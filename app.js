@@ -1,146 +1,257 @@
-/*
-===========================
-SPIN WAR X
-Version 0.0.4
-===========================
-*/
+/*=========================================
+        SPIN WAR X
+        Game Engine v0.1.1
+=========================================*/
+
+//==============================
+// GAME STATE
+//==============================
 
 const game = {
 
-    version: "0.0.4",
+    version: "0.1.1",
 
     mode: null,
 
-    player: {},
+    draft: {
 
-    cpu: {}
-
-};
-
-const buttons = document.querySelectorAll(".menu-btn");
-
-buttons.forEach(button => {
-
-    button.addEventListener("click", () => {
-
-        const mode = button.dataset.mode;
-
-        startMode(mode);
-
-    });
-
-});
-
-function startMode(mode){
-
-    game.mode = mode;
-
-    animateMenuOut();
-
-}
-
-function animateMenuOut(){
-
-    const menu = document.querySelector(".menu");
-
-    menu.style.opacity = "0";
-
-    menu.style.transform = "translateY(-20px)";
-
-    setTimeout(loadNextScreen,350);
-
-}
-
-function loadNextScreen(){
-
-    switch(game.mode){
-
-        case "bronze":
-            alert("Bronze Mode\n\nComing Next Update");
-            break;
-
-        case "silver":
-            alert("Silver Mode\n\nComing Next Update");
-            break;
-
-        case "gold":
-            alert("Gold / Diamond Mode\n\nComing Next Update");
-            break;
-
-        case "custom":
-            showCustomMenu();
-            break;
+        blade: null,
+        ratchet: null,
+        bit: null
 
     }
 
+};
+
+//==============================
+// DATABASE
+//==============================
+
+const blades = [
+
+{
+    name:"Knight Shield",
+    type:"Defense",
+    tier:"Bronze",
+    meta:70,
+    avg:69,
+    weight:"34.8g"
+},
+
+{
+    name:"Arrow Wizard",
+    type:"Balance",
+    tier:"Bronze",
+    meta:72,
+    avg:71,
+    weight:"35.0g"
+},
+
+{
+    name:"Viper Tail",
+    type:"Attack",
+    tier:"Bronze",
+    meta:73,
+    avg:72,
+    weight:"35.2g"
+},
+
+{
+    name:"Shark Edge",
+    type:"Attack",
+    tier:"Silver",
+    meta:84,
+    avg:79,
+    weight:"35.6g"
+},
+
+{
+    name:"Knight Mail",
+    type:"Defense",
+    tier:"Silver",
+    meta:82,
+    avg:80,
+    weight:"36.0g"
+},
+
+{
+    name:"Dran Sword",
+    type:"Attack",
+    tier:"Silver",
+    meta:85,
+    avg:81,
+    weight:"35.9g"
+},
+
+{
+    name:"Wizard Rod",
+    type:"Stamina",
+    tier:"Gold",
+    meta:96,
+    avg:90,
+    weight:"37.0g"
+},
+
+{
+    name:"Phoenix Wing",
+    type:"Attack",
+    tier:"Gold",
+    meta:95,
+    avg:89,
+    weight:"38.0g"
+},
+
+{
+    name:"Silver Wolf",
+    type:"Defense",
+    tier:"Gold",
+    meta:92,
+    avg:88,
+    weight:"37.4g"
 }
 
-function showCustomMenu(){
+];
 
-    document.getElementById("app").innerHTML = `
+//==============================
+// START
+//==============================
 
-    <main class="menu">
+const menuButtons = document.querySelectorAll(".menu-btn");
 
-        <div class="logo">
+menuButtons.forEach(button=>{
 
-            <div class="logo-icon">⚙</div>
+button.addEventListener("click",()=>{
 
-            <h1>CUSTOM</h1>
+game.mode = button.dataset.mode;
 
-            <p>Select Match Type</p>
+beginDraft();
 
-        </div>
+});
 
-        <section class="menu-card">
+});
 
-            <button class="menu-btn custom" id="buildBoth">
-                Build Both Beys
-            </button>
+//==============================
+// DRAFT
+//==============================
 
-            <button class="menu-btn silver" id="randomCPU">
-                Build Mine • Random CPU
-            </button>
+function beginDraft(){
 
-            <button class="menu-btn bronze" id="randomBoth">
-                Random Both
-            </button>
+const app=document.getElementById("app");
 
-            <button class="menu-btn gold" id="backButton">
-                ← Back
-            </button>
+app.innerHTML=`
 
-        </section>
+<div class="background"></div>
 
-    </main>
+<main class="menu">
 
-    `;
+<div class="logo">
 
-    document
-    .getElementById("backButton")
-    .addEventListener("click", location.reload);
+<div class="logo-icon">🎴</div>
 
-    document
-    .getElementById("buildBoth")
-    .addEventListener("click", ()=>{
+<h1>GENERATING DRAFT</h1>
 
-        alert("Combo Builder Coming Soon");
+<p>Please Wait...</p>
 
-    });
+</div>
 
-    document
-    .getElementById("randomCPU")
-    .addEventListener("click", ()=>{
+<section class="menu-card">
 
-        alert("Random CPU Coming Soon");
+<h2 id="loadingText">
+Preparing Cards...
+</h2>
 
-    });
+<div class="loadingBar">
 
-    document
-    .getElementById("randomBoth")
-    .addEventListener("click", ()=>{
+<div id="loadingFill"></div>
 
-        alert("Random Battle Coming Soon");
+</div>
 
-    });
+</section>
+
+</main>
+
+`;
+
+animateLoading();
+
+}
+
+//==============================
+// LOADING
+//==============================
+
+function animateLoading(){
+
+const fill=document.getElementById("loadingFill");
+
+let progress=0;
+
+const timer=setInterval(()=>{
+
+progress+=4;
+
+fill.style.width=progress+"%";
+
+if(progress>=100){
+
+clearInterval(timer);
+
+setTimeout(showBladeDraft,400);
+
+}
+
+},40);
+
+}
+
+//==============================
+// BLADE DRAFT
+//==============================
+
+function showBladeDraft(){
+
+const pool=blades.filter(
+
+blade=>blade.tier===game.mode.charAt(0).toUpperCase()+game.mode.slice(1)
+
+);
+
+const choices=[...pool];
+
+document.getElementById("app").innerHTML=`
+
+<div class="background"></div>
+
+<main class="menu">
+
+<div class="logo">
+
+<div class="logo-icon">🎴</div>
+
+<h1>CHOOSE BLADE</h1>
+
+<p>Swipe support coming soon</p>
+
+</div>
+
+<section class="menu-card">
+
+${choices.map(blade=>`
+
+<button class="menu-btn silver bladeCard">
+
+${blade.name}<br>
+
+META ${blade.meta}
+
+</button>
+
+`).join("")}
+
+</section>
+
+</main>
+
+`;
 
 }
