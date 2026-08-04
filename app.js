@@ -943,9 +943,8 @@ function calculateComboStats(){
 
         meta:clamp(meta)
 
-    };
+};
 
-}
 }
 //=========================
 // COMBO CARD
