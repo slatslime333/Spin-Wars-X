@@ -35,84 +35,235 @@ const BLADES = [
 name:"Knight Shield",
 tier:"Bronze",
 type:"Defense",
-meta:70,
-avg:68,
-weight:"34.8g"
+weight:34.8,
+
+stats:{
+attack:63,
+knockback:64,
+defense:84,
+evasiveness:65,
+balance:82,
+stamina:74
+}
 },
 
 {
 name:"Arrow Wizard",
 tier:"Bronze",
 type:"Balance",
-meta:72,
-avg:70,
-weight:"35.0g"
+weight:35.0,
+
+stats:{
+attack:68,
+knockback:66,
+defense:70,
+evasiveness:71,
+balance:74,
+stamina:75
+}
 },
 
 {
 name:"Viper Tail",
 tier:"Bronze",
 type:"Attack",
-meta:73,
-avg:71,
-weight:"35.2g"
+weight:35.2,
+
+stats:{
+attack:79,
+knockback:78,
+defense:64,
+evasiveness:76,
+balance:68,
+stamina:63
+}
 },
 
 {
 name:"Shark Edge",
 tier:"Silver",
 type:"Attack",
-meta:84,
-avg:79,
-weight:"35.6g"
+weight:35.6,
+
+stats:{
+attack:90,
+knockback:88,
+defense:69,
+evasiveness:87,
+balance:72,
+stamina:64
+}
 },
 
 {
 name:"Knight Mail",
 tier:"Silver",
 type:"Defense",
-meta:82,
-avg:80,
-weight:"36.0g"
+weight:36.0,
+
+stats:{
+attack:71,
+knockback:72,
+defense:89,
+evasiveness:66,
+balance:86,
+stamina:77
+}
 },
 
 {
 name:"Dran Sword",
 tier:"Silver",
 type:"Attack",
-meta:85,
-avg:81,
-weight:"35.8g"
+weight:35.8,
+
+stats:{
+attack:88,
+knockback:86,
+defense:70,
+evasiveness:84,
+balance:73,
+stamina:66
+}
 },
 
 {
 name:"Phoenix Wing",
 tier:"Gold",
 type:"Attack",
-meta:95,
-avg:90,
-weight:"38.0g"
+weight:38.0,
+
+stats:{
+attack:96,
+knockback:95,
+defense:80,
+evasiveness:82,
+balance:84,
+stamina:75
+}
 },
 
 {
 name:"Wizard Rod",
 tier:"Gold",
 type:"Stamina",
-meta:96,
-avg:91,
-weight:"37.0g"
+weight:37.0,
+
+stats:{
+attack:70,
+knockback:68,
+defense:84,
+evasiveness:70,
+balance:93,
+stamina:99
+}
 },
 
 {
 name:"Silver Wolf",
 tier:"Gold",
 type:"Defense",
-meta:92,
-avg:88,
-weight:"37.4g"
+weight:37.4,
+
+stats:{
+attack:73,
+knockback:75,
+defense:94,
+evasiveness:68,
+balance:92,
+stamina:84
+}
 }
 
 ];
+
+//=========================
+// RATCHET DATABASE
+//=========================
+
+const RATCHETS = [
+
+{
+name:"1-60",
+
+stats:{
+attack:4,
+knockback:5,
+defense:-2,
+evasiveness:3,
+balance:-3,
+stamina:-2
+}
+},
+
+{
+name:"3-60",
+
+stats:{
+attack:2,
+knockback:2,
+defense:1,
+evasiveness:1,
+balance:2,
+stamina:1
+}
+},
+
+{
+name:"5-60",
+
+stats:{
+attack:-1,
+knockback:1,
+defense:3,
+evasiveness:-1,
+balance:3,
+stamina:3
+}
+},
+
+{
+name:"6-60",
+
+stats:{
+attack:-2,
+knockback:0,
+defense:5,
+evasiveness:-2,
+balance:4,
+stamina:4
+}
+},
+
+{
+name:"7-60",
+
+stats:{
+attack:-3,
+knockback:-1,
+defense:6,
+evasiveness:-3,
+balance:5,
+stamina:5
+}
+},
+
+{
+name:"9-60",
+
+stats:{
+attack:-4,
+knockback:-2,
+defense:8,
+evasiveness:-4,
+balance:7,
+stamina:6
+}
+}
+
+];
+
+
 
 //=========================
 // START GAME
@@ -467,7 +618,7 @@ function showRatchetPlaceholder(){
 
         button.className="menu-btn silver";
 
-        button.textContent=r;
+        button.textContent=r.name;
 
         button.onclick=()=>{
 
@@ -487,16 +638,81 @@ function showRatchetPlaceholder(){
 // BIT DATABASE
 //=========================
 
-const BITS=[
+const BITS = [
 
-"Flat",
+{
+name:"Flat",
+stats:{attack:5,knockback:3,defense:-3,evasiveness:4,balance:-2,stamina:-4},
+traits:["attack","fast"]
+},
 
-"Rush",
+{
+name:"Low Flat",
+stats:{attack:7,knockback:4,defense:-5,evasiveness:6,balance:-3,stamina:-5},
+traits:["attack","low"]
+},
 
-"Needle"
+{
+name:"Rush",
+stats:{attack:7,knockback:4,defense:-5,evasiveness:6,balance:-3,stamina:-5},
+traits:["aggressive","fast"]
+},
+
+{
+name:"Low Rush",
+stats:{attack:8,knockback:5,defense:-6,evasiveness:7,balance:-4,stamina:-6},
+traits:["aggressive","low"]
+},
+
+{
+name:"Level",
+stats:{attack:4,knockback:2,defense:2,evasiveness:2,balance:4,stamina:1},
+traits:["balance"]
+},
+
+{
+name:"Elevate",
+stats:{attack:-1,knockback:0,defense:3,evasiveness:3,balance:4,stamina:5},
+traits:["height","balance"]
+},
+
+{
+name:"Kick",
+stats:{attack:4,knockback:6,defense:-2,evasiveness:4,balance:-3,stamina:-3},
+traits:["smash"]
+},
+
+{
+name:"Wedge",
+stats:{attack:-2,knockback:1,defense:7,evasiveness:-4,balance:7,stamina:3},
+traits:["defense"]
+},
+
+{
+name:"Hexa",
+stats:{attack:-1,knockback:0,defense:8,evasiveness:-3,balance:8,stamina:4},
+traits:["defense","antiTilt"]
+},
+
+{
+name:"Needle",
+stats:{attack:-4,knockback:-3,defense:7,evasiveness:-6,balance:7,stamina:3},
+traits:["defense"]
+},
+
+{
+name:"Ball",
+stats:{attack:-5,knockback:-3,defense:4,evasiveness:-4,balance:5,stamina:8},
+traits:["stamina"]
+},
+
+{
+name:"Orb",
+stats:{attack:-3,knockback:-2,defense:3,evasiveness:-2,balance:4,stamina:6},
+traits:["stamina"]
+}
 
 ];
-
 //=========================
 // SHOW BITS
 //=========================
@@ -533,26 +749,29 @@ function showBitDraft(){
 
     const container=document.getElementById("bitContainer");
 
-    BITS.forEach(bit=>{
+    const draftBits=[...BITS]
+.sort(()=>Math.random()-0.5)
+.slice(0,3);
 
-        const button=document.createElement("button");
+draftBits.forEach(bit=>{
 
-        button.className="menu-btn bronze";
+    const button=document.createElement("button");
 
-        button.textContent=bit;
+    button.className="menu-btn bronze";
 
-        button.onclick=()=>{
+    button.textContent=bit.name;
 
-            Game.player.bit=bit;
+    button.onclick=()=>{
 
-            showComboCard();
+        Game.player.bit=bit;
 
-        };
+        showComboCard();
 
-        container.appendChild(button);
+    };
 
-    });
+    container.appendChild(button);
 
+});
 }
 
 //=========================
@@ -561,11 +780,13 @@ function showBitDraft(){
 
 function showComboCard(){
 
-    const blade=Game.player.blade;
+    const combo = calculateComboStats();
 
-    const app=document.getElementById("app");
+    const blade = Game.player.blade;
 
-    app.innerHTML=`
+    const app = document.getElementById("app");
+
+    app.innerHTML = `
 
     <div class="background"></div>
 
@@ -587,39 +808,43 @@ function showComboCard(){
 
             </div>
 
-            <div class="blade-rating">
-
-                META ${blade.meta}
-
-            </div>
-
-            <div class="blade-average">
-
-                AVG ${blade.avg}
-
-            </div>
-
             <div class="blade-type">
 
                 ${blade.type}
 
             </div>
 
-            <div class="blade-weight">
+            <br>
 
-                ${blade.weight}
+            <h2>META ${combo.meta}</h2>
 
-            </div>
+            <h3>AVG ${combo.avg}</h3>
 
             <hr>
 
-            <h3>${Game.player.ratchet}</h3>
+            <p>⚔ Attack: ${combo.stats.attack}</p>
 
-            <h3>${Game.player.bit}</h3>
+            <p>💥 Knockback: ${combo.stats.knockback}</p>
+
+            <p>🛡 Defense: ${combo.stats.defense}</p>
+
+            <p>🌀 Evasiveness: ${combo.stats.evasiveness}</p>
+
+            <p>⚖ Balance: ${combo.stats.balance}</p>
+
+            <p>🔋 Stamina: ${combo.stats.stamina}</p>
+
+            <hr>
+
+            <p><strong>Ratchet:</strong> ${Game.player.ratchet.name}</p>
+
+            <p><strong>Bit:</strong> ${Game.player.bit.name}</p>
+
+            <br>
 
             <button
-            class="menu-btn gold"
-            id="battleButton">
+                class="menu-btn gold"
+                id="battleButton">
 
                 START BATTLE
 
@@ -632,11 +857,11 @@ function showComboCard(){
     `;
 
     document
-    .getElementById("battleButton")
-    .onclick=()=>{
+        .getElementById("battleButton")
+        .onclick = () => {
 
-        alert("Battle Engine Coming Next!");
+            alert("Battle Engine Coming in v0.4");
 
-    };
+        };
 
 }
