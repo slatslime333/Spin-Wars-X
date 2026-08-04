@@ -946,6 +946,7 @@ function calculateComboStats(){
     };
 
 }
+}
 //=========================
 // COMBO CARD
 //=========================
