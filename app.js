@@ -383,17 +383,23 @@ function showBladeDraft(){
 
     Game.screen = "bladeDraft";
 
-    const pool = BLADES.filter(blade => {
+    const pool = BLADES.filter(blade=>{
 
-        if(Game.mode==="bronze") return blade.tier==="Bronze";
-        if(Game.mode==="silver") return blade.tier==="Silver";
-        if(Game.mode==="gold") return blade.tier==="Gold";
+    if(Game.mode==="bronze") return blade.tier==="Bronze";
 
-        return true;
+    if(Game.mode==="silver") return blade.tier==="Silver";
 
-    });
+    if(Game.mode==="gold") return blade.tier==="Gold";
 
-    renderBladeDraft(pool);
+    return true;
+
+});
+
+const draftBlades=[...pool]
+.sort(()=>Math.random()-0.5)
+.slice(0,3);
+
+renderBladeDraft(draftBlades);
 
 }
 
@@ -567,15 +573,165 @@ function showRatchetPlaceholder(){
 
 }
 //=========================
-// RATCHET DATABASE
+// RATCHET BASE DATABASE
 //=========================
 
-const RATCHETS = [
-"1-60",
-"3-60",
-"5-60"
-];
+const RATCHET_BASES = [
 
+{
+number:1,
+
+stats:{
+attack:4,
+knockback:5,
+defense:-2,
+evasiveness:3,
+balance:-3,
+stamina:-2
+}
+},
+
+{
+number:3,
+
+stats:{
+attack:2,
+knockback:2,
+defense:1,
+evasiveness:1,
+balance:2,
+stamina:1
+}
+},
+
+{
+number:5,
+
+stats:{
+attack:-1,
+knockback:1,
+defense:3,
+evasiveness:-1,
+balance:3,
+stamina:3
+}
+},
+
+{
+number:6,
+
+stats:{
+attack:-2,
+knockback:0,
+defense:5,
+evasiveness:-2,
+balance:4,
+stamina:4
+}
+},
+
+{
+number:7,
+
+stats:{
+attack:-3,
+knockback:-1,
+defense:6,
+evasiveness:-3,
+balance:5,
+stamina:5
+}
+},
+
+{
+number:9,
+
+stats:{
+attack:-4,
+knockback:-2,
+defense:8,
+evasiveness:-4,
+balance:7,
+stamina:6
+}
+}
+
+];
+//=========================
+// BUILD ALL RATCHETS
+//=========================
+
+const HEIGHTS=[60,70,80];
+
+const RATCHETS=[];
+
+RATCHET_BASES.forEach(base=>{
+
+    HEIGHTS.forEach(height=>{
+
+        const modifier={
+
+            attack:0,
+            knockback:0,
+            defense:0,
+            evasiveness:0,
+            balance:0,
+            stamina:0
+
+        };
+
+        if(height===60){
+
+            modifier.attack+=2;
+            modifier.evasiveness+=2;
+            modifier.stamina-=2;
+
+        }
+
+        if(height===70){
+
+            modifier.balance+=1;
+
+        }
+
+        if(height===80){
+
+            modifier.defense+=2;
+            modifier.balance+=2;
+            modifier.stamina+=2;
+            modifier.evasiveness-=2;
+
+        }
+
+        RATCHETS.push({
+
+            name:`${base.number}-${height}`,
+
+            number:base.number,
+
+            height,
+
+            stats:{
+
+                attack:base.stats.attack+modifier.attack,
+
+                knockback:base.stats.knockback+modifier.knockback,
+
+                defense:base.stats.defense+modifier.defense,
+
+                evasiveness:base.stats.evasiveness+modifier.evasiveness,
+
+                balance:base.stats.balance+modifier.balance,
+
+                stamina:base.stats.stamina+modifier.stamina
+
+            }
+
+        });
+
+    });
+
+});
 //=========================
 // SHOW RATCHETS
 //=========================
@@ -612,26 +768,29 @@ function showRatchetPlaceholder(){
 
     const container=document.getElementById("ratchetContainer");
 
-    RATCHETS.forEach(r=>{
+    const draftRatchets=[...RATCHETS]
+.sort(()=>Math.random()-0.5)
+.slice(0,3);
 
-        const button=document.createElement("button");
+draftRatchets.forEach(r=>{
 
-        button.className="menu-btn silver";
+    const button=document.createElement("button");
 
-        button.textContent=r.name;
+    button.className="menu-btn silver";
 
-        button.onclick=()=>{
+    button.textContent=r.name;
 
-            Game.player.ratchet=r;
+    button.onclick=()=>{
 
-            showBitDraft();
+        Game.player.ratchet=r;
 
-        };
+        showBitDraft();
 
-        container.appendChild(button);
+    };
 
-    });
+    container.appendChild(button);
 
+});
 }
 
 //=========================
