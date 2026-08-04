@@ -58,25 +58,37 @@ transform:scale(1.12);
 
     position:relative;
 
-    width:min(92vw,430px);
+    width:min(94vw,420px);
+
+    margin:0 auto;
+
+    min-height:100vh;
 
     display:flex;
+
     flex-direction:column;
 
     align-items:center;
 
-    gap:28px;
+    justify-content:flex-start;
+
+    gap:12px;
+
+    padding:20px 14px;
+
+    box-sizing:border-box;
 
     z-index:10;
-}
 
+}
 /* Logo */
 
 .logo{
 
-text-align:center;
+    text-align:center;
 
-animation:fade .8s ease;
+    margin-bottom:6px;
+
 }
 
 .logo-icon{
@@ -88,49 +100,44 @@ margin-bottom:8px;
 
 .logo h1{
 
-font-size:2.6rem;
+    font-size:34px;
 
-letter-spacing:3px;
+    margin:6px 0;
 
-font-weight:800;
 }
 
 .logo p{
 
-margin-top:8px;
+    font-size:15px;
 
-color:#bfc7d5;
+    opacity:.8;
 
-font-size:.95rem;
+    margin:0;
+
 }
 
 /* Card */
 
 .menu-card{
 
-width:100%;
+    width:100%;
 
-padding:24px;
+    background:rgba(20,20,30,.88);
 
-border-radius:26px;
+    border:2px solid #444;
 
-background:rgba(255,255,255,.06);
+    border-radius:16px;
 
-backdrop-filter:blur(18px);
+    padding:14px;
 
-border:1px solid rgba(255,255,255,.08);
+    box-sizing:border-box;
 
-box-shadow:
+    display:flex;
 
-0 15px 35px rgba(0,0,0,.35);
+    flex-direction:column;
 
-display:flex;
+    gap:10px;
 
-flex-direction:column;
-
-gap:16px;
-
-animation:fade 1s ease;
 }
 
 .menu-card h2{
@@ -146,21 +153,22 @@ font-size:1.25rem;
 
 .menu-btn{
 
-height:62px;
+    width:100%;
 
-border:none;
+    min-height:48px;
 
-border-radius:18px;
+    padding:12px;
 
-font-size:1rem;
+    border:none;
 
-font-weight:700;
+    border-radius:12px;
 
-color:white;
+    font-size:17px;
 
-transition:.18s;
+    font-weight:700;
 
-cursor:pointer;
+    cursor:pointer;
+
 }
 
 .menu-btn:active{
