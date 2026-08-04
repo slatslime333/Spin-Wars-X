@@ -456,6 +456,21 @@ function createBladeCard(blade){
 
     card.className="blade-card";
 
+    const ovr=Math.round(
+
+        (
+
+            blade.stats.attack+
+            blade.stats.knockback+
+            blade.stats.defense+
+            blade.stats.evasiveness+
+            blade.stats.balance+
+            blade.stats.stamina
+
+        )/6
+
+    );
+
     card.innerHTML=`
 
         <div class="blade-name">
@@ -472,19 +487,31 @@ function createBladeCard(blade){
 
         <div class="blade-rating">
 
-            META ${blade.meta}
+            OVR ${ovr}
 
         </div>
 
-        <div class="blade-average">
-
-            AVG ${blade.avg}
-
-        </div>
+        <hr>
 
         <div class="blade-weight">
 
-            ${blade.weight}
+            ${blade.weight}g
+
+        </div>
+
+        <br>
+
+        <div>
+
+            ⚔ ${blade.stats.attack}
+
+            &nbsp;&nbsp;
+
+            🛡 ${blade.stats.defense}
+
+            &nbsp;&nbsp;
+
+            🔋 ${blade.stats.stamina}
 
         </div>
 
@@ -932,7 +959,134 @@ draftBits.forEach(bit=>{
 
 });
 }
+//=========================
+// STAT ENGINE
+//=========================
 
+function clamp(value){
+
+    return Math.max(60,Math.min(99,value));
+
+}
+
+function calculateComboStats(){
+
+    const blade=Game.player.blade;
+    const ratchet=Game.player.ratchet;
+    const bit=Game.player.bit;
+
+    let stats={
+
+        attack:clamp(blade.stats.attack+ratchet.stats.attack+bit.stats.attack),
+
+        knockback:clamp(blade.stats.knockback+ratchet.stats.knockback+bit.stats.knockback),
+
+        defense:clamp(blade.stats.defense+ratchet.stats.defense+bit.stats.defense),
+
+        evasiveness:clamp(blade.stats.evasiveness+ratchet.stats.evasiveness+bit.stats.evasiveness),
+
+        balance:clamp(blade.stats.balance+ratchet.stats.balance+bit.stats.balance),
+
+        stamina:clamp(blade.stats.stamina+ratchet.stats.stamina+bit.stats.stamina)
+
+    };
+
+    // Attack Synergies
+
+    if(blade.type==="Attack" && bit.name==="Low Rush"){
+
+        stats.attack=clamp(stats.attack+3);
+        stats.knockback=clamp(stats.knockback+2);
+
+    }
+
+    if(blade.type==="Attack" && bit.name==="Kick"){
+
+        stats.knockback=clamp(stats.knockback+4);
+
+    }
+
+    if(blade.type==="Attack" && bit.name==="Low Flat"){
+
+        stats.attack=clamp(stats.attack+2);
+        stats.evasiveness=clamp(stats.evasiveness+2);
+
+    }
+
+    // Defense Synergies
+
+    if(blade.type==="Defense" && bit.name==="Hexa"){
+
+        stats.defense=clamp(stats.defense+5);
+        stats.balance=clamp(stats.balance+3);
+
+    }
+
+    if(blade.type==="Defense" && bit.name==="Wedge"){
+
+        stats.defense=clamp(stats.defense+4);
+
+    }
+
+    // Balance
+
+    if(blade.type==="Balance" && bit.name==="Level"){
+
+        stats.balance=clamp(stats.balance+3);
+
+    }
+
+    // Stamina
+
+    if(blade.type==="Stamina" && bit.name==="Ball"){
+
+        stats.stamina=clamp(stats.stamina+5);
+
+    }
+
+    if(blade.type==="Stamina" && bit.name==="Orb"){
+
+        stats.stamina=clamp(stats.stamina+3);
+
+    }
+
+    const ovr=Math.round(
+
+        (
+
+            stats.attack+
+            stats.knockback+
+            stats.defense+
+            stats.evasiveness+
+            stats.balance+
+            stats.stamina
+
+        )/6
+
+    );
+
+    let meta=ovr;
+
+    if(blade.type==="Attack")
+        meta+=2;
+
+    if(blade.type==="Defense")
+        meta+=1;
+
+    if(blade.type==="Stamina")
+        meta+=1;
+
+    return{
+
+        stats,
+
+        ovr:clamp(ovr),
+
+        meta:clamp(meta)
+
+    };
+
+}
 //=========================
 // COMBO CARD
 //=========================
