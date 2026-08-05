@@ -878,7 +878,19 @@ draftBits.forEach(bit=>{
     container.appendChild(button);
 
 });
+
+container.appendChild(
+
+    createBackButton(()=>{
+
+        showRatchetPlaceholder();
+
+    })
+
+);
+
 }
+
 //=========================
 // STAT ENGINE
 //=========================
