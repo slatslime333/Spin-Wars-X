@@ -244,6 +244,16 @@ font-size:3.4rem;
 
 .menu{
 
+    width:min(94vw,430px);
+
+    margin:0 auto;
+
+    padding:20px 14px;
+
+    box-sizing:border-box;
+
+}
+
 width:470px;
 
 }
@@ -285,6 +295,11 @@ BLADE CARDS
 =========================*/
 
 .blade-card{
+    
+width:100%;
+max-width:100%;
+box-sizing:border-box;
+margin:0;
 
     background:linear-gradient(
         180deg,
