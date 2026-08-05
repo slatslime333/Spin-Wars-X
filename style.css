@@ -265,11 +265,15 @@ transform:translateY(0);
 
 /* Desktop */
 
-@media(min-width:900px){
+@media (min-width:900px){
 
-.logo h1{
+    .logo h1{
+        font-size:3.4rem;
+    }
 
-font-size:3.4rem;
+    .menu{
+        width:470px;
+    }
 
 }
 
