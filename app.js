@@ -309,6 +309,8 @@ function createBackButton(onClick){
 //=========================
 
 
+ function showBladeDraft(){
+
     Game.screen = "bladeDraft";
 
     const pool = BLADES.filter(blade=>{
@@ -1012,7 +1014,7 @@ function showComboCard(){
 
             <h2>META ${combo.meta}</h2>
 
-            <h3>AVG ${combo.avg}</h3>
+          <h3>OVR ${combo.ovr}</h3>
 
             <hr>
 
