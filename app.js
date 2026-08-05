@@ -701,7 +701,7 @@ personality:{
 
 }
      
-},
+};
 
 //=========================
 // ENGINE 2.0 RATCHETS
