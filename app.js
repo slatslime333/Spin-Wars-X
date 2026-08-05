@@ -1087,5 +1087,16 @@ function showComboCard(){
             alert("Battle Engine Coming in v0.4");
 
         };
+const menuCard=document.querySelector(".menu-card");
 
+menuCard.appendChild(
+
+    createBackButton(()=>{
+
+        showBitDraft();
+
+    })
+
+);
+ 
 }
