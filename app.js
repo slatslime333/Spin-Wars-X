@@ -433,15 +433,14 @@ const BLADE_ENGINE = {
         ],
 
         personality:{
-            aggression:9,
-            control:99,
-            consistency:99,
-            risk:4
-         
- }
-     
+    aggression:9,
+    control:99,
+    consistency:99,
+    risk:4
 }
- 
+
+    }
+
 };
 
 //=========================
