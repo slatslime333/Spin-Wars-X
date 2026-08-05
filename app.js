@@ -279,6 +279,70 @@ winConditions:{
 
 },
 
+const RATCHET_ENGINE = {
+
+    "1-60":{
+
+        weight:1,
+
+        height:60,
+
+        stability:72,
+
+        burstResistance:82,
+
+        attackBias:96,
+
+        defenseBias:45,
+
+        staminaBias:52,
+
+        mobilityBias:92
+
+    },
+
+    "7-60":{
+
+        weight:7,
+
+        height:60,
+
+        stability:94,
+
+        burstResistance:94,
+
+        attackBias:58,
+
+        defenseBias:94,
+
+        staminaBias:92,
+
+        mobilityBias:66
+
+    },
+
+    "9-60":{
+
+        weight:9,
+
+        height:60,
+
+        stability:99,
+
+        burstResistance:98,
+
+        attackBias:46,
+
+        defenseBias:99,
+
+        staminaBias:98,
+
+        mobilityBias:54
+
+    }
+
+};
+
         //=========================
         // COMPATIBILITY
         //=========================
