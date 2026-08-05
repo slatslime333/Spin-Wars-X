@@ -304,32 +304,32 @@ function createBackButton(onClick){
     return button;
 
 }
+
 //=========================
 // SHOW BLADE DRAFT
 //=========================
 
-
- function showBladeDraft(){
+function showBladeDraft(){
 
     Game.screen = "bladeDraft";
 
     const pool = BLADES.filter(blade=>{
 
-    if(Game.mode==="bronze") return blade.tier==="Bronze";
+        if(Game.mode==="bronze") return blade.tier==="Bronze";
 
-    if(Game.mode==="silver") return blade.tier==="Silver";
+        if(Game.mode==="silver") return blade.tier==="Silver";
 
-    if(Game.mode==="gold") return blade.tier==="Gold";
+        if(Game.mode==="gold") return blade.tier==="Gold";
 
-    return true;
+        return true;
 
-});
+    });
 
-const draftBlades=[...pool]
-.sort(()=>Math.random()-0.5)
-.slice(0,3);
+    const draftBlades = [...pool]
+        .sort(()=>Math.random()-0.5)
+        .slice(0,3);
 
-renderBladeDraft(draftBlades);
+    renderBladeDraft(draftBlades);
 
 }
 
