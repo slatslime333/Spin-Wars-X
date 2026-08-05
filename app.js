@@ -995,16 +995,6 @@ draftRatchets.forEach(r=>{
         Game.player.ratchet=r;
 
         showBitDraft();
-
-     container.appendChild(
-
-    createBackButton(()=>{
-
-        showRatchetPlaceholder();
-
-    })
-
-);
     
     };
 
