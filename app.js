@@ -685,7 +685,35 @@ draftRatchets.forEach(r=>{
         Game.player.ratchet=r;
 
         showBitDraft();
+draftBits.forEach(bit=>{
 
+    const button=document.createElement("button");
+
+    button.className="menu-btn bronze";
+
+    button.textContent=bit.name;
+
+    button.onclick=()=>{
+
+        Game.player.bit=bit;
+
+        showComboCard();
+
+    };
+
+    container.appendChild(button);
+
+});
+     container.appendChild(
+
+    createBackButton(()=>{
+
+        showRatchetPlaceholder();
+
+    })
+
+);
+    
     };
 
     container.appendChild(button);
