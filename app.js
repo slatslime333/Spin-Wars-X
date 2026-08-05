@@ -963,16 +963,7 @@ function createBackButton(onClick){
     button.onclick=onClick;
 
     return button;
-container.appendChild(
 
-    createBackButton(()=>{
-
-        showRatchetPlaceholder();
-
-    })
-
-);
- 
 }
 
 //=========================
