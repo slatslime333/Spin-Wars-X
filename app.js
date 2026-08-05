@@ -288,10 +288,26 @@ function animateLoading(){
 
 }
 //=========================
+// BACK BUTTON
+//=========================
+
+function createBackButton(onClick){
+
+    const button=document.createElement("button");
+
+    button.className="back-btn";
+
+    button.textContent="← Back";
+
+    button.onclick=onClick;
+
+    return button;
+
+}
+//=========================
 // SHOW BLADE DRAFT
 //=========================
 
-function showBladeDraft(){
 
     Game.screen = "bladeDraft";
 
@@ -355,7 +371,15 @@ function renderBladeDraft(blades){
         container.appendChild(createBladeCard(blade));
 
     });
+container.appendChild(
 
+    createBackButton(()=>{
+
+        location.reload();
+
+    })
+
+);
 }
 
 //=========================
@@ -665,6 +689,16 @@ draftRatchets.forEach(r=>{
     container.appendChild(button);
 
 });
+ container.appendChild(
+
+    createBackButton(()=>{
+
+        showBladeDraft();
+
+    })
+
+);
+ 
 }
 
 //=========================
