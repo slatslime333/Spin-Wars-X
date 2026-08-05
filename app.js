@@ -204,16 +204,6 @@ window.onload = () => {
 };
 
 //=========================
-// START GAME
-//=========================
-
-window.onload = () => {
-
-    hookMenuButtons();
-
-};
-
-//=========================
 // MENU
 //=========================
 
@@ -914,6 +904,26 @@ container.appendChild(
     })
 
 );
+
+}
+
+function buildCombo(blade,ratchet,bit){
+
+    return{
+
+        blade,
+        ratchet,
+        bit,
+
+        stats:null,
+
+        ovr:0,
+
+        meta:0,
+
+        compatibility:0
+
+    };
 
 }
 
