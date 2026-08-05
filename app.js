@@ -185,177 +185,263 @@ const BLADE_ENGINE = {
 
     silver_wolf:{
 
-        //=========================
-        // BASIC INFO
-        //=========================
-
         name:"Silver Wolf",
-
         type:"Defense",
-
         tier:"Gold",
-
         spin:"Right",
-
         weight:37.4,
 
-        //=========================
-        // VISIBLE CARD
-        //=========================
-
         card:{
-
             attack:35,
-
             knockback:48,
-
             defense:96,
-
             mobility:56,
-
             balance:95,
-
             stamina:97,
-
             burst:94
-
         },
-
-        //=========================
-        // PHYSICS
-        //=========================
 
         physics:{
-
             weightClass:"Heavy",
-
             centerOfGravity:"Low",
-
             contactShape:"Round",
-
             recoil:"Very Low",
-
             lockStrength:94,
-
             weightDistribution:"Outer"
-
         },
 
-        //=========================
-        // BEHAVIOR
-        //=========================
-
         behavior:{
-
             attackStyle:"Counter",
-
             smashPower:18,
-
             upperPower:8,
-
             barragePower:32,
-
             counterPower:95,
-
             movementControl:94,
-
             spinRetention:98,
-
             lad:99,
-
             burstResistance:95,
-         
-winConditions:{
 
-    spin:92,
-
-    burst:78,
-
-    knockout:34,
-
-    counter:100
-
-}
-
-},
-
-        //=========================
-        // COMPATIBILITY
-        //=========================
+            winConditions:{
+                spin:92,
+                burst:78,
+                knockout:34,
+                counter:100
+            }
+        },
 
         compatibility:{
-
             heights:{
-
                 60:90,
-
                 70:90,
-
                 80:55
-
             },
 
             bits:{
-
                 Hexa:100,
-
                 Wedge:95,
-
                 Ball:91,
-
                 Orb:88,
-
                 Level:72,
-
                 Elevate:76,
-
                 Flat:28,
-
                 LowFlat:12,
-
                 Rush:18,
-
                 LowRush:8,
-
                 Kick:22,
-
                 Needle:84
-
             }
-
         },
 
-        //=========================
-        // TRAITS
-        //=========================
-
         traits:[
-
             "Counter",
-
             "Heavy",
-
             "LAD",
-
             "Defense",
-
             "Stable"
-
         ],
-         
-personality:{
 
-    aggression:19,
-
-    control:98,
-
-    consistency:99,
-
-    risk:10
-
-}
+        personality:{
+            aggression:19,
+            control:98,
+            consistency:99,
+            risk:10
+        }
 
     },
+
+    phoenix_wing:{
+
+        name:"Phoenix Wing",
+        type:"Attack",
+        tier:"Gold",
+        spin:"Right",
+        weight:38.0,
+
+        card:{
+            attack:94,
+            knockback:92,
+            defense:84,
+            mobility:84,
+            balance:87,
+            stamina:75,
+            burst:87
+        },
+
+        physics:{
+            weightClass:"Very Heavy",
+            centerOfGravity:"Medium",
+            contactShape:"Smash",
+            recoil:"Medium",
+            lockStrength:87,
+            weightDistribution:"Outer"
+        },
+
+        behavior:{
+            attackStyle:"Smash",
+            smashPower:99,
+            upperPower:72,
+            barragePower:68,
+            counterPower:42,
+            movementControl:86,
+            spinRetention:76,
+            lad:73,
+            burstResistance:87,
+
+            winConditions:{
+                spin:55,
+                burst:96,
+                knockout:99,
+                counter:60
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:98,
+                70:91,
+                80:52
+            },
+
+            bits:{
+                Rush:100,
+                LowRush:98,
+                Flat:95,
+                LowFlat:96,
+                Kick:93,
+                Level:76,
+                Hexa:60,
+                Wedge:35,
+                Ball:28,
+                Orb:36,
+                Needle:30,
+                Elevate:75
+            }
+        },
+
+        traits:[
+            "Heavy",
+            "Smash",
+            "Aggressive",
+            "Attack",
+            "Power"
+        ],
+
+        personality:{
+            aggression:100,
+            control:82,
+            consistency:78,
+            risk:78
+        }
+
+    },
+
+    wizard_rod:{
+
+        name:"Wizard Rod",
+        type:"Stamina",
+        tier:"Gold",
+        spin:"Right",
+        weight:37.0,
+
+        card:{
+            attack:52,
+            knockback:58,
+            defense:88,
+            mobility:44,
+            balance:97,
+            stamina:99,
+            burst:92
+        },
+
+        physics:{
+            weightClass:"Heavy",
+            centerOfGravity:"Very Low",
+            contactShape:"Round",
+            recoil:"Very Low",
+            lockStrength:92,
+            weightDistribution:"Outer"
+        },
+
+        behavior:{
+            attackStyle:"Stamina",
+            smashPower:22,
+            upperPower:14,
+            barragePower:35,
+            counterPower:70,
+            movementControl:97,
+            spinRetention:100,
+            lad:100,
+            burstResistance:92,
+
+            winConditions:{
+                spin:100,
+                burst:52,
+                knockout:18,
+                counter:60
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:95,
+                70:90,
+                80:72
+            },
+
+            bits:{
+                Ball:96,
+                Orb:92,
+                Hexa:98,
+                Needle:85,
+                Wedge:88,
+                Elevate:74,
+                Level:75,
+                Flat:40,
+                LowFlat:40,
+                Rush:84,
+                LowRush:76,
+                Kick:77
+            }
+        },
+
+        traits:[
+            "Stamina",
+            "LAD",
+            "Stable",
+            "Heavy",
+            "Spin Finish"
+        ],
+
+        personality:{
+            aggression:9,
+            control:99,
+            consistency:99,
+            risk:4
+        }
+
+    }
+
+};
 
 phoenix_wing:{
 
