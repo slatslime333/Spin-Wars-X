@@ -1,6 +1,6 @@
 /* ===========================
    SPIN WAR X
-   Version 0.0.3
+   MOBILE FIRST UI
 =========================== */
 
 *{
@@ -10,24 +10,33 @@
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
 
+html{
+
+    width:100%;
+    height:100%;
+
+}
+
 body{
 
+    width:100%;
+    min-height:100vh;
+
     background:#101217;
-    color:white;
+    color:#fff;
 
     overflow-x:hidden;
     overflow-y:auto;
 
     display:flex;
     justify-content:center;
-    align-items:center;
+    align-items:flex-start;
 
-    width:100vw;
-    height:100vh;
-    
 }
 
-/* Animated Background */
+/*=========================
+BACKGROUND
+=========================*/
 
 .background{
 
@@ -35,56 +44,50 @@ body{
     inset:0;
 
     background:
-    radial-gradient(circle at top,#2b3d66 0%,transparent 45%),
-    radial-gradient(circle at bottom,#3b1d5f 0%,transparent 45%),
-    #101217;
+        radial-gradient(circle at top,#304673 0%,transparent 45%),
+        radial-gradient(circle at bottom,#341b56 0%,transparent 45%),
+        #101217;
 
-    animation:bgMove 12s ease-in-out infinite alternate;
+    z-index:-1;
+
+    animation:bgMove 14s ease-in-out infinite alternate;
+
 }
 
 @keyframes bgMove{
 
-from{
-transform:scale(1);
+    from{
+
+        transform:scale(1);
+
+    }
+
+    to{
+
+        transform:scale(1.08);
+
+    }
+
 }
 
-to{
-transform:scale(1.12);
-}
-
-}
-
-/* Main */
-
-/* Main */
+/*=========================
+MAIN LAYOUT
+=========================*/
 
 .menu{
 
-    position:relative;
-
-    width:min(90vw,400px);
+    width:100%;
+    max-width:400px;
 
     margin:0 auto;
 
-    min-height:auto;
+    padding:18px 14px 24px;
 
     display:flex;
-
     flex-direction:column;
-
     align-items:center;
 
-    justify-content:flex-start;
-
-    gap:12px;
-
-    padding:20px 14px;
-
-    padding-bottom:20px;
-
-    box-sizing:border-box;
-
-    z-index:10;
+    gap:14px;
 
 }
 
@@ -92,29 +95,78 @@ transform:scale(1.12);
 
     width:100%;
 
-    background:rgba(20,20,30,.88);
+    background:rgba(20,20,30,.92);
 
-    border:2px solid #444;
+    border:2px solid rgba(255,255,255,.10);
 
-    border-radius:16px;
+    border-radius:18px;
 
-    padding:10px;
-
-    box-sizing:border-box;
+    padding:14px;
 
     overflow:hidden;
 
     display:flex;
-
     flex-direction:column;
 
     gap:10px;
 
 }
 
-/* Logo */
+/*=========================
+LOGO
+=========================*/
 
 .logo{
+
+    width:100%;
+
+    text-align:center;
+
+    margin-top:8px;
+
+    margin-bottom:8px;
+
+}
+
+.logo-icon{
+
+    font-size:48px;
+
+    margin-bottom:6px;
+
+}
+
+.logo h1{
+
+    font-size:42px;
+
+    font-weight:900;
+
+    letter-spacing:1px;
+
+    line-height:1;
+
+    margin-bottom:8px;
+
+}
+
+.logo p{
+
+    font-size:16px;
+
+    opacity:.75;
+
+}
+
+/*=========================
+HEADINGS
+=========================*/
+
+.menu-card h2{
+
+    font-size:30px;
+
+    font-weight:800;
 
     text-align:center;
 
@@ -122,114 +174,143 @@ transform:scale(1.12);
 
 }
 
-.logo-icon{
+.menu-card h3{
 
-font-size:42px;
-
-margin-bottom:8px;
-}
-
-.logo h1{
-
-    font-size:34px;
-
-    margin:6px 0;
-
-}
-
-.logo p{
-
-    font-size:15px;
-
-    opacity:.8;
-
-    margin:0;
-
-}
-
-/* Card */
-
-.menu-card{
-
-    width:100%;
-
-    background:rgba(20,20,30,.88);
-
-    border:2px solid #444;
-
-    border-radius:16px;
-
-    padding:14px;
-
-    box-sizing:border-box;
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:10px;
-
-}
-
-.menu-card h2{
-
-text-align:center;
-
-margin-bottom:6px;
-
-font-size:1.25rem;
-}
-
-/* Buttons */
-
-.menu-btn{
-
-    width:100%;
-
-    min-height:48px;
-
-    padding:12px;
-
-    border:none;
-
-    border-radius:12px;
-
-    font-size:17px;
+    font-size:22px;
 
     font-weight:700;
 
+}
+
+.menu-card p{
+
+    font-size:16px;
+
+    line-height:1.4;
+
+}
+
+/*=========================
+SECTION LABELS
+=========================*/
+
+.section-title{
+
+    font-size:18px;
+
+    font-weight:700;
+
+    opacity:.85;
+
+    margin-bottom:4px;
+
+}
+
+/*=========================
+BUTTONS
+=========================*/
+
+.menu-btn,
+.back-btn{
+
+    width:100%;
+
+    min-height:52px;
+
+    border:none;
+
+    border-radius:14px;
+
+    font-size:17px;
+
+    font-weight:800;
+
     cursor:pointer;
 
+    transition:
+        transform .15s,
+        filter .2s,
+        box-shadow .2s;
+
 }
 
-.menu-btn:active{
+.menu-btn{
 
-transform:scale(.96);
-}
+    color:white;
 
-.bronze{
-
-background:#9d6b44;
-}
-
-.silver{
-
-background:#8e98aa;
-}
-
-.gold{
-
-background:#c89d18;
-}
-
-.custom{
-
-background:#3b82f6;
 }
 
 .menu-btn:hover{
 
-filter:brightness(1.08);
+    filter:brightness(1.08);
+
+    transform:translateY(-2px);
+
+}
+
+.menu-btn:active,
+.back-btn:active{
+
+    transform:scale(.98);
+
+}
+
+.back-btn{
+
+    margin-top:8px;
+
+    background:#2b313d;
+
+    color:#fff;
+
+    border:2px solid rgba(255,255,255,.08);
+
+}
+
+.back-btn:hover{
+
+    background:#363d4b;
+
+}
+
+.bronze{
+
+    background:linear-gradient(
+        180deg,
+        #b98258,
+        #8b5c39
+    );
+
+}
+
+.silver{
+
+    background:linear-gradient(
+        180deg,
+        #bcc6d6,
+        #8792a5
+    );
+
+}
+
+.gold{
+
+    background:linear-gradient(
+        180deg,
+        #e2bc39,
+        #ba9011
+    );
+
+}
+
+.custom{
+
+    background:linear-gradient(
+        180deg,
+        #3f9cff,
+        #2464d6
+    );
+
 }
 
 /* Footer */
@@ -330,39 +411,39 @@ BLADE CARDS
 =========================*/
 
 .blade-card{
-    
-width:100%;
-max-width:100%;
-box-sizing:border-box;
-margin:0;
+
+    width:100%;
 
     background:linear-gradient(
         180deg,
-        #2a303d,
-        #181c25
+        rgba(50,58,74,.98),
+        rgba(26,30,40,.98)
     );
 
     border:2px solid rgba(255,255,255,.08);
 
-    border-radius:14px;
+    border-radius:18px;
 
-    padding:8px 10px;
-
-    margin-bottom:8px;
-
-    text-align:left;
+    padding:14px;
 
     cursor:pointer;
 
-    transition:.2s;
+    transition:
+        transform .18s,
+        box-shadow .18s,
+        border-color .18s;
 
-    user-select:none;
+    overflow:hidden;
 
 }
 
 .blade-card:hover{
 
     transform:translateY(-3px);
+
+    border-color:#58a6ff;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.35);
 
 }
 
@@ -372,57 +453,39 @@ margin:0;
 
 }
 
-.blade-name{
+.blade-card strong{
 
-    font-size:1.15rem;
-
-    font-weight:700;
-
-    margin-bottom:2px;
+    font-size:20px;
 
 }
 
-.blade-type{
+.blade-card hr{
 
-    opacity:.8;
+    margin:10px 0;
 
-    font-size:.9rem;
+    border:none;
 
-    margin-bottom:6px;
-
-}
-
-.blade-rating{
-
-    font-size:1.25rem;
-
-    font-weight:800;
-
-    color:#FFD84F;
-
-    margin-bottom:4px;
+    border-top:1px solid rgba(255,255,255,.08);
 
 }
 
-.blade-average{
+.blade-card div{
 
-    opacity:.85;
+    font-size:15px;
 
-    margin-bottom:6px;
-
-}
-
-.blade-weight{
-
-    opacity:.7;
-
-    font-size:.8rem;
-
-    margin-top:4px;
+    line-height:1.45;
 
 }
 
-hr{
+.menu-card hr{
+
+    margin:6px 0;
+
+    border:none;
+
+    border-top:1px solid rgba(255,255,255,.08);
+
+}
 
     margin:4px 0;
 
