@@ -178,10 +178,18 @@ stamina:84
 ];
 
 //=========================
-// ENGINE 2.0 BLADE DATA
+// ENGINE 2.0 DATABASES
 //=========================
 
 const BLADE_ENGINE = {
+
+};
+
+const RATCHET_ENGINE = {
+
+};
+
+const BIT_ENGINE = {
 
 };
 
@@ -908,6 +916,47 @@ container.appendChild(
 );
 
 }
+
+//=========================
+// ENGINE 2.0
+// COMPATIBILITY
+//=========================
+
+function evaluateBladeRatchet(){
+
+    return 0;
+
+}
+
+function evaluateBladeBit(){
+
+    return 0;
+
+}
+
+function evaluateFullCombo(){
+
+    return 0;
+
+}
+
+const CARD_STATS=[
+
+"attack",
+
+"knockback",
+
+"defense",
+
+"mobility",
+
+"balance",
+
+"stamina",
+
+"burst"
+
+];
 
 //=========================
 // STAT ENGINE
