@@ -197,7 +197,7 @@ const BLADE_ENGINE = {
 
         spin:"Right",
 
-        weight:36.4,
+        weight:37.4,
 
         //=========================
         // VISIBLE CARD
@@ -263,7 +263,7 @@ const BLADE_ENGINE = {
 
             lad:99,
 
-            burstResistance:95
+            burstResistance:95,
          
 winConditions:{
 
@@ -515,7 +515,7 @@ phoenix_wing:{
 
         "Power"
 
-    ]
+    ],
 
  personality:{
 
@@ -543,7 +543,7 @@ wizard_rod:{
 
     spin:"Right",
 
-    weight:36.0,
+    weight:37.0,
 
     //=========================
     // VISIBLE CARD
@@ -696,7 +696,9 @@ personality:{
     consistency:99,
 
     risk:4
- 
+
+}
+     
 },
 
 //=========================
