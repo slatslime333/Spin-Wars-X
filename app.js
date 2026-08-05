@@ -437,7 +437,7 @@ phoenix_wing:{
 
         lad:73,
 
-        burstResistance:87
+        burstResistance:87,
 
      winConditions:{
 
@@ -621,7 +621,9 @@ winConditions:{
 
     counter:60
 
-    },
+}
+     
+},
 
     //=========================
     // COMPATIBILITY
