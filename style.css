@@ -358,23 +358,6 @@ transform:translateY(0);
 
 }
 
-.menu{
-
-    width:min(94vw,430px);
-
-    margin:0 auto;
-
-    padding:20px 14px;
-
-    box-sizing:border-box;
-
-}
-
-width:470px;
-
-}
-
-}
 /*==================================
 DRAFT UI
 ==================================*/
@@ -480,14 +463,6 @@ BLADE CARDS
 .menu-card hr{
 
     margin:6px 0;
-
-    border:none;
-
-    border-top:1px solid rgba(255,255,255,.08);
-
-}
-
-    margin:4px 0;
 
     border:none;
 
