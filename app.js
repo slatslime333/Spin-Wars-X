@@ -385,47 +385,35 @@ function createBladeCard(blade){
 
     card.innerHTML=`
 
-        <div class="blade-name">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
 
-            ${blade.name}
+            <strong>${blade.name}</strong>
 
-        </div>
-
-        <div class="blade-type">
-
-            ${blade.type}
+            <strong>OVR ${ovr}</strong>
 
         </div>
 
-        <div class="blade-rating">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;opacity:.8;font-size:.9rem;">
 
-            OVR ${ovr}
+            <span>${blade.type}</span>
+
+            <span>${blade.weight}g</span>
 
         </div>
 
         <hr>
 
-        <div class="blade-weight">
+        <div>Attack ............. ${blade.stats.attack}</div>
 
-            ${blade.weight}g
+        <div>Knockback ...... ${blade.stats.knockback}</div>
 
-        </div>
+        <div>Defense .......... ${blade.stats.defense}</div>
 
-        <br>
+        <div>Evasiveness ... ${blade.stats.evasiveness}</div>
 
-        <div>
+        <div>Balance .......... ${blade.stats.balance}</div>
 
-            ⚔ ${blade.stats.attack}
-
-            &nbsp;&nbsp;
-
-            🛡 ${blade.stats.defense}
-
-            &nbsp;&nbsp;
-
-            🔋 ${blade.stats.stamina}
-
-        </div>
+        <div>Stamina ......... ${blade.stats.stamina}</div>
 
     `;
 
