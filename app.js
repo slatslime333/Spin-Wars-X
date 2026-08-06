@@ -2455,29 +2455,17 @@ function showLaunchScreen(){
 
             <h3>Select Launch Angle</h3>
 
-            <button
-                class="menu-btn bronze"
-                onclick="chooseLaunchAngle('Flat')">
+            <button class="menu-btn bronze" id="flatLaunch">
+    Flat
+</button>
 
-                Flat
+<button class="menu-btn silver" id="slightLaunch">
+    Slight Tilt
+</button>
 
-            </button>
-
-            <button
-                class="menu-btn silver"
-                onclick="chooseLaunchAngle('Slight Tilt')">
-
-                Slight Tilt
-
-            </button>
-
-            <button
-                class="menu-btn gold"
-                onclick="chooseLaunchAngle('Hard Tilt')">
-
-                Hard Tilt
-
-            </button>
+<button class="menu-btn gold" id="hardLaunch">
+    Hard Tilt
+</button>
 
         </section>
 
