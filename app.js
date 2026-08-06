@@ -2250,34 +2250,43 @@ menuCard.appendChild(
 } 
 
 //=========================
-// VS SCREEN
+// CPU DRAFT
 //=========================
 
-function showVS(){
+function generateCPUCombo(){
 
-    // Temporary CPU opponent
-    const pool = Object.values(BLADE_ENGINE).filter(
+    // Blade
+    const bladePool = Object.values(BLADE_ENGINE).filter(
 
         blade => blade.tier === Game.player.blade.tier
 
     );
 
-    Game.cpu.blade = pool[
-        Math.floor(Math.random()*pool.length)
+    Game.cpu.blade = bladePool[
+        Math.floor(Math.random()*bladePool.length)
     ];
 
-    // Temporary combo
-    Game.cpu.ratchet = {
+    // Ratchet
+    Game.cpu.ratchet = [...RATCHETS][
+        Math.floor(Math.random()*RATCHETS.length)
+    ];
 
-        name:"3-70"
+    // Bit
+    const bits = Object.values(BIT_ENGINE);
 
-    };
+    Game.cpu.bit = bits[
+        Math.floor(Math.random()*bits.length)
+    ];
 
-    Game.cpu.bit = {
+}
 
-        name:"Level"
+//=========================
+// VS SCREEN
+//=========================
 
-    };
+function showVS(){
+
+   generateCPUCombo();
 
     const app=document.getElementById("app");
 
