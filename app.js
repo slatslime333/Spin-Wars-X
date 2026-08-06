@@ -449,42 +449,173 @@ const BLADE_ENGINE = {
 
 const RATCHET_ENGINE = {
 
-    "1-60":{
+    "1":{
 
         weight:1,
-        height:60,
+
         stability:72,
+
         burstResistance:82,
+
         attackBias:96,
+
         defenseBias:45,
+
         staminaBias:52,
+
         mobilityBias:92
 
     },
 
-    "7-60":{
+    "3":{
+
+        weight:3,
+
+        stability:82,
+
+        burstResistance:86,
+
+        attackBias:82,
+
+        defenseBias:66,
+
+        staminaBias:68,
+
+        mobilityBias:84
+
+    },
+
+    "5":{
+
+        weight:5,
+
+        stability:90,
+
+        burstResistance:90,
+
+        attackBias:70,
+
+        defenseBias:82,
+
+        staminaBias:80,
+
+        mobilityBias:74
+
+    },
+
+    "6":{
+
+        weight:6,
+
+        stability:92,
+
+        burstResistance:92,
+
+        attackBias:64,
+
+        defenseBias:88,
+
+        staminaBias:86,
+
+        mobilityBias:70
+
+    },
+
+    "7":{
 
         weight:7,
-        height:60,
+
         stability:94,
+
         burstResistance:94,
+
         attackBias:58,
+
         defenseBias:94,
+
         staminaBias:92,
+
         mobilityBias:66
 
     },
 
-    "9-60":{
+    "9":{
 
         weight:9,
-        height:60,
+
         stability:99,
+
         burstResistance:98,
+
         attackBias:46,
+
         defenseBias:99,
+
         staminaBias:98,
+
         mobilityBias:54
+
+    }
+
+};
+
+//=========================
+// ENGINE 2.0 HEIGHTS
+//=========================
+
+const HEIGHT_ENGINE = {
+
+    "60":{
+
+        attack:2,
+
+        knockback:1,
+
+        defense:-1,
+
+        mobility:2,
+
+        balance:-1,
+
+        stamina:-2,
+
+        burst:2
+
+    },
+
+    "70":{
+
+        attack:0,
+
+        knockback:0,
+
+        defense:0,
+
+        mobility:0,
+
+        balance:1,
+
+        stamina:0,
+
+        burst:0
+
+    },
+
+    "80":{
+
+        attack:-2,
+
+        knockback:-1,
+
+        defense:3,
+
+        mobility:-3,
+
+        balance:3,
+
+        stamina:3,
+
+        burst:-4
 
     }
 
