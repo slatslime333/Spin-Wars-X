@@ -2843,4 +2843,59 @@ function showArena(){
 
 }
 
+//=========================
+// OPENING COMMENTARY
+//=========================
+
+function openingCommentary(){
+
+    const text=document.getElementById("arenaText");
+
+    const player=Game.player.blade;
+    const cpu=Game.cpu.blade;
+
+    let line="";
+
+    // Player launch
+
+    if(player.personality.aggression>=90){
+
+        line+=`${player.name} explodes off the launcher!\n\n`;
+
+    }else if(player.personality.control>=90){
+
+        line+=`${player.name} launches with incredible precision.\n\n`;
+
+    }else{
+
+        line+=`${player.name} gets a clean launch.\n\n`;
+
+    }
+
+    // CPU launch
+
+    if(cpu.personality.aggression>=90){
+
+        line+=`${cpu.name} rushes forward looking for a knockout!\n\n`;
+
+    }else if(cpu.personality.control>=90){
+
+        line+=`${cpu.name} calmly takes its position.\n\n`;
+
+    }else{
+
+        line+=`${cpu.name} enters the stadium confidently.\n\n`;
+
+    }
+
+    text.innerHTML=line;
+
+    setTimeout(()=>{
+
+        resolveOpening();
+
+    },2500);
+
+}
+
 hookMenuButtons();
