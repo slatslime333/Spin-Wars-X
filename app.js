@@ -2497,13 +2497,18 @@ document.getElementById("hardLaunch").onclick = () => {
 // CHOOSE LAUNCH ANGLE
 //=========================
 
-function chooseLaunchAngle(angle){
+   function chooseLaunchAngle(angle){
+
+    console.log("Launch Angle Selected:", angle);
 
     Game.player.launch.angle = angle;
+
+    alert("Button Works!");
 
     showLaunchTechnique();
 
 }
+
 
 //=========================
 // LAUNCH TECHNIQUE
