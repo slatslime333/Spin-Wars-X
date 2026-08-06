@@ -2439,15 +2439,63 @@ function showLaunchScreen(){
 
             <h1>LAUNCH PHASE</h1>
 
+            <hr>
+
+            <h2>${Game.player.blade.name}</h2>
+
+            <p>
+
+                ${Game.player.ratchet.name}
+                •
+                ${Game.player.bit.name}
+
+            </p>
+
             <br>
 
-            <p>Coming Next...</p>
+            <h3>Select Launch Angle</h3>
+
+            <button
+                class="menu-btn bronze"
+                onclick="chooseLaunchAngle('Flat')">
+
+                Flat
+
+            </button>
+
+            <button
+                class="menu-btn silver"
+                onclick="chooseLaunchAngle('Slight Tilt')">
+
+                Slight Tilt
+
+            </button>
+
+            <button
+                class="menu-btn gold"
+                onclick="chooseLaunchAngle('Hard Tilt')">
+
+                Hard Tilt
+
+            </button>
 
         </section>
 
     </main>
 
     `;
+
+}
+
+//=========================
+// CHOOSE LAUNCH ANGLE
+//=========================
+
+function chooseLaunchAngle(angle){
+
+    Game.player.launch.angle = angle;
+
+    showLaunchTechnique();
 
 }
 
