@@ -2609,4 +2609,16 @@ function showLaunchTechnique(){
 
 }
 
+//=========================
+// CHOOSE LAUNCH TECHNIQUE
+//=========================
+
+function chooseLaunchTechnique(technique){
+
+    Game.player.launch.technique = technique;
+
+    generateCPULaunch();
+
+}
+
 hookMenuButtons();
