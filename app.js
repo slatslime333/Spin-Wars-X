@@ -1875,6 +1875,40 @@ const CARD_STATS=[
 ];
 
 //=========================
+// ENGINE 2.0 HELPERS
+//=========================
+
+function getBladeEngine(blade){
+
+    return BLADE_ENGINE[
+        blade.name
+            .toLowerCase()
+            .replace(/ /g,"_")
+    ];
+
+}
+
+function scoreHeight(bladeData,height){
+
+    return bladeData.compatibility.heights[String(height)] ?? 50;
+
+}
+
+function scoreBit(bladeData,bitName){
+
+    return bladeData.compatibility.bits[
+        bitName.replace(/ /g,"")
+    ] ?? 50;
+
+}
+
+function average(a,b){
+
+    return Math.round((a+b)/2);
+
+}
+
+//=========================
 // STAT ENGINE
 //=========================
 
@@ -1906,65 +1940,37 @@ function calculateComboStats(){
 
     };
 
-    // Attack Synergies
+    const bladeData = getBladeEngine(blade);
 
-    if(blade.type==="Attack" && bit.name==="Low Rush"){
+if(bladeData){
 
-        stats.attack=clamp(stats.attack+3);
-        stats.knockback=clamp(stats.knockback+2);
+    const heightScore = scoreHeight(
+        bladeData,
+        ratchet.height
+    );
 
-    }
+    const bitScore = scoreBit(
+        bladeData,
+        bit.name
+    );
 
-    if(blade.type==="Attack" && bit.name==="Kick"){
+    const compatibility = average(
+        heightScore,
+        bitScore
+    );
 
-        stats.knockback=clamp(stats.knockback+4);
+    const modifier = Math.round(
+        (compatibility-50)/10
+    );
 
-    }
+    stats.attack      = clamp(stats.attack+modifier);
+    stats.knockback   = clamp(stats.knockback+modifier);
+    stats.defense     = clamp(stats.defense+modifier);
+    stats.evasiveness = clamp(stats.evasiveness+modifier);
+    stats.balance     = clamp(stats.balance+modifier);
+    stats.stamina     = clamp(stats.stamina+modifier);
 
-    if(blade.type==="Attack" && bit.name==="Low Flat"){
-
-        stats.attack=clamp(stats.attack+2);
-        stats.evasiveness=clamp(stats.evasiveness+2);
-
-    }
-
-    // Defense Synergies
-
-    if(blade.type==="Defense" && bit.name==="Hexa"){
-
-        stats.defense=clamp(stats.defense+5);
-        stats.balance=clamp(stats.balance+3);
-
-    }
-
-    if(blade.type==="Defense" && bit.name==="Wedge"){
-
-        stats.defense=clamp(stats.defense+4);
-
-    }
-
-    // Balance
-
-    if(blade.type==="Balance" && bit.name==="Level"){
-
-        stats.balance=clamp(stats.balance+3);
-
-    }
-
-    // Stamina
-
-    if(blade.type==="Stamina" && bit.name==="Ball"){
-
-        stats.stamina=clamp(stats.stamina+5);
-
-    }
-
-    if(blade.type==="Stamina" && bit.name==="Orb"){
-
-        stats.stamina=clamp(stats.stamina+3);
-
-    }
-
+}
     const ovr=Math.round(
 
         (
@@ -2002,6 +2008,7 @@ function calculateComboStats(){
 };
 
 }
+
 //=========================
 // COMBO CARD
 //=========================
