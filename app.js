@@ -437,14 +437,11 @@ const BLADE_ENGINE = {
     control:99,
     consistency:99,
     risk:4
-}
 
-    }
+      }
 
-};
-
-,
-
+    },
+ 
     shark_edge:{
 
         name:"Shark Edge",
