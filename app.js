@@ -443,6 +443,93 @@ const BLADE_ENGINE = {
 
 };
 
+,
+
+    shark_edge:{
+
+        name:"Shark Edge",
+        type:"Attack",
+        tier:"Silver",
+        spin:"Right",
+        weight:35.6,
+
+        card:{
+            attack:91,
+            knockback:89,
+            defense:68,
+            mobility:92,
+            balance:70,
+            stamina:63,
+            burst:73
+        },
+
+        physics:{
+            weightClass:"Medium",
+            centerOfGravity:"Low",
+            contactShape:"Upper Smash",
+            recoil:"High",
+            lockStrength:72,
+            weightDistribution:"Forward"
+        },
+
+        behavior:{
+            attackStyle:"Rush",
+            smashPower:92,
+            upperPower:95,
+            barragePower:74,
+            counterPower:28,
+            movementControl:90,
+            spinRetention:66,
+            lad:58,
+            burstResistance:73,
+
+            winConditions:{
+                spin:24,
+                burst:90,
+                knockout:98,
+                counter:30
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:99,
+                70:84,
+                80:38
+            },
+
+            bits:{
+                LowRush:100,
+                Rush:98,
+                LowFlat:98,
+                Flat:94,
+                Kick:90,
+                Level:84,
+                Hexa:30,
+                Wedge:25,
+                Ball:18,
+                Orb:20,
+                Needle:15,
+                Elevate:50
+            }
+        },
+
+        traits:[
+            "Upper Attack",
+            "Aggressive",
+            "Fast",
+            "Knockout",
+            "Glass Cannon"
+        ],
+
+        personality:{
+            aggression:99,
+            control:76,
+            consistency:68,
+            risk:95
+        }
+
+    }
 //=========================
 // ENGINE 2.0 RATCHETS
 //=========================
