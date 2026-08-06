@@ -2621,4 +2621,44 @@ function chooseLaunchTechnique(technique){
 
 }
 
+//=========================
+// CPU LAUNCH
+//=========================
+
+function generateCPULaunch(){
+
+    const angles=[
+
+        "Flat",
+        "Slight Tilt",
+        "Hard Tilt"
+
+    ];
+
+    const techniques=[
+
+        "Center",
+        "X-Rail",
+        "Direct Clash",
+        "Pocket Drop",
+        "Wide Circle"
+
+    ];
+
+    Game.cpu.launch.angle=
+
+        angles[
+            Math.floor(Math.random()*angles.length)
+        ];
+
+    Game.cpu.launch.technique=
+
+        techniques[
+            Math.floor(Math.random()*techniques.length)
+        ];
+
+    showLetItRip();
+
+}
+
 hookMenuButtons();
