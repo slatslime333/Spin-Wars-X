@@ -2473,6 +2473,24 @@ function showLaunchScreen(){
 
     `;
 
+document.getElementById("flatLaunch").onclick = () => {
+
+    chooseLaunchAngle("Flat");
+
+};
+
+document.getElementById("slightLaunch").onclick = () => {
+
+    chooseLaunchAngle("Slight Tilt");
+
+};
+
+document.getElementById("hardLaunch").onclick = () => {
+
+    chooseLaunchAngle("Hard Tilt");
+
+};
+
 }
 
 //=========================
@@ -2484,6 +2502,105 @@ function chooseLaunchAngle(angle){
     Game.player.launch.angle = angle;
 
     showLaunchTechnique();
+
+}
+
+//=========================
+// LAUNCH TECHNIQUE
+//=========================
+
+function showLaunchTechnique(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>LAUNCH TECHNIQUE</h1>
+
+            <hr>
+
+            <h2>${Game.player.blade.name}</h2>
+
+            <p>
+
+                Launch Angle:
+                <strong>${Game.player.launch.angle}</strong>
+
+            </p>
+
+            <br>
+
+            <button class="menu-btn bronze" id="centerLaunch">
+
+                Center
+
+            </button>
+
+            <button class="menu-btn silver" id="xrailLaunch">
+
+                X-Rail
+
+            </button>
+
+            <button class="menu-btn gold" id="clashLaunch">
+
+                Direct Clash
+
+            </button>
+
+            <button class="menu-btn bronze" id="pocketLaunch">
+
+                Pocket Drop
+
+            </button>
+
+            <button class="menu-btn silver" id="circleLaunch">
+
+                Wide Circle
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+    document.getElementById("centerLaunch").onclick=()=>{
+
+        chooseLaunchTechnique("Center");
+
+    };
+
+    document.getElementById("xrailLaunch").onclick=()=>{
+
+        chooseLaunchTechnique("X-Rail");
+
+    };
+
+    document.getElementById("clashLaunch").onclick=()=>{
+
+        chooseLaunchTechnique("Direct Clash");
+
+    };
+
+    document.getElementById("pocketLaunch").onclick=()=>{
+
+        chooseLaunchTechnique("Pocket Drop");
+
+    };
+
+    document.getElementById("circleLaunch").onclick=()=>{
+
+        chooseLaunchTechnique("Wide Circle");
+
+    };
 
 }
 
