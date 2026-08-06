@@ -1905,7 +1905,6 @@ function getCompatibilityScore(blade,ratchet,bit){
 // ENGINE 2.0 HELPERS
 //=========================
 
-function getBladeEngine(blade){
 
     return BLADE_ENGINE[
         blade.name
@@ -2130,8 +2129,8 @@ function showComboCard(){
 
             <p>🛡 Defense: ${combo.stats.defense}</p>
 
-            <p>🌀 Evasiveness: ${combo.stats.evasiveness}</p>
-
+            <p>🌀 Mobility: ${combo.stats.evasiveness}</p>
+            
             <p>⚖ Balance: ${combo.stats.balance}</p>
 
             <p>🔋 Stamina: ${combo.stats.stamina}</p>
