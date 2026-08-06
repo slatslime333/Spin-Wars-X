@@ -2041,19 +2041,15 @@ function calculateComboStats(){
 
     });
 
-    const ovr=Math.round(
+   const baseOVR = bladeData.card.ovr;
 
-        (
-            stats.attack+
-            stats.knockback+
-            stats.defense+
-            stats.evasiveness+
-            stats.balance+
-            stats.stamina+
-            stats.burst
-        )/7
+const compatibilityBonus = Math.round(
+    (compatibility - 50) / 10
+);
 
-    );
+const ovr = clamp(
+    baseOVR + compatibilityBonus
+);
 
     return{
 
