@@ -2254,8 +2254,6 @@ function calculateComboStats(){
 
     }
 
-    const stats={
-
         const stats = {
 
     attack: bladeData.card.attack,
