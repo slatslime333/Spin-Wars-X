@@ -41,7 +41,7 @@ stats:{
 attack:63,
 knockback:64,
 defense:84,
-evasiveness:65,
+mobility:65,
 balance:82,
 stamina:74
 }
@@ -57,7 +57,7 @@ stats:{
 attack:68,
 knockback:66,
 defense:70,
-evasiveness:71,
+mobility:71,
 balance:74,
 stamina:75
 }
@@ -73,7 +73,7 @@ stats:{
 attack:79,
 knockback:78,
 defense:64,
-evasiveness:76,
+mobility:76,
 balance:68,
 stamina:63
 }
@@ -89,7 +89,7 @@ stats:{
 attack:90,
 knockback:88,
 defense:69,
-evasiveness:87,
+mobility:87,
 balance:72,
 stamina:64
 }
@@ -105,7 +105,7 @@ stats:{
 attack:71,
 knockback:72,
 defense:89,
-evasiveness:66,
+mobility:66,
 balance:86,
 stamina:77
 }
@@ -121,7 +121,7 @@ stats:{
 attack:88,
 knockback:86,
 defense:70,
-evasiveness:84,
+mobility:84,
 balance:73,
 stamina:66
 }
@@ -137,7 +137,7 @@ stats:{
 attack:96,
 knockback:95,
 defense:80,
-evasiveness:82,
+mobility:82,
 balance:84,
 stamina:75
 }
@@ -153,7 +153,7 @@ stats:{
 attack:70,
 knockback:68,
 defense:84,
-evasiveness:70,
+mobility:70,
 balance:93,
 stamina:99
 }
@@ -169,7 +169,7 @@ stats:{
 attack:73,
 knockback:75,
 defense:94,
-evasiveness:68,
+mobility:68,
 balance:92,
 stamina:84
 }
@@ -1156,16 +1156,6 @@ const HEIGHT_ENGINE = {
 };
 
 //=========================
-// START GAME
-//=========================
-
-window.onload = () => {
-
-    hookMenuButtons();
-
-};
-
-//=========================
 // ENGINE 2.0 BITS
 //=========================
 
@@ -1760,7 +1750,7 @@ stats:{
 attack:4,
 knockback:5,
 defense:-2,
-evasiveness:3,
+mobility:3,
 balance:-3,
 stamina:-2
 }
@@ -1773,7 +1763,7 @@ stats:{
 attack:2,
 knockback:2,
 defense:1,
-evasiveness:1,
+mobility:1,
 balance:2,
 stamina:1
 }
@@ -1786,7 +1776,7 @@ stats:{
 attack:-1,
 knockback:1,
 defense:3,
-evasiveness:-1,
+mobility:-1,
 balance:3,
 stamina:3
 }
@@ -1799,7 +1789,7 @@ stats:{
 attack:-2,
 knockback:0,
 defense:5,
-evasiveness:-2,
+mobility:-2,
 balance:4,
 stamina:4
 }
@@ -1812,7 +1802,7 @@ stats:{
 attack:-3,
 knockback:-1,
 defense:6,
-evasiveness:-3,
+mobility:-3,
 balance:5,
 stamina:5
 }
@@ -1825,7 +1815,7 @@ stats:{
 attack:-4,
 knockback:-2,
 defense:8,
-evasiveness:-4,
+mobility:-4,
 balance:7,
 stamina:6
 }
@@ -1849,7 +1839,7 @@ RATCHET_BASES.forEach(base=>{
             attack:0,
             knockback:0,
             defense:0,
-            evasiveness:0,
+            mobility:0,
             balance:0,
             stamina:0
 
@@ -1858,7 +1848,7 @@ RATCHET_BASES.forEach(base=>{
         if(height===60){
 
             modifier.attack+=2;
-            modifier.evasiveness+=2;
+            modifier.mobility+=2;
             modifier.stamina-=2;
 
         }
@@ -1874,7 +1864,7 @@ RATCHET_BASES.forEach(base=>{
             modifier.defense+=2;
             modifier.balance+=2;
             modifier.stamina+=2;
-            modifier.evasiveness-=2;
+            modifier.mobility-=2;
 
         }
 
@@ -1894,7 +1884,7 @@ RATCHET_BASES.forEach(base=>{
 
                 defense:base.stats.defense+modifier.defense,
 
-                evasiveness:base.stats.mobility+modifier.mobility,
+                mobility:base.stats.mobility+modifier.mobility,
 
                 balance:base.stats.balance+modifier.balance,
 
@@ -1986,73 +1976,73 @@ const BITS = [
 
 {
 name:"Flat",
-stats:{attack:5,knockback:3,defense:-3,evasiveness:4,balance:-2,stamina:-4},
+stats:{attack:5,knockback:3,defense:-3,mobility:4,balance:-2,stamina:-4},
 traits:["attack","fast"]
 },
 
 {
 name:"Low Flat",
-stats:{attack:7,knockback:4,defense:-5,evasiveness:6,balance:-3,stamina:-5},
+stats:{attack:7,knockback:4,defense:-5,mobility:6,balance:-3,stamina:-5},
 traits:["attack","low"]
 },
 
 {
 name:"Rush",
-stats:{attack:7,knockback:4,defense:-5,evasiveness:6,balance:-3,stamina:-5},
+stats:{attack:7,knockback:4,defense:-5,mobility:6,balance:-3,stamina:-5},
 traits:["aggressive","fast"]
 },
 
 {
 name:"Low Rush",
-stats:{attack:8,knockback:5,defense:-6,evasiveness:7,balance:-4,stamina:-6},
+stats:{attack:8,knockback:5,defense:-6,mobility:7,balance:-4,stamina:-6},
 traits:["aggressive","low"]
 },
 
 {
 name:"Level",
-stats:{attack:4,knockback:2,defense:2,evasiveness:2,balance:4,stamina:1},
+stats:{attack:4,knockback:2,defense:2,mobility:2,balance:4,stamina:1},
 traits:["balance"]
 },
 
 {
 name:"Elevate",
-stats:{attack:-1,knockback:0,defense:3,evasiveness:3,balance:4,stamina:5},
+stats:{attack:-1,knockback:0,defense:3,mobility:3,balance:4,stamina:5},
 traits:["height","balance"]
 },
 
 {
 name:"Kick",
-stats:{attack:4,knockback:6,defense:-2,evasiveness:4,balance:-3,stamina:-3},
+stats:{attack:4,knockback:6,defense:-2,mobility:4,balance:-3,stamina:-3},
 traits:["smash"]
 },
 
 {
 name:"Wedge",
-stats:{attack:-2,knockback:1,defense:7,evasiveness:-4,balance:7,stamina:3},
+stats:{attack:-2,knockback:1,defense:7,mobility:-4,balance:7,stamina:3},
 traits:["defense"]
 },
 
 {
 name:"Hexa",
-stats:{attack:-1,knockback:0,defense:8,evasiveness:-3,balance:8,stamina:4},
+stats:{attack:-1,knockback:0,defense:8,mobility:-3,balance:8,stamina:4},
 traits:["defense","antiTilt"]
 },
 
 {
 name:"Needle",
-stats:{attack:-4,knockback:-3,defense:7,evasiveness:-6,balance:7,stamina:3},
+stats:{attack:-4,knockback:-3,defense:7,mobility:-6,balance:7,stamina:3},
 traits:["defense"]
 },
 
 {
 name:"Ball",
-stats:{attack:-5,knockback:-3,defense:4,evasiveness:-4,balance:5,stamina:8},
+stats:{attack:-5,knockback:-3,defense:4,mobility:-4,balance:5,stamina:8},
 traits:["stamina"]
 },
 
 {
 name:"Orb",
-stats:{attack:-3,knockback:-2,defense:3,evasiveness:-2,balance:4,stamina:6},
+stats:{attack:-3,knockback:-2,defense:3,mobility:-2,balance:4,stamina:6},
 traits:["stamina"]
 }
 
