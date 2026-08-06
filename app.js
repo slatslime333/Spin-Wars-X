@@ -2673,25 +2673,58 @@ function showLetItRip(){
 
         <section class="menu-card">
 
-            <h1>3...</h1>
+            <h1 id="ripText">
+
+                3...
+
+            </h1>
 
             <br>
 
-            <h1>2...</h1>
+            <p>
 
-            <br>
+                Both Bladers Prepare...
 
-            <h1>1...</h1>
-
-            <br><br>
-
-            <h1>LET IT RIP!</h1>
+            </p>
 
         </section>
 
     </main>
 
     `;
+
+    const countdown=[
+
+        "3...",
+        "2...",
+        "1...",
+        "LET IT RIP!"
+
+    ];
+
+    let index=0;
+
+    const timer=setInterval(()=>{
+
+        index++;
+
+        document.getElementById("ripText").textContent=
+
+            countdown[index];
+
+        if(index===3){
+
+            clearInterval(timer);
+
+            setTimeout(()=>{
+
+                generateArena();
+
+            },1000);
+
+        }
+
+    },1000);
 
 }
 
