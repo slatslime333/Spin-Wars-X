@@ -38,12 +38,26 @@ const Game = {
     },
 
     match:{
-        round:1,
-        playerPoints:0,
-        cpuPoints:0
-    }
+    round:1,
+    playerPoints:0,
+    cpuPoints:0
+},
 
-};
+arena:{
+
+    playerSide:null,
+
+    cpuSide:null,
+
+    xRail:"Bottom",
+
+    xExit:"Top",
+
+    playerLane:null,
+
+    cpuLane:null
+
+}
 
 //=========================
 // ENGINE 2.0 DATABASES
@@ -1330,6 +1344,35 @@ orb:{
 }
 
 };
+
+//=========================
+// GENERATE ARENA
+//=========================
+
+function generateArena(){
+
+    // Swap sides every 2 rounds
+    const swap=Math.floor((Game.match.round-1)/2)%2;
+
+    if(swap===0){
+
+        Game.arena.playerSide="Left";
+        Game.arena.cpuSide="Right";
+
+    }else{
+
+        Game.arena.playerSide="Right";
+        Game.arena.cpuSide="Left";
+
+    }
+
+    Game.arena.playerLane="Outer";
+
+    Game.arena.cpuLane="Outer";
+
+    showArena();
+
+}
 
 //=========================
 // MENU
@@ -2725,6 +2768,78 @@ function showLetItRip(){
         }
 
     },1000);
+
+}
+
+//=========================
+// SHOW ARENA
+//=========================
+
+function showArena(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>ROUND ${Game.match.round}</h1>
+
+            <hr>
+
+<pre style="font-size:18px;line-height:1.5;text-align:center;">
+
+           X EXIT
+             ▲
+
+ ${Game.arena.playerSide.toUpperCase()} ●         ● ${Game.arena.cpuSide.toUpperCase()}
+
+        ╲       ╱
+
+🕳══════ X-RAIL ══════🕳
+         🕳
+
+</pre>
+
+            <hr>
+
+            <p>
+
+                Player Side:
+                <strong>${Game.arena.playerSide}</strong>
+
+            </p>
+
+            <p>
+
+                CPU Side:
+                <strong>${Game.arena.cpuSide}</strong>
+
+            </p>
+
+            <br>
+
+            <p id="arenaText">
+
+                Entering Stadium...
+
+            </p>
+
+        </section>
+
+    </main>
+
+    `;
+
+    setTimeout(()=>{
+
+        openingCommentary();
+
+    },2000);
 
 }
 
