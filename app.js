@@ -412,7 +412,7 @@ const BLADE_ENGINE = {
                 Ball:96,
                 Orb:92,
                 Hexa:98,
-                Needle:85,
+                Needle:84,
                 Wedge:88,
                 Elevate:74,
                 Level:75,
@@ -527,9 +527,436 @@ const BLADE_ENGINE = {
 
            }
      
+        },
+
+       dran_sword:{
+
+        name:"Dran Sword",
+        type:"Attack",
+        tier:"Silver",
+        spin:"Right",
+        weight:35.8,
+
+        card:{
+            attack:88,
+            knockback:86,
+            defense:70,
+            mobility:84,
+            balance:73,
+            stamina:66,
+            burst:78
+        },
+
+        physics:{
+            weightClass:"Medium",
+            centerOfGravity:"Low",
+            contactShape:"Smash",
+            recoil:"High",
+            lockStrength:78,
+            weightDistribution:"Balanced"
+        },
+
+        behavior:{
+            attackStyle:"Smash",
+            smashPower:90,
+            upperPower:72,
+            barragePower:82,
+            counterPower:34,
+            movementControl:82,
+            spinRetention:72,
+            lad:62,
+            burstResistance:78,
+
+            winConditions:{
+                spin:36,
+                burst:88,
+                knockout:93,
+                counter:42
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:98,
+                70:88,
+                80:44
+            },
+
+            bits:{
+                LowRush:96,
+                Rush:98,
+                Flat:94,
+                LowFlat:94,
+                Kick:92,
+                Level:82,
+                Elevate:66,
+                Hexa:42,
+                Wedge:30,
+                Ball:24,
+                Orb:26,
+                Needle:18
+            }
+        },
+
+        traits:[
+            "Smash Attack",
+            "Aggressive",
+            "Versatile",
+            "Fast"
+        ],
+
+        personality:{
+            aggression:90,
+            control:80,
+            consistency:78,
+            risk:82
+         
         }
 
-    };
+    },
+
+    knight_mail:{
+
+        name:"Knight Mail",
+        type:"Defense",
+        tier:"Silver",
+        spin:"Right",
+        weight:36.0,
+
+        card:{
+            attack:70,
+            knockback:86,
+            defense:91,
+            mobility:62,
+            balance:90,
+            stamina:71,
+            burst:91
+        },
+
+        physics:{
+            weightClass:"Heavy",
+            centerOfGravity:"Low",
+            contactShape:"Round",
+            recoil:"Low",
+            lockStrength:91,
+            weightDistribution:"Outer"
+        },
+
+        behavior:{
+            attackStyle:"Counter",
+            smashPower:44,
+            upperPower:70,
+            barragePower:56,
+            counterPower:91,
+            movementControl:90,
+            spinRetention:86,
+            lad:82,
+            burstResistance:91,
+
+            winConditions:{
+                spin:82,
+                burst:64,
+                knockout:58,
+                counter:92
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:98,
+                70:94,
+                80:60
+            },
+
+            bits:{
+                Hexa:88,
+                Wedge:90,
+                Needle:40,
+                Ball:82,
+                Orb:80,
+                Level:93,
+                Elevate:80,
+                Flat:80,
+                LowFlat:75,
+                Rush:94,
+                LowRush:96,
+                Kick:82
+            }
+        },
+
+        traits:[
+            "Counter",
+            "Defense",
+            "Heavy",
+            "Stable"
+        ],
+
+        personality:{
+            aggression:38,
+            control:94,
+            consistency:92,
+            risk:24
+        }
+
+    },
+
+    shelter_drake:{
+
+        name:"Shelter Drake",
+        type:"Balance",
+        tier:"Bronze",
+        spin:"Right",
+        weight:32.4,
+
+        card:{
+            attack:75,
+            knockback:76,
+            defense:65,
+            mobility:84,
+            balance:82,
+            stamina:80,
+            burst:66
+        },
+
+        physics:{
+            weightClass:"Light",
+            centerOfGravity:"Low",
+            contactShape:"Thin Oval",
+            recoil:"Medium",
+            lockStrength:66,
+            weightDistribution:"Balanced"
+        },
+
+        behavior:{
+            attackStyle:"Precision Smash",
+            smashPower:88,
+            upperPower:58,
+            barragePower:74,
+            counterPower:52,
+            movementControl:84,
+            spinRetention:72,
+            lad:68,
+            burstResistance:66,
+
+            winConditions:{
+                spin:54,
+                burst:72,
+                knockout:86,
+                counter:58
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:100,
+                70:84,
+                80:42
+            },
+
+            bits:{
+                LowRush:89,
+                Rush:88,
+                Flat:83,
+                LowFlat:83,
+                Kick:84,
+                Level:82,
+                Elevate:74,
+                Hexa:44,
+                Wedge:88,
+                Ball:34,
+                Orb:38,
+                Needle:94
+            }
+        },
+
+        traits:[
+            "Precision",
+            "Lightweight",
+            "Smash Attack",
+            "High Skill"
+        ],
+
+        personality:{
+            aggression:86,
+            control:78,
+            consistency:62,
+            risk:88
+        }
+
+    },
+
+    arrow_wizard:{
+
+        name:"Arrow Wizard",
+        type:"Balance",
+        tier:"Bronze",
+        spin:"Right",
+        weight:35.0,
+
+        card:{
+            attack:70,
+            knockback:68,
+            defense:72,
+            mobility:74,
+            balance:82,
+            stamina:78,
+            burst:76
+        },
+
+        physics:{
+            weightClass:"Medium",
+            centerOfGravity:"Centered",
+            contactShape:"Multi Contact",
+            recoil:"Medium",
+            lockStrength:76,
+            weightDistribution:"Balanced"
+        },
+
+        behavior:{
+            attackStyle:"Balanced",
+            smashPower:70,
+            upperPower:42,
+            barragePower:74,
+            counterPower:70,
+            movementControl:82,
+            spinRetention:82,
+            lad:78,
+            burstResistance:76,
+
+            winConditions:{
+                spin:78,
+                burst:58,
+                knockout:64,
+                counter:74
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:88,
+                70:100,
+                80:82
+            },
+
+            bits:{
+                Level:100,
+                Orb:92,
+                Ball:88,
+                Hexa:84,
+                Wedge:82,
+                Elevate:86,
+                Flat:72,
+                LowFlat:66,
+                Rush:68,
+                LowRush:62,
+                Kick:74,
+                Needle:84
+            }
+        },
+
+        traits:[
+            "Balanced",
+            "Versatile",
+            "Consistent",
+            "Control"
+        ],
+
+        personality:{
+            aggression:56,
+            control:90,
+            consistency:90,
+            risk:34
+         
+        }
+
+    },
+
+    viper_tail:{
+
+        name:"Viper Tail",
+        type:"Attack",
+        tier:"Bronze",
+        spin:"Right",
+        weight:35.2,
+
+        card:{
+            attack:82,
+            knockback:80,
+            defense:64,
+            mobility:86,
+            balance:68,
+            stamina:62,
+            burst:70
+        },
+
+        physics:{
+            weightClass:"Medium",
+            centerOfGravity:"Forward",
+            contactShape:"Upper Attack",
+            recoil:"High",
+            lockStrength:70,
+            weightDistribution:"Forward"
+        },
+
+        behavior:{
+            attackStyle:"Rush",
+            smashPower:84,
+            upperPower:88,
+            barragePower:76,
+            counterPower:32,
+            movementControl:82,
+            spinRetention:66,
+            lad:60,
+            burstResistance:70,
+
+            winConditions:{
+                spin:26,
+                burst:74,
+                knockout:90,
+                counter:30
+            }
+        },
+
+        compatibility:{
+            heights:{
+                60:100,
+                70:82,
+                80:40
+            },
+
+            bits:{
+                LowRush:98,
+                Rush:96,
+                LowFlat:96,
+                Flat:94,
+                Kick:90,
+                Level:78,
+                Elevate:66,
+                Hexa:32,
+                Wedge:28,
+                Ball:20,
+                Orb:22,
+                Needle:18
+            }
+        },
+
+        traits:[
+            "Upper Attack",
+            "Fast",
+            "Aggressive",
+            "Glass Cannon"
+        ],
+
+        personality:{
+            aggression:94,
+            control:74,
+            consistency:68,
+            risk:90
+        }
+
+    }
+ 
+};
 
 //=========================
 // ENGINE 2.0 RATCHETS
@@ -637,9 +1064,9 @@ const RATCHET_ENGINE = {
 
         attackBias:46,
 
-        defenseBias:99,
+        defenseBias:98,
 
-        staminaBias:98,
+        staminaBias:95,
 
         mobilityBias:54
 
