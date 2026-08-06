@@ -2466,5 +2466,7 @@ menuCard.appendChild(
     })
 
 );
- 
+
+} // end of showComboCard
+
 hookMenuButtons();
