@@ -38,9 +38,13 @@ const Game = {
     },
 
     match:{
+
     round:1,
+
     playerPoints:0,
+
     cpuPoints:0
+
 },
 
 arena:{
@@ -57,7 +61,25 @@ arena:{
 
     cpuLane:null
 
+},
+
+battle:{
+
+    openingWinner:null,
+
+    centerControl:null,
+
+    momentum:0,
+
+    firstHit:false,
+
+    clashStrength:0,
+
+    phase:"Opening"
+
 }
+
+};
 
 //=========================
 // ENGINE 2.0 DATABASES
@@ -2895,6 +2917,76 @@ function openingCommentary(){
         resolveOpening();
 
     },2500);
+
+}
+
+//=========================
+// RESOLVE OPENING
+//=========================
+
+function resolveOpening(){
+
+    const player=Game.player.blade;
+    const cpu=Game.cpu.blade;
+
+    let playerScore=0;
+    let cpuScore=0;
+
+    // Aggression
+    playerScore+=player.personality.aggression;
+    cpuScore+=cpu.personality.aggression;
+
+    // Mobility
+    playerScore+=player.card.mobility;
+    cpuScore+=cpu.card.mobility;
+
+    // Launch Angle
+
+    switch(Game.player.launch.angle){
+
+        case "Flat":
+            playerScore+=5;
+            break;
+
+        case "Slight Tilt":
+            playerScore+=3;
+            break;
+
+        case "Hard Tilt":
+            playerScore+=1;
+            break;
+
+    }
+
+    switch(Game.cpu.launch.angle){
+
+        case "Flat":
+            cpuScore+=5;
+            break;
+
+        case "Slight Tilt":
+            cpuScore+=3;
+            break;
+
+        case "Hard Tilt":
+            cpuScore+=1;
+            break;
+
+    }
+
+    if(playerScore>cpuScore){
+
+        showOpeningResult("PLAYER");
+
+    }else if(cpuScore>playerScore){
+
+        showOpeningResult("CPU");
+
+    }else{
+
+        showOpeningResult("DRAW");
+
+    }
 
 }
 
