@@ -8,30 +8,39 @@
 //=========================
 
 const Game = {
-    version: "0.5.0",
-    screen: "menu",
-    mode: null,
 
-    player: {
-        blade: null,
-        ratchet: null,
-        bit: null
+    version:"0.5.0",
+
+    screen:"menu",
+
+    mode:null,
+
+    player:{
+        blade:null,
+        ratchet:null,
+        bit:null,
+
+        launch:{
+            angle:null,
+            technique:null
+        }
     },
 
-    cpu: {
-        blade: null,
-        ratchet: null,
-        bit: null
+    cpu:{
+        blade:null,
+        ratchet:null,
+        bit:null,
+
+        launch:{
+            angle:null,
+            technique:null
+        }
     },
 
-    match: {
-
-        round: 1,
-
-        playerPoints: 0,
-
-        cpuPoints: 0
-
+    match:{
+        round:1,
+        playerPoints:0,
+        cpuPoints:0
     }
 
 };
