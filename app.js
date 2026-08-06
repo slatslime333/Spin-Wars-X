@@ -26,158 +26,6 @@ const Game = {
 };
 
 //=========================
-// BLADE DATABASE
-//=========================
-
-const BLADES = [
-
-{
-name:"Knight Shield",
-tier:"Bronze",
-type:"Defense",
-weight:34.8,
-
-stats:{
-attack:63,
-knockback:64,
-defense:84,
-mobility:65,
-balance:82,
-stamina:74
-}
-},
-
-{
-name:"Arrow Wizard",
-tier:"Bronze",
-type:"Balance",
-weight:35.0,
-
-stats:{
-attack:68,
-knockback:66,
-defense:70,
-mobility:71,
-balance:74,
-stamina:75
-}
-},
-
-{
-name:"Viper Tail",
-tier:"Bronze",
-type:"Attack",
-weight:35.2,
-
-stats:{
-attack:79,
-knockback:78,
-defense:64,
-mobility:76,
-balance:68,
-stamina:63
-}
-},
-
-{
-name:"Shark Edge",
-tier:"Silver",
-type:"Attack",
-weight:35.6,
-
-stats:{
-attack:90,
-knockback:88,
-defense:69,
-mobility:87,
-balance:72,
-stamina:64
-}
-},
-
-{
-name:"Knight Mail",
-tier:"Silver",
-type:"Defense",
-weight:36.0,
-
-stats:{
-attack:71,
-knockback:72,
-defense:89,
-mobility:66,
-balance:86,
-stamina:77
-}
-},
-
-{
-name:"Dran Sword",
-tier:"Silver",
-type:"Attack",
-weight:35.8,
-
-stats:{
-attack:88,
-knockback:86,
-defense:70,
-mobility:84,
-balance:73,
-stamina:66
-}
-},
-
-{
-name:"Phoenix Wing",
-tier:"Gold",
-type:"Attack",
-weight:38.0,
-
-stats:{
-attack:96,
-knockback:95,
-defense:80,
-mobility:82,
-balance:84,
-stamina:75
-}
-},
-
-{
-name:"Wizard Rod",
-tier:"Gold",
-type:"Stamina",
-weight:37.0,
-
-stats:{
-attack:70,
-knockback:68,
-defense:84,
-mobility:70,
-balance:93,
-stamina:99
-}
-},
-
-{
-name:"Silver Wolf",
-tier:"Gold",
-type:"Defense",
-weight:37.4,
-
-stats:{
-attack:73,
-knockback:75,
-defense:94,
-mobility:68,
-balance:92,
-stamina:84
-}
-}
-
-];
-
-//=========================
 // ENGINE 2.0 DATABASES
 //=========================
 
@@ -1180,8 +1028,8 @@ const BIT_ENGINE = {
         behavior:{
             speed:96,
             aggression:92,
-            control:72,
-            staminaRetention:60
+            control:60,
+            staminaRetention:62
         }
 
     },
@@ -1204,9 +1052,9 @@ const BIT_ENGINE = {
 
         behavior:{
             speed:99,
-            aggression:98,
-            control:68,
-            staminaRetention:56
+            aggression:93,
+            control:74,
+            staminaRetention:70
         }
 
     },
@@ -1229,9 +1077,9 @@ const BIT_ENGINE = {
 
         behavior:{
             speed:98,
-            aggression:100,
-            control:70,
-            staminaRetention:58
+            aggression:90,
+            control:78,
+            staminaRetention:74
         }
 
     },
@@ -1968,85 +1816,6 @@ draftRatchets.forEach(r=>{
  
 }
 
-//=========================
-// BIT DATABASE
-//=========================
-
-const BITS = [
-
-{
-name:"Flat",
-stats:{attack:5,knockback:3,defense:-3,mobility:4,balance:-2,stamina:-4},
-traits:["attack","fast"]
-},
-
-{
-name:"Low Flat",
-stats:{attack:7,knockback:4,defense:-5,mobility:6,balance:-3,stamina:-5},
-traits:["attack","low"]
-},
-
-{
-name:"Rush",
-stats:{attack:7,knockback:4,defense:-5,mobility:6,balance:-3,stamina:-5},
-traits:["aggressive","fast"]
-},
-
-{
-name:"Low Rush",
-stats:{attack:8,knockback:5,defense:-6,mobility:7,balance:-4,stamina:-6},
-traits:["aggressive","low"]
-},
-
-{
-name:"Level",
-stats:{attack:4,knockback:2,defense:2,mobility:2,balance:4,stamina:1},
-traits:["balance"]
-},
-
-{
-name:"Elevate",
-stats:{attack:-1,knockback:0,defense:3,mobility:3,balance:4,stamina:5},
-traits:["height","balance"]
-},
-
-{
-name:"Kick",
-stats:{attack:4,knockback:6,defense:-2,mobility:4,balance:-3,stamina:-3},
-traits:["smash"]
-},
-
-{
-name:"Wedge",
-stats:{attack:-2,knockback:1,defense:7,mobility:-4,balance:7,stamina:3},
-traits:["defense"]
-},
-
-{
-name:"Hexa",
-stats:{attack:-1,knockback:0,defense:8,mobility:-3,balance:8,stamina:4},
-traits:["defense","antiTilt"]
-},
-
-{
-name:"Needle",
-stats:{attack:-4,knockback:-3,defense:7,mobility:-6,balance:7,stamina:3},
-traits:["defense"]
-},
-
-{
-name:"Ball",
-stats:{attack:-5,knockback:-3,defense:4,mobility:-4,balance:5,stamina:8},
-traits:["stamina"]
-},
-
-{
-name:"Orb",
-stats:{attack:-3,knockback:-2,defense:3,mobility:-2,balance:4,stamina:6},
-traits:["stamina"]
-}
-
-];
 //=========================
 // SHOW BITS
 //=========================
