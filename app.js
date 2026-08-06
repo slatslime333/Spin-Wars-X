@@ -1905,15 +1905,6 @@ function getCompatibilityScore(blade,ratchet,bit){
 // ENGINE 2.0 HELPERS
 //=========================
 
-
-    return BLADE_ENGINE[
-        blade.name
-            .toLowerCase()
-            .replace(/ /g,"_")
-    ];
-
-}
-
 function scoreHeight(bladeData,height){
 
     return bladeData.compatibility.heights[String(height)] ?? 50;
