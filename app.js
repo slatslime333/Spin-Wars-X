@@ -2466,6 +2466,5 @@ menuCard.appendChild(
     })
 
 );
- document.addEventListener("DOMContentLoaded", () => {
-    hookMenuButtons();
-});
+ 
+hookMenuButtons();
