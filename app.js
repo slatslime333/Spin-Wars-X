@@ -1250,7 +1250,232 @@ const BIT_ENGINE = {
             staminaRetention:58
         }
 
+    },
+ 
+ low_rush:{
+
+    name:"Low Rush",
+
+    type:"Attack",
+
+    card:{
+        attack:99,
+        knockback:94,
+        defense:56,
+        mobility:99,
+        balance:62,
+        stamina:54,
+        burst:78
+    },
+
+    behavior:{
+        speed:100,
+        aggression:100,
+        control:64,
+        staminaRetention:54
     }
+
+},
+
+level:{
+
+    name:"Level",
+
+    type:"Balance",
+
+    card:{
+        attack:78,
+        knockback:76,
+        defense:80,
+        mobility:78,
+        balance:94,
+        stamina:80,
+        burst:86
+    },
+
+    behavior:{
+        speed:76,
+        aggression:64,
+        control:94,
+        staminaRetention:82
+    }
+
+},
+
+elevate:{
+
+    name:"Elevate",
+
+    type:"Balance",
+
+    card:{
+        attack:70,
+        knockback:72,
+        defense:86,
+        mobility:82,
+        balance:92,
+        stamina:92,
+        burst:84
+    },
+
+    behavior:{
+        speed:72,
+        aggression:52,
+        control:96,
+        staminaRetention:94
+    }
+
+},
+
+ kick:{
+
+    name:"Kick",
+
+    type:"Attack",
+
+    card:{
+        attack:90,
+        knockback:98,
+        defense:68,
+        mobility:86,
+        balance:66,
+        stamina:64,
+        burst:82
+    },
+
+    behavior:{
+        speed:84,
+        aggression:94,
+        control:74,
+        staminaRetention:66
+    }
+
+},
+
+wedge:{
+
+    name:"Wedge",
+
+    type:"Defense",
+
+    card:{
+        attack:58,
+        knockback:66,
+        defense:95,
+        mobility:52,
+        balance:96,
+        stamina:84,
+        burst:92
+    },
+
+    behavior:{
+        speed:48,
+        aggression:30,
+        control:98,
+        staminaRetention:86
+    }
+
+},
+
+hexa:{
+
+    name:"Hexa",
+
+    type:"Defense",
+
+    card:{
+        attack:60,
+        knockback:68,
+        defense:98,
+        mobility:56,
+        balance:98,
+        stamina:88,
+        burst:94
+    },
+
+    behavior:{
+        speed:52,
+        aggression:26,
+        control:100,
+        staminaRetention:90
+    }
+
+},
+
+needle:{
+
+    name:"Needle",
+
+    type:"Defense",
+
+    card:{
+        attack:50,
+        knockback:58,
+        defense:94,
+        mobility:40,
+        balance:94,
+        stamina:82,
+        burst:90
+    },
+
+    behavior:{
+        speed:38,
+        aggression:20,
+        control:98,
+        staminaRetention:84
+    }
+
+},
+
+ball:{
+
+    name:"Ball",
+
+    type:"Stamina",
+
+    card:{
+        attack:46,
+        knockback:54,
+        defense:82,
+        mobility:48,
+        balance:92,
+        stamina:99,
+        burst:88
+    },
+
+    behavior:{
+        speed:46,
+        aggression:18,
+        control:96,
+        staminaRetention:100
+    }
+
+},
+
+orb:{
+
+    name:"Orb",
+
+    type:"Stamina",
+
+    card:{
+        attack:54,
+        knockback:60,
+        defense:84,
+        mobility:58,
+        balance:90,
+        stamina:95,
+        burst:86
+    },
+
+    behavior:{
+        speed:54,
+        aggression:24,
+        control:94,
+        staminaRetention:96
+    }
+
+}
 
 };
 
@@ -1675,7 +1900,7 @@ RATCHET_BASES.forEach(base=>{
 
                 defense:base.stats.defense+modifier.defense,
 
-                evasiveness:base.stats.evasiveness+modifier.evasiveness,
+                evasiveness:base.stats.mobility+modifier.mobility,
 
                 balance:base.stats.balance+modifier.balance,
 
@@ -1874,9 +2099,9 @@ function showBitDraft(){
 
     const container=document.getElementById("bitContainer");
 
-    const draftBits=[...BITS]
-.sort(()=>Math.random()-0.5)
-.slice(0,3);
+    const draftBits = Object.values(BIT_ENGINE)
+    .sort(()=>Math.random()-0.5)
+    .slice(0,3);
 
 draftBits.forEach(bit=>{
 
@@ -2079,7 +2304,7 @@ function calculateComboStats(){
         (ratchetData.staminaBias-50)/10
     );
 
-    stats.evasiveness+=Math.round(
+    stats.mobility+=Math.round(
         (ratchetData.mobilityBias-50)/10
     );
 
@@ -2096,7 +2321,7 @@ function calculateComboStats(){
     stats.attack+=heightData.attack;
     stats.knockback+=heightData.knockback;
     stats.defense+=heightData.defense;
-    stats.evasiveness+=heightData.mobility;
+    stats.mobility+=heightData.mobility;
     stats.balance+=heightData.balance;
     stats.stamina+=heightData.stamina;
     stats.burst+=heightData.burst;
@@ -2106,7 +2331,7 @@ function calculateComboStats(){
     stats.attack+=bit.stats.attack;
     stats.knockback+=bit.stats.knockback;
     stats.defense+=bit.stats.defense;
-    stats.evasiveness+=bit.stats.evasiveness;
+    stats.mobility+=bit.stats.mobility;
     stats.balance+=bit.stats.balance;
     stats.stamina+=bit.stats.stamina;
 
@@ -2210,7 +2435,7 @@ function showComboCard(){
 
             <p>🛡 Defense: ${combo.stats.defense}</p>
 
-            <p>🌀 Mobility: ${combo.stats.evasiveness}</p>
+            <p>🌀 Mobility: ${combo.stats.mobility}</p>
             
             <p>⚖ Balance: ${combo.stats.balance}</p>
 
