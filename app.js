@@ -8,7 +8,7 @@
 //=========================
 
 const Game = {
-    version: "0.2.0",
+    version: "0.5.0",
     screen: "menu",
     mode: null,
 
