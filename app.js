@@ -1165,12 +1165,6 @@ window.onload = () => {
 
 };
 
-const HEIGHT_ENGINE = {
-
-    ...
-    
-};
-
 //=========================
 // ENGINE 2.0 BITS
 //=========================
@@ -2272,15 +2266,17 @@ function calculateComboStats(){
 
     const stats={
 
-        attack:bladeData.card.attack,
-        knockback:bladeData.card.knockback,
-        defense:bladeData.card.defense,
-        evasiveness:bladeData.card.mobility,
-        balance:bladeData.card.balance,
-        stamina:bladeData.card.stamina,
-        burst:bladeData.card.burst
+        const stats = {
 
-    };
+    attack: bladeData.card.attack,
+    knockback: bladeData.card.knockback,
+    defense: bladeData.card.defense,
+    mobility: bladeData.card.mobility,
+    balance: bladeData.card.balance,
+    stamina: bladeData.card.stamina,
+    burst: bladeData.card.burst
+
+};
 
     const ratchetData=RATCHET_ENGINE[
         String(ratchet.number)
