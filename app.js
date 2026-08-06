@@ -2254,8 +2254,8 @@ function calculateComboStats(){
 
     }
 
-        calculateComboStats
-         
+        const stats = {
+
     attack: bladeData.card.attack,
     knockback: bladeData.card.knockback,
     defense: bladeData.card.defense,
