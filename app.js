@@ -1272,17 +1272,17 @@ function showBladeDraft(){
 
     Game.screen = "bladeDraft";
 
-    const pool = BLADES.filter(blade=>{
+    const pool = Object.values(BLADE_ENGINE).filter(blade=>{
 
-        if(Game.mode==="bronze") return blade.tier==="Bronze";
+    if(Game.mode==="bronze") return blade.tier==="Bronze";
 
-        if(Game.mode==="silver") return blade.tier==="Silver";
+    if(Game.mode==="silver") return blade.tier==="Silver";
 
-        if(Game.mode==="gold") return blade.tier==="Gold";
+    if(Game.mode==="gold") return blade.tier==="Gold";
 
-        return true;
+    return true;
 
-    });
+});
 
     const draftBlades = [...pool]
         .sort(()=>Math.random()-0.5)
@@ -1355,18 +1355,19 @@ function createBladeCard(blade){
 
     const ovr=Math.round(
 
-        (
+    (
 
-            blade.stats.attack+
-            blade.stats.knockback+
-            blade.stats.defense+
-            blade.stats.evasiveness+
-            blade.stats.balance+
-            blade.stats.stamina
+        blade.card.attack+
+        blade.card.knockback+
+        blade.card.defense+
+        blade.card.mobility+
+        blade.card.balance+
+        blade.card.stamina+
+        blade.card.burst
 
-        )/6
+    )/7
 
-    );
+);
 
     card.innerHTML=`
 
@@ -1388,17 +1389,19 @@ function createBladeCard(blade){
 
         <hr>
 
-        <div>Attack ............. ${blade.stats.attack}</div>
+<div>Attack ............. ${blade.card.attack}</div>
 
-        <div>Knockback ...... ${blade.stats.knockback}</div>
+<div>Knockback ...... ${blade.card.knockback}</div>
 
-        <div>Defense .......... ${blade.stats.defense}</div>
+<div>Defense .......... ${blade.card.defense}</div>
 
-        <div>Evasiveness ... ${blade.stats.evasiveness}</div>
+<div>Mobility .......... ${blade.card.mobility}</div>
 
-        <div>Balance .......... ${blade.stats.balance}</div>
+<div>Balance .......... ${blade.card.balance}</div>
 
-        <div>Stamina ......... ${blade.stats.stamina}</div>
+<div>Stamina ......... ${blade.card.stamina}</div>
+
+<div>Burst .............. ${blade.card.burst}</div>
 
     `;
 
@@ -1838,41 +1841,65 @@ function buildCombo(blade,ratchet,bit){
 // COMPATIBILITY
 //=========================
 
-function evaluateBladeRatchet(){
+function getBladeEngine(blade){
 
-    return 0;
-
-}
-
-function evaluateBladeBit(){
-
-    return 0;
+    return BLADE_ENGINE[
+        blade.name
+            .toLowerCase()
+            .replace(/ /g,"_")
+    ];
 
 }
 
-function evaluateFullCombo(){
+function getHeightModifier(height){
 
-    return 0;
+    return HEIGHT_ENGINE[String(height)];
 
 }
 
-const CARD_STATS=[
+function getBitCompatibility(bladeData,bit){
 
-"attack",
+    return bladeData.compatibility.bits[
+        bit.name.replace(/ /g,"")
+    ] ?? 50;
 
-"knockback",
+}
 
-"defense",
+function getHeightCompatibility(bladeData,height){
 
-"mobility",
+    return bladeData.compatibility.heights[
+        String(height)
+    ] ?? 50;
 
-"balance",
+}
 
-"stamina",
+function getCompatibilityScore(blade,ratchet,bit){
 
-"burst"
+    const bladeData=getBladeEngine(blade);
 
-];
+    if(!bladeData){
+
+        return 50;
+
+    }
+
+    const heightScore=getHeightCompatibility(
+        bladeData,
+        ratchet.height
+    );
+
+    const bitScore=getBitCompatibility(
+        bladeData,
+        bit
+    );
+
+    return Math.round(
+
+        (heightScore+bitScore)/2
+
+    );
+
+}
 
 //=========================
 // ENGINE 2.0 HELPERS
@@ -1924,88 +1951,128 @@ function calculateComboStats(){
     const ratchet=Game.player.ratchet;
     const bit=Game.player.bit;
 
-    let stats={
+    const bladeData=getBladeEngine(blade);
 
-        attack:clamp(blade.stats.attack+ratchet.stats.attack+bit.stats.attack),
+    if(!bladeData){
 
-        knockback:clamp(blade.stats.knockback+ratchet.stats.knockback+bit.stats.knockback),
+        console.error("Blade not found.");
 
-        defense:clamp(blade.stats.defense+ratchet.stats.defense+bit.stats.defense),
+        return null;
 
-        evasiveness:clamp(blade.stats.evasiveness+ratchet.stats.evasiveness+bit.stats.evasiveness),
+    }
 
-        balance:clamp(blade.stats.balance+ratchet.stats.balance+bit.stats.balance),
+    const stats={
 
-        stamina:clamp(blade.stats.stamina+ratchet.stats.stamina+bit.stats.stamina)
+        attack:bladeData.card.attack,
+        knockback:bladeData.card.knockback,
+        defense:bladeData.card.defense,
+        evasiveness:bladeData.card.mobility,
+        balance:bladeData.card.balance,
+        stamina:bladeData.card.stamina,
+        burst:bladeData.card.burst
 
     };
 
-    const bladeData = getBladeEngine(blade);
+    const ratchetData=RATCHET_ENGINE[
+        String(ratchet.number)
+    ];
 
-if(bladeData){
-
-    const heightScore = scoreHeight(
-        bladeData,
+    const heightData=getHeightModifier(
         ratchet.height
     );
 
-    const bitScore = scoreBit(
-        bladeData,
-        bit.name
+    // Ratchet influence
+
+    stats.attack+=Math.round(
+        (ratchetData.attackBias-50)/10
     );
 
-    const compatibility = average(
-        heightScore,
-        bitScore
+    stats.defense+=Math.round(
+        (ratchetData.defenseBias-50)/10
     );
 
-    const modifier = Math.round(
+    stats.stamina+=Math.round(
+        (ratchetData.staminaBias-50)/10
+    );
+
+    stats.evasiveness+=Math.round(
+        (ratchetData.mobilityBias-50)/10
+    );
+
+    stats.balance+=Math.round(
+        (ratchetData.stability-50)/12
+    );
+
+    stats.burst+=Math.round(
+        (ratchetData.burstResistance-50)/12
+    );
+
+    // Height influence
+
+    stats.attack+=heightData.attack;
+    stats.knockback+=heightData.knockback;
+    stats.defense+=heightData.defense;
+    stats.evasiveness+=heightData.mobility;
+    stats.balance+=heightData.balance;
+    stats.stamina+=heightData.stamina;
+    stats.burst+=heightData.burst;
+
+    // Bit influence (old system for now)
+
+    stats.attack+=bit.stats.attack;
+    stats.knockback+=bit.stats.knockback;
+    stats.defense+=bit.stats.defense;
+    stats.evasiveness+=bit.stats.evasiveness;
+    stats.balance+=bit.stats.balance;
+    stats.stamina+=bit.stats.stamina;
+
+    // Compatibility
+
+    const compatibility=getCompatibilityScore(
+        blade,
+        ratchet,
+        bit
+    );
+
+    const modifier=Math.round(
         (compatibility-50)/10
     );
 
-    stats.attack      = clamp(stats.attack+modifier);
-    stats.knockback   = clamp(stats.knockback+modifier);
-    stats.defense     = clamp(stats.defense+modifier);
-    stats.evasiveness = clamp(stats.evasiveness+modifier);
-    stats.balance     = clamp(stats.balance+modifier);
-    stats.stamina     = clamp(stats.stamina+modifier);
+    Object.keys(stats).forEach(key=>{
 
-}
+        stats[key]=clamp(
+            stats[key]+modifier
+        );
+
+    });
+
     const ovr=Math.round(
 
         (
-
             stats.attack+
             stats.knockback+
             stats.defense+
             stats.evasiveness+
             stats.balance+
-            stats.stamina
-
-        )/6
+            stats.stamina+
+            stats.burst
+        )/7
 
     );
-
-    let meta=ovr;
-
-    if(blade.type==="Attack")
-        meta+=2;
-
-    if(blade.type==="Defense")
-        meta+=1;
-
-    if(blade.type==="Stamina")
-        meta+=1;
 
     return{
 
         stats,
 
-        ovr:clamp(ovr),
+        compatibility,
 
-        meta:clamp(meta)
+        ovr,
 
-};
+        meta:Math.round(
+            (ovr+compatibility)/2
+        )
+
+    };
 
 }
 
@@ -2015,7 +2082,7 @@ if(bladeData){
 
 function showComboCard(){
 
-    const combo = calculateComboStats();
+    const combo = ();
 
     const blade = Game.player.blade;
 
