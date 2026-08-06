@@ -2082,14 +2082,14 @@ function calculateComboStats(){
 
 function showComboCard(){
 
-    const combo = ();
+    const combo = calculateComboStats();
 
     const blade = Game.player.blade;
 
     const app = document.getElementById("app");
 
     app.innerHTML = `
-
+    
     <div class="background"></div>
 
     <main class="menu">
