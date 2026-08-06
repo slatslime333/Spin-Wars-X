@@ -192,6 +192,8 @@ const BLADE_ENGINE = {
         weight:37.4,
 
         card:{
+         ovr:95,
+         
             attack:35,
             knockback:48,
             defense:96,
@@ -278,6 +280,8 @@ const BLADE_ENGINE = {
         weight:38.0,
 
         card:{
+         ovr:94,
+          
             attack:94,
             knockback:92,
             defense:84,
@@ -364,6 +368,8 @@ const BLADE_ENGINE = {
         weight:37.0,
 
         card:{
+         ovr:98,
+         
             attack:52,
             knockback:58,
             defense:88,
@@ -451,6 +457,8 @@ const BLADE_ENGINE = {
         weight:35.6,
 
         card:{
+         ovr:84,
+         
             attack:91,
             knockback:89,
             defense:68,
@@ -538,6 +546,8 @@ const BLADE_ENGINE = {
         weight:35.8,
 
         card:{
+         ovr:84,
+         
             attack:88,
             knockback:86,
             defense:70,
@@ -624,6 +634,8 @@ const BLADE_ENGINE = {
         weight:36.0,
 
         card:{
+         ovr:85,
+         
             attack:70,
             knockback:86,
             defense:91,
@@ -709,7 +721,9 @@ const BLADE_ENGINE = {
         weight:32.4,
 
         card:{
-            attack:75,
+         ovr:70,
+         
+            attack:70,
             knockback:76,
             defense:65,
             mobility:84,
@@ -729,19 +743,19 @@ const BLADE_ENGINE = {
 
         behavior:{
             attackStyle:"Precision Smash",
-            smashPower:88,
+            smashPower:75,
             upperPower:58,
             barragePower:74,
             counterPower:52,
-            movementControl:84,
+            movementControl:85,
             spinRetention:72,
             lad:68,
             burstResistance:66,
 
             winConditions:{
-                spin:54,
-                burst:72,
-                knockout:86,
+                spin:70,
+                burst:40,
+                knockout:30,
                 counter:58
             }
         },
@@ -749,7 +763,7 @@ const BLADE_ENGINE = {
         compatibility:{
             heights:{
                 60:100,
-                70:84,
+                70:82,
                 80:42
             },
 
@@ -794,6 +808,8 @@ const BLADE_ENGINE = {
         weight:35.0,
 
         card:{
+         ovr:74,
+         
             attack:70,
             knockback:68,
             defense:72,
@@ -872,6 +888,7 @@ const BLADE_ENGINE = {
     },
 
     viper_tail:{
+   
 
         name:"Viper Tail",
         type:"Attack",
@@ -880,6 +897,8 @@ const BLADE_ENGINE = {
         weight:35.2,
 
         card:{
+         ovr:73,
+         
             attack:82,
             knockback:80,
             defense:64,
@@ -1353,21 +1372,7 @@ function createBladeCard(blade){
 
     card.className="blade-card";
 
-    const ovr=Math.round(
-
-    (
-
-        blade.card.attack+
-        blade.card.knockback+
-        blade.card.defense+
-        blade.card.mobility+
-        blade.card.balance+
-        blade.card.stamina+
-        blade.card.burst
-
-    )/7
-
-);
+   const ovr = blade.card.ovr;
 
     card.innerHTML=`
 
