@@ -241,16 +241,16 @@ const BLADE_ENGINE = {
             bits:{
                 Hexa:100,
                 Wedge:95,
-                Ball:91,
+                Ball:98,
                 Orb:88,
-                Level:72,
+                Level:78,
                 Elevate:76,
-                Flat:28,
-                LowFlat:12,
-                Rush:18,
-                LowRush:8,
+                Flat:40,
+                LowFlat:40,
+                Rush:40,
+                LowRush:42,
                 Kick:22,
-                Needle:84
+                Needle:78
             }
         },
 
@@ -409,23 +409,23 @@ const BLADE_ENGINE = {
 
         compatibility:{
             heights:{
-                60:95,
-                70:90,
-                80:72
+                60:99,
+                70:94,
+                80:70
             },
 
             bits:{
-                Ball:96,
+                Ball:99,
                 Orb:92,
-                Hexa:98,
-                Needle:84,
-                Wedge:88,
+                Hexa:99,
+                Needle:80,
+                Wedge:90,
                 Elevate:74,
                 Level:75,
-                Flat:40,
-                LowFlat:40,
-                Rush:84,
-                LowRush:76,
+                Flat:70,
+                LowFlat:70,
+                Rush:95,
+                LowRush:90,
                 Kick:77
             }
         },
