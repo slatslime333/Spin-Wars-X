@@ -22,7 +22,18 @@ const Game = {
         blade: null,
         ratchet: null,
         bit: null
+    },
+
+    match: {
+
+        round: 1,
+
+        playerPoints: 0,
+
+        cpuPoints: 0
+
     }
+
 };
 
 //=========================
@@ -2218,12 +2229,12 @@ function showComboCard(){
     `;
 
     document
-        .getElementById("battleButton")
-        .onclick = () => {
+    .getElementById("battleButton")
+    .onclick = () => {
 
-            alert("Battle Engine Coming in v0.4");
+        showVS();
 
-        };
+    };
 const menuCard=document.querySelector(".menu-card");
 
 menuCard.appendChild(
@@ -2236,6 +2247,190 @@ menuCard.appendChild(
 
 );
 
-} // end of showComboCard
+} 
+
+//=========================
+// VS SCREEN
+//=========================
+
+function showVS(){
+
+    // Temporary CPU opponent
+    const pool = Object.values(BLADE_ENGINE).filter(
+
+        blade => blade.tier === Game.player.blade.tier
+
+    );
+
+    Game.cpu.blade = pool[
+        Math.floor(Math.random()*pool.length)
+    ];
+
+    // Temporary combo
+    Game.cpu.ratchet = {
+
+        name:"3-70"
+
+    };
+
+    Game.cpu.bit = {
+
+        name:"Level"
+
+    };
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h2>
+
+            ROUND ${Game.match.round}
+
+            </h2>
+
+            <p>
+
+            First to 7 Points
+
+            </p>
+
+            <hr>
+
+            <div style="display:flex;justify-content:space-between;">
+
+                <div>
+
+                    <h3>PLAYER</h3>
+
+                    <strong>${Game.player.blade.name}</strong>
+
+                    <br>
+
+                    ${Game.player.ratchet.name}
+
+                    <br>
+
+                    ${Game.player.bit.name}
+
+                    <br><br>
+
+                    OVR ${Game.player.blade.card.ovr}
+
+                </div>
+
+                <div>
+
+                    <h3>CPU</h3>
+
+                    <strong>${Game.cpu.blade.name}</strong>
+
+                    <br>
+
+                    ${Game.cpu.ratchet.name}
+
+                    <br>
+
+                    ${Game.cpu.bit.name}
+
+                    <br><br>
+
+                    OVR ${Game.cpu.blade.card.ovr}
+
+                </div>
+
+            </div>
+
+            <br>
+
+            <h1>
+
+            ⚔ VS ⚔
+
+            </h1>
+
+            <br>
+
+            <h3>
+
+            PLAYER ${Game.match.playerPoints}
+
+            -
+
+            ${Game.match.cpuPoints} CPU
+
+            </h3>
+
+            <br>
+
+            <h2 id="countdown">
+
+            Starting in 4...
+
+            </h2>
+
+        </section>
+
+    </main>
+
+    `;
+
+    let seconds=4;
+
+    const timer=setInterval(()=>{
+
+        seconds--;
+
+        document.getElementById("countdown").textContent=
+
+        "Starting in "+seconds+"...";
+
+        if(seconds<=0){
+
+            clearInterval(timer);
+
+            showLaunchScreen();
+
+        }
+
+    },1000);
+
+}
+
+//=========================
+// LAUNCH SCREEN
+//=========================
+
+function showLaunchScreen(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>LAUNCH PHASE</h1>
+
+            <br>
+
+            <p>Coming Next...</p>
+
+        </section>
+
+    </main>
+
+    `;
+
+}
 
 hookMenuButtons();
