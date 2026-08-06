@@ -2499,11 +2499,7 @@ document.getElementById("hardLaunch").onclick = () => {
 
    function chooseLaunchAngle(angle){
 
-    console.log("Launch Angle Selected:", angle);
-
     Game.player.launch.angle = angle;
-
-    alert("Button Works!");
 
     showLaunchTechnique();
 
@@ -2658,6 +2654,44 @@ function generateCPULaunch(){
         ];
 
     showLetItRip();
+
+}
+
+//=========================
+// LET IT RIP
+//=========================
+
+function showLetItRip(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>3...</h1>
+
+            <br>
+
+            <h1>2...</h1>
+
+            <br>
+
+            <h1>1...</h1>
+
+            <br><br>
+
+            <h1>LET IT RIP!</h1>
+
+        </section>
+
+    </main>
+
+    `;
 
 }
 
