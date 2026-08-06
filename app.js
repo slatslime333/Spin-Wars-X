@@ -2990,4 +2990,8 @@ function resolveOpening(){
 
 }
 
-hookMenuButtons();
+window.addEventListener("DOMContentLoaded", () => {
+
+    hookMenuButtons();
+
+});
