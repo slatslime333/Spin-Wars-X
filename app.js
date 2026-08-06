@@ -1165,6 +1165,95 @@ window.onload = () => {
 
 };
 
+const HEIGHT_ENGINE = {
+
+    ...
+    
+};
+
+//=========================
+// ENGINE 2.0 BITS
+//=========================
+
+const BIT_ENGINE = {
+
+    flat:{
+
+        name:"Flat",
+
+        type:"Attack",
+
+        card:{
+            attack:95,
+            knockback:88,
+            defense:62,
+            mobility:94,
+            balance:68,
+            stamina:60,
+            burst:72
+        },
+
+        behavior:{
+            speed:96,
+            aggression:92,
+            control:72,
+            staminaRetention:60
+        }
+
+    },
+
+    low_flat:{
+
+        name:"Low Flat",
+
+        type:"Attack",
+
+        card:{
+            attack:98,
+            knockback:92,
+            defense:58,
+            mobility:98,
+            balance:64,
+            stamina:56,
+            burst:74
+        },
+
+        behavior:{
+            speed:99,
+            aggression:98,
+            control:68,
+            staminaRetention:56
+        }
+
+    },
+
+    rush:{
+
+        name:"Rush",
+
+        type:"Attack",
+
+        card:{
+            attack:97,
+            knockback:90,
+            defense:60,
+            mobility:97,
+            balance:66,
+            stamina:58,
+            burst:76
+        },
+
+        behavior:{
+            speed:98,
+            aggression:100,
+            control:70,
+            staminaRetention:58
+        }
+
+    }
+
+};
+
 //=========================
 // MENU
 //=========================
