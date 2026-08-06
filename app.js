@@ -524,6 +524,9 @@ const BLADE_ENGINE = {
             control:76,
             consistency:68,
             risk:95
+
+           }
+     
         }
 
     };
