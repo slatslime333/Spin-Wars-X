@@ -2255,7 +2255,7 @@ function calculateComboStats(){
     }
 
         const stats = {
-
+         
     attack: bladeData.card.attack,
     knockback: bladeData.card.knockback,
     defense: bladeData.card.defense,
@@ -2310,15 +2310,16 @@ function calculateComboStats(){
     stats.stamina+=heightData.stamina;
     stats.burst+=heightData.burst;
 
-    // Bit influence (old system for now)
+    // Bit influence (Engine 2.0)
 
-    stats.attack+=bit.stats.attack;
-    stats.knockback+=bit.stats.knockback;
-    stats.defense+=bit.stats.defense;
-    stats.mobility+=bit.stats.mobility;
-    stats.balance+=bit.stats.balance;
-    stats.stamina+=bit.stats.stamina;
-
+stats.attack += Math.round((bit.card.attack - 70) / 10);
+stats.knockback += Math.round((bit.card.knockback - 70) / 10);
+stats.defense += Math.round((bit.card.defense - 70) / 10);
+stats.mobility += Math.round((bit.card.mobility - 70) / 10);
+stats.balance += Math.round((bit.card.balance - 70) / 10);
+stats.stamina += Math.round((bit.card.stamina - 70) / 10);
+stats.burst += Math.round((bit.card.burst - 70) / 10);
+ 
     // Compatibility
 
     const compatibility=getCompatibilityScore(
