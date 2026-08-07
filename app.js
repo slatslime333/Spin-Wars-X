@@ -2125,11 +2125,7 @@ function clamp(value){
 
 }
 
-function calculateComboStats(){
-
-    const blade=Game.player.blade;
-    const ratchet=Game.player.ratchet;
-    const bit=Game.player.bit;
+function calculateComboStats(blade, ratchet, bit){
 
     const bladeData=getBladeEngine(blade);
 
@@ -2259,7 +2255,11 @@ const ovr = clamp(
 
 function showComboCard(){
 
-    const combo = calculateComboStats();
+    const combo = calculateComboStats(
+    Game.player.blade,
+    Game.player.ratchet,
+    Game.player.bit
+);
 
     const blade = Game.player.blade;
 
@@ -2834,10 +2834,22 @@ function showLetItRip(){
 
     const app=document.getElementById("app");
 
-    const player=Game.player.blade;
-    const cpu=Game.cpu.blade;
-    const prediction = getMatchPrediction();
- 
+   const player = Game.player.blade;
+const cpu = Game.cpu.blade;
+
+const playerCombo = calculateComboStats(
+    Game.player.blade,
+    Game.player.ratchet,
+    Game.player.bit
+);
+
+const cpuCombo = calculateComboStats(
+    Game.cpu.blade,
+    Game.cpu.ratchet,
+    Game.cpu.bit
+);
+
+const prediction = getMatchPrediction();
     let seconds=10;
 
     app.innerHTML=`
@@ -2862,15 +2874,15 @@ function showLetItRip(){
 
                     ${Game.player.bit.name}<br><br>
 
-                    OVR ${player.card.ovr}<br><br>
+                    OVR ${playerCombo.ovr}<br><br>
 
-                    ATK ${player.card.attack}<br>
-                    KNO ${player.card.knockback}<br>
-                    DEF ${player.card.defense}<br>
-                    MOB ${player.card.mobility}<br>
-                    BAL ${player.card.balance}<br>
-                    STA ${player.card.stamina}<br>
-                    BST ${player.card.burst}
+ATK ${playerCombo.stats.attack}<br>
+KNO ${playerCombo.stats.knockback}<br>
+DEF ${playerCombo.stats.defense}<br>
+MOB ${playerCombo.stats.mobility}<br>
+BAL ${playerCombo.stats.balance}<br>
+STA ${playerCombo.stats.stamina}<br>
+BST ${playerCombo.stats.burst}
 
                 </div>
 
@@ -2882,15 +2894,15 @@ function showLetItRip(){
 
                     ${Game.cpu.bit.name}<br><br>
 
-                    OVR ${cpu.card.ovr}<br><br>
+                    OVR ${cpuCombo.ovr}<br><br>
 
-                    ATK ${cpu.card.attack}<br>
-                    KNO ${cpu.card.knockback}<br>
-                    DEF ${cpu.card.defense}<br>
-                    MOB ${cpu.card.mobility}<br>
-                    BAL ${cpu.card.balance}<br>
-                    STA ${cpu.card.stamina}<br>
-                    BST ${cpu.card.burst}
+ATK ${cpuCombo.stats.attack}<br>
+KNO ${cpuCombo.stats.knockback}<br>
+DEF ${cpuCombo.stats.defense}<br>
+MOB ${cpuCombo.stats.mobility}<br>
+BAL ${cpuCombo.stats.balance}<br>
+STA ${cpuCombo.stats.stamina}<br>
+BST ${cpuCombo.stats.burst}
 
                 </div>
 
