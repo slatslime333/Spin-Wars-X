@@ -1493,109 +1493,87 @@ const STADIUM_MAP = {
 
 function renderStadium(){
 
-    return `
+return `
 
 <div class="stadium">
 
 <svg class="stadium-svg"
-     viewBox="0 0 1000 900">
+viewBox="0 0 1000 900">
 
-    <g id="railLayer">
-
-    <!-- Left Rail -->
+    <!-- CONTINUOUS X RAIL -->
 
     <path
         class="rail-track"
-
         d="
-        M245 675
+            M245 680
 
-        C185 560 185 280 310 165
+            C170 560 170 250 330 135
 
-        C360 120 420 100 470 95
+            C430 70 570 70 670 135
+
+            C830 250 830 560 755 680
         "
-
     />
 
-    <!-- Right Rail -->
-
-    <path
-        class="rail-track"
-
-        d="
-        M755 675
-
-        C815 560 815 280 690 165
-
-        C640 120 580 100 530 95
-        "
-
-    />
-
-</g>
-
-    <g id="bowlLayer">
-
-    <!-- Outer Bowl -->
+    <!-- OUTER BOWL -->
 
     <ellipse
-
+        class="battleOuter"
         cx="500"
-        cy="430"
-
+        cy="420"
         rx="255"
         ry="245"
-
-        class="battleOuter"
-
     />
 
-    <!-- Inner Bowl -->
+    <!-- INNER BOWL -->
 
     <ellipse
-
+        class="battleInner"
         cx="500"
-        cy="430"
-
+        cy="420"
         rx="220"
         ry="210"
-
-        class="battleInner"
-
     />
 
-</g>
+    <!-- X EXIT -->
 
-   <g id="finishLayer">
-
-    <!-- Left Over Zone -->
-    <circle
-        class="over-zone"
-        cx="250"
-        cy="700"
-        r="42"/>
-
-    <!-- Xtreme Zone -->
     <rect
-        class="xtreme-zone"
+        class="xExit"
+        x="455"
+        y="62"
+        width="90"
+        height="40"
+        rx="12"
+    />
+
+    <!-- LEFT OVER -->
+
+    <circle
+        class="overZone"
+        cx="255"
+        cy="705"
+        r="38"
+    />
+
+    <!-- XTREME -->
+
+    <rect
+        class="xtremeZone"
         x="435"
         y="690"
         width="130"
-        height="48"
-        rx="20"/>
+        height="45"
+        rx="18"
+    />
 
-    <!-- Right Over Zone -->
+    <!-- RIGHT OVER -->
+
     <circle
-        class="over-zone"
-        cx="750"
-        cy="700"
-        r="42"/>
-
-</g>
-
-    <g id="effectsLayer">
-
-    </g>
+        class="overZone"
+        cx="745"
+        cy="705"
+        r="38"
+    />
 
 </svg>
 
