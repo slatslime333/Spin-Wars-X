@@ -1495,29 +1495,65 @@ function renderStadium(){
 
     return `
 
-    <div class="stadium">
+<div class="stadium">
 
-        <div class="rail"></div>
+<svg class="stadium-svg" viewBox="0 0 600 600">
 
-        <div class="battle-bowl">
+    <!-- X-Rail -->
+    <circle
+        cx="300"
+        cy="300"
+        r="255"
+        class="rail-track"/>
 
-            <div class="x-exit"></div>
+    <!-- Battle Bowl -->
+    <circle
+        cx="300"
+        cy="300"
+        r="205"
+        class="battle-area"/>
 
-            <div class="left-pocket"></div>
+    <!-- X Exit -->
+    <rect
+        x="255"
+        y="18"
+        width="90"
+        height="42"
+        rx="12"
+        class="x-exit"/>
 
-            <div class="xtreme-pocket"></div>
+    <!-- Left Over Zone -->
+    <circle
+        cx="120"
+        cy="500"
+        r="34"
+        class="pocket"/>
 
-            <div class="right-pocket"></div>
+    <!-- Xtreme Zone -->
+    <rect
+        x="255"
+        y="500"
+        width="90"
+        height="42"
+        rx="18"
+        class="xtreme"/>
 
-            <div id="playerBey" class="bey player"></div>
+    <!-- Right Over Zone -->
+    <circle
+        cx="480"
+        cy="500"
+        r="34"
+        class="pocket"/>
 
-            <div id="cpuBey" class="bey cpu"></div>
+</svg>
 
-        </div>
+<div id="playerBey" class="bey player"></div>
 
-    </div>
+<div id="cpuBey" class="bey cpu"></div>
 
-    `;
+</div>
+
+`;
 
 }
 
