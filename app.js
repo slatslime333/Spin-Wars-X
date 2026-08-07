@@ -2676,8 +2676,7 @@ function showLaunchTechnique(){
 
 <button
     class="menu-btn"
-
-    onclick="showLaunchAngle()">
+    id="backLaunch">
 
 ← Back
 
