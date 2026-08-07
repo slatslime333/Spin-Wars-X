@@ -2395,6 +2395,18 @@ function showVS(){
 
    generateCPUCombo();
 
+ const playerCombo = calculateComboStats(
+    Game.player.blade,
+    Game.player.ratchet,
+    Game.player.bit
+);
+
+const cpuCombo = calculateComboStats(
+    Game.cpu.blade,
+    Game.cpu.ratchet,
+    Game.cpu.bit
+);
+
     const app=document.getElementById("app");
 
     app.innerHTML=`
@@ -2437,7 +2449,27 @@ function showVS(){
 
                     <br><br>
 
-                    OVR ${Game.player.blade.card.ovr}
+                    OVR ${playerCombo.ovr}
+
+<br><br>
+
+ATK ${playerCombo.stats.attack}
+
+<br>
+
+DEF ${playerCombo.stats.defense}
+
+<br>
+
+STA ${playerCombo.stats.stamina}
+
+<br>
+
+BAL ${playerCombo.stats.balance}
+
+<br>
+
+MOB ${playerCombo.stats.mobility}
 
                 </div>
 
@@ -2457,7 +2489,27 @@ function showVS(){
 
                     <br><br>
 
-                    OVR ${Game.cpu.blade.card.ovr}
+                    OVR ${cpuCombo.ovr}
+
+<br><br>
+
+ATK ${cpuCombo.stats.attack}
+
+<br>
+
+DEF ${cpuCombo.stats.defense}
+
+<br>
+
+STA ${cpuCombo.stats.stamina}
+
+<br>
+
+BAL ${cpuCombo.stats.balance}
+
+<br>
+
+MOB ${cpuCombo.stats.mobility}
 
                 </div>
 
@@ -2487,7 +2539,7 @@ function showVS(){
 
             <h2 id="countdown">
 
-            Starting in 4...
+            Starting in 10...
 
             </h2>
 
@@ -2497,7 +2549,7 @@ function showVS(){
 
     `;
 
-    let seconds=4;
+    let seconds=10;
 
     const timer=setInterval(()=>{
 
