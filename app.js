@@ -3063,7 +3063,6 @@ function resolveOpening(){
     playerScore += Math.floor(Math.random()*21);
     cpuScore += Math.floor(Math.random()*21);
 
-    // Launch angle
     switch(Game.player.launch.angle){
 
         case "Flat":
@@ -3096,8 +3095,6 @@ function resolveOpening(){
 
     }
 
-    // Determine battle state
-
     if(playerScore > cpuScore){
 
         Game.battle.openingWinner = "Player";
@@ -3120,15 +3117,21 @@ function resolveOpening(){
 
     Game.battle.phase = "Opening";
 
-    function showOpeningResult(){
+    showOpeningResult();
 
-    const app = document.getElementById("app");
+}
 
-    let text = "";
+//=========================
+// SHOW OPENING RESULT
+//=========================
+
+function showOpeningResult(){
+
+    let text="";
 
     if(Game.battle.openingWinner==="Player"){
 
-        text = `
+        text=`
         ${Game.player.blade.name} wins the opening clash!
 
         ${Game.player.blade.name} takes center control.
@@ -3136,7 +3139,7 @@ function resolveOpening(){
 
     }else if(Game.battle.openingWinner==="CPU"){
 
-        text = `
+        text=`
         ${Game.cpu.blade.name} wins the opening clash!
 
         ${Game.cpu.blade.name} controls the center.
@@ -3144,7 +3147,7 @@ function resolveOpening(){
 
     }else{
 
-        text = `
+        text=`
         Neither Bey gains an advantage!
 
         Both continue circling.
@@ -3152,7 +3155,7 @@ function resolveOpening(){
 
     }
 
-    document.getElementById("arenaText").innerHTML = text;
+    document.getElementById("arenaText").innerHTML=text;
 
     setTimeout(()=>{
 
@@ -3162,11 +3165,15 @@ function resolveOpening(){
 
 }
 
- function generateDecision(){
+//=========================
+// DECISION SCREEN
+//=========================
 
-    const app = document.getElementById("app");
+function generateDecision(){
 
-    app.innerHTML = `
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
 
     <div class="background"></div>
 
@@ -3180,7 +3187,8 @@ function resolveOpening(){
 
             <p>
 
-            ${Game.battle.centerControl==="Player"
+            ${
+                Game.battle.centerControl==="Player"
                 ? "You control the center."
                 : Game.battle.centerControl==="CPU"
                 ? "The CPU controls the center."
@@ -3216,11 +3224,8 @@ function resolveOpening(){
     `;
 
 }
- 
-window.addEventListener("DOMContentLoaded", () => {
 
-
- //=========================
+//=========================
 // MATCH PREDICTION
 //=========================
 
@@ -3302,4 +3307,13 @@ function getMatchPrediction(){
     ];
 
 }
+
+//=========================
+// START GAME
+//=========================
+
+window.addEventListener("DOMContentLoaded",()=>{
+
     hookMenuButtons();
+
+});
