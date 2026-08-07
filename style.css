@@ -612,7 +612,15 @@ STADIUM
 
 }
 
-.pocket{
+.over-zone{
+
+    fill:#0b0b0b;
+
+    stroke:#666;
+
+    stroke-width:5;
+
+}
 
     fill:#050505;
 
@@ -622,7 +630,11 @@ STADIUM
 
 }
 
-.xtreme{
+.xtreme-zone{
+
+    fill:#d61d1d;
+
+}
 
     fill:#d71d1d;
 
