@@ -1500,13 +1500,40 @@ return `
 <svg class="stadium-svg"
 viewBox="0 0 1000 900">
 
-    <!-- CONTINUOUS X RAIL -->
+    <!-- LEFT RAIL -->
 
-    <path
-        class="rail-track"
-        d="
-        
-    />
+<path
+    class="rail-track"
+    d="
+        M275 610
+        C205 520 185 360 220 245
+        C255 150 345 90 450 75
+    "
+/>
+
+<!-- RIGHT RAIL -->
+
+<path
+    class="rail-track"
+    d="
+        M725 610
+        C795 520 815 360 780 245
+        C745 150 655 90 550 75
+    "
+/>
+
+<!-- TOP CONNECTOR -->
+
+<path
+    class="rail-track"
+    d="
+        M450 75
+        L470 75
+
+        M530 75
+        L550 75
+    "
+/>
 
     <!-- BATTLE BOWL -->
 
