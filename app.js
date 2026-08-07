@@ -1497,10 +1497,6 @@ function renderStadium(){
 
 <div class="stadium">
 
-<div id="playerBey"></div>
-
-<div id="cpuBey"></div>
-
 <svg class="stadium-svg"
      viewBox="0 0 1000 900">
 
@@ -1540,9 +1536,32 @@ function renderStadium(){
 
 </g>
 
-    <g id="finishLayer">
+   <g id="finishLayer">
 
-    </g>
+    <!-- Left Over Zone -->
+    <circle
+        class="over-zone"
+        cx="250"
+        cy="700"
+        r="42"/>
+
+    <!-- Xtreme Zone -->
+    <rect
+        class="xtreme-zone"
+        x="435"
+        y="690"
+        width="130"
+        height="48"
+        rx="20"/>
+
+    <!-- Right Over Zone -->
+    <circle
+        class="over-zone"
+        cx="750"
+        cy="700"
+        r="42"/>
+
+</g>
 
     <g id="effectsLayer">
 
