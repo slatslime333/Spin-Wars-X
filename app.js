@@ -1497,114 +1497,56 @@ function renderStadium(){
 
 <div class="stadium">
 
-<svg
-    class="stadium-svg"
-    viewBox="0 0 1000 900">
+<div id="playerBey"></div>
 
-    <!-- =========================
-         CONTINUOUS X-RAIL
-    ========================== -->
+<div id="cpuBey"></div>
 
-    <path
-        class="rail-track"
-        d="
+<svg class="stadium-svg"
+     viewBox="0 0 1000 900">
 
-        M170 720
+    <g id="railLayer">
 
-        A340 340 0 0 1 500 120
+    </g>
 
-        A340 340 0 0 1 830 720
+    <g id="bowlLayer">
 
-        "
-
-    />
-
-    <!-- =========================
-         BATTLE BOWL
-    ========================== -->
+    <!-- Outer Bowl -->
 
     <ellipse
-        class="battle-area"
 
         cx="500"
         cy="430"
 
-        rx="285"
-        ry="275"
+        rx="255"
+        ry="245"
+
+        class="battleOuter"
 
     />
 
-    <!-- =========================
-         X EXIT
-    ========================== -->
+    <!-- Inner Bowl -->
 
-    <rect
+    <ellipse
 
-        class="x-exit"
+        cx="500"
+        cy="430"
 
-        x="445"
+        rx="220"
+        ry="210"
 
-        y="70"
-
-        width="110"
-
-        height="55"
-
-        rx="12"
+        class="battleInner"
 
     />
 
-    <!-- =========================
-         LEFT OVER ZONE
-    ========================== -->
+</g>
 
-    <circle
+    <g id="finishLayer">
 
-        class="over-zone"
+    </g>
 
-        cx="240"
+    <g id="effectsLayer">
 
-        cy="735"
-
-        r="42"
-
-    />
-
-    <!-- =========================
-         XTREME ZONE
-    ========================== -->
-
-    <rect
-
-        class="xtreme-zone"
-
-        x="435"
-
-        y="720"
-
-        width="130"
-
-        height="52"
-
-        rx="22"
-
-    />
-
-    <!-- =========================
-         RIGHT OVER ZONE
-    ========================== -->
-
-    <circle
-
-        class="over-zone"
-
-        cx="760"
-
-        cy="735"
-
-        r="42"
-
-    />
+    </g>
 
 </svg>
 
