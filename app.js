@@ -3689,6 +3689,55 @@ function rollRiskQuality(){
 }
 
 //=========================
+// LAUNCH MODIFIERS
+//=========================
+
+function applyLaunchQuality(blader){
+
+    const target=Game[blader];
+
+    switch(target.launch.quality){
+
+        case "Horrible":
+
+            target.launch.spinBonus=-15;
+            target.launch.balanceBonus=-15;
+            target.launch.positionBonus=-2;
+            break;
+
+        case "Bad":
+
+            target.launch.spinBonus=-8;
+            target.launch.balanceBonus=-6;
+            target.launch.positionBonus=-1;
+            break;
+
+        case "Okay":
+
+            target.launch.spinBonus=0;
+            target.launch.balanceBonus=0;
+            target.launch.positionBonus=0;
+            break;
+
+        case "Good":
+
+            target.launch.spinBonus=5;
+            target.launch.balanceBonus=4;
+            target.launch.positionBonus=1;
+            break;
+
+        case "Perfect":
+
+            target.launch.spinBonus=10;
+            target.launch.balanceBonus=8;
+            target.launch.positionBonus=2;
+            break;
+
+    }
+
+}
+
+//=========================
 // LAUNCH EXECUTION
 //=========================
 
@@ -3743,7 +3792,10 @@ function showLaunchExecution(){
 
         Game.player.launch.gamble=false;
 
-        generateCPULaunch();
+        applyLaunchQuality("player");
+
+    generateCPULaunch();
+
 
     };
 
@@ -3759,7 +3811,7 @@ function showLaunchExecution(){
 
         setTimeout(()=>{
 
-            generateCPULaunch();
+            applyLaunchQuality("player");  generateCPULaunch();
 
         },700);
 
