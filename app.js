@@ -2249,6 +2249,35 @@ const ovr = clamp(
 
 }
 
+function createStatBar(label,value){
+
+    return `
+
+    <div class="stat-row">
+
+        <div class="stat-label">
+
+            <span>${label}</span>
+
+            <span>${value}</span>
+
+        </div>
+
+        <div class="stat-bar">
+
+            <div
+                class="stat-fill"
+                style="width:${value}%">
+            </div>
+
+        </div>
+
+    </div>
+
+    `;
+
+}
+
 //=========================
 // COMBO CARD
 //=========================
@@ -2876,14 +2905,19 @@ const prediction = getMatchPrediction();
 
                     OVR ${playerCombo.ovr}<br><br>
 
-ATK ${playerCombo.stats.attack}<br>
-KNO ${playerCombo.stats.knockback}<br>
-DEF ${playerCombo.stats.defense}<br>
-MOB ${playerCombo.stats.mobility}<br>
-BAL ${playerCombo.stats.balance}<br>
-STA ${playerCombo.stats.stamina}<br>
-BST ${playerCombo.stats.burst}
+${createStatBar("ATK",playerCombo.stats.attack)}
 
+${createStatBar("KNO",playerCombo.stats.knockback)}
+
+${createStatBar("DEF",playerCombo.stats.defense)}
+
+${createStatBar("MOB",playerCombo.stats.mobility)}
+
+${createStatBar("BAL",playerCombo.stats.balance)}
+
+${createStatBar("STA",playerCombo.stats.stamina)}
+
+${createStatBar("BST",playerCombo.stats.burst)}
                 </div>
 
                 <div style="text-align:right;">
@@ -2896,13 +2930,19 @@ BST ${playerCombo.stats.burst}
 
                     OVR ${cpuCombo.ovr}<br><br>
 
-ATK ${cpuCombo.stats.attack}<br>
-KNO ${cpuCombo.stats.knockback}<br>
-DEF ${cpuCombo.stats.defense}<br>
-MOB ${cpuCombo.stats.mobility}<br>
-BAL ${cpuCombo.stats.balance}<br>
-STA ${cpuCombo.stats.stamina}<br>
-BST ${cpuCombo.stats.burst}
+${createStatBar("ATK",cpuCombo.stats.attack)}
+
+${createStatBar("KNO",cpuCombo.stats.knockback)}
+
+${createStatBar("DEF",cpuCombo.stats.defense)}
+
+${createStatBar("MOB",cpuCombo.stats.mobility)}
+
+${createStatBar("BAL",cpuCombo.stats.balance)}
+
+${createStatBar("STA",cpuCombo.stats.stamina)}
+
+${createStatBar("BST",cpuCombo.stats.burst)}
 
                 </div>
 
