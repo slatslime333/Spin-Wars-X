@@ -9,8 +9,6 @@
 
 const Game = {
 
- 
-
     version:"0.5.0",
 
     screen:"menu",
@@ -1701,43 +1699,27 @@ function renderBeys(){
     const cpu=document.getElementById("cpuBey");
 
     if(!player || !cpu) return;
- 
-const p=ZONE_POSITIONS[Game.battle.player.zone];
-const c=ZONE_POSITIONS[Game.battle.cpu.zone];
-
-let playerX = p.x;
-let playerY = p.y;
-
-let cpuX = c.x;
-let cpuY = c.y;
-
-// If both Beys are in the same zone,
-// separate them slightly so both are visible.
-if(Game.battle.player.zone===Game.battle.cpu.zone){
-
-    playerX -= 12;
-    cpuX += 12;
-
-}
-
-function renderBeys(){
-
-    const player=document.getElementById("playerBey");
-    const cpu=document.getElementById("cpuBey");
-
-    if(!player || !cpu) return;
 
     const p=ZONE_POSITIONS[Game.battle.player.zone];
     const c=ZONE_POSITIONS[Game.battle.cpu.zone];
 
     if(!p || !c) return;
 
-    player.setAttribute("cx",p.x);
+    let playerX=p.x;
+    let cpuX=c.x;
+
+    if(Game.battle.player.zone===Game.battle.cpu.zone){
+
+        playerX-=12;
+        cpuX+=12;
+
+    }
+
+    player.setAttribute("cx",playerX);
     player.setAttribute("cy",p.y);
 
-    cpu.setAttribute("cx",c.x);
+    cpu.setAttribute("cx",cpuX);
     cpu.setAttribute("cy",c.y);
-
 
 }
 
