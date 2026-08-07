@@ -1397,6 +1397,39 @@ function generateArena(){
 }
 
 //=========================
+// STADIUM PREVIEW
+//=========================
+
+function getStadiumPreview(){
+
+    return `
+
+<pre style="font-size:17px;line-height:1.5;text-align:center;">
+
+              X EXIT
+                ▲
+
+ ${Game.arena.playerSide.toUpperCase()} ●         ● ${Game.arena.cpuSide.toUpperCase()}
+
+         ╲       ╱
+
+🕳══════ X-RAIL ══════🕳
+         🕳
+
+</pre>
+
+<p style="text-align:center;">
+
+You are launching from the
+<strong>${Game.arena.playerSide}</strong> side.
+
+</p>
+
+`;
+
+}
+
+//=========================
 // MENU
 //=========================
 
@@ -2563,7 +2596,11 @@ document.getElementById("hardLaunch").onclick = () => {
 //=========================
 
    function chooseLaunchAngle(angle){
+    
+   <h1>Choose Launch Angle</h1>
 
+    ${getStadiumPreview()}
+    
     Game.player.launch.angle = angle;
 
     showLaunchTechnique();
@@ -2588,6 +2625,8 @@ function showLaunchTechnique(){
         <section class="menu-card">
 
             <h1>LAUNCH TECHNIQUE</h1>
+            
+    ${getStadiumPreview()}
 
             <hr>
 
@@ -2635,6 +2674,17 @@ function showLaunchTechnique(){
         </section>
 
     </main>
+
+    <br>
+
+<button
+    class="menu-btn"
+
+    onclick="showLaunchAngle()">
+
+← Back
+
+</button>
 
     `;
 
