@@ -4277,7 +4277,7 @@ ${renderStadium()}
 
 setTimeout(()=>{
 
-    openingCommentary();
+    ();
 
 },2000);
 
@@ -4373,8 +4373,6 @@ switch(cpuLaunch){
 
         line+=`💥 HORRIBLE LAUNCH!\n${cpu.name} struggles immediately.\n\n`;
         break;
-
-}
 
     }
 
