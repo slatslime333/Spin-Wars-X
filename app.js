@@ -1488,45 +1488,56 @@ const STADIUM_MAP = {
 };
 
 //=========================
-// DRAW STADIUM
+// RENDER STADIUM
 //=========================
 
-function drawArena(){
-
-    const player = Game.battle.player.zone;
-    const cpu = Game.battle.cpu.zone;
-
-    function zone(name){
-
-        let text = name;
-
-        if(player===name) text += " 🔵";
-
-        if(cpu===name) text += " 🔴";
-
-        return text;
-
-    }
+function renderStadium(){
 
     return `
 
-<pre class="arena">
+    <div class="stadium">
 
-                 X EXIT
+        <div class="x-exit">
 
-${zone("TopLeft")}      ${zone("TopCenter")}      ${zone("TopRight")}
+            X EXIT
 
-${zone("LeftMid")}      ${zone("Center")}      ${zone("RightMid")}
+        </div>
 
-${zone("BottomLeft")}      ${zone("BottomCenter")}      ${zone("BottomRight")}
+        <div class="rail rail-left"></div>
 
-${zone("LeftRail")}                    ${zone("RightRail")}
+        <div class="rail rail-right"></div>
 
-🕳 ${zone("LeftPocket")}          ${zone("RightPocket")} 🕳
+        <div class="rail rail-bottom"></div>
 
-</pre>
+        <div class="battle-bowl">
 
-`;
+            <div id="playerBey" class="bey player"></div>
+
+            <div id="cpuBey" class="bey cpu"></div>
+
+        </div>
+
+        <div class="finish left-pocket">
+
+            🕳
+
+        </div>
+
+        <div class="finish xtreme">
+
+            💥
+
+        </div>
+
+        <div class="finish right-pocket">
+
+            🕳
+
+        </div>
+
+    </div>
+
+    `;
 
 }
 
@@ -3500,7 +3511,7 @@ function showArena(){
 
             <hr>
 
-${drawArena()}
+${renderStadium()}
 
             <hr>
 
@@ -3743,7 +3754,7 @@ function generateDecision(){
 
         <section class="menu-card">
         
-${drawArena()}
+${renderStadium()}
 
             <h1>MOVE</h1>
 
