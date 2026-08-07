@@ -3041,34 +3041,41 @@ function openingCommentary(){
 
 function resolveOpening(){
 
-    const player=Game.player.blade;
-    const cpu=Game.cpu.blade;
+    const player = Game.player.blade;
+    const cpu = Game.cpu.blade;
 
-    let playerScore=0;
-    let cpuScore=0;
+    let playerScore = 0;
+    let cpuScore = 0;
 
-    // Aggression
-    playerScore+=player.personality.aggression;
-    cpuScore+=cpu.personality.aggression;
+    // Personality
+    playerScore += player.personality.aggression;
+    cpuScore += cpu.personality.aggression;
 
     // Mobility
-    playerScore+=player.card.mobility;
-    cpuScore+=cpu.card.mobility;
+    playerScore += player.card.mobility;
+    cpuScore += cpu.card.mobility;
 
-    // Launch Angle
+    // Attack
+    playerScore += player.card.attack;
+    cpuScore += cpu.card.attack;
 
+    // Random launch quality
+    playerScore += Math.floor(Math.random()*21);
+    cpuScore += Math.floor(Math.random()*21);
+
+    // Launch angle
     switch(Game.player.launch.angle){
 
         case "Flat":
-            playerScore+=5;
+            playerScore += 5;
             break;
 
         case "Slight Tilt":
-            playerScore+=3;
+            playerScore += 3;
             break;
 
         case "Hard Tilt":
-            playerScore+=1;
+            playerScore += 1;
             break;
 
     }
@@ -3076,35 +3083,140 @@ function resolveOpening(){
     switch(Game.cpu.launch.angle){
 
         case "Flat":
-            cpuScore+=5;
+            cpuScore += 5;
             break;
 
         case "Slight Tilt":
-            cpuScore+=3;
+            cpuScore += 3;
             break;
 
         case "Hard Tilt":
-            cpuScore+=1;
+            cpuScore += 1;
             break;
 
     }
 
-    if(playerScore>cpuScore){
+    // Determine battle state
 
-        showOpeningResult("PLAYER");
+    if(playerScore > cpuScore){
 
-    }else if(cpuScore>playerScore){
+        Game.battle.openingWinner = "Player";
+        Game.battle.centerControl = "Player";
+        Game.battle.momentum = 70;
 
-        showOpeningResult("CPU");
+    }else if(cpuScore > playerScore){
+
+        Game.battle.openingWinner = "CPU";
+        Game.battle.centerControl = "CPU";
+        Game.battle.momentum = -70;
 
     }else{
 
-        showOpeningResult("DRAW");
+        Game.battle.openingWinner = "Draw";
+        Game.battle.centerControl = "Neutral";
+        Game.battle.momentum = 0;
 
     }
 
+    Game.battle.phase = "Opening";
+
+    function showOpeningResult(){
+
+    const app = document.getElementById("app");
+
+    let text = "";
+
+    if(Game.battle.openingWinner==="Player"){
+
+        text = `
+        ${Game.player.blade.name} wins the opening clash!
+
+        ${Game.player.blade.name} takes center control.
+        `;
+
+    }else if(Game.battle.openingWinner==="CPU"){
+
+        text = `
+        ${Game.cpu.blade.name} wins the opening clash!
+
+        ${Game.cpu.blade.name} controls the center.
+        `;
+
+    }else{
+
+        text = `
+        Neither Bey gains an advantage!
+
+        Both continue circling.
+        `;
+
+    }
+
+    document.getElementById("arenaText").innerHTML = text;
+
+    setTimeout(()=>{
+
+        generateDecision();
+
+    },2500);
+
 }
 
+ function generateDecision(){
+
+    const app = document.getElementById("app");
+
+    app.innerHTML = `
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>MOVE</h1>
+
+            <hr>
+
+            <p>
+
+            ${Game.battle.centerControl==="Player"
+                ? "You control the center."
+                : Game.battle.centerControl==="CPU"
+                ? "The CPU controls the center."
+                : "Neither Bey controls the center."
+            }
+
+            </p>
+
+            <br>
+
+            <button class="menu-btn bronze">
+
+                Brace
+
+            </button>
+
+            <button class="menu-btn silver">
+
+                Counter
+
+            </button>
+
+            <button class="menu-btn gold">
+
+                Dodge
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+}
+ 
 window.addEventListener("DOMContentLoaded", () => {
 
 
