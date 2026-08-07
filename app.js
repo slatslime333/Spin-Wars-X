@@ -2062,15 +2062,29 @@ function setLaunchPositions(){
             moveBey("player","Center");
             break;
 
-        case "X-Rail":
+       case "X-Rail":
 
-            moveBey(
-                "player",
-                playerSide==="Left"
-                ? "LeftRail"
-                : "RightRail"
-            );
-            break;
+    if(Game.player.launch.success){
+
+        moveBey(
+            "player",
+            playerSide==="Left"
+            ? "LeftRail"
+            : "RightRail"
+        );
+
+    }else{
+
+        moveBey(
+            "player",
+            playerSide==="Left"
+            ? "LeftMid"
+            : "RightMid"
+        );
+
+    }
+
+    break;
 
         case "Pocket Drop":
 
@@ -2110,15 +2124,29 @@ function setLaunchPositions(){
             moveBey("cpu","Center");
             break;
 
-        case "X-Rail":
+       case "X-Rail":
 
-            moveBey(
-                "cpu",
-                cpuSide==="Left"
-                ? "LeftRail"
-                : "RightRail"
-            );
-            break;
+    if(Game.cpu.launch.success){
+
+        moveBey(
+            "cpu",
+            cpuSide==="Left"
+            ? "LeftRail"
+            : "RightRail"
+        );
+
+    }else{
+
+        moveBey(
+            "cpu",
+            cpuSide==="Left"
+            ? "LeftMid"
+            : "RightMid"
+        );
+
+    }
+
+    break;
 
         case "Pocket Drop":
 
@@ -2155,13 +2183,48 @@ function setLaunchPositions(){
 
 function playLaunchAnimation(){
 
-    renderBeys();
+    const playerPath=getLaunchPath("player");
+    const cpuPath=getLaunchPath("cpu");
 
-    setTimeout(()=>{
+    let step=0;
 
-        showArena();
+    function animate(){
 
-    },1200);
+        if(step<playerPath.length){
+
+            moveBey("player",playerPath[step]);
+
+        }
+
+        if(step<cpuPath.length){
+
+            moveBey("cpu",cpuPath[step]);
+
+        }
+
+        renderBeys();
+
+        step++;
+
+        if(
+            step<
+            Math.max(
+                playerPath.length,
+                cpuPath.length
+            )
+        ){
+
+            setTimeout(animate,500);
+
+        }else{
+
+            setTimeout(showArena,500);
+
+        }
+
+    }
+
+    animate();
 
 }
 
@@ -3724,6 +3787,124 @@ function applyLaunchQuality(blader){
 }
 
 //=========================
+// VALIDATE LAUNCH
+//=========================
+
+function validateLaunch(blader){
+
+    const launch = Game[blader].launch;
+
+    const blade = Game[blader].blade;
+
+    const side =
+        blader==="player"
+        ? Game.arena.playerSide
+        : Game.arena.cpuSide;
+
+    launch.success=true;
+    launch.reason="";
+
+    // Right-spin Bey cannot naturally
+    // ride the left rail.
+
+    if(
+        blade.spin==="Right" &&
+        side==="Left" &&
+        launch.technique==="X-Rail"
+    ){
+
+        launch.success=false;
+
+        launch.reason=
+            "Right-spin cannot catch the left X-Rail.";
+
+    }
+
+}
+
+//=========================
+// GET LAUNCH PATH
+//=========================
+
+function getLaunchPath(blader){
+
+    const launch=Game[blader].launch;
+
+    const side=
+        blader==="player"
+        ? Game.arena.playerSide
+        : Game.arena.cpuSide;
+
+    switch(launch.technique){
+
+        case "Center":
+
+            return [
+                "Center"
+            ];
+
+        case "X-Rail":
+
+            if(!launch.success){
+
+                return[
+                    side==="Left"
+                    ?"LeftMid"
+                    :"RightMid"
+                ];
+
+            }
+
+            return[
+
+                side==="Left"
+                ?"LeftRail"
+                :"RightRail",
+
+                "XRailExit",
+
+                "Center"
+
+            ];
+
+        case "Pocket Drop":
+
+            return[
+                "XRailExit",
+                "Center"
+            ];
+
+        case "Wide Circle":
+
+            return[
+                side==="Left"
+                ?"LeftMid"
+                :"RightMid",
+
+                side==="Left"
+                ?"TopLeft"
+                :"TopRight",
+
+                "Center"
+            ];
+
+        case "Direct Clash":
+
+            return[
+                side==="Left"
+                ?"TopLeft"
+                :"TopRight",
+
+                "Center"
+            ];
+
+    }
+
+    return["Center"];
+
+}
+
+//=========================
 // LAUNCH EXECUTION
 //=========================
 
@@ -3779,7 +3960,9 @@ function showLaunchExecution(){
         Game.player.launch.gamble=false;
 
         applyLaunchQuality("player");
-
+     
+validateLaunch("player");
+     
     generateCPULaunch();
 
 
@@ -3846,7 +4029,9 @@ Game.cpu.launch.quality = rollQuality();
 
 // Apply bonuses/penalties
 applyLaunchQuality("cpu");
-
+ 
+validateLaunch("cpu");
+ 
 showLetItRip();
 
 }
@@ -4110,36 +4295,86 @@ function openingCommentary(){
     const cpu=Game.cpu.blade;
 
     let line="";
+ 
+const playerLaunch=Game.player.launch.quality;
+const cpuLaunch=Game.cpu.launch.quality;
+ 
+  if(!Game.player.launch.success){
 
-    // Player launch
+    line+=`⚠ ${Game.player.launch.reason}\n\n`;
 
-    if(player.personality.aggression>=90){
+}
 
-        line+=`${player.name} explodes off the launcher!\n\n`;
+if(!Game.cpu.launch.success){
 
-    }else if(player.personality.control>=90){
+    line+=`⚠ ${Game.cpu.launch.reason}\n\n`;
 
-        line+=`${player.name} launches with incredible precision.\n\n`;
+}
+    //=========================
+// PLAYER LAUNCH
+//=========================
 
-    }else{
+switch(playerLaunch){
 
-        line+=`${player.name} gets a clean launch.\n\n`;
+    case "Perfect":
 
-    }
+        line+=`⭐ PERFECT LAUNCH!\n${player.name} rockets into the stadium!\n\n`;
+        break;
 
-    // CPU launch
+    case "Good":
 
-    if(cpu.personality.aggression>=90){
+        line+=`${player.name} gets an excellent launch.\n\n`;
+        break;
 
-        line+=`${cpu.name} rushes forward looking for a knockout!\n\n`;
+    case "Okay":
 
-    }else if(cpu.personality.control>=90){
+        line+=`${player.name} gets a solid launch.\n\n`;
+        break;
 
-        line+=`${cpu.name} calmly takes its position.\n\n`;
+    case "Bad":
 
-    }else{
+        line+=`${player.name} launches awkwardly and loses momentum.\n\n`;
+        break;
 
-        line+=`${cpu.name} enters the stadium confidently.\n\n`;
+    case "Horrible":
+
+        line+=`💥 HORRIBLE LAUNCH!\n${player.name} struggles immediately.\n\n`;
+        break;
+
+}
+
+   //=========================
+// CPU LAUNCH
+//=========================
+
+switch(cpuLaunch){
+
+    case "Perfect":
+
+        line+=`⭐ PERFECT LAUNCH!\n${cpu.name} rockets into the stadium!\n\n`;
+        break;
+
+    case "Good":
+
+        line+=`${cpu.name} gets an excellent launch.\n\n`;
+        break;
+
+    case "Okay":
+
+        line+=`${cpu.name} gets a solid launch.\n\n`;
+        break;
+
+    case "Bad":
+
+        line+=`${cpu.name} launches awkwardly and loses momentum.\n\n`;
+        break;
+
+    case "Horrible":
+
+        line+=`💥 HORRIBLE LAUNCH!\n${cpu.name} struggles immediately.\n\n`;
+        break;
+
+}
 
     }
 
@@ -4177,9 +4412,21 @@ function resolveOpening(){
     playerScore += player.card.attack;
     cpuScore += cpu.card.attack;
 
-    // Random launch quality
-    playerScore += Math.floor(Math.random()*21);
-    cpuScore += Math.floor(Math.random()*21);
+   // Launch Quality
+
+const launchBonus={
+
+    Horrible:-15,
+    Bad:-8,
+    Okay:0,
+    Good:8,
+    Perfect:15
+
+};
+
+playerScore += launchBonus[Game.player.launch.quality];
+
+cpuScore += launchBonus[Game.cpu.launch.quality];
 
     switch(Game.player.launch.angle){
 
