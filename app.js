@@ -1502,7 +1502,37 @@ function renderStadium(){
 
     <g id="railLayer">
 
-    </g>
+    <!-- Left Rail -->
+
+    <path
+        class="rail-track"
+
+        d="
+        M245 675
+
+        C185 560 185 280 310 165
+
+        C360 120 420 100 470 95
+        "
+
+    />
+
+    <!-- Right Rail -->
+
+    <path
+        class="rail-track"
+
+        d="
+        M755 675
+
+        C815 560 815 280 690 165
+
+        C640 120 580 100 530 95
+        "
+
+    />
+
+</g>
 
     <g id="bowlLayer">
 
