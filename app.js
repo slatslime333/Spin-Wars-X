@@ -1486,6 +1486,49 @@ const STADIUM_MAP = {
 };
 
 //=========================
+// DRAW STADIUM
+//=========================
+
+function drawArena(){
+
+    const player = Game.battle.player.zone;
+    const cpu = Game.battle.cpu.zone;
+
+    function zone(name){
+
+        let text = name;
+
+        if(player===name) text += " 🔵";
+
+        if(cpu===name) text += " 🔴";
+
+        return text;
+
+    }
+
+    return `
+
+<pre class="arena">
+
+                 X EXIT
+
+${zone("TopLeft")}      ${zone("TopCenter")}      ${zone("TopRight")}
+
+${zone("LeftMid")}      ${zone("Center")}      ${zone("RightMid")}
+
+${zone("BottomLeft")}      ${zone("BottomCenter")}      ${zone("BottomRight")}
+
+${zone("LeftRail")}                    ${zone("RightRail")}
+
+🕳 ${zone("LeftPocket")}          ${zone("RightPocket")} 🕳
+
+</pre>
+
+`;
+
+}
+
+//=========================
 // COLLISION RADIUS
 //=========================
 
@@ -1639,17 +1682,19 @@ function getNaturalMovement(bey){
 
 function battleTick(){
 
-    // Player movement
-    const playerNext = getNaturalMovement("player");
+    // Move Player
+    moveBey(
+        "player",
+        getNaturalMovement("player")
+    );
 
-    moveBey("player",playerNext);
+    // Move CPU
+    moveBey(
+        "cpu",
+        getNaturalMovement("cpu")
+    );
 
-    // CPU movement
-    const cpuNext = getNaturalMovement("cpu");
-
-    moveBey("cpu",cpuNext);
-
-    // Check events
+    // Check for collisions/events
     checkBattleEvents();
 
 }
@@ -3660,13 +3705,15 @@ function showOpeningResult(){
 
     }
 
-    document.getElementById("arenaText").innerHTML=text;
+ document.getElementById("arenaText").innerHTML=text;
 
-    setTimeout(()=>{
+setTimeout(()=>{
 
-        generateDecision();
+    battleTick();
 
-    },2500);
+    generateDecision();
+
+},2500);
 
 }
 
@@ -3685,6 +3732,8 @@ function generateDecision(){
     <main class="menu">
 
         <section class="menu-card">
+        
+${drawArena()}
 
             <h1>MOVE</h1>
 
