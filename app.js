@@ -3018,6 +3018,16 @@ MOB ${cpuCombo.stats.mobility}
 
             </h2>
 
+            <br>
+
+<button
+    class="menu-btn gold"
+    id="skipVS">
+
+    SKIP
+
+</button>
+
         </section>
 
     </main>
@@ -3045,6 +3055,16 @@ MOB ${cpuCombo.stats.mobility}
 }
 
     },1000);
+
+ document.getElementById("skipVS").onclick = ()=>{
+
+    clearInterval(timer);
+
+    assignStadiumSides();
+
+    showLaunchScreen();
+
+};
 
 }
 
