@@ -4540,9 +4540,6 @@ function generateDecision(){
 
     app.innerHTML=`
     
-renderBeys();
-
-    <main class="menu">
 
         <section class="menu-card">
         
@@ -4589,6 +4586,8 @@ ${renderStadium()}
     </main>
 
     `;
+ 
+ renderBeys();
 
 }
 
