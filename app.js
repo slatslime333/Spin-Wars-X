@@ -2536,6 +2536,8 @@ function showLaunchScreen(){
         <section class="menu-card">
 
             <h1>LAUNCH PHASE</h1>
+            
+${getStadiumPreview()}
 
             <hr>
 
@@ -2596,17 +2598,12 @@ document.getElementById("hardLaunch").onclick = () => {
 //=========================
 
    function chooseLaunchAngle(angle){
-    
-   <h1>Choose Launch Angle</h1>
 
-    ${getStadiumPreview()}
-    
     Game.player.launch.angle = angle;
 
     showLaunchTechnique();
 
 }
-
 
 //=========================
 // LAUNCH TECHNIQUE
