@@ -1394,6 +1394,35 @@ orb:{
 };
 
 //=========================
+// ZONE POSITIONS
+//=========================
+
+const ZONE_POSITIONS={
+
+    TopLeft:{x:170,y:95},
+    TopCenter:{x:250,y:70},
+    TopRight:{x:330,y:95},
+
+    LeftMid:{x:135,y:170},
+    Center:{x:250,y:185},
+    RightMid:{x:365,y:170},
+
+    BottomLeft:{x:180,y:265},
+    BottomCenter:{x:250,y:280},
+    BottomRight:{x:320,y:265},
+
+    LeftRail:{x:115,y:115},
+    RightRail:{x:385,y:115},
+
+    XRailExit:{x:250,y:38},
+
+    LeftPocket:{x:155,y:320},
+    XtremeZone:{x:250,y:320},
+    RightPocket:{x:345,y:320}
+
+};
+
+//=========================
 // STADIUM ENGINE
 //=========================
 
@@ -1644,6 +1673,36 @@ viewBox="0 0 1000 900">
 </div>
 
 `;
+
+}
+
+//=========================
+// RENDER BEYS
+//=========================
+
+function renderBeys(){
+
+    const player=document.getElementById("playerBey");
+    const cpu=document.getElementById("cpuBey");
+
+    if(!player || !cpu) return;
+
+    const p=ZONE_POSITIONS[Game.battle.player.zone];
+    const c=ZONE_POSITIONS[Game.battle.cpu.zone];
+
+    if(p){
+
+        player.style.left=(p.x-10)+"px";
+        player.style.top=(p.y-10)+"px";
+
+    }
+
+    if(c){
+
+        cpu.style.left=(c.x-10)+"px";
+        cpu.style.top=(c.y-10)+"px";
+
+    }
 
 }
 
@@ -3649,11 +3708,13 @@ ${renderStadium()}
 
     `;
 
-    setTimeout(()=>{
+   renderBeys();
 
-        openingCommentary();
+setTimeout(()=>{
 
-    },2000);
+    openingCommentary();
+
+},2000);
 
 }
 
@@ -3853,6 +3914,8 @@ function generateDecision(){
     const app=document.getElementById("app");
 
     app.innerHTML=`
+    
+renderBeys();
 
     <div class="background"></div>
 
