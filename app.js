@@ -1497,41 +1497,21 @@ function renderStadium(){
 
     <div class="stadium">
 
-        <div class="x-exit">
-
-            X EXIT
-
-        </div>
-
-        <div class="rail rail-left"></div>
-
-        <div class="rail rail-right"></div>
-
-        <div class="rail rail-bottom"></div>
+        <div class="rail"></div>
 
         <div class="battle-bowl">
+
+            <div class="x-exit"></div>
+
+            <div class="left-pocket"></div>
+
+            <div class="xtreme-pocket"></div>
+
+            <div class="right-pocket"></div>
 
             <div id="playerBey" class="bey player"></div>
 
             <div id="cpuBey" class="bey cpu"></div>
-
-        </div>
-
-        <div class="finish left-pocket">
-
-            🕳
-
-        </div>
-
-        <div class="finish xtreme">
-
-            💥
-
-        </div>
-
-        <div class="finish right-pocket">
-
-            🕳
 
         </div>
 
