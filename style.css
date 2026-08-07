@@ -572,10 +572,29 @@ STADIUM 2.0
 
     position:relative;
 
-    width:420px;
-    height:420px;
+    width:520px;
+    height:450px;
 
     margin:25px auto;
+
+}
+
+.rail{
+
+    position:absolute;
+
+    left:50%;
+    top:12px;
+
+    transform:translateX(-50%);
+
+    width:460px;
+    height:460px;
+
+    border:22px solid #565656;
+    border-radius:50%;
+
+    box-sizing:border-box;
 
 }
 
@@ -583,15 +602,17 @@ STADIUM 2.0
 
     position:absolute;
 
-    inset:40px;
+    left:50%;
+    top:32px;
 
-    border:8px solid #777;
+    transform:translateX(-50%);
+
+    width:390px;
+    height:390px;
 
     border-radius:50%;
 
-    background:
-
-    radial-gradient(circle,#2c2c2c 0%,#1b1b1b 100%);
+    background:#1d1d1d;
 
     overflow:hidden;
 
@@ -601,81 +622,74 @@ STADIUM 2.0
 
     position:absolute;
 
-    top:0;
+    top:-6px;
     left:50%;
 
     transform:translateX(-50%);
 
-    color:#ffd84d;
+    width:90px;
+    height:34px;
 
-    font-weight:bold;
+    background:#ffd94d;
 
-    font-size:15px;
+    border-radius:0 0 18px 18px;
 
-   .finish{
+}
+
+.finish{
 
     position:absolute;
 
-    width:54px;
-    height:54px;
-
-    border-radius:50%;
-
     background:#111;
-
-    border:3px solid #666;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:center;
-
-    font-size:22px;
 
 }
 
 .left-pocket{
 
-    left:15px;
+    width:58px;
+    height:58px;
 
-    bottom:15px;
+    border-radius:50%;
+
+    left:22px;
+    bottom:22px;
 
 }
 
 .right-pocket{
 
-    right:15px;
+    width:58px;
+    height:58px;
 
-    bottom:15px;
+    border-radius:50%;
+
+    right:22px;
+    bottom:22px;
 
 }
 
-.xtreme{
+.xtreme-pocket{
+
+    width:90px;
+    height:42px;
 
     left:50%;
-
     bottom:8px;
 
     transform:translateX(-50%);
 
-    width:72px;
-
-    height:42px;
-
     border-radius:20px;
 
-    background:#c41717;
-
-    color:white;
+    background:#d91d1d;
 
 }
-   .bey{
+
+.bey{
 
     position:absolute;
 
-    width:22px;
-    height:22px;
+    width:20px;
+    height:20px;
 
     border-radius:50%;
 
@@ -684,29 +698,18 @@ STADIUM 2.0
 
     transform:translate(-50%,-50%);
 
-    transition:
-
-        left .45s ease,
-
-        top .45s ease,
-
-        transform .45s ease;
+    transition:.35s;
 
 }
 
 .player{
 
-    background:#3aa8ff;
-
-    box-shadow:0 0 12px #3aa8ff;
+    background:#2ea8ff;
 
 }
 
 .cpu{
 
-    background:#ff4040;
+    background:#ff4545;
 
-    box-shadow:0 0 12px #ff4040;
-
-}
 }
