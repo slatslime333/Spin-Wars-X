@@ -4277,7 +4277,7 @@ ${renderStadium()}
 
 setTimeout(()=>{
 
-    ();
+    openingCommentary();
 
 },2000);
 
