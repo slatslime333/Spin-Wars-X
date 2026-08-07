@@ -1982,10 +1982,77 @@ function canCollide(playerZone,cpuZone){
 
 function resolveCollision(){
 
-    console.log("Collision!");
+    const player=Game.player.blade.card;
+    const cpu=Game.cpu.blade.card;
+
+    let playerPower=
+        player.attack+
+        player.knockback+
+        Game.battle.player.attackBonus;
+
+    let cpuPower=
+        cpu.attack+
+        cpu.knockback+
+        Game.battle.cpu.attackBonus;
+
+    playerPower-=Game.battle.cpu.defenseBonus;
+    cpuPower-=Game.battle.player.defenseBonus;
+
+    if(playerPower>cpuPower){
+
+        Game.battle.momentum+=15;
+
+        Game.battle.cpu.spin-=6;
+        Game.battle.cpu.balance-=4;
+
+        pushBey("cpu");
+
+    }
+
+    else if(cpuPower>playerPower){
+
+        Game.battle.momentum-=15;
+
+        Game.battle.player.spin-=6;
+        Game.battle.player.balance-=4;
+
+        pushBey("player");
+
+    }
+
+    renderBeys();
 
 }
+ 
+//=========================
+// KNOCKBACK
+//=========================
 
+function pushBey(bey){
+
+    const data=Game.battle[bey];
+
+    const neighbors=
+        STADIUM_MAP[data.zone].neighbors;
+
+    if(neighbors.length===0){
+
+        return;
+
+    }
+
+    const destination=
+
+        neighbors[
+            Math.floor(
+                Math.random()*neighbors.length
+            )
+        ];
+
+    moveBey(bey,destination);
+
+}
+ 
 //=========================
 // RAIL EXIT
 //=========================
@@ -4563,21 +4630,29 @@ ${renderStadium()}
 
             <br>
 
-            <button class="menu-btn bronze">
+          <button
+    class="menu-btn bronze"
+    id="braceBtn">
 
-                Brace
+    Brace
 
-            </button>
+</button>
 
-            <button class="menu-btn silver">
+<button
+    class="menu-btn silver"
+    id="counterBtn">
 
-                Counter
+    Counter
 
-            </button>
+</button>
 
-            <button class="menu-btn gold">
+<button
+    class="menu-btn gold"
+    id="dodgeBtn">
 
-                Dodge
+    Dodge
+
+</button>
 
             </button>
 
@@ -4588,6 +4663,182 @@ ${renderStadium()}
     `;
  
  renderBeys();
+
+ document.getElementById("braceBtn").onclick=()=>{
+
+    chooseMove("Brace");
+
+};
+
+document.getElementById("counterBtn").onclick=()=>{
+
+    chooseMove("Counter");
+
+};
+
+document.getElementById("dodgeBtn").onclick=()=>{
+
+    chooseMove("Dodge");
+
+};
+
+}
+
+//=========================
+// PLAYER MOVE
+//=========================
+
+function chooseMove(move){
+
+    Game.player.currentMove=move;
+
+    generateCPUMove();
+
+}
+
+//=========================
+// CPU MOVE
+//=========================
+
+function generateCPUMove(){
+
+    const moves=[
+
+        "Brace",
+        "Counter",
+        "Dodge"
+
+    ];
+
+    Game.cpu.currentMove=
+
+        moves[
+            Math.floor(Math.random()*moves.length)
+        ];
+
+    resolveMoves();
+
+}
+
+//=========================
+// RESOLVE MOVES
+//=========================
+
+function resolveMoves(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>MOVES</h1>
+
+            <hr>
+
+            <h2>
+
+                You:
+                ${Game.player.currentMove}
+
+            </h2>
+
+            <h2>
+
+                CPU:
+                ${Game.cpu.currentMove}
+
+            </h2>
+
+            <br>
+
+            <button
+                class="menu-btn gold"
+                id="continueBtn">
+
+                CONTINUE
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+    document.getElementById("continueBtn").onclick=()=>{
+
+        applyMoveEffects();
+
+battleTick();
+
+generateDecision();
+     
+    };
+
+}
+
+//=========================
+// MOVE MODIFIERS
+//=========================
+
+function applyMoveEffects(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    // Reset
+    player.attackBonus=0;
+    player.defenseBonus=0;
+    player.evasionBonus=0;
+
+    cpu.attackBonus=0;
+    cpu.defenseBonus=0;
+    cpu.evasionBonus=0;
+
+    //-----------------
+    // PLAYER
+    //-----------------
+
+    switch(Game.player.currentMove){
+
+        case "Brace":
+            player.defenseBonus=12;
+            break;
+
+        case "Counter":
+            player.attackBonus=8;
+            break;
+
+        case "Dodge":
+            player.evasionBonus=18;
+            break;
+
+    }
+
+    //-----------------
+    // CPU
+    //-----------------
+
+    switch(Game.cpu.currentMove){
+
+        case "Brace":
+            cpu.defenseBonus=12;
+            break;
+
+        case "Counter":
+            cpu.attackBonus=8;
+            break;
+
+        case "Dodge":
+            cpu.evasionBonus=18;
+            break;
+
+    }
 
 }
 
