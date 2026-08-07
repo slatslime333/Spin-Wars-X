@@ -9,6 +9,8 @@
 
 const Game = {
 
+ 
+
     version:"0.5.0",
 
     screen:"menu",
@@ -65,21 +67,43 @@ arena:{
 
 battle:{
 
+    phase:"Opening",
+
     openingWinner:null,
 
     centerControl:null,
 
     momentum:0,
 
-    firstHit:false,
+    exchange:0,
 
-    clashStrength:0,
+    finished:false,
 
-    phase:"Opening"
+    player:{
+        zone:"Center",
+        previousZone:"Center",
+        side:null,
+        direction:"Clockwise",
+        rail:false,
+        xExit:false,
+        speed:0,
+        spin:100,
+        balance:100
+    },
 
-}
+    cpu:{
+        zone:"Center",
+        previousZone:"Center",
+        side:null,
+        direction:"CounterClockwise",
+        rail:false,
+        xExit:false,
+        speed:0,
+        spin:100,
+        balance:100
+    }
 
-};
+},
 
 //=========================
 // ENGINE 2.0 DATABASES
