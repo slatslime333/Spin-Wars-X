@@ -2732,7 +2732,8 @@ function showLetItRip(){
 
     const player=Game.player.blade;
     const cpu=Game.cpu.blade;
-
+    const prediction = getMatchPrediction();
+ 
     let seconds=10;
 
     app.innerHTML=`
@@ -2793,7 +2794,19 @@ function showLetItRip(){
 
             <hr>
 
-            <h2 id="ripText">
+<div style="margin:18px 0;padding:12px;background:rgba(255,255,255,.08);border-radius:10px;">
+
+    <strong>🎙 COMMENTATOR</strong>
+
+    <p id="predictionText">
+
+        ${prediction}
+
+    </p>
+
+</div>
+
+<h2 id="ripText">
 
                 Battle Begins In: 10
 
@@ -3042,6 +3055,87 @@ function resolveOpening(){
 
 window.addEventListener("DOMContentLoaded", () => {
 
-    hookMenuButtons();
 
-});
+ //=========================
+// MATCH PREDICTION
+//=========================
+
+function getMatchPrediction(){
+
+    const player=Game.player.blade.card;
+    const cpu=Game.cpu.blade.card;
+
+    let playerScore=0;
+    let cpuScore=0;
+
+    playerScore+=player.attack;
+    cpuScore+=cpu.attack;
+
+    playerScore+=player.defense;
+    cpuScore+=cpu.defense;
+
+    playerScore+=player.stamina;
+    cpuScore+=cpu.stamina;
+
+    playerScore+=player.balance;
+    cpuScore+=cpu.balance;
+
+    playerScore+=player.mobility;
+    cpuScore+=cpu.mobility;
+
+    const diff=playerScore-cpuScore;
+
+    let lines=[];
+
+    if(diff>35){
+
+        lines=[
+
+            `I like ${Game.player.blade.name} in this matchup. It has the stronger overall stat profile.`,
+
+            `${Game.player.blade.name} comes in as the favorite. Let's see if it lives up to expectations.`,
+
+            `${Game.cpu.blade.name} has its work cut out for it in this one.`,
+
+            `${Game.player.blade.name} has the edge on paper, but anything can happen in the stadium.`
+
+        ];
+
+    }else if(diff<-35){
+
+        lines=[
+
+            `${Game.cpu.blade.name} looks like the favorite going into this battle.`,
+
+            `${Game.cpu.blade.name} has the stronger overall combo on paper.`,
+
+            `${Game.player.blade.name} will need a great launch to pull off the upset.`,
+
+            `The numbers favor ${Game.cpu.blade.name}, but Beyblade battles are never guaranteed.`
+
+        ];
+
+    }else{
+
+        lines=[
+
+            `This matchup looks incredibly even.`,
+
+            `I don't see a clear favorite here. This could go either way.`,
+
+            `These two combos match up surprisingly well against each other.`,
+
+            `Expect a close battle. One big hit could decide everything.`,
+
+            `Neither blader has a clear advantage entering this match.`
+
+        ];
+
+    }
+
+    return lines[
+        Math.floor(Math.random()*lines.length)
+    ];
+
+}
+    hookMenuButtons();
