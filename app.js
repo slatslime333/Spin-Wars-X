@@ -1505,35 +1505,68 @@ viewBox="0 0 1000 900">
     <path
         class="rail-track"
         d="
-            M245 680
-
-            C170 560 170 250 330 135
-
-            C430 70 570 70 670 135
-
-            C830 250 830 560 755 680
-        "
+        
     />
 
-    <!-- OUTER BOWL -->
+    <!-- BATTLE BOWL -->
 
-    <ellipse
-        class="battleOuter"
-        cx="500"
-        cy="420"
-        rx="255"
-        ry="245"
-    />
+<path
+    class="battleOuter"
 
-    <!-- INNER BOWL -->
+    d="
 
-    <ellipse
-        class="battleInner"
-        cx="500"
-        cy="420"
-        rx="220"
-        ry="210"
-    />
+    M260 210
+
+    Q500 120 740 210
+
+    Q820 300 800 470
+
+    Q790 560 730 605
+
+    Q655 655 565 620
+
+    L435 620
+
+    Q345 655 270 605
+
+    Q210 560 200 470
+
+    Q180 300 260 210
+
+    Z
+
+    "
+
+/>
+
+<path
+    class="battleInner"
+
+    d="
+
+    M295 235
+
+    Q500 155 705 235
+
+    Q770 305 755 455
+
+    Q745 535 690 575
+
+    Q625 615 555 585
+
+    L445 585
+
+    Q375 615 310 575
+
+    Q255 535 245 455
+
+    Q230 305 295 235
+
+    Z
+
+    "
+
+/>
 
     <!-- X EXIT -->
 
@@ -1548,32 +1581,32 @@ viewBox="0 0 1000 900">
 
     <!-- LEFT OVER -->
 
-    <circle
-        class="overZone"
-        cx="255"
-        cy="705"
-        r="38"
-    />
+<circle
+    class="overZone"
+    cx="255"
+    cy="705"
+    r="38"
+/>
 
-    <!-- XTREME -->
+<!-- XTREME -->
 
-    <rect
-        class="xtremeZone"
-        x="435"
-        y="690"
-        width="130"
-        height="45"
-        rx="18"
-    />
+<rect
+    class="xtremeZone"
+    x="435"
+    y="690"
+    width="130"
+    height="45"
+    rx="18"
+/>
 
-    <!-- RIGHT OVER -->
+<!-- RIGHT OVER -->
 
-    <circle
-        class="overZone"
-        cx="745"
-        cy="705"
-        r="38"
-    />
+<circle
+    class="overZone"
+    cx="745"
+    cy="705"
+    r="38"
+/>
 
 </svg>
 
