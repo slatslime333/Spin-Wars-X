@@ -1686,21 +1686,36 @@ function renderBeys(){
     const cpu=document.getElementById("cpuBey");
 
     if(!player || !cpu) return;
+ 
+const p=ZONE_POSITIONS[Game.battle.player.zone];
+const c=ZONE_POSITIONS[Game.battle.cpu.zone];
 
-    const p=ZONE_POSITIONS[Game.battle.player.zone];
-    const c=ZONE_POSITIONS[Game.battle.cpu.zone];
+let playerX = p.x;
+let playerY = p.y;
+
+let cpuX = c.x;
+let cpuY = c.y;
+
+// If both Beys are in the same zone,
+// separate them slightly so both are visible.
+if(Game.battle.player.zone===Game.battle.cpu.zone){
+
+    playerX -= 12;
+    cpuX += 12;
+
+}
 
     if(p){
 
-        player.style.left=(p.x-10)+"px";
-        player.style.top=(p.y-10)+"px";
+       player.style.left=(playerX-10)+"px";
+       player.style.top=(playerY-10)+"px";
 
     }
 
     if(c){
-
-        cpu.style.left=(c.x-10)+"px";
-        cpu.style.top=(c.y-10)+"px";
+     
+cpu.style.left=(cpuX-10)+"px";
+cpu.style.top=(cpuY-10)+"px";
 
     }
 
