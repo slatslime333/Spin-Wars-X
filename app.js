@@ -1392,6 +1392,374 @@ orb:{
 };
 
 //=========================
+// STADIUM ENGINE
+//=========================
+
+const STADIUM_MAP = {
+
+    TopLeft:{
+        neighbors:["TopCenter","LeftMid"]
+    },
+
+    TopCenter:{
+        neighbors:["TopLeft","TopRight","Center","XRailExit"]
+    },
+
+    TopRight:{
+        neighbors:["TopCenter","RightMid"]
+    },
+
+    LeftMid:{
+        neighbors:["TopLeft","Center","BottomLeft","LeftRail"]
+    },
+
+    Center:{
+        neighbors:[
+            "TopCenter",
+            "LeftMid",
+            "RightMid",
+            "BottomCenter"
+        ]
+    },
+
+    RightMid:{
+        neighbors:[
+            "TopRight",
+            "Center",
+            "BottomRight",
+            "RightRail"
+        ]
+    },
+
+    BottomLeft:{
+        neighbors:[
+            "LeftMid",
+            "BottomCenter",
+            "LeftPocket"
+        ]
+    },
+
+    BottomCenter:{
+        neighbors:[
+            "BottomLeft",
+            "Center",
+            "BottomRight"
+        ]
+    },
+
+    BottomRight:{
+        neighbors:[
+            "RightMid",
+            "BottomCenter",
+            "RightPocket"
+        ]
+    },
+
+    LeftRail:{
+        neighbors:[
+            "LeftMid",
+            "XRailExit"
+        ]
+    },
+
+    RightRail:{
+        neighbors:[
+            "RightMid",
+            "XRailExit"
+        ]
+    },
+
+    XRailExit:{
+        neighbors:[
+            "TopCenter"
+        ]
+    },
+
+    LeftPocket:{
+        neighbors:[]
+    },
+
+    RightPocket:{
+        neighbors:[]
+    }
+
+};
+
+//=========================
+// COLLISION RADIUS
+//=========================
+
+const COLLISION_RADIUS = {
+
+    TopLeft:["TopCenter","LeftMid"],
+
+    TopCenter:[
+        "TopLeft",
+        "TopRight",
+        "Center",
+        "XRailExit"
+    ],
+
+    TopRight:[
+        "TopCenter",
+        "RightMid"
+    ],
+
+    LeftMid:[
+        "TopLeft",
+        "Center",
+        "BottomLeft",
+        "LeftRail"
+    ],
+
+    Center:[
+        "TopCenter",
+        "LeftMid",
+        "RightMid",
+        "BottomCenter"
+    ],
+
+    RightMid:[
+        "TopRight",
+        "Center",
+        "BottomRight",
+        "RightRail"
+    ],
+
+    BottomLeft:[
+        "LeftMid",
+        "BottomCenter",
+        "LeftPocket"
+    ],
+
+    BottomCenter:[
+        "Center",
+        "BottomLeft",
+        "BottomRight"
+    ],
+
+    BottomRight:[
+        "RightMid",
+        "BottomCenter",
+        "RightPocket"
+    ],
+
+    LeftRail:[
+        "LeftMid",
+        "XRailExit"
+    ],
+
+    RightRail:[
+        "RightMid",
+        "XRailExit"
+    ],
+
+    XRailExit:[
+        "TopCenter",
+        "LeftRail",
+        "RightRail"
+    ],
+
+    LeftPocket:[
+        "BottomLeft"
+    ],
+
+    RightPocket:[
+        "BottomRight"
+    ]
+
+};
+
+//=========================
+// MOVE BEY
+//=========================
+
+function moveBey(bey,newZone){
+
+    const target = Game.battle[bey];
+
+    // Save previous position
+    target.previousZone = target.zone;
+
+    // Move
+    target.zone = newZone;
+
+    // Reset event flags
+    target.rail = false;
+    target.xExit = false;
+
+    // Rail check
+    if(newZone === "LeftRail" || newZone === "RightRail"){
+
+        target.rail = true;
+
+    }
+
+    // X-Rail Exit check
+    if(newZone === "XRailExit"){
+
+        target.xExit = true;
+
+    }
+
+}
+
+//=========================
+// NEXT NATURAL ZONE
+//=========================
+
+function getNaturalMovement(bey){
+
+    const data = Game.battle[bey];
+
+    const neighbors =
+        STADIUM_MAP[data.zone].neighbors;
+
+    if(neighbors.length===0){
+
+        return data.zone;
+
+    }
+
+    if(data.direction==="Clockwise"){
+
+        return neighbors[0];
+
+    }
+
+    return neighbors[
+        neighbors.length-1
+    ];
+
+}
+
+//=========================
+// BATTLE TICK
+//=========================
+
+function battleTick(){
+
+    // Player movement
+    const playerNext = getNaturalMovement("player");
+
+    moveBey("player",playerNext);
+
+    // CPU movement
+    const cpuNext = getNaturalMovement("cpu");
+
+    moveBey("cpu",cpuNext);
+
+    // Check events
+    checkBattleEvents();
+
+}
+
+//=========================
+// BATTLE EVENTS
+//=========================
+
+function checkBattleEvents(){
+
+    const player = Game.battle.player;
+
+    const cpu = Game.battle.cpu;
+
+    // Collision
+
+    if(canCollide(player.zone,cpu.zone)){
+
+        resolveCollision();
+
+        return;
+
+    }
+
+    // Rail Exit
+
+    if(player.xExit){
+
+        resolveRailExit("player");
+
+    }
+
+    if(cpu.xExit){
+
+        resolveRailExit("cpu");
+
+    }
+
+    // Pocket danger
+
+    if(player.zone==="LeftPocket" || player.zone==="RightPocket"){
+
+        resolvePocket("player");
+
+    }
+
+    if(cpu.zone==="LeftPocket" || cpu.zone==="RightPocket"){
+
+        resolvePocket("cpu");
+
+    }
+
+}
+
+//=========================
+// COLLISION CHECK
+//=========================
+
+function canCollide(playerZone,cpuZone){
+
+    if(playerZone===cpuZone){
+
+        return true;
+
+    }
+
+    const nearby =
+        COLLISION_RADIUS[playerZone];
+
+    if(!nearby){
+
+        return false;
+
+    }
+
+    return nearby.includes(cpuZone);
+
+}
+
+//=========================
+// COLLISION
+//=========================
+
+function resolveCollision(){
+
+    console.log("Collision!");
+
+}
+
+//=========================
+// RAIL EXIT
+//=========================
+
+function resolveRailExit(bey){
+
+    console.log(bey+" exited the X-Rail!");
+
+}
+
+//=========================
+// POCKET
+//=========================
+
+function resolvePocket(bey){
+
+    console.log(bey+" is in pocket danger!");
+
+}
+
+//=========================
 // ASSIGN STADIUM SIDES
 //=========================
 
