@@ -2723,12 +2723,17 @@ function generateCPULaunch(){
 }
 
 //=========================
-// LET IT RIP
+// BATTLE PREVIEW
 //=========================
 
 function showLetItRip(){
 
     const app=document.getElementById("app");
+
+    const player=Game.player.blade;
+    const cpu=Game.cpu.blade;
+
+    let seconds=10;
 
     app.innerHTML=`
 
@@ -2738,19 +2743,71 @@ function showLetItRip(){
 
         <section class="menu-card">
 
-            <h1 id="ripText">
+            <h1>ROUND ${Game.match.round}</h1>
 
-                3...
+            <hr>
 
-            </h1>
+            <div style="display:flex;justify-content:space-between;text-align:left;">
+
+                <div>
+
+                    <strong>${player.name}</strong><br>
+
+                    ${Game.player.ratchet.name}<br>
+
+                    ${Game.player.bit.name}<br><br>
+
+                    OVR ${player.card.ovr}<br><br>
+
+                    ATK ${player.card.attack}<br>
+                    KNO ${player.card.knockback}<br>
+                    DEF ${player.card.defense}<br>
+                    MOB ${player.card.mobility}<br>
+                    BAL ${player.card.balance}<br>
+                    STA ${player.card.stamina}<br>
+                    BST ${player.card.burst}
+
+                </div>
+
+                <div style="text-align:right;">
+
+                    <strong>${cpu.name}</strong><br>
+
+                    ${Game.cpu.ratchet.name}<br>
+
+                    ${Game.cpu.bit.name}<br><br>
+
+                    OVR ${cpu.card.ovr}<br><br>
+
+                    ATK ${cpu.card.attack}<br>
+                    KNO ${cpu.card.knockback}<br>
+                    DEF ${cpu.card.defense}<br>
+                    MOB ${cpu.card.mobility}<br>
+                    BAL ${cpu.card.balance}<br>
+                    STA ${cpu.card.stamina}<br>
+                    BST ${cpu.card.burst}
+
+                </div>
+
+            </div>
+
+            <hr>
+
+            <h2 id="ripText">
+
+                Battle Begins In: 10
+
+            </h2>
 
             <br>
 
-            <p>
+            <button
+                class="menu-btn gold"
+                id="skipButton">
 
-                Both Bladers Prepare...
+                SKIP
 
-            </p>
+            </button>
 
         </section>
 
@@ -2758,38 +2815,31 @@ function showLetItRip(){
 
     `;
 
-    const countdown=[
-
-        "3...",
-        "2...",
-        "1...",
-        "LET IT RIP!"
-
-    ];
-
-    let index=0;
-
     const timer=setInterval(()=>{
 
-        index++;
+        seconds--;
 
         document.getElementById("ripText").textContent=
 
-            countdown[index];
+            "Battle Begins In: "+seconds;
 
-        if(index===3){
+        if(seconds<=0){
 
             clearInterval(timer);
 
-            setTimeout(()=>{
-
-                generateArena();
-
-            },1000);
+            generateArena();
 
         }
 
     },1000);
+
+    document.getElementById("skipButton").onclick=()=>{
+
+        clearInterval(timer);
+
+        generateArena();
+
+    };
 
 }
 
