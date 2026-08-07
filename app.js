@@ -1368,29 +1368,36 @@ orb:{
 };
 
 //=========================
+// ASSIGN STADIUM SIDES
+//=========================
+
+function assignStadiumSides(){
+
+    // Swap every 2 rounds
+    const swap = Math.floor((Game.match.round - 1) / 2) % 2;
+
+    if(swap === 0){
+
+        Game.arena.playerSide = "Left";
+        Game.arena.cpuSide = "Right";
+
+    }else{
+
+        Game.arena.playerSide = "Right";
+        Game.arena.cpuSide = "Left";
+
+    }
+
+    Game.arena.playerLane = "Outer";
+    Game.arena.cpuLane = "Outer";
+
+}
+
+//=========================
 // GENERATE ARENA
 //=========================
 
 function generateArena(){
-
-    // Swap sides every 2 rounds
-    const swap=Math.floor((Game.match.round-1)/2)%2;
-
-    if(swap===0){
-
-        Game.arena.playerSide="Left";
-        Game.arena.cpuSide="Right";
-
-    }else{
-
-        Game.arena.playerSide="Right";
-        Game.arena.cpuSide="Left";
-
-    }
-
-    Game.arena.playerLane="Outer";
-
-    Game.arena.cpuLane="Outer";
 
     showArena();
 
@@ -2590,11 +2597,13 @@ MOB ${cpuCombo.stats.mobility}
 
         if(seconds<=0){
 
-            clearInterval(timer);
+    clearInterval(timer);
 
-            showLaunchScreen();
+    assignStadiumSides();
 
-        }
+    showLaunchScreen();
+
+}
 
     },1000);
 
