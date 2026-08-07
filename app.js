@@ -3710,12 +3710,14 @@ function showLaunchExecution(){
 
             <h2>Predicted Quality</h2>
 
-            <h1>${Game.player.launch.quality}</h1>
+            <h1 id="qualityText">
+                ${Game.player.launch.quality}
+            </h1>
 
             <br>
 
             <button
-                class="menu-btn bronze"
+                class="menu-btn silver"
                 id="qualityBtn">
 
                 QUALITY
@@ -3736,6 +3738,7 @@ function showLaunchExecution(){
 
     `;
 
+    // Keep the predetermined quality
     document.getElementById("qualityBtn").onclick=()=>{
 
         Game.player.launch.gamble=false;
@@ -3744,13 +3747,21 @@ function showLaunchExecution(){
 
     };
 
+    // Roll a new quality
     document.getElementById("riskBtn").onclick=()=>{
 
         Game.player.launch.gamble=true;
 
         Game.player.launch.quality=rollRiskQuality();
 
-        generateCPULaunch();
+        document.getElementById("qualityText").textContent=
+            Game.player.launch.quality;
+
+        setTimeout(()=>{
+
+            generateCPULaunch();
+
+        },700);
 
     };
 
