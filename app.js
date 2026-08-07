@@ -3689,6 +3689,74 @@ function rollRiskQuality(){
 }
 
 //=========================
+// LAUNCH EXECUTION
+//=========================
+
+function showLaunchExecution(){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>LAUNCH EXECUTION</h1>
+
+            <hr>
+
+            <h2>Predicted Quality</h2>
+
+            <h1>${Game.player.launch.quality}</h1>
+
+            <br>
+
+            <button
+                class="menu-btn bronze"
+                id="qualityBtn">
+
+                QUALITY
+
+            </button>
+
+            <button
+                class="menu-btn gold"
+                id="riskBtn">
+
+                RISK
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+    document.getElementById("qualityBtn").onclick=()=>{
+
+        Game.player.launch.gamble=false;
+
+        generateCPULaunch();
+
+    };
+
+    document.getElementById("riskBtn").onclick=()=>{
+
+        Game.player.launch.gamble=true;
+
+        Game.player.launch.quality=rollRiskQuality();
+
+        generateCPULaunch();
+
+    };
+
+}
+
+//=========================
 // CPU LAUNCH
 //=========================
 
