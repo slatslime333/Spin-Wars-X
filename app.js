@@ -2712,8 +2712,14 @@ function showLaunchTechnique(){
 
         chooseLaunchTechnique("Wide Circle");
 
+     
     };
+document.getElementById("backLaunch").onclick=()=>{
 
+    showLaunchScreen();
+
+};
+ 
 }
 
 //=========================
