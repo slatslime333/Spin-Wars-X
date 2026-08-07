@@ -1401,26 +1401,32 @@ orb:{
 
 const ZONE_POSITIONS={
 
-    TopLeft:{x:170,y:95},
-    TopCenter:{x:250,y:70},
-    TopRight:{x:330,y:95},
+    // Top
+    TopLeft:{x:330,y:225},
+    TopCenter:{x:500,y:185},
+    TopRight:{x:670,y:225},
 
-    LeftMid:{x:135,y:170},
-    Center:{x:250,y:185},
-    RightMid:{x:365,y:170},
+    // Mid
+    LeftMid:{x:300,y:390},
+    Center:{x:500,y:430},
+    RightMid:{x:700,y:390},
 
-    BottomLeft:{x:180,y:265},
-    BottomCenter:{x:250,y:280},
-    BottomRight:{x:320,y:265},
+    // Bottom
+    BottomLeft:{x:360,y:585},
+    BottomCenter:{x:500,y:620},
+    BottomRight:{x:640,y:585},
 
-    LeftRail:{x:115,y:115},
-    RightRail:{x:385,y:115},
+    // Rails
+    LeftRail:{x:240,y:170},
+    RightRail:{x:760,y:170},
 
-    XRailExit:{x:250,y:38},
+    // X Exit
+    XRailExit:{x:500,y:82},
 
-    LeftPocket:{x:155,y:320},
-    XtremeZone:{x:250,y:320},
-    RightPocket:{x:345,y:320}
+    // Bottom zones
+    LeftPocket:{x:255,y:705},
+    XtremeZone:{x:500,y:712},
+    RightPocket:{x:745,y:705}
 
 };
 
