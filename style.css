@@ -656,3 +656,23 @@ STADIUM
     box-shadow:0 0 12px #ff4545;
 
 }
+
+/*=========================
+BATTLE BOWL
+=========================*/
+
+.battleOuter{
+
+    fill:#3a3a3a;
+
+    stroke:#808080;
+
+    stroke-width:10;
+
+}
+
+.battleInner{
+
+    fill:#1b1b1b;
+
+}
