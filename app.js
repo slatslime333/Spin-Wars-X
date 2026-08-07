@@ -1666,10 +1666,21 @@ viewBox="0 0 1000 900">
 
 </svg>
 
-<div id="playerBey" class="bey player"></div>
+<circle
+    id="playerBey"
+    cx="500"
+    cy="420"
+    r="12"
+    fill="#3ba8ff"
+/>
 
-<div id="cpuBey" class="bey cpu"></div>
-
+<circle
+    id="cpuBey"
+    cx="500"
+    cy="420"
+    r="12"
+    fill="#ff4b4b"
+/>
 </div>
 
 `;
@@ -1707,8 +1718,11 @@ if(Game.battle.player.zone===Game.battle.cpu.zone){
 
     if(p){
 
-       player.style.left=(playerX-10)+"px";
-       player.style.top=(playerY-10)+"px";
+player.setAttribute("cx", p.x);
+player.setAttribute("cy", p.y);
+
+cpu.setAttribute("cx", c.x);
+cpu.setAttribute("cy", c.y);
 
     }
 
