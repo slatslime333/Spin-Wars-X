@@ -1497,53 +1497,114 @@ function renderStadium(){
 
 <div class="stadium">
 
-<svg class="stadium-svg" viewBox="0 0 600 600">
+<svg
+    class="stadium-svg"
+    viewBox="0 0 1000 900">
 
-    <!-- X-Rail -->
-    <circle
-        cx="300"
-        cy="300"
-        r="255"
-        class="rail-track"/>
+    <!-- =========================
+         CONTINUOUS X-RAIL
+    ========================== -->
 
-    <!-- Battle Bowl -->
-    <circle
-        cx="300"
-        cy="300"
-        r="205"
-        class="battle-area"/>
+    <path
+        class="rail-track"
+        d="
 
-    <!-- X Exit -->
+        M170 720
+
+        A340 340 0 0 1 500 120
+
+        A340 340 0 0 1 830 720
+
+        "
+
+    />
+
+    <!-- =========================
+         BATTLE BOWL
+    ========================== -->
+
+    <ellipse
+        class="battle-area"
+
+        cx="500"
+        cy="430"
+
+        rx="285"
+        ry="275"
+
+    />
+
+    <!-- =========================
+         X EXIT
+    ========================== -->
+
     <rect
-        x="255"
-        y="18"
-        width="90"
-        height="42"
+
+        class="x-exit"
+
+        x="445"
+
+        y="70"
+
+        width="110"
+
+        height="55"
+
         rx="12"
-        class="x-exit"/>
 
-    <!-- Left Over Zone -->
+    />
+
+    <!-- =========================
+         LEFT OVER ZONE
+    ========================== -->
+
     <circle
-        cx="120"
-        cy="500"
-        r="34"
-        class="pocket"/>
 
-    <!-- Xtreme Zone -->
+        class="over-zone"
+
+        cx="240"
+
+        cy="735"
+
+        r="42"
+
+    />
+
+    <!-- =========================
+         XTREME ZONE
+    ========================== -->
+
     <rect
-        x="255"
-        y="500"
-        width="90"
-        height="42"
-        rx="18"
-        class="xtreme"/>
 
-    <!-- Right Over Zone -->
+        class="xtreme-zone"
+
+        x="435"
+
+        y="720"
+
+        width="130"
+
+        height="52"
+
+        rx="22"
+
+    />
+
+    <!-- =========================
+         RIGHT OVER ZONE
+    ========================== -->
+
     <circle
-        cx="480"
-        cy="500"
-        r="34"
-        class="pocket"/>
+
+        class="over-zone"
+
+        cx="760"
+
+        cy="735"
+
+        r="42"
+
+    />
 
 </svg>
 
