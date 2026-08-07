@@ -1720,22 +1720,24 @@ if(Game.battle.player.zone===Game.battle.cpu.zone){
 
 }
 
-    if(p){
+function renderBeys(){
 
-player.setAttribute("cx", p.x);
-player.setAttribute("cy", p.y);
+    const player=document.getElementById("playerBey");
+    const cpu=document.getElementById("cpuBey");
 
-cpu.setAttribute("cx", c.x);
-cpu.setAttribute("cy", c.y);
+    if(!player || !cpu) return;
 
-    }
+    const p=ZONE_POSITIONS[Game.battle.player.zone];
+    const c=ZONE_POSITIONS[Game.battle.cpu.zone];
 
-    if(c){
-     
-cpu.style.left=(cpuX-10)+"px";
-cpu.style.top=(cpuY-10)+"px";
+    if(!p || !c) return;
 
-    }
+    player.setAttribute("cx",p.x);
+    player.setAttribute("cy",p.y);
+
+    cpu.setAttribute("cx",c.x);
+    cpu.setAttribute("cy",c.y);
+
 
 }
 
@@ -2048,11 +2050,6 @@ function assignStadiumSides(){
 
     Game.arena.playerLane="Outer";
     Game.arena.cpuLane="Outer";
-
-}
-
-    Game.arena.playerLane = "Outer";
-    Game.arena.cpuLane = "Outer";
 
 }
 
@@ -3851,11 +3848,17 @@ function generateCPULaunch(){
 
     Game.cpu.launch.technique=
 
-        techniques[
-            Math.floor(Math.random()*techniques.length)
-        ];
+    techniques[
+        Math.floor(Math.random()*techniques.length)
+    ];
 
-    showLetItRip();
+// Roll CPU launch quality
+Game.cpu.launch.quality = rollQuality();
+
+// Apply bonuses/penalties
+applyLaunchQuality("cpu");
+
+showLetItRip();
 
 }
 
@@ -4276,8 +4279,6 @@ function generateDecision(){
     app.innerHTML=`
     
 renderBeys();
-
-    <div class="background"></div>
 
     <main class="menu">
 
