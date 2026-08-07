@@ -22,10 +22,12 @@ const Game = {
         ratchet:null,
         bit:null,
 
-        launch:{
-            angle:null,
-            technique:null
-        }
+       launch:{
+    angle:null,
+    technique:null,
+    quality:null,
+    gamble:false
+}
     },
 
     cpu:{
@@ -33,10 +35,12 @@ const Game = {
         ratchet:null,
         bit:null,
 
-        launch:{
-            angle:null,
-            technique:null
-        }
+       launch:{
+    angle:null,
+    technique:null,
+    quality:null,
+    gamble:false
+}
     },
 
     match:{
@@ -52,15 +56,15 @@ const Game = {
 arena:{
 
     playerSide:null,
-
     cpuSide:null,
 
-    xRail:"Bottom",
+    playerColor:null,
+    cpuColor:null,
 
+    xRail:"Bottom",
     xExit:"Top",
 
     playerLane:null,
-
     cpuLane:null
 
 },
@@ -2018,22 +2022,160 @@ function resolvePocket(bey){
 function assignStadiumSides(){
 
     // Swap every 2 rounds
-    const swap = Math.floor((Game.match.round - 1) / 2) % 2;
+    const swap=Math.floor((Game.match.round-1)/2)%2;
 
-    if(swap === 0){
+    if(swap===0){
 
-        Game.arena.playerSide = "Left";
-        Game.arena.cpuSide = "Right";
+        // Rounds 1-2
+
+        Game.arena.playerSide="Left";
+        Game.arena.cpuSide="Right";
+
+        Game.arena.playerColor="Blue";
+        Game.arena.cpuColor="Red";
 
     }else{
 
-        Game.arena.playerSide = "Right";
-        Game.arena.cpuSide = "Left";
+        // Rounds 3-4
+
+        Game.arena.playerSide="Right";
+        Game.arena.cpuSide="Left";
+
+        Game.arena.playerColor="Red";
+        Game.arena.cpuColor="Blue";
 
     }
 
+    Game.arena.playerLane="Outer";
+    Game.arena.cpuLane="Outer";
+
+}
+
     Game.arena.playerLane = "Outer";
     Game.arena.cpuLane = "Outer";
+
+}
+
+//=========================
+// SET LAUNCH POSITIONS
+//=========================
+
+function setLaunchPositions(){
+
+    const playerSide=Game.arena.playerSide;
+    const cpuSide=Game.arena.cpuSide;
+
+    //-------------------------
+    // PLAYER
+    //-------------------------
+
+    switch(Game.player.launch.technique){
+
+        case "Center":
+
+            moveBey("player","Center");
+            break;
+
+        case "X-Rail":
+
+            moveBey(
+                "player",
+                playerSide==="Left"
+                ? "LeftRail"
+                : "RightRail"
+            );
+            break;
+
+        case "Pocket Drop":
+
+            moveBey("player","XRailExit");
+            break;
+
+        case "Wide Circle":
+
+            moveBey(
+                "player",
+                playerSide==="Left"
+                ? "LeftMid"
+                : "RightMid"
+            );
+            break;
+
+        case "Direct Clash":
+
+            moveBey(
+                "player",
+                playerSide==="Left"
+                ? "TopLeft"
+                : "TopRight"
+            );
+            break;
+
+    }
+
+    //-------------------------
+    // CPU
+    //-------------------------
+
+    switch(Game.cpu.launch.technique){
+
+        case "Center":
+
+            moveBey("cpu","Center");
+            break;
+
+        case "X-Rail":
+
+            moveBey(
+                "cpu",
+                cpuSide==="Left"
+                ? "LeftRail"
+                : "RightRail"
+            );
+            break;
+
+        case "Pocket Drop":
+
+            moveBey("cpu","XRailExit");
+            break;
+
+        case "Wide Circle":
+
+            moveBey(
+                "cpu",
+                cpuSide==="Left"
+                ? "LeftMid"
+                : "RightMid"
+            );
+            break;
+
+        case "Direct Clash":
+
+            moveBey(
+                "cpu",
+                cpuSide==="Left"
+                ? "TopLeft"
+                : "TopRight"
+            );
+            break;
+
+    }
+
+}
+
+//=========================
+// PLAY LAUNCH ANIMATION
+//=========================
+
+function playLaunchAnimation(){
+
+    renderBeys();
+
+    setTimeout(()=>{
+
+        showArena();
+
+    },1200);
 
 }
 
@@ -2043,7 +2185,9 @@ function assignStadiumSides(){
 
 function generateArena(){
 
-    showArena();
+    setLaunchPositions();
+
+    playLaunchAnimation();
 
 }
 
@@ -3290,6 +3434,20 @@ function showLaunchScreen(){
         <section class="menu-card">
 
             <h1>LAUNCH PHASE</h1>
+
+            <p>
+
+<strong>You are the ${Game.arena.playerColor} Bey</strong>
+
+<br>
+
+Launching from the
+
+<strong>${Game.arena.playerSide}</strong>
+
+side.
+
+</p>
             
 ${getStadiumPreview()}
 
@@ -3482,9 +3640,51 @@ document.getElementById("backLaunch").onclick=()=>{
 
 function chooseLaunchTechnique(technique){
 
-    Game.player.launch.technique = technique;
+    Game.player.launch.technique=technique;
 
-    generateCPULaunch();
+    Game.player.launch.quality=rollQuality();
+
+    showLaunchExecution();
+
+}
+
+//=========================
+// SAFE QUALITY
+//=========================
+
+function rollQuality(){
+
+    const roll=Math.random()*100;
+
+    if(roll<5) return "Horrible";
+
+    if(roll<12) return "Bad";
+
+    if(roll<45) return "Okay";
+
+    if(roll<90) return "Good";
+
+    return "Perfect";
+
+}
+
+//=========================
+// RISK QUALITY
+//=========================
+
+function rollRiskQuality(){
+
+    const roll=Math.random()*100;
+
+    if(roll<5) return "Horrible";
+
+    if(roll<15) return "Bad";
+
+    if(roll<40) return "Okay";
+
+    if(roll<75) return "Good";
+
+    return "Perfect";
 
 }
 
