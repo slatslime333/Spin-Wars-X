@@ -3478,19 +3478,7 @@ function showArena(){
 
             <hr>
 
-<pre style="font-size:18px;line-height:1.5;text-align:center;">
-
-           X EXIT
-             ▲
-
- ${Game.arena.playerSide.toUpperCase()} ●         ● ${Game.arena.cpuSide.toUpperCase()}
-
-        ╲       ╱
-
-🕳══════ X-RAIL ══════🕳
-         🕳
-
-</pre>
+${drawArena()}
 
             <hr>
 
