@@ -3887,6 +3887,34 @@ const prediction = getMatchPrediction();
 
             <h1>ROUND ${Game.match.round}</h1>
 
+<hr>
+
+<div style="display:flex;justify-content:space-between;text-align:center;margin-bottom:15px;">
+
+    <div>
+
+        <strong>YOU</strong>
+
+        <br>
+
+        ${Game.player.launch.quality}
+
+    </div>
+
+    <div>
+
+        <strong>CPU</strong>
+
+        <br>
+
+        ${Game.cpu.launch.quality}
+
+    </div>
+
+</div>
+
+<hr>
+
             <hr>
 
             <div style="display:flex;justify-content:space-between;text-align:left;">
