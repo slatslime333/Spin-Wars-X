@@ -1666,8 +1666,6 @@ viewBox="0 0 1000 900">
     r="38"
 />
 
-</svg>
-
 <circle
     id="playerBey"
     cx="500"
@@ -1683,6 +1681,9 @@ viewBox="0 0 1000 900">
     r="12"
     fill="#ff4b4b"
 />
+
+</svg>
+
 </div>
 
 `;
