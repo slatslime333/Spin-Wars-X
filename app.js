@@ -90,7 +90,7 @@ battle:{
         xExit:false,
         speed:0,
         spin:100,
-        balance:100
+        balance:100,
 
      attackBonus:0,
 defenseBonus:0,
@@ -108,7 +108,7 @@ momentum:0
         xExit:false,
         speed:0,
         spin:100,
-        balance:100
+        balance:100,
 
      attackBonus:0,
 defenseBonus:0,
@@ -1869,15 +1869,26 @@ function getNaturalMovement(bey){
 
     const data=Game.battle[bey];
 
-    // Rail always carries the Bey toward X Exit
-    if(data.zone==="LeftRail" ||
-       data.zone==="RightRail"){
+    // Stay on the rail for multiple ticks
+    // so speed can build.
 
-        return "XRailExit";
+    if(
+        data.zone==="LeftRail" ||
+        data.zone==="RightRail"
+    ){
+
+        return data.zone;
 
     }
 
-    const neighbors =
+    // X Exit leaves the rail
+    if(data.zone==="XRailExit"){
+
+        return "TopCenter";
+
+    }
+
+    const neighbors=
         STADIUM_MAP[data.zone].neighbors;
 
     if(neighbors.length===0){
@@ -1937,13 +1948,29 @@ function updateRailSpeed(bey){
 
  
 }
+
 //=========================
 // BATTLE TICK
 //=========================
 
 function battleTick(){
 
-    // Move
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    // Check for rail interception BEFORE movement
+    checkRailInterception();
+
+    // Check collision before movement
+    if(canCollide(player.zone,cpu.zone)){
+
+        resolveCollision();
+
+        return;
+
+    }
+
+    // Move both Beys
     moveBey(
         "player",
         getNaturalMovement("player")
@@ -1954,21 +1981,22 @@ function battleTick(){
         getNaturalMovement("cpu")
     );
 
-    // Build rail speed
+    // Build speed after movement
     updateRailSpeed("player");
     updateRailSpeed("cpu");
 
-    // Convert speed into movement speed
-    Game.battle.player.speed=
-        Game.battle.player.rail
-        ? Game.battle.player.railSpeed
+    // Normal movement speed
+    player.speed=
+        player.rail
+        ? player.railSpeed
         : 50;
 
-    Game.battle.cpu.speed=
-        Game.battle.cpu.rail
-        ? Game.battle.cpu.railSpeed
+    cpu.speed=
+        cpu.rail
+        ? cpu.railSpeed
         : 50;
 
+    // Check events after movement
     checkBattleEvents();
 
 }
@@ -2578,35 +2606,6 @@ function resolveCollision(){
 }
 
  //=========================
-// KNOCKBACK
-//=========================
-
-function pushBey(bey){
-
-    const data=Game.battle[bey];
-
-    const neighbors=
-        STADIUM_MAP[data.zone].neighbors;
-
-    if(neighbors.length===0){
-
-        return;
-
-    }
-
-    const destination=
-
-        neighbors[
-            Math.floor(
-                Math.random()*neighbors.length
-            )
-        ];
-
-    moveBey(bey,destination);
-
-}
-
-//=========================
 // KNOCKBACK
 //=========================
 
