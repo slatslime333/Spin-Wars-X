@@ -2911,29 +2911,144 @@ function getStadiumPreview(){
 
     return `
 
-<pre style="font-size:17px;line-height:1.5;text-align:center;">
+    <div style="
+        text-align:center;
+        margin:15px 0;
+    ">
 
-              X EXIT
-                ▲
+        <svg
+            viewBox="0 0 1000 900"
+            style="
+                width:100%;
+                max-width:430px;
+                height:auto;
+            "
+        >
 
- ${Game.arena.playerSide.toUpperCase()} ●         ● ${Game.arena.cpuSide.toUpperCase()}
+            <!-- LEFT X-RAIL -->
 
-         ╲       ╱
+            <path
+                d="
+                M275 610
+                C205 520 185 360 220 245
+                C255 150 345 90 450 75
+                "
+                fill="none"
+                stroke="#666"
+                stroke-width="28"
+                stroke-linecap="round"
+            />
 
-🕳══════ X-RAIL ══════🕳
-         🕳
+            <!-- RIGHT X-RAIL -->
 
-</pre>
+            <path
+                d="
+                M725 610
+                C795 520 815 360 780 245
+                C745 150 655 90 550 75
+                "
+                fill="none"
+                stroke="#666"
+                stroke-width="28"
+                stroke-linecap="round"
+            />
 
-<p style="text-align:center;">
+            <!-- BATTLE AREA -->
 
-You are launching from the
-<strong>${Game.arena.playerSide}</strong> side.
+            <path
+                d="
+                M260 210
+                Q500 120 740 210
+                Q820 300 800 470
+                Q790 560 730 605
+                Q655 655 565 620
+                L435 620
+                Q345 655 270 605
+                Q210 560 200 470
+                Q180 300 260 210
+                Z
+                "
+                fill="#191919"
+                stroke="#777"
+                stroke-width="10"
+            />
 
-</p>
+            <!-- X EXIT -->
 
-`;
+            <rect
+                x="455"
+                y="62"
+                width="90"
+                height="40"
+                rx="12"
+                fill="#ffd43b"
+            />
 
+            <!-- POCKETS -->
+
+            <circle
+                cx="255"
+                cy="705"
+                r="38"
+                fill="#080808"
+                stroke="#777"
+                stroke-width="5"
+            />
+
+            <circle
+                cx="745"
+                cy="705"
+                r="38"
+                fill="#080808"
+                stroke="#777"
+                stroke-width="5"
+            />
+
+            <!-- XTREME ZONE -->
+
+            <rect
+                x="435"
+                y="690"
+                width="130"
+                height="45"
+                rx="18"
+                fill="#e33"
+            />
+
+            <!-- PLAYER SIDE -->
+
+            <circle
+                cx="${Game.arena.playerSide==="Left" ? 300 : 700}"
+                cy="420"
+                r="15"
+                fill="${Game.arena.playerColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
+            />
+
+            <!-- CPU SIDE -->
+
+            <circle
+                cx="${Game.arena.cpuSide==="Left" ? 300 : 700}"
+                cy="420"
+                r="15"
+                fill="${Game.arena.cpuColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
+            />
+
+        </svg>
+
+        <p>
+            <strong>
+                ${Game.arena.playerColor} Bey:
+                ${Game.arena.playerSide} side
+            </strong>
+        </p>
+
+        <p style="opacity:.7;">
+            X-Rail is on both sides → X Exit is at the top
+        </p>
+
+    </div>
+
+    `;
 }
 
 //=========================
