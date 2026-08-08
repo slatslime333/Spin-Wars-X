@@ -2696,147 +2696,40 @@ function assignStadiumSides(){
 
 function setLaunchPositions(){
 
-    const playerSide=Game.arena.playerSide;
-    const cpuSide=Game.arena.cpuSide;
+    const playerSide = Game.arena.playerSide;
+    const cpuSide = Game.arena.cpuSide;
 
-    // Reset both Beys to their launch sides
+    const playerStart =
+        playerSide === "Left"
+        ? "LeftMid"
+        : "RightMid";
+
+    const cpuStart =
+        cpuSide === "Left"
+        ? "LeftMid"
+        : "RightMid";
+
+    // Reset launch state
+    Game.battle.player.rail = false;
+    Game.battle.player.xExit = false;
+    Game.battle.player.railSpeed = 0;
+
+    Game.battle.cpu.rail = false;
+    Game.battle.cpu.xExit = false;
+    Game.battle.cpu.railSpeed = 0;
+
+    // Put both Beys on their actual launch sides
     moveBey(
         "player",
-        playerSide==="Left"
-        ? "LeftMid"
-        : "RightMid"
+        playerStart
     );
 
     moveBey(
         "cpu",
-        cpuSide==="Left"
-        ? "LeftMid"
-        : "RightMid"
+        cpuStart
     );
 
-    //-------------------------
-    // PLAYER
-    //-------------------------
-
-    switch(Game.player.launch.technique){
-      
-        case "Center":
-
-            moveBey("player","Center");
-            break;
-
-       case "X-Rail":
-
-    if(Game.player.launch.success){
-
-        moveBey(
-            "player",
-            playerSide==="Left"
-            ? "LeftRail"
-            : "RightRail"
-        );
-
-    }else{
-
-        moveBey(
-            "player",
-            playerSide==="Left"
-            ? "LeftMid"
-            : "RightMid"
-        );
-
-    }
-
-    break;
-
-        case "Pocket Drop":
-
-            moveBey("player","XRailExit");
-            break;
-
-        case "Wide Circle":
-
-            moveBey(
-                "player",
-                playerSide==="Left"
-                ? "LeftMid"
-                : "RightMid"
-            );
-            break;
-
-        case "Direct Clash":
-
-            moveBey(
-                "player",
-                playerSide==="Left"
-                ? "TopLeft"
-                : "TopRight"
-            );
-            break;
-
-    }
-
-    //-------------------------
-    // CPU
-    //-------------------------
-
-    switch(Game.cpu.launch.technique){
-
-        case "Center":
-
-            moveBey("cpu","Center");
-            break;
-
-       case "X-Rail":
-
-    if(Game.cpu.launch.success){
-
-        moveBey(
-            "cpu",
-            cpuSide==="Left"
-            ? "LeftRail"
-            : "RightRail"
-        );
-
-    }else{
-
-        moveBey(
-            "cpu",
-            cpuSide==="Left"
-            ? "LeftMid"
-            : "RightMid"
-        );
-
-    }
-
-    break;
-
-        case "Pocket Drop":
-
-            moveBey("cpu","XRailExit");
-            break;
-
-        case "Wide Circle":
-
-            moveBey(
-                "cpu",
-                cpuSide==="Left"
-                ? "LeftMid"
-                : "RightMid"
-            );
-            break;
-
-        case "Direct Clash":
-
-            moveBey(
-                "cpu",
-                cpuSide==="Left"
-                ? "TopLeft"
-                : "TopRight"
-            );
-            break;
-
-    }
+    renderBeys();
 
 }
 
@@ -2846,22 +2739,28 @@ function setLaunchPositions(){
 
 function playLaunchAnimation(){
 
-    const playerPath=getLaunchPath("player");
-    const cpuPath=getLaunchPath("cpu");
+    const playerPath = getLaunchPath("player");
+    const cpuPath = getLaunchPath("cpu");
 
-    let step=0;
+    let step = 0;
 
     function animate(){
 
-        if(step<playerPath.length){
+        if(step < playerPath.length){
 
-            moveBey("player",playerPath[step]);
+            moveBey(
+                "player",
+                playerPath[step]
+            );
 
         }
 
-        if(step<cpuPath.length){
+        if(step < cpuPath.length){
 
-            moveBey("cpu",cpuPath[step]);
+            moveBey(
+                "cpu",
+                cpuPath[step]
+            );
 
         }
 
@@ -2870,18 +2769,24 @@ function playLaunchAnimation(){
         step++;
 
         if(
-            step<
+            step <
             Math.max(
                 playerPath.length,
                 cpuPath.length
             )
         ){
 
-            setTimeout(animate,500);
+            setTimeout(
+                animate,
+                600
+            );
 
         }else{
 
-            setTimeout(showArena,500);
+            setTimeout(
+                showArena,
+                600
+            );
 
         }
 
@@ -4601,19 +4506,22 @@ function validateLaunch(blader){
 }
 
 //=========================
-// GET LAUNCH PATH
+// LAUNCH PATH
 //=========================
 
 function getLaunchPath(blader){
 
-    const launch=Game[blader].launch;
+    const launch = Game[blader].launch;
 
-    const side=
-        blader==="player"
+    const side =
+        blader === "player"
         ? Game.arena.playerSide
         : Game.arena.cpuSide;
 
-    const left=side==="Left";
+    const left = side === "Left";
+
+    // Starting side
+    const start = left ? "LeftMid" : "RightMid";
 
     switch(launch.technique){
 
@@ -4621,7 +4529,7 @@ function getLaunchPath(blader){
         case "Center":
 
             return [
-                left ? "LeftMid" : "RightMid",
+                start,
                 "Center"
             ];
 
@@ -4629,16 +4537,19 @@ function getLaunchPath(blader){
         // X-RAIL
         case "X-Rail":
 
+            // Failed rail attempt
             if(!launch.success){
 
                 return [
-                    left ? "LeftMid" : "RightMid",
+                    start,
                     "Center"
                 ];
 
             }
 
             return [
+
+                start,
 
                 left
                 ? "LeftRail"
@@ -4651,16 +4562,18 @@ function getLaunchPath(blader){
             ];
 
 
-        // POCKET DROP
-        case "Pocket Drop":
+        // DIRECT CLASH
+        case "Direct Clash":
 
             return [
 
-                left
-                ? "LeftMid"
-                : "RightMid",
+                start,
 
-                "XRailExit"
+                left
+                ? "TopLeft"
+                : "TopRight",
+
+                "Center"
 
             ];
 
@@ -4670,9 +4583,11 @@ function getLaunchPath(blader){
 
             return [
 
+                start,
+
                 left
-                ? "LeftMid"
-                : "RightMid",
+                ? "BottomLeft"
+                : "BottomRight",
 
                 left
                 ? "TopLeft"
@@ -4685,28 +4600,29 @@ function getLaunchPath(blader){
             ];
 
 
-        // DIRECT CLASH
-        case "Direct Clash":
+        // POCKET DROP
+        case "Pocket Drop":
 
             return [
 
-                left
-                ? "LeftMid"
-                : "RightMid",
+                start,
 
                 left
-                ? "TopLeft"
-                : "TopRight",
+                ? "BottomLeft"
+                : "BottomRight",
 
-                "Center"
+                left
+                ? "LeftPocket"
+                : "RightPocket"
 
             ];
 
     }
 
-    return ["Center"];
+    return [start];
 
 }
+
 //=========================
 // LAUNCH EXECUTION
 //=========================
