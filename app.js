@@ -2015,6 +2015,63 @@ function checkRailInterception(){
 }
 
 //=========================
+// DIRECTIONAL COUNTER
+//=========================
+
+function counterDestination(defender, attacker){
+
+    const defenderZone = Game.battle[defender].zone;
+
+    // Defender's position determines where
+    // the attacker gets redirected.
+
+    if(defenderZone==="LeftMid"){
+
+        return [
+            "RightMid",
+            "BottomLeft",
+            "LeftPocket"
+        ];
+
+    }
+
+    if(defenderZone==="RightMid"){
+
+        return [
+            "LeftMid",
+            "BottomRight",
+            "RightPocket"
+        ];
+
+    }
+
+    if(defenderZone==="TopCenter"){
+
+        return [
+            "TopLeft",
+            "TopRight",
+            "XRailExit"
+        ];
+
+    }
+
+    if(defenderZone==="Center"){
+
+        return [
+            "BottomCenter",
+            "LeftMid",
+            "RightMid"
+        ];
+
+    }
+
+    return STADIUM_MAP[
+        Game.battle[attacker].zone
+    ].neighbors;
+
+}
+
+//=========================
 // RAIL COUNTER
 //=========================
 
@@ -2093,7 +2150,40 @@ function resolveRailCounter(defender,attacker){
             " ON THE X-RAIL!"
         );
 
-        pushBey(attacker);
+        const destinations=
+    counterDestination(
+        defender,
+        attacker
+    );
+
+const destination=
+    destinations[
+        Math.floor(
+            Math.random()*destinations.length
+        )
+    ];
+
+moveBey(
+    attacker,
+    destination
+);
+
+     // Extra danger when redirected toward a finish zone
+
+if(
+    destination==="LeftPocket" ||
+    destination==="RightPocket"
+){
+
+    attackerState.balance-=8;
+
+}
+
+if(destination==="XtremeZone"){
+
+    attackerState.balance-=12;
+
+}
 
     }else{
 
