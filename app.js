@@ -2023,7 +2023,36 @@ function resolveCollision(){
     renderBeys();
 
 }
- 
+
+ //=========================
+// KNOCKBACK
+//=========================
+
+function pushBey(bey){
+
+    const data=Game.battle[bey];
+
+    const neighbors=
+        STADIUM_MAP[data.zone].neighbors;
+
+    if(neighbors.length===0){
+
+        return;
+
+    }
+
+    const destination=
+
+        neighbors[
+            Math.floor(
+                Math.random()*neighbors.length
+            )
+        ];
+
+    moveBey(bey,destination);
+
+}
+
 //=========================
 // KNOCKBACK
 //=========================
