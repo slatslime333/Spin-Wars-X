@@ -91,6 +91,12 @@ battle:{
         speed:0,
         spin:100,
         balance:100
+
+     attackBonus:0,
+defenseBonus:0,
+evasionBonus:0,
+railSpeed:0,
+momentum:0
     },
 
     cpu:{
@@ -103,6 +109,12 @@ battle:{
         speed:0,
         spin:100,
         balance:100
+
+     attackBonus:0,
+defenseBonus:0,
+evasionBonus:0,
+railSpeed:0,
+momentum:0
     }
 
 },
@@ -1855,7 +1867,15 @@ function moveBey(bey,newZone){
 
 function getNaturalMovement(bey){
 
-    const data = Game.battle[bey];
+    const data=Game.battle[bey];
+
+    // Rail always carries the Bey toward X Exit
+    if(data.zone==="LeftRail" ||
+       data.zone==="RightRail"){
+
+        return "XRailExit";
+
+    }
 
     const neighbors =
         STADIUM_MAP[data.zone].neighbors;
@@ -1879,25 +1899,216 @@ function getNaturalMovement(bey){
 }
 
 //=========================
+// RAIL SPEED
+//=========================
+
+function updateRailSpeed(bey){
+
+    const data=Game.battle[bey];
+
+    if(data.rail){
+
+        // Entering the rail
+        if(data.railSpeed===0){
+
+            data.railSpeed=65;
+
+        }else{
+
+            // Speed builds while riding
+            data.railSpeed+=15;
+
+        }
+
+        data.railSpeed=Math.min(
+            100,
+            data.railSpeed
+        );
+
+    }else{
+
+        // Lose rail speed after leaving
+        data.railSpeed=Math.max(
+            0,
+            data.railSpeed-30
+        );
+
+    }
+
+ 
+}
+//=========================
 // BATTLE TICK
 //=========================
 
 function battleTick(){
 
-    // Move Player
+    // Move
     moveBey(
         "player",
         getNaturalMovement("player")
     );
 
-    // Move CPU
     moveBey(
         "cpu",
         getNaturalMovement("cpu")
     );
 
-    // Check for collisions/events
+    // Build rail speed
+    updateRailSpeed("player");
+    updateRailSpeed("cpu");
+
+    // Convert speed into movement speed
+    Game.battle.player.speed=
+        Game.battle.player.rail
+        ? Game.battle.player.railSpeed
+        : 50;
+
+    Game.battle.cpu.speed=
+        Game.battle.cpu.rail
+        ? Game.battle.cpu.railSpeed
+        : 50;
+
     checkBattleEvents();
+
+}
+
+//=========================
+// RAIL INTERCEPTION
+//=========================
+
+function checkRailInterception(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    // Player is riding the rail
+    if(player.rail && !cpu.rail){
+
+        if(
+            cpu.zone==="XRailExit" ||
+            cpu.zone==="TopCenter" ||
+            cpu.zone==="Center"
+        ){
+
+            resolveRailCounter("cpu","player");
+
+        }
+
+    }
+
+    // CPU is riding the rail
+    if(cpu.rail && !player.rail){
+
+        if(
+            player.zone==="XRailExit" ||
+            player.zone==="TopCenter" ||
+            player.zone==="Center"
+        ){
+
+            resolveRailCounter("player","cpu");
+
+        }
+
+    }
+
+}
+
+//=========================
+// RAIL COUNTER
+//=========================
+
+function resolveRailCounter(defender,attacker){
+
+    const defenderState=Game.battle[defender];
+    const attackerState=Game.battle[attacker];
+
+    const defenderCombo=
+        defender==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
+        );
+
+    const attackerCombo=
+        attacker==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
+        );
+
+    // Defender's counter strength
+    const counterPower=
+        defenderCombo.stats.knockback*
+        (
+            1+
+            defenderState.balance/200
+        )*
+        (
+            Game[defender].currentMove==="Counter"
+            ? 1.5
+            : 0.7
+        );
+
+    // Incoming rail impact
+    const railImpact=
+        attackerCombo.stats.knockback*
+        (
+            1+
+            attackerState.railSpeed/100
+        )*
+        (
+            1+
+            Math.abs(attackerState.momentum)/100
+        );
+
+    const counterRatio=
+        counterPower/
+        Math.max(1,railImpact);
+
+    // Counter succeeds
+    if(counterRatio>=1){
+
+        attackerState.balance-=10;
+        attackerState.spin-=7;
+
+        attackerState.momentum*=-0.8;
+
+        console.log(
+            defender+
+            " STOPPED "+
+            attacker+
+            " ON THE X-RAIL!"
+        );
+
+        pushBey(attacker);
+
+    }else{
+
+        // Failed counter attempt
+        defenderState.balance-=5;
+        defenderState.spin-=4;
+
+        console.log(
+            defender+
+            " MISSED THE RAIL COUNTER!"
+        );
+
+    }
+
+    renderBeys();
 
 }
 
@@ -1910,7 +2121,9 @@ function checkBattleEvents(){
     const player = Game.battle.player;
 
     const cpu = Game.battle.cpu;
-
+ 
+checkRailInterception();
+ 
     // Collision
 
     if(canCollide(player.zone,cpu.zone)){
@@ -1977,48 +2190,298 @@ function canCollide(playerZone,cpuZone){
 }
 
 //=========================
+// IMPACT SYSTEM
+//=========================
+
+function getImpactData(attacker,defender){
+
+    const attackerState=Game.battle[attacker];
+    const defenderState=Game.battle[defender];
+
+    const attackerCombo=
+        attacker==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
+        );
+
+    const defenderCombo=
+        defender==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
+        );
+
+    // Base stats
+    const knockback=
+        attackerCombo.stats.knockback;
+
+    const attack=
+        attackerCombo.stats.attack;
+
+    const defense=
+        defenderCombo.stats.defense+
+        defenderState.defenseBonus;
+
+    // Speed multiplier
+    let speedMultiplier=1;
+
+    if(attackerState.rail){
+
+        speedMultiplier=1.6;
+
+    }else if(attackerState.speed>=80){
+
+        speedMultiplier=1.25;
+
+    }else if(attackerState.speed>=50){
+
+        speedMultiplier=1.1;
+
+    }
+
+    // Momentum multiplier
+    const momentumMultiplier=
+        1+
+        Math.abs(attackerState.momentum)/100;
+
+    // Direct contact bonus
+    let contactMultiplier=1;
+
+    if(
+        attackerState.zone===
+        defenderState.zone
+    ){
+
+        contactMultiplier=1.15;
+
+    }
+
+    // Rail impact
+    if(attackerState.rail){
+
+        contactMultiplier*=1.35;
+
+    }
+
+    const rawImpact=
+        knockback*
+        speedMultiplier*
+        momentumMultiplier*
+        contactMultiplier;
+
+    const attackImpact=
+        attack*
+        speedMultiplier;
+
+    const effectiveImpact=
+        Math.max(
+            0,
+            rawImpact+
+            attackImpact-
+            defense
+        );
+
+    return{
+
+        rawImpact,
+        effectiveImpact,
+        speedMultiplier,
+        contactMultiplier
+
+    };
+
+}
+
+//=========================
+// COUNTER SYSTEM
+//=========================
+
+function calculateCounter(defender,attacker){
+
+    const defenderState=Game.battle[defender];
+    const attackerState=Game.battle[attacker];
+
+    const defenderCombo=
+        defender==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
+        );
+
+    const defenderKnockback=
+        defenderCombo.stats.knockback;
+
+    const defenderDefense=
+        defenderCombo.stats.defense+
+        defenderState.defenseBonus;
+
+    // Counter timing
+    let timing=1;
+
+    if(
+        Game[defender].currentMove==="Counter"
+    ){
+
+        timing=1.5;
+
+    }
+
+    // Rail contact gives the counter
+    // more opportunity to redirect momentum
+    let position=1;
+
+    if(attackerState.rail){
+
+        position=1.35;
+
+    }
+
+    const stability=
+        (
+            defenderDefense+
+            defenderState.balance
+        )/200;
+
+    const counterPower=
+        defenderKnockback*
+        timing*
+        position*
+        stability;
+
+    const incoming=
+        getImpactData(
+            attacker,
+            defender
+        ).effectiveImpact;
+
+    return{
+
+        power:counterPower,
+
+        incoming,
+
+        success:
+            counterPower>incoming
+
+    };
+
+}
+
+//=========================
 // COLLISION
 //=========================
 
 function resolveCollision(){
 
-    const player=Game.player.blade.card;
-    const cpu=Game.cpu.blade.card;
+    let attacker="player";
+    let defender="cpu";
 
-    let playerPower=
-        player.attack+
-        player.knockback+
-        Game.battle.player.attackBonus;
+    const playerPower=
+        Game.battle.player.momentum;
 
-    let cpuPower=
-        cpu.attack+
-        cpu.knockback+
-        Game.battle.cpu.attackBonus;
+    const cpuPower=
+        Game.battle.cpu.momentum;
 
-    playerPower-=Game.battle.cpu.defenseBonus;
-    cpuPower-=Game.battle.player.defenseBonus;
+    // Determine who is bringing more momentum
+    if(cpuPower>playerPower){
 
-    if(playerPower>cpuPower){
-
-        Game.battle.momentum+=15;
-
-        Game.battle.cpu.spin-=6;
-        Game.battle.cpu.balance-=4;
-
-        pushBey("cpu");
+        attacker="cpu";
+        defender="player";
 
     }
 
-    else if(cpuPower>playerPower){
+    const attackerState=
+        Game.battle[attacker];
 
-        Game.battle.momentum-=15;
+    const defenderState=
+        Game.battle[defender];
 
-        Game.battle.player.spin-=6;
-        Game.battle.player.balance-=4;
+    // Counter attempt
+    const counter=
+        calculateCounter(
+            defender,
+            attacker
+        );
 
-        pushBey("player");
+    if(
+        Game[defender].currentMove==="Counter" &&
+        counter.success
+    ){
+
+        console.log(
+            defender+
+            " COUNTERS "+
+            attacker
+        );
+
+        attackerState.balance-=8;
+        attackerState.spin-=5;
+
+        attackerState.momentum*=-0.75;
+
+        pushBey(attacker);
+
+        renderBeys();
+
+        return;
 
     }
+
+    // Normal impact
+    const impact=
+        getImpactData(
+            attacker,
+            defender
+        );
+
+    console.log(
+        "IMPACT:",
+        impact
+    );
+
+    const damage=
+        Math.max(
+            1,
+            Math.round(
+                impact.effectiveImpact/18
+            )
+        );
+
+    defenderState.spin-=damage;
+    defenderState.balance-=
+        Math.max(
+            1,
+            Math.round(damage*0.65)
+        );
+
+    // Convert impact into momentum
+    attackerState.momentum+=
+        impact.effectiveImpact/10;
+
+    defenderState.momentum-=
+        impact.effectiveImpact/12;
+
+    // Push according to impact
+    pushBey(defender);
 
     renderBeys();
 
