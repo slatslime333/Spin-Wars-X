@@ -1413,29 +1413,29 @@ orb:{
 
 const ZONE_POSITIONS={
 
-    // Top
-    TopLeft:{x:330,y:225},
-    TopCenter:{x:500,y:185},
-    TopRight:{x:670,y:225},
+    // TOP
+    TopLeft:{x:330,y:245},
+    TopCenter:{x:500,y:300},
+    TopRight:{x:670,y:245},
 
-    // Mid
-    LeftMid:{x:300,y:390},
+    // MIDDLE
+    LeftMid:{x:300,y:420},
     Center:{x:500,y:430},
-    RightMid:{x:700,y:390},
+    RightMid:{x:700,y:420},
 
-    // Bottom
-    BottomLeft:{x:360,y:585},
-    BottomCenter:{x:500,y:620},
-    BottomRight:{x:640,y:585},
+    // BOTTOM
+    BottomLeft:{x:360,y:560},
+    BottomCenter:{x:500,y:585},
+    BottomRight:{x:640,y:560},
 
-    // Rails
-    LeftRail:{x:240,y:170},
-    RightRail:{x:760,y:170},
+    // X-RAILS
+    LeftRail:{x:215,y:300},
+    RightRail:{x:785,y:300},
 
-    // X Exit
-    XRailExit:{x:500,y:82},
+    // X-EXIT
+    XRailExit:{x:500,y:75},
 
-    // Bottom zones
+    // FINISH AREAS
     LeftPocket:{x:255,y:705},
     XtremeZone:{x:500,y:712},
     RightPocket:{x:745,y:705}
@@ -2699,12 +2699,27 @@ function setLaunchPositions(){
     const playerSide=Game.arena.playerSide;
     const cpuSide=Game.arena.cpuSide;
 
+    // Reset both Beys to their launch sides
+    moveBey(
+        "player",
+        playerSide==="Left"
+        ? "LeftMid"
+        : "RightMid"
+    );
+
+    moveBey(
+        "cpu",
+        cpuSide==="Left"
+        ? "LeftMid"
+        : "RightMid"
+    );
+
     //-------------------------
     // PLAYER
     //-------------------------
 
     switch(Game.player.launch.technique){
-
+      
         case "Center":
 
             moveBey("player","Center");
@@ -4483,75 +4498,100 @@ function getLaunchPath(blader){
         ? Game.arena.playerSide
         : Game.arena.cpuSide;
 
+    const left=side==="Left";
+
     switch(launch.technique){
 
+        // CENTER
         case "Center":
 
             return [
+                left ? "LeftMid" : "RightMid",
                 "Center"
             ];
 
+
+        // X-RAIL
         case "X-Rail":
 
             if(!launch.success){
 
-                return[
-                    side==="Left"
-                    ?"LeftMid"
-                    :"RightMid"
+                return [
+                    left ? "LeftMid" : "RightMid",
+                    "Center"
                 ];
 
             }
 
-            return[
+            return [
 
-                side==="Left"
-                ?"LeftRail"
-                :"RightRail",
+                left
+                ? "LeftRail"
+                : "RightRail",
 
                 "XRailExit",
 
-                "Center"
+                "TopCenter"
 
             ];
 
+
+        // POCKET DROP
         case "Pocket Drop":
 
-            return[
-                "XRailExit",
-                "Center"
+            return [
+
+                left
+                ? "LeftMid"
+                : "RightMid",
+
+                "XRailExit"
+
             ];
 
+
+        // WIDE CIRCLE
         case "Wide Circle":
 
-            return[
-                side==="Left"
-                ?"LeftMid"
-                :"RightMid",
+            return [
 
-                side==="Left"
-                ?"TopLeft"
-                :"TopRight",
+                left
+                ? "LeftMid"
+                : "RightMid",
+
+                left
+                ? "TopLeft"
+                : "TopRight",
+
+                "TopCenter",
 
                 "Center"
+
             ];
 
+
+        // DIRECT CLASH
         case "Direct Clash":
 
-            return[
-                side==="Left"
-                ?"TopLeft"
-                :"TopRight",
+            return [
+
+                left
+                ? "LeftMid"
+                : "RightMid",
+
+                left
+                ? "TopLeft"
+                : "TopRight",
 
                 "Center"
+
             ];
 
     }
 
-    return["Center"];
+    return ["Center"];
 
 }
-
 //=========================
 // LAUNCH EXECUTION
 //=========================
