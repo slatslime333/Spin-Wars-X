@@ -4568,6 +4568,7 @@ document.getElementById("xrailLaunch").onclick=()=>{
         getXRailTechnique("player")
     );
 
+};
 
 document.getElementById("clashLaunch").onclick=()=>{
 
