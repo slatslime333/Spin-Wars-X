@@ -4557,19 +4557,25 @@ function simulateBattleRound(){
 
 function resolveAutomaticSituation(){
 
-    const situation=Game.battle.situation;
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const distance=Math.abs(
+        player.x-cpu.x
+    );
 
     let event;
 
-    if(situation==="clash"){
+    // Close enough for a real clash
+    if(distance<60){
 
         const roll=Math.random()*100;
 
-        if(roll<20){
+        if(roll<15){
 
             event="passBy";
 
-        }else if(roll<60){
+        }else if(roll<55){
 
             event="normalHit";
 
@@ -4585,17 +4591,24 @@ function resolveAutomaticSituation(){
 
     }
 
-    else if(situation==="approach"){
+    // Close enough that they may connect
+    else if(distance<140){
 
         const roll=Math.random()*100;
 
-        event=
-            roll<45
-            ? "normalHit"
-            : "passBy";
+        if(roll<60){
+
+            event="normalHit";
+
+        }else{
+
+            event="passBy";
+
+        }
 
     }
 
+    // Still far apart
     else{
 
         event="separation";
@@ -4927,12 +4940,70 @@ function resolveAutomaticEvent(event){
 
     }
 
-    saveBattleSequence(
-        "ROUND "+Game.battle.turn,
-        text
-    );
+  saveBattleSequence(
+    "ROUND "+Game.battle.turn,
+    text
+);
 
-    decideNextBattleStep();
+showBattleSimulation(text);
+ 
+}
+
+//=========================
+// SHOW AUTO SIMULATION
+//=========================
+
+function showBattleSimulation(text){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>
+                ROUND ${Game.battle.turn}
+            </h1>
+
+            ${renderStadium()}
+
+            <div class="battle-decision">
+
+                <strong>
+                    🎙 COMMENTATOR
+                </strong>
+
+                <p>
+                    ${text}
+                </p>
+
+                <p>
+                    <strong>
+                        Situation:
+                    </strong>
+                    ${Game.battle.situation}
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    `;
+
+    renderBeys();
+
+    setTimeout(()=>{
+
+        decideNextBattleStep();
+
+    },1500);
+
 }
 
 //=========================
