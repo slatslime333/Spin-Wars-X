@@ -5311,25 +5311,23 @@ function continueBattleSequence(){
     // Opening
     if(Game.battle.phase==="Opening"){
 
-       if(Game.battle.phase==="Opening"){
+        Game.battle.phase="Battle";
 
-    Game.battle.phase="Battle";
+        saveBattleSequence(
+            "BATTLE STARTS",
+            "Both Beys begin moving through the stadium."
+        );
 
-    saveBattleSequence(
-        "BATTLE STARTS",
-        "Both Beys begin moving through the stadium."
-    );
+        renderBattleSequence();
 
-    renderBattleSequence();
+        return;
 
-    return;
+    }
 
-}
-     
-    // Normal battle exchange
+    // Normal battle
     if(Game.battle.phase==="Battle"){
 
-        generateDecision();
+        battleTick();
 
         return;
 
