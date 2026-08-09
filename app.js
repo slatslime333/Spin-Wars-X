@@ -2960,6 +2960,29 @@ if(
 
 }
      
+// PLAYER DIRECT CLASH
+if(
+    Game.player.launch.technique==="Direct Clash" &&
+    !Game.battle.player.directClash &&
+    playerPath[step]==="Center"
+){
+
+    applyDirectClash("player");
+
+}
+
+
+// CPU DIRECT CLASH
+if(
+    Game.cpu.launch.technique==="Direct Clash" &&
+    !Game.battle.cpu.directClash &&
+    cpuPath[step]==="Center"
+){
+
+    applyDirectClash("cpu");
+
+}
+     
 renderBeys();
 
         step++;
@@ -4910,6 +4933,62 @@ function applyXRailDash(blader){
 }
 
 //=========================
+// APPLY DIRECT CLASH
+//=========================
+
+function applyDirectClash(blader){
+
+    const launch=Game[blader].launch;
+    const battle=Game.battle[blader];
+
+    if(!battle) return;
+
+    battle.directClash=true;
+
+    switch(launch.quality){
+
+        case "Perfect":
+
+            battle.speed=75;
+            battle.balance+=4;
+            battle.openingHitPower=1.35;
+            break;
+
+        case "Good":
+
+            battle.speed=65;
+            battle.balance+=2;
+            battle.openingHitPower=1.15;
+            break;
+
+        case "Okay":
+
+            battle.speed=55;
+            battle.openingHitPower=1;
+            break;
+
+        case "Bad":
+
+            battle.speed=40;
+            battle.balance-=6;
+            battle.openingHitPower=0.75;
+            battle.openingClashWeak=true;
+            break;
+
+        case "Horrible":
+
+            battle.speed=25;
+            battle.balance-=12;
+            battle.spin-=8;
+            battle.openingHitPower=0.35;
+            battle.openingClashMiss=true;
+            break;
+
+    }
+
+}
+
+//=========================
 // LAUNCH PATH
 //=========================
 
@@ -4998,20 +5077,25 @@ case "Reverse X-Dash":
     ];
 
         // DIRECT CLASH
-        case "Direct Clash":
+     case "Direct Clash":
 
-            return [
+    if(launch.quality==="Horrible"){
 
-                start,
+        return [
 
-                left
-                ? "TopLeft"
-                : "TopRight",
+            start,
+            "Center"
 
-                "Center"
+        ];
 
-            ];
+    }
 
+    return [
+
+        start,
+        "Center"
+
+    ];
 
         // WIDE CIRCLE
         case "Wide Circle":
