@@ -5221,8 +5221,7 @@ applyLaunchQuality("cpu");
  
 validateLaunch("cpu");
  
-showLetItRip();
-
+generateArena();
 }
 
 //=========================
