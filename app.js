@@ -4316,19 +4316,24 @@ event="heavyHit";
 
     Game.battle.lastEvent=event;
 
-    // Apply the actual battle event
-    if(event){
+if(event){
 
-        applyBattleEvent(event);
+    applyBattleEvent(event);
 
-    }
+}
 
-    showIntentResult(
-        playerIntent,
-        cpuIntent,
-        playerResult,
-        text
-    );
+if(checkBattleFinish()){
+
+    return;
+
+}
+
+showIntentResult(
+    playerIntent,
+    cpuIntent,
+    playerResult,
+    text
+);
 
 }
 
@@ -4399,12 +4404,12 @@ function showIntentResult(
     renderBeys();
 
     document.getElementById(
-        "continueBattle"
-    ).onclick=()=>{
+    "continueBattle"
+).onclick=()=>{
 
-       decideNextBattleStep();
-     
-    };
+    decideNextBattleStep();
+
+};
 
 }
 
@@ -4431,15 +4436,21 @@ function startBattleLoop(){
 
 function simulateBattleRound(){
 
-    Game.battle.turn++;
-
     const player=Game.battle.player;
     const cpu=Game.battle.cpu;
 
-    // Stop if either Bey has already lost
+    // Check before starting
+    if(checkBattleFinish()){
+
+        return;
+
+    }
+
+    Game.battle.turn++;
+
     if(
-        player.spin<=0 ||
-        cpu.spin<=0
+        Game.battle.turn>
+        Game.battle.maxTurns
     ){
 
         resolveBattleEnd();
@@ -4448,37 +4459,93 @@ function simulateBattleRound(){
 
     }
 
-    // Safety limit: battle lasts 1-10 sequences
-    if(Game.battle.turn>Game.battle.maxTurns){
 
-        resolveBattleEnd();
+    //=========================
+    // MOVE TOWARD ENCOUNTER
+    //=========================
 
-        return;
+    const distance=
+        Math.abs(
+            player.x-cpu.x
+        );
+
+
+    if(distance>60){
+
+        const playerDirection=
+            player.x<cpu.x
+            ? 1
+            : -1;
+
+        const cpuDirection=
+            cpu.x<player.x
+            ? 1
+            : -1;
+
+
+        const playerMove=
+            Math.max(
+                15,
+                player.speed*0.35
+            );
+
+
+        const cpuMove=
+            Math.max(
+                15,
+                cpu.speed*0.35
+            );
+
+
+        player.x+=
+            playerDirection*
+            playerMove;
+
+
+        cpu.x+=
+            cpuDirection*
+            cpuMove;
 
     }
 
-    const distance=Math.abs(
-        player.x-cpu.x
-    );
+
+    //=========================
+    // RECALCULATE DISTANCE
+    //=========================
+
+    const newDistance=
+        Math.abs(
+            player.x-cpu.x
+        );
+
 
     let situation;
 
-    // Decide what is physically happening
-    if(distance<60){
+
+    if(newDistance<60){
 
         situation="clash";
 
-    }else if(distance<140){
+    }
+
+    else if(newDistance<140){
 
         situation="approach";
 
-    }else{
+    }
+
+    else{
 
         situation="separated";
 
     }
 
-    Game.battle.situation=situation;
+
+    Game.battle.situation=
+        situation;
+
+
+    renderBeys();
 
     resolveAutomaticSituation();
 
@@ -4821,85 +4888,51 @@ function resolveAutomaticEvent(event){
 
     applyBattleEvent(event);
 
+    if(checkBattleFinish()){
+
+        return;
+    }
+
     let text="";
-
     const winner=Game.battle.lastHitWinner;
-
 
     if(event==="passBy"){
 
+        text="Both Beys rush past each other without a clean hit.";
+
+    }else if(event==="separation"){
+
+        text="The Beys circle apart and search for an opening.";
+
+    }else if(event==="normalHit"){
+
         text=
-        "Both Beys rush past each other without a clean hit.";
+            winner==="player"
+            ? "You land the cleaner hit."
+            : "The CPU lands the cleaner hit.";
 
-    }
-
-
-    else if(event==="separation"){
+    }else if(event==="heavyHit"){
 
         text=
-        "The Beys circle apart and begin searching for another opening.";
+            winner==="player"
+            ? "You win a heavy clash and send the CPU backward."
+            : "The CPU wins a heavy clash and sends you backward.";
+
+    }else if(event==="extremeImpact"){
+
+        text=
+            winner==="player"
+            ? "You land a massive impact."
+            : "The CPU lands a massive impact.";
 
     }
-
-
-    else if(event==="normalHit"){
-
-        if(winner==="player"){
-
-            text=
-            "You land the cleaner hit and push the CPU Bey off its line.";
-
-        }else{
-
-            text=
-            "The CPU lands the cleaner hit and knocks your Bey off its line.";
-
-        }
-
-    }
-
-
-    else if(event==="heavyHit"){
-
-        if(winner==="player"){
-
-            text=
-            "You win a heavy clash and send the CPU Bey flying backward.";
-
-        }else{
-
-            text=
-            "The CPU wins a heavy clash and sends your Bey backward.";
-
-        }
-
-    }
-
-
-    else if(event==="extremeImpact"){
-
-        if(winner==="player"){
-
-            text=
-            "You land a massive hit. The CPU Bey is violently knocked away and becomes unstable.";
-
-        }else{
-
-            text=
-            "The CPU lands a massive hit. Your Bey is violently knocked away and becomes unstable.";
-
-        }
-
-    }
-
 
     saveBattleSequence(
         "ROUND "+Game.battle.turn,
         text
     );
 
-    checkBattleFinish();
-
+    decideNextBattleStep();
 }
 
 //=========================
@@ -4911,159 +4944,47 @@ function checkBattleFinish(){
     const player=Game.battle.player;
     const cpu=Game.battle.cpu;
 
-
     if(player.spin<=0){
 
         Game.battle.finish="Spin Finish";
-
         Game.battle.winner="cpu";
 
         resolveBattleEnd();
 
         return true;
-
     }
-
 
     if(cpu.spin<=0){
 
         Game.battle.finish="Spin Finish";
-
         Game.battle.winner="player";
 
         resolveBattleEnd();
 
         return true;
-
     }
-
 
     if(player.balance<=0){
 
         Game.battle.finish="Over Finish";
-
         Game.battle.winner="cpu";
 
         resolveBattleEnd();
 
         return true;
-
     }
-
 
     if(cpu.balance<=0){
 
         Game.battle.finish="Over Finish";
-
         Game.battle.winner="player";
 
         resolveBattleEnd();
 
         return true;
-
     }
-
 
     return false;
-
-}
-
-//=========================
-// DECIDE NEXT BATTLE STEP
-//=========================
-
-function decideNextBattleStep(){
-
-    // Battle has reached its random length
-    if(
-        Game.battle.turn>=
-        Game.battle.maxTurns
-    ){
-
-        resolveBattleEnd();
-
-        return;
-
-    }
-
-
-    //=========================
-    // ROUND 1 IS ALWAYS AUTO
-    //=========================
-
-    if(Game.battle.turn===1){
-
-        setTimeout(()=>{
-
-            simulateBattleRound();
-
-        },1200);
-
-        return;
-
-    }
-
-
-    //=========================
-    // DECISION CHANCE
-    //=========================
-
-    let decisionChance=20;
-
-    // More likely to give a decision
-    // during dangerous situations
-    if(
-        Game.battle.situation==="clash"
-    ){
-
-        decisionChance=50;
-
-    }
-
-    // Player is in danger
-    if(
-        Game.battle.player.balance<35
-    ){
-
-        decisionChance+=15;
-
-    }
-
-    // CPU is in danger
-    if(
-        Game.battle.cpu.balance<35
-    ){
-
-        decisionChance+=10;
-
-    }
-
-
-    //=========================
-    // ROLL
-    //=========================
-
-    const roll=Math.random()*100;
-
-    if(roll<decisionChance){
-
-        generateDynamicDecision();
-
-        return;
-
-    }
-
-
-    //=========================
-    // KEEP AUTO SIMULATING
-    //=========================
-
-    setTimeout(()=>{
-
-        simulateBattleRound();
-
-    },1200);
-
 }
 
 //=========================
