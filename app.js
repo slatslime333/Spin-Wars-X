@@ -4568,7 +4568,6 @@ document.getElementById("xrailLaunch").onclick=()=>{
         getXRailTechnique("player")
     );
 
-};
 
 document.getElementById("clashLaunch").onclick=()=>{
 
@@ -4579,6 +4578,7 @@ document.getElementById("clashLaunch").onclick=()=>{
 document.getElementById("dropLaunch").onclick=()=>{
 
     chooseLaunchTechnique("Drop Launch");
+
 
 };
 
@@ -4593,30 +4593,6 @@ document.getElementById("backLaunch").onclick=()=>{
     showLaunchScreen();
 
 };
-
-        chooseLaunchTechnique("Direct Clash");
-
-    };
-
-   document.getElementById("dropLaunch").onclick=()=>{
-
-    chooseLaunchTechnique("Drop Launch");
-
-};
-
-    document.getElementById("circleLaunch").onclick=()=>{
-
-        chooseLaunchTechnique("Wide Circle");
-
-     
-    };
-document.getElementById("backLaunch").onclick=()=>{
-
-    showLaunchScreen();
-
-};
- 
-}
 
 //=========================
 // CHOOSE LAUNCH TECHNIQUE
