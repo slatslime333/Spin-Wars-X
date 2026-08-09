@@ -2983,6 +2983,15 @@ if(
 
 }
      
+     if(
+    playerPath[step]==="Center" ||
+    cpuPath[step]==="Center"
+){
+
+    checkOpeningInteraction();
+
+}
+     
 renderBeys();
 
         step++;
@@ -5044,6 +5053,109 @@ function resolveOpeningClash(){
         saveBattleSequence(
             "OPENING CLASH",
             `${Game.cpu.blade.name} wins the opening clash!`
+        );
+
+    }
+
+}
+
+//=========================
+// CHECK OPENING INTERACTION
+//=========================
+
+function checkOpeningInteraction(){
+
+ if(Game.battle.openingInteractionResolved) return;
+
+Game.battle.openingInteractionResolved=true;
+
+    const playerTech=Game.player.launch.technique;
+    const cpuTech=Game.cpu.launch.technique;
+
+    // Both Direct Clash
+    if(
+        playerTech==="Direct Clash" &&
+        cpuTech==="Direct Clash"
+    ){
+
+        resolveOpeningClash();
+
+        return;
+
+    }
+
+    // Player Direct Clash attacks CPU
+    if(playerTech==="Direct Clash"){
+
+        resolveOpeningAttack(
+            "player",
+            "cpu"
+        );
+
+    }
+ 
+//=========================
+// RESOLVE OPENING ATTACK
+//=========================
+
+function resolveOpeningAttack(attacker,defender){
+
+    const attackBattle=Game.battle[attacker];
+    const defendBattle=Game.battle[defender];
+
+    if(!attackBattle || !defendBattle) return;
+
+    const attackerImpact=
+        attackBattle.speed *
+        (Game[attacker].stats.attack / 100) *
+        (Game[attacker].stats.knockback / 100) *
+        (attackBattle.openingHitPower || 1);
+
+    const defenderResistance=
+        (Game[defender].stats.defense / 100) *
+        (defendBattle.balance / 100);
+
+    const finalImpact=
+        attackerImpact -
+        defenderResistance * 20;
+
+    if(finalImpact > 25){
+
+        defendBattle.balance-=10;
+
+        saveBattleSequence(
+            "OPENING ATTACK",
+            `${Game[attacker].blade.name} lands a strong opening hit!`
+        );
+
+    }
+    else if(finalImpact > 10){
+
+        defendBattle.balance-=5;
+
+        saveBattleSequence(
+            "OPENING ATTACK",
+            `${Game[attacker].blade.name} lands a glancing hit.`
+        );
+
+    }
+    else{
+
+        saveBattleSequence(
+            "OPENING ATTACK",
+            `${Game[attacker].blade.name} misses the opening attack!`
+        );
+
+    }
+
+}
+ 
+    // CPU Direct Clash attacks Player
+    if(cpuTech==="Direct Clash"){
+
+        resolveOpeningAttack(
+            "cpu",
+            "player"
         );
 
     }
