@@ -2905,6 +2905,21 @@ if(
     applyDropLaunch("cpu");
 
 }
+if(
+    Game.player.launch.technique==="Reverse X-Dash" &&
+    !Game.battle.player.reverseDash
+){
+
+    applyReverseXDash("player");
+
+}
+
+if(
+    Game.cpu.launch.technique==="Reverse X-Dash" &&
+    !Game.battle.cpu.reverseDash
+){
+
+    applyReverseXDash("cpu");
 
         }
 
@@ -4434,7 +4449,7 @@ function showLaunchTechnique(){
 
             <button class="menu-btn silver" id="xrailLaunch">
 
-                X-Rail
+${getXRailTechnique("player")}
 
             </button>
 
@@ -4722,7 +4737,65 @@ function getXRailTechnique(blader){
         : "Reverse X-Dash";
 
 }
+ 
+//=========================
+// APPLY REVERSE X-DASH
+//=========================
 
+function applyReverseXDash(blader){
+
+    const launch=Game[blader].launch;
+    const battle=Game.battle[blader];
+
+    if(!battle) return;
+
+    battle.reverseDash=true;
+
+    switch(launch.quality){
+
+        case "Perfect":
+
+            battle.speed=75;
+            battle.balance+=5;
+            break;
+
+
+        case "Good":
+
+            battle.speed=65;
+            break;
+
+
+        case "Okay":
+
+            battle.speed=52;
+            battle.balance-=3;
+            break;
+
+
+        case "Bad":
+
+            battle.speed=38;
+            battle.balance-=8;
+            battle.spin-=5;
+            break;
+
+
+        case "Horrible":
+
+            battle.speed=25;
+            battle.balance-=15;
+            battle.spin-=10;
+
+            // Misses the reverse rail attempt
+            battle.reverseDashFailed=true;
+
+            break;
+
+    }
+
+}
+ 
 //=========================
 // LAUNCH PATH
 //=========================
@@ -4752,33 +4825,52 @@ function getLaunchPath(blader){
             ];
 
 
-        // X-RAIL
-        case "X-Rail":
+       // X-RAIL DASH
+case "X-Rail Dash":
 
-            // Failed rail attempt
-            if(!launch.success){
+    return [
 
-                return [
-                    start,
-                    "Center"
-                ];
+        start,
 
-            }
+        left
+        ? "LeftRail"
+        : "RightRail",
 
-            return [
+        "XRailExit"
 
-                start,
+    ];
 
-                left
-                ? "LeftRail"
-                : "RightRail",
 
-                "XRailExit",
+// REVERSE X-DASH
+case "Reverse X-Dash":
 
-                "TopCenter"
+    // Horrible reverse launch misses the rail
+    if(
+        launch.quality==="Horrible"
+    ){
 
-            ];
+        return [
 
+            start,
+            "Center"
+
+        ];
+
+    }
+
+    return [
+
+        start,
+
+        "Center",
+
+        left
+        ? "RightRail"
+        : "LeftRail",
+
+        "XRailExit"
+
+    ];
 
         // DIRECT CLASH
         case "Direct Clash":
