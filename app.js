@@ -4595,6 +4595,8 @@ document.getElementById("backLaunch").onclick=()=>{
 
 };
 
+}
+
 //=========================
 // CHOOSE LAUNCH TECHNIQUE
 //=========================
