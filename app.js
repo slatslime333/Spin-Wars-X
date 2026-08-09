@@ -3009,14 +3009,17 @@ renderBeys();
                 600
             );
 
-        }else{
+       }else{
 
-            setTimeout(
-                showArena,
-                600
-            );
+    setTimeout(()=>{
 
-        }
+        showArena();
+
+        startBattleLoop();
+
+    },600);
+
+}
 
     }
 
@@ -3033,6 +3036,169 @@ function generateArena(){
     setLaunchPositions();
 
     playLaunchAnimation();
+
+}
+//=========================
+// START BATTLE LOOP
+//=========================
+
+function startBattleLoop(){
+
+    resetBattleHistory();
+
+    Game.battle.turn=0;
+
+    nextBattleTurn();
+
+}
+
+
+//=========================
+// NEXT BATTLE TURN
+//=========================
+
+function nextBattleTurn(){
+
+    if(
+        Game.battle.player.spin<=0 ||
+        Game.battle.cpu.spin<=0
+    ){
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+    Game.battle.turn++;
+
+    Game.battle.lastEvent=null;
+
+    generateBattleSituation();
+
+}
+
+
+//=========================
+// GENERATE BATTLE SITUATION
+//=========================
+
+function generateBattleSituation(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const distance=Math.abs(
+        player.x-cpu.x
+    );
+
+    let situation;
+
+    if(distance<60){
+
+        situation="close";
+
+    }else if(distance<150){
+
+        situation="approaching";
+
+    }else{
+
+        situation="separated";
+
+    }
+
+    Game.battle.situation=situation;
+
+    showBattleMoveScreen();
+
+}
+
+
+//=========================
+// SHOW MOVE CHOICES
+//=========================
+
+function showBattleMoveScreen(){
+
+    const app=document.getElementById("app");
+
+    const situation=Game.battle.situation;
+
+    let text="Both Beys are circling.";
+
+    if(situation==="close"){
+
+        text="The Beys are close and an impact could happen.";
+
+    }
+
+    if(situation==="approaching"){
+
+        text="The Beys are moving toward each other.";
+
+    }
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>MOVE</h1>
+
+            <p>${text}</p>
+
+            <button
+                class="menu-btn"
+                onclick="chooseBattleMove('Brace')"
+            >
+                1. BRACE
+            </button>
+
+            <button
+                class="menu-btn"
+                onclick="chooseBattleMove('Counter')"
+            >
+                2. COUNTER
+            </button>
+
+            <button
+                class="menu-btn"
+                onclick="chooseBattleMove('Dodge')"
+            >
+                3. DODGE
+            </button>
+
+            <button
+                class="menu-btn"
+                onclick="chooseBattleMove('N/A')"
+            >
+                4. N/A
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+}
+
+
+//=========================
+// CHOOSE PLAYER MOVE
+//=========================
+
+function chooseBattleMove(move){
+
+    Game.battle.player.move=move;
+
+    chooseCPUMove();
+
+    resolveBattleMove();
 
 }
 
