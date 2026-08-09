@@ -2902,24 +2902,64 @@ if(
 
 }
 
+// PLAYER REVERSE X-DASH
 if(
     Game.player.launch.technique==="Reverse X-Dash" &&
-    !Game.battle.player.reverseDash
+    !Game.battle.player.reverseDash &&
+    (
+        playerPath[step]==="LeftRail" ||
+        playerPath[step]==="RightRail"
+    )
 ){
 
     applyReverseXDash("player");
 
 }
 
+
+// CPU REVERSE X-DASH
 if(
     Game.cpu.launch.technique==="Reverse X-Dash" &&
-    !Game.battle.cpu.reverseDash
+    !Game.battle.cpu.reverseDash &&
+    (
+        cpuPath[step]==="LeftRail" ||
+        cpuPath[step]==="RightRail"
+    )
 ){
 
     applyReverseXDash("cpu");
 
 }
+     
+// PLAYER X-RAIL DASH
+if(
+    Game.player.launch.technique==="X-Rail Dash" &&
+    !Game.battle.player.xrailDash &&
+    (
+        playerPath[step]==="LeftRail" ||
+        playerPath[step]==="RightRail"
+    )
+){
 
+    applyXRailDash("player");
+
+}
+
+
+// CPU X-RAIL DASH
+if(
+    Game.cpu.launch.technique==="X-Rail Dash" &&
+    !Game.battle.cpu.xrailDash &&
+    (
+        cpuPath[step]==="LeftRail" ||
+        cpuPath[step]==="RightRail"
+    )
+){
+
+    applyXRailDash("cpu");
+
+}
+     
 renderBeys();
 
         step++;
@@ -4815,7 +4855,60 @@ function applyReverseXDash(blader){
     }
 
 }
- 
+
+ //=========================
+// APPLY X-RAIL DASH
+//=========================
+
+function applyXRailDash(blader){
+
+    const launch=Game[blader].launch;
+    const battle=Game.battle[blader];
+
+    if(!battle) return;
+
+    battle.xrailDash=true;
+
+    switch(launch.quality){
+
+        case "Perfect":
+
+            battle.speed=85;
+            battle.balance+=6;
+            break;
+
+        case "Good":
+
+            battle.speed=72;
+            battle.balance+=3;
+            break;
+
+        case "Okay":
+
+            battle.speed=60;
+            break;
+
+        case "Bad":
+
+            battle.speed=42;
+            battle.balance-=6;
+            battle.spin-=3;
+            break;
+
+        case "Horrible":
+
+            battle.speed=30;
+            battle.balance-=12;
+            battle.spin-=7;
+
+            battle.xrailDashFailed=true;
+
+            break;
+
+    }
+
+}
+
 //=========================
 // LAUNCH PATH
 //=========================
@@ -4847,6 +4940,18 @@ function getLaunchPath(blader){
 
        // X-RAIL DASH
 case "X-Rail Dash":
+
+    // Horrible launch misses the rail
+    if(launch.quality==="Horrible"){
+
+        return [
+
+            start,
+            "Center"
+
+        ];
+
+    }
 
     return [
 
