@@ -3412,7 +3412,6 @@ function showDynamicDecision(
 
     const app=document.getElementById("app");
 
-
     app.innerHTML=`
 
     <div class="background"></div>
@@ -3421,38 +3420,50 @@ function showDynamicDecision(
 
         <section class="menu-card">
 
-            <h1>MOVE</h1>
-
-            <strong>🎙 COMMENTATOR</strong>
-
-            <p>
-
-                ${scenario}
-
-            </p>
+            <h1>ROUND ${Game.match.round}</h1>
 
             <hr>
 
-            ${choices.map(
-                (choice,index)=>`
+            ${renderStadium()}
 
-                <button
-                    class="menu-btn"
-                    onclick="chooseDynamicMove('${choice.intent}')"
-                >
+            <hr>
 
-                    ${index+1}. ${choice.name}
+            <div class="battle-decision">
 
-                </button>
+                <h2>MOVE</h2>
 
-                `
-            ).join("")}
+                <strong>🎙 COMMENTATOR</strong>
+
+                <p>
+                    ${scenario}
+                </p>
+
+                <hr>
+
+                ${choices.map(
+                    (choice,index)=>`
+
+                    <button
+                        class="menu-btn gold decision-btn"
+                        onclick="chooseDynamicMove('${choice.intent}')"
+                    >
+
+                        ${index+1}. ${choice.name}
+
+                    </button>
+
+                    `
+                ).join("")}
+
+            </div>
 
         </section>
 
     </main>
 
     `;
+
+    renderBeys();
 
 }
 
