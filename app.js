@@ -5041,47 +5041,36 @@ function resolveOpeningClash(){
 
 function checkOpeningInteraction(){
 
- if(Game.battle.openingInteractionResolved) return;
+    if(Game.battle.openingInteractionResolved) return;
 
-Game.battle.openingInteractionResolved=true;
+    Game.battle.openingInteractionResolved=true;
 
     const playerTech=Game.player.launch.technique;
     const cpuTech=Game.cpu.launch.technique;
 
-    // Both Direct Clash
     if(
         playerTech==="Direct Clash" &&
         cpuTech==="Direct Clash"
     ){
 
         resolveOpeningClash();
-
         return;
 
     }
 
-    // Player Direct Clash attacks CPU
-if(playerTech==="Direct Clash"){
+    if(playerTech==="Direct Clash"){
 
-    resolveOpeningAttack(
-        "player",
-        "cpu"
-    );
+        resolveOpeningAttack("player","cpu");
 
-}
+    }
 
-// CPU Direct Clash attacks Player
-if(cpuTech==="Direct Clash"){
+    if(cpuTech==="Direct Clash"){
 
-    resolveOpeningAttack(
-        "cpu",
-        "player"
-    );
+        resolveOpeningAttack("cpu","player");
+
+    }
 
 }
-
-} // END checkOpeningInteraction()
-
 
 //=========================
 // RESOLVE OPENING ATTACK
