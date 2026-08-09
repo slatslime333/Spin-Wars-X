@@ -2724,10 +2724,18 @@ function resolveCollision(){
     defenderState.momentum-=
         impact.effectiveImpact/12;
 
-    // Push according to impact
-    pushBey(defender);
+   // Push according to impact
+pushBey(defender);
 
-    renderBeys();
+// Check if the knockback pushed the Bey
+// into a dangerous stadium area
+if(checkStadiumDanger(defender)){
+
+    return;
+
+}
+
+renderBeys();
 
 }
 
@@ -3256,31 +3264,78 @@ function getBattleCommentary(){
 
 function generateDynamicDecision(){
 
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const playerZone=player.zone;
+    const cpuZone=cpu.zone;
+
     const event=Game.battle.lastEvent;
 
     let scenario="";
     let choices=[];
 
 
-    if(event==="passBy"){
+    //=========================
+    // PLAYER NEAR POCKET
+    //=========================
+
+    if(
+        playerZone==="LeftPocket" ||
+        playerZone==="RightPocket"
+    ){
 
         scenario=
-        "The Beys have just passed each other. Your opponent is turning back toward the center.";
+        "Your Bey has been pushed dangerously close to the pocket. You need to decide whether to escape, stabilize, or fight your way back.";
 
         choices=[
 
             {
-                name:"Chase the opponent",
-                intent:"chase"
+                name:"Escape toward center",
+                intent:"escape"
             },
 
             {
-                name:"Reposition toward center",
-                intent:"reposition"
+                name:"Stabilize your Bey",
+                intent:"stabilize"
             },
 
             {
-                name:"Hold your current line",
+                name:"Attempt a defensive counter",
+                intent:"counter"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // CPU NEAR POCKET
+    //=========================
+
+    else if(
+        cpuZone==="LeftPocket" ||
+        cpuZone==="RightPocket"
+    ){
+
+        scenario=
+        "The CPU Bey is near the pocket. A well-timed attack could push it into serious danger.";
+
+        choices=[
+
+            {
+                name:"Press the attack",
+                intent:"attack"
+            },
+
+            {
+                name:"Attempt a strong counter",
+                intent:"counter"
+            },
+
+            {
+                name:"Hold position and wait",
                 intent:"hold"
             }
 
@@ -3289,15 +3344,59 @@ function generateDynamicDecision(){
     }
 
 
-    else if(event==="normalHit"){
+    //=========================
+    // PLAYER ON X-RAIL AREA
+    //=========================
+
+    else if(
+        playerZone==="LeftRail" ||
+        playerZone==="RightRail" ||
+        playerZone==="XRailExit"
+    ){
 
         scenario=
-        "Both Beys absorbed the last hit and remain close enough for another clash.";
+        "Your Bey is moving through the X-Rail area. The stadium's speed could create a powerful opening, but losing control is dangerous.";
 
         choices=[
 
             {
-                name:"Brace for another hit",
+                name:"Attempt an X-Dash",
+                intent:"attack"
+            },
+
+            {
+                name:"Move away from the rail",
+                intent:"escape"
+            },
+
+            {
+                name:"Stabilize before attacking",
+                intent:"stabilize"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // BOTH BEYS CLOSE
+    //=========================
+
+    else if(
+        playerZone===cpuZone ||
+        event==="normalHit" ||
+        event==="heavyHit" ||
+        event==="extremeImpact"
+    ){
+
+        scenario=
+        "The Beys are close and another clash could happen at any moment.";
+
+        choices=[
+
+            {
+                name:"Brace for impact",
                 intent:"brace"
             },
 
@@ -3316,66 +3415,21 @@ function generateDynamicDecision(){
     }
 
 
-    else if(event==="heavyHit"){
-
-        scenario=
-        "The last impact knocked both Beys off their normal paths. An opening is developing.";
-
-        choices=[
-
-            {
-                name:"Attempt a strong counter",
-                intent:"counter"
-            },
-
-            {
-                name:"Stabilize first",
-                intent:"stabilize"
-            },
-
-            {
-                name:"Press the opening",
-                intent:"attack"
-            }
-
-        ];
-
-    }
-
-
-    else if(event==="extremeImpact"){
-
-        scenario=
-        "Both Beys were violently separated by the impact. Their next movements could be unpredictable.";
-
-        choices=[
-
-            {
-                name:"Regain stability",
-                intent:"stabilize"
-            },
-
-            {
-                name:"Chase the opening",
-                intent:"attack"
-            },
-
-            {
-                name:"Move away from danger",
-                intent:"escape"
-            }
-
-        ];
-
-    }
-
+    //=========================
+    // BOTH SEPARATED
+    //=========================
 
     else{
 
         scenario=
-        "The Beys are circling and searching for the next opening.";
+        "The Beys are separated and moving through different areas of the stadium.";
 
         choices=[
+
+            {
+                name:"Chase the opponent",
+                intent:"chase"
+            },
 
             {
                 name:"Move toward center",
@@ -3383,12 +3437,7 @@ function generateDynamicDecision(){
             },
 
             {
-                name:"Try to close the distance",
-                intent:"approach"
-            },
-
-            {
-                name:"Keep your current path",
+                name:"Hold your current path",
                 intent:"hold"
             }
 
@@ -3398,7 +3447,6 @@ function generateDynamicDecision(){
 
 
     Game.battle.decisionChoices=choices;
-
 
     showDynamicDecision(
         scenario,
@@ -3493,201 +3541,522 @@ function resolvePlayerIntent(){
 
     const intent=Game.battle.player.intent;
 
-    const player=Game.battle.player;
-    const cpu=Game.battle.cpu;
-
-    const playerStats=calculateComboStats(
-        Game.player.blade,
-        Game.player.ratchet,
-        Game.player.bit
-    );
-
-    const cpuStats=calculateComboStats(
-        Game.cpu.blade,
-        Game.cpu.ratchet,
-        Game.cpu.bit
-    );
-
-    // CPU reacts independently
-    const cpuRoll=Math.random()*100;
-
-    let cpuIntent="hold";
-
-    if(cpuRoll<25){
-
-        cpuIntent="attack";
-
-    }else if(cpuRoll<45){
-
-        cpuIntent="brace";
-
-    }else if(cpuRoll<65){
-
-        cpuIntent="evade";
-
-    }else if(cpuRoll<80){
-
-        cpuIntent="counter";
-
-    }
+    const cpuIntent=chooseCPUIntent();
 
     Game.battle.cpu.intent=cpuIntent;
 
+    const playerResult=
+        rollIntentResult(
+            "player",
+            intent
+        );
 
-    // Base chance for the player's attempt
+    const cpuResult=
+        rollIntentResult(
+            "cpu",
+            cpuIntent
+        );
+
+    // Apply both Beys' attempted moves
+    applyIntentMovement(
+        "player",
+        intent,
+        playerResult
+    );
+
+    applyIntentMovement(
+        "cpu",
+        cpuIntent,
+        cpuResult
+    );
+
+    resolveIntentResult(
+        intent,
+        cpuIntent,
+        playerResult,
+        cpuResult
+    );
+
+}
+
+//=========================
+// CHOOSE CPU INTENT
+//=========================
+
+function chooseCPUIntent(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const playerZone=player.zone;
+    const cpuZone=cpu.zone;
+
+    const roll=Math.random()*100;
+
+
+    // CPU IS IN POCKET DANGER
+    if(
+        cpuZone==="LeftPocket" ||
+        cpuZone==="RightPocket"
+    ){
+
+        if(roll<45) return "escape";
+
+        if(roll<75) return "stabilize";
+
+        return "counter";
+
+    }
+
+
+    // PLAYER IS IN POCKET DANGER
+    if(
+        playerZone==="LeftPocket" ||
+        playerZone==="RightPocket"
+    ){
+
+        if(roll<50) return "attack";
+
+        if(roll<75) return "chase";
+
+        return "hold";
+
+    }
+
+
+    // CPU LOW BALANCE
+    if(cpu.balance<40){
+
+        if(roll<60) return "stabilize";
+
+        if(roll<80) return "escape";
+
+        return "hold";
+
+    }
+
+
+    // BEYS ARE CLOSE
+    if(
+        playerZone===cpuZone ||
+        Game.battle.lastEvent==="normalHit" ||
+        Game.battle.lastEvent==="heavyHit" ||
+        Game.battle.lastEvent==="extremeImpact"
+    ){
+
+        if(roll<35) return "attack";
+
+        if(roll<60) return "counter";
+
+        if(roll<80) return "brace";
+
+        return "evade";
+
+    }
+
+
+    // BEYS ARE SEPARATED
+    if(roll<40) return "chase";
+
+    if(roll<65) return "center";
+
+    if(roll<85) return "hold";
+
+    return "attack";
+
+}
+
+//=========================
+// ROLL INTENT RESULT
+//=========================
+
+function rollIntentResult(blader,intent){
+
+    const stats=calculateComboStats(
+        Game[blader].blade,
+        Game[blader].ratchet,
+        Game[blader].bit
+    );
+
+    const battle=Game.battle[blader];
+
     let chance=50;
 
-
-    // Player stats affect what they are trying to do
     switch(intent){
 
-        case "brace":
+        case "escape":
+        case "evade":
 
             chance+=
-                (playerStats.stats.defense-75)*0.8;
-
-            chance+=
-                (playerStats.stats.balance-75)*0.4;
+                (stats.stats.mobility-75)*0.9;
 
             break;
 
+        case "attack":
+        case "chase":
+
+            chance+=
+                (stats.stats.attack-75)*0.6;
+
+            chance+=
+                (stats.stats.mobility-75)*0.3;
+
+            break;
 
         case "counter":
 
             chance+=
-                (playerStats.stats.attack-75)*0.7;
+                (stats.stats.attack-75)*0.5;
 
             chance+=
-                (playerStats.stats.knockback-75)*0.4;
+                (stats.stats.knockback-75)*0.4;
 
             break;
 
-
-        case "evade":
-
-        case "escape":
+        case "brace":
 
             chance+=
-                (playerStats.stats.mobility-75)*0.9;
+                (stats.stats.defense-75)*0.7;
+
+            chance+=
+                (stats.stats.balance-75)*0.3;
 
             break;
-
-
-        case "attack":
-
-        case "chase":
-
-        case "approach":
-
-            chance+=
-                (playerStats.stats.attack-75)*0.7;
-
-            chance+=
-                (playerStats.stats.mobility-75)*0.3;
-
-            break;
-
 
         case "stabilize":
 
             chance+=
-                (playerStats.stats.balance-75)*0.9;
+                (stats.stats.balance-75)*0.9;
 
             break;
-
 
         case "center":
 
-        case "reposition":
-
             chance+=
-                (playerStats.stats.mobility-75)*0.5;
-
-            chance+=
-                (playerStats.stats.balance-75)*0.4;
+                (stats.stats.mobility-75)*0.5;
 
             break;
-
 
         case "hold":
 
             chance+=
-                (playerStats.stats.balance-75)*0.5;
+                (stats.stats.balance-75)*0.5;
 
             break;
 
     }
 
-
-    // CPU can make the attempt harder
-    if(cpuIntent==="counter"){
-
-        chance-=8;
-
-    }
-
-    if(cpuIntent==="evade"){
-
-        chance-=5;
-
-    }
-
-    if(cpuIntent==="attack"){
-
-        chance-=3;
-
-    }
-
-
-    // Current condition matters
-    if(player.balance<40){
+    if(battle.balance<40){
 
         chance-=12;
 
     }
 
-    if(player.speed>45){
-
-        chance-=5;
-
-    }
-
-
-    // Clamp chance
     chance=Math.max(
         15,
         Math.min(85,chance)
     );
 
-
     const roll=Math.random()*100;
 
-    let result;
+    if(roll<chance*0.30){
 
-    if(roll<chance*0.35){
+        return "perfect";
 
-        result="perfect";
+    }
 
-    }else if(roll<chance){
+    if(roll<chance){
 
-        result="success";
+        return "success";
 
-    }else if(roll<chance+20){
+    }
 
-        result="partial";
+    if(roll<chance+20){
 
-    }else{
+        return "partial";
 
-        result="fail";
+    }
+
+    return "fail";
+
+}
+
+//=========================
+// APPLY INTENT MOVEMENT
+//=========================
+
+function applyIntentMovement(
+    blader,
+    intent,
+    result
+){
+
+    const battle=Game.battle[blader];
+
+    if(result==="fail"){
+
+        return;
+
+    }
+
+    const currentZone=battle.zone;
+
+    const neighbors=
+        STADIUM_MAP[currentZone].neighbors;
+
+    if(!neighbors || neighbors.length===0){
+
+        return;
+
+    }
+
+    const opponent=
+        blader==="player"
+        ? "cpu"
+        : "player";
+
+    const opponentZone=
+        Game.battle[opponent].zone;
+
+    let targetZone=null;
+
+
+    // ESCAPE / EVADE / CENTER
+    if(
+        intent==="escape" ||
+        intent==="evade" ||
+        intent==="center"
+    ){
+
+        if(neighbors.includes("Center")){
+
+            targetZone="Center";
+
+        }
 
     }
 
 
-    resolveIntentResult(
-        intent,
-        cpuIntent,
-        result
-    );
+    // CHASE / ATTACK / COUNTER
+    if(
+        intent==="chase" ||
+        intent==="attack" ||
+        intent==="counter"
+    ){
+
+        if(neighbors.includes(opponentZone)){
+
+            targetZone=opponentZone;
+
+        }
+
+    }
+
+
+    // STABILIZE
+    if(intent==="stabilize"){
+
+        battle.balance=
+            Math.min(
+                100,
+                battle.balance+
+                (
+                    result==="perfect"
+                    ? 15
+                    : 8
+                )
+            );
+
+    }
+
+
+    // PERFECT MOVE = extra momentum
+    if(result==="perfect"){
+
+        battle.momentum+=15;
+
+    }
+
+    // PARTIAL MOVE = small momentum
+    if(result==="partial"){
+
+        battle.momentum+=5;
+
+    }
+
+
+    // MOVE IF A VALID ZONE EXISTS
+    if(targetZone){
+
+        moveBey(
+            blader,
+            targetZone
+        );
+
+    }
+
+}
+
+//=========================
+// APPLY PLAYER MOVEMENT
+//=========================
+
+function applyPlayerIntentMovement(
+    intent,
+    result
+){
+
+    const player=Game.battle.player;
+
+    // Failed moves do not reliably move
+    if(result==="fail"){
+
+        return;
+
+    }
+
+    const currentZone=player.zone;
+
+    const neighbors=
+        STADIUM_MAP[currentZone].neighbors;
+
+    if(!neighbors || neighbors.length===0){
+
+        return;
+
+    }
+
+    let targetZone=null;
+
+    //=========================
+    // ESCAPE / EVADE
+    //=========================
+
+    if(
+        intent==="escape" ||
+        intent==="evade"
+    ){
+
+        if(
+            neighbors.includes("Center")
+        ){
+
+            targetZone="Center";
+
+        }
+
+    }
+
+
+    //=========================
+    // MOVE TO CENTER
+    //=========================
+
+    if(intent==="center"){
+
+        if(
+            neighbors.includes("Center")
+        ){
+
+            targetZone="Center";
+
+        }
+
+    }
+
+
+    //=========================
+    // STABILIZE
+    //=========================
+
+    if(intent==="stabilize"){
+
+        player.balance=
+            Math.min(
+                100,
+                player.balance+
+                (
+                    result==="perfect"
+                    ? 15
+                    : 8
+                )
+            );
+
+    }
+
+
+    //=========================
+    // CHASE
+    //=========================
+
+    if(intent==="chase"){
+
+        const cpuZone=
+            Game.battle.cpu.zone;
+
+        if(
+            neighbors.includes(cpuZone)
+        ){
+
+            targetZone=cpuZone;
+
+        }
+
+    }
+
+
+    //=========================
+    // ATTACK / COUNTER
+    //=========================
+
+    if(
+        intent==="attack" ||
+        intent==="counter"
+    ){
+
+        const cpuZone=
+            Game.battle.cpu.zone;
+
+        if(
+            neighbors.includes(cpuZone)
+        ){
+
+            targetZone=cpuZone;
+
+        }
+
+    }
+
+
+    //=========================
+    // APPLY MOVEMENT
+    //=========================
+
+    if(targetZone){
+
+        moveBey(
+            "player",
+            targetZone
+        );
+
+    }
+
+
+    // Partial success gives less benefit
+    if(result==="partial"){
+
+        player.momentum+=5;
+
+    }
+
+
+    if(result==="perfect"){
+
+        player.momentum+=15;
+
+    }
+
+    renderBeys();
 
 }
 
