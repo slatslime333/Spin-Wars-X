@@ -4429,6 +4429,126 @@ function startBattleLoop(){
     simulateBattleRound();
 
 }
+//=========================
+// SIMULATE BATTLE MOVEMENT
+//=========================
+
+function simulateBattleMovement(bey){
+
+    const battle=Game.battle[bey];
+    const opponent=
+        Game.battle[
+            bey==="player"
+            ? "cpu"
+            : "player"
+        ];
+
+    if(!battle || !opponent){
+
+        return;
+
+    }
+
+    const currentZone=battle.zone;
+
+    const neighbors=
+        STADIUM_MAP[currentZone]?.neighbors;
+
+    if(
+        !neighbors ||
+        neighbors.length===0
+    ){
+
+        return;
+
+    }
+
+
+    //=========================
+    // FIND OPPONENT
+    //=========================
+
+    let targetZone=null;
+
+
+    // Attack / high momentum:
+    // actively chase the opponent
+    if(
+        battle.momentum>20 ||
+        Math.random()*100<
+        battle.speed
+    ){
+
+        if(
+            neighbors.includes(
+                opponent.zone
+            )
+        ){
+
+            targetZone=
+                opponent.zone;
+
+        }
+
+    }
+
+
+    //=========================
+    // MOVE TOWARD CENTER
+    //=========================
+
+    if(!targetZone){
+
+        const centerZones=[
+            "Center",
+            "TopCenter",
+            "LeftMid",
+            "RightMid",
+            "BottomCenter"
+        ];
+
+        const centerOption=
+            neighbors.find(
+                zone=>
+                centerZones.includes(zone)
+            );
+
+        if(centerOption){
+
+            targetZone=centerOption;
+
+        }
+
+    }
+
+
+    //=========================
+    // RANDOM VALID MOVEMENT
+    //=========================
+
+    if(!targetZone){
+
+        targetZone=
+            neighbors[
+                Math.floor(
+                    Math.random()*
+                    neighbors.length
+                )
+            ];
+
+    }
+
+
+    //=========================
+    // MOVE
+    //=========================
+
+    moveBey(
+        bey,
+        targetZone
+    );
+
+}
 
 //=========================
 // SIMULATE BATTLE ROUND
@@ -4461,93 +4581,56 @@ function simulateBattleRound(){
 
 
     //=========================
-    // MOVE TOWARD ENCOUNTER
-    //=========================
+// SIMULATE MOVEMENT
+//=========================
 
-    const distance=
-        Math.abs(
-            player.x-cpu.x
-        );
+simulateBattleMovement("player");
 
-
-    if(distance>60){
-
-        const playerDirection=
-            player.x<cpu.x
-            ? 1
-            : -1;
-
-        const cpuDirection=
-            cpu.x<player.x
-            ? 1
-            : -1;
+simulateBattleMovement("cpu");
 
 
-        const playerMove=
-            Math.max(
-                15,
-                player.speed*0.35
-            );
+//=========================
+// CHECK DISTANCE AFTER MOVE
+//=========================
 
+const distance=Math.abs(
+    player.x-cpu.x
+);
 
-        const cpuMove=
-            Math.max(
-                15,
-                cpu.speed*0.35
-            );
+let situation;
 
+if(
+    player.zone===cpu.zone ||
+    distance<60
+){
 
-        player.x+=
-            playerDirection*
-            playerMove;
+    situation="clash";
 
+}
 
-        cpu.x+=
-            cpuDirection*
-            cpuMove;
+else if(
+    STADIUM_MAP[player.zone]
+    .neighbors
+    .includes(cpu.zone) ||
+    distance<140
+){
 
-    }
+    situation="approach";
 
+}
 
-    //=========================
-    // RECALCULATE DISTANCE
-    //=========================
+else{
 
-    const newDistance=
-        Math.abs(
-            player.x-cpu.x
-        );
+    situation="separated";
 
+}
 
-    let situation;
+Game.battle.situation=
+    situation;
 
+renderBeys();
 
-    if(newDistance<60){
-
-        situation="clash";
-
-    }
-
-    else if(newDistance<140){
-
-        situation="approach";
-
-    }
-
-    else{
-
-        situation="separated";
-
-    }
-
-
-    Game.battle.situation=
-        situation;
-
-
-    renderBeys();
-
-    resolveAutomaticSituation();
+resolveAutomaticSituation();
 
 }
 
