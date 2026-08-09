@@ -4402,8 +4402,8 @@ function showIntentResult(
         "continueBattle"
     ).onclick=()=>{
 
-        simulateBattleRound();
-
+       decideNextBattleStep();
+     
     };
 
 }
