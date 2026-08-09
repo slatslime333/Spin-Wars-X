@@ -2731,7 +2731,7 @@ function resolveCollision(){
 
 }
 
- //=========================
+//=========================
 // KNOCKBACK
 //=========================
 
@@ -2742,24 +2742,175 @@ function pushBey(bey){
     const neighbors=
         STADIUM_MAP[data.zone].neighbors;
 
-    if(neighbors.length===0){
+    if(!neighbors || neighbors.length===0){
 
         return;
 
     }
 
-    const destination=
+    // Stronger momentum can push farther
+    let pushes=1;
 
-        neighbors[
-            Math.floor(
-                Math.random()*neighbors.length
-            )
-        ];
+    if(
+        Math.abs(data.momentum)>80
+    ){
 
-    moveBey(bey,destination);
+        pushes=2;
+
+    }
+
+    for(
+        let i=0;
+        i<pushes;
+        i++
+    ){
+
+        const currentZone=
+            Game.battle[bey].zone;
+
+        const currentNeighbors=
+            STADIUM_MAP[
+                currentZone
+            ].neighbors;
+
+        if(
+            !currentNeighbors ||
+            currentNeighbors.length===0
+        ){
+
+            break;
+
+        }
+
+        // Prefer dangerous/special zones
+        const dangerousZones=
+            currentNeighbors.filter(
+                zone=>
+                zone==="LeftPocket" ||
+                zone==="RightPocket" ||
+                zone==="XRailExit"
+            );
+
+        let destination;
+
+        if(
+            dangerousZones.length>0 &&
+            Math.random()<0.65
+        ){
+
+            destination=
+                dangerousZones[
+                    Math.floor(
+                        Math.random()*
+                        dangerousZones.length
+                    )
+                ];
+
+        }else{
+
+            destination=
+                currentNeighbors[
+                    Math.floor(
+                        Math.random()*
+                        currentNeighbors.length
+                    )
+                ];
+
+        }
+
+        moveBey(
+            bey,
+            destination
+        );
+
+    }
 
 }
- 
+
+ //=========================
+// CHECK STADIUM DANGER
+//=========================
+
+function checkStadiumDanger(bey){
+
+    const battle=
+        Game.battle[bey];
+
+    const zone=
+        battle.zone;
+
+    //=========================
+    // POCKET
+    //=========================
+
+    if(
+        zone==="LeftPocket" ||
+        zone==="RightPocket"
+    ){
+
+        const recovery=
+            battle.balance+
+            battle.spin*0.4;
+
+        const roll=
+            Math.random()*100;
+
+        if(
+            roll>recovery
+        ){
+
+            Game.battle.finish=
+                "Over Finish";
+
+            Game.battle.winner=
+                bey==="player"
+                ? "cpu"
+                : "player";
+
+            resolveBattleEnd();
+
+            return true;
+
+        }
+
+        return false;
+
+    }
+
+
+    //=========================
+    // XTREME ZONE
+    //=========================
+
+    if(zone==="XRailExit"){
+
+        const momentum=
+            Math.abs(
+                battle.momentum
+            );
+
+        if(momentum>60){
+
+            Game.battle.finish=
+                "Xtreme Finish";
+
+            Game.battle.winner=
+                bey==="player"
+                ? "cpu"
+                : "player";
+
+            resolveBattleEnd();
+
+            return true;
+
+        }
+
+    }
+
+    return false;
+
+}
+
 //=========================
 // RAIL EXIT
 //=========================
@@ -4014,7 +4165,20 @@ function applyBattleEvent(event){
         );
 
     }
+ 
+//=========================
+// APPLY KNOCKBACK
+//=========================
 
+pushBey(loser);
+
+if(
+    checkStadiumDanger(loser)
+){
+
+    return;
+
+}
 
     //=========================
     // SAVE HIT DETAILS
