@@ -2872,23 +2872,19 @@ function playLaunchAnimation(){
 
     function animate(){
 
-        if(step < playerPath.length){
+      if(step < playerPath.length){
 
-            moveBey(
-                "player",
-                playerPath[step]
-            );
+    moveBey("player", playerPath[step]);
 
-        }
+}
 
-        if(step < cpuPath.length){
+if(step < cpuPath.length){
 
-            moveBey(
-                "cpu",
-                cpuPath[step]
-            );
+    moveBey("cpu", cpuPath[step]);
 
-         if(
+}
+
+if(
     playerPath[step]==="XRailExit" &&
     Game.player.launch.technique==="Drop Launch"
 ){
@@ -2905,6 +2901,7 @@ if(
     applyDropLaunch("cpu");
 
 }
+
 if(
     Game.player.launch.technique==="Reverse X-Dash" &&
     !Game.battle.player.reverseDash
@@ -2921,9 +2918,9 @@ if(
 
     applyReverseXDash("cpu");
 
-        }
+}
 
-        renderBeys();
+renderBeys();
 
         step++;
 
@@ -4487,20 +4484,43 @@ ${getXRailTechnique("player")}
 
     `;
 
-    document.getElementById("centerLaunch").onclick=()=>{
+   document.getElementById("centerLaunch").onclick=()=>{
 
-        chooseLaunchTechnique("Center");
+    chooseLaunchTechnique("Center");
 
-    };
+};
 
-  document.getElementById("railBtn").onclick=()=>{
+document.getElementById("xrailLaunch").onclick=()=>{
 
     chooseLaunchTechnique(
         getXRailTechnique("player")
     );
 
+};
 
-    document.getElementById("clashLaunch").onclick=()=>{
+document.getElementById("clashLaunch").onclick=()=>{
+
+    chooseLaunchTechnique("Direct Clash");
+
+};
+
+document.getElementById("dropLaunch").onclick=()=>{
+
+    chooseLaunchTechnique("Drop Launch");
+
+};
+
+document.getElementById("circleLaunch").onclick=()=>{
+
+    chooseLaunchTechnique("Wide Circle");
+
+};
+
+document.getElementById("backLaunch").onclick=()=>{
+
+    showLaunchScreen();
+
+};
 
         chooseLaunchTechnique("Direct Clash");
 
