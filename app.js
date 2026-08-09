@@ -4352,20 +4352,26 @@ function checkBattleFinish(){
 
 function decideNextBattleStep(){
 
-    // Round 1 is always automatic
-    if(Game.battle.turn===1){
+    if(Game.battle.turn>=Game.battle.maxTurns){
 
-        showBattleResult();
+        resolveBattleEnd();
 
         return;
 
     }
 
-    const situation=Game.battle.situation;
+    // Round 1 always continues automatically
+    if(Game.battle.turn===1){
+
+        simulateBattleRound();
+
+        return;
+
+    }
 
     let decisionChance=20;
 
-    if(situation==="clash"){
+    if(Game.battle.situation==="clash"){
 
         decisionChance=50;
 
@@ -4383,45 +4389,17 @@ function decideNextBattleStep(){
 
     }
 
-    const roll=Math.random()*100;
-
-    if(roll<decisionChance){
+    if(Math.random()*100<decisionChance){
 
         generateDynamicDecision();
 
     }else{
 
-        showBattleResult();
+        simulateBattleRound();
 
     }
 
 }
-
-//=========================
-// NEXT BATTLE TURN
-//=========================
-
-function nextBattleTurn(){
-
-    if(
-        Game.battle.player.spin<=0 ||
-        Game.battle.cpu.spin<=0
-    ){
-
-        resolveBattleEnd();
-
-        return;
-
-    }
-
-    Game.battle.turn++;
-
-    Game.battle.lastEvent=null;
-
-    generateBattleSituation();
-
-}
-
 
 //=========================
 // GENERATE BATTLE SITUATION
@@ -4455,94 +4433,6 @@ function generateBattleSituation(){
     Game.battle.situation=situation;
 
     showBattleMoveScreen();
-
-}
-
-
-//=========================
-// SHOW MOVE CHOICES
-//=========================
-
-function showBattleMoveScreen(){
-
-    const app=document.getElementById("app");
-
-    const situation=Game.battle.situation;
-
-    let text="Both Beys are circling.";
-
-    if(situation==="close"){
-
-        text="The Beys are close and an impact could happen.";
-
-    }
-
-    if(situation==="approaching"){
-
-        text="The Beys are moving toward each other.";
-
-    }
-
-    app.innerHTML=`
-
-    <div class="background"></div>
-
-    <main class="menu">
-
-        <section class="menu-card">
-
-            <h1>MOVE</h1>
-
-            <p>${text}</p>
-
-            <button
-                class="menu-btn"
-                onclick="chooseBattleMove('Brace')"
-            >
-                1. BRACE
-            </button>
-
-            <button
-                class="menu-btn"
-                onclick="chooseBattleMove('Counter')"
-            >
-                2. COUNTER
-            </button>
-
-            <button
-                class="menu-btn"
-                onclick="chooseBattleMove('Dodge')"
-            >
-                3. DODGE
-            </button>
-
-            <button
-                class="menu-btn"
-                onclick="chooseBattleMove('N/A')"
-            >
-                4. N/A
-            </button>
-
-        </section>
-
-    </main>
-
-    `;
-
-}
-
-
-//=========================
-// CHOOSE PLAYER MOVE
-//=========================
-
-function chooseBattleMove(move){
-
-    Game.battle.player.move=move;
-
-    chooseCPUMove();
-
-    resolveBattleMove();
 
 }
 
