@@ -5550,19 +5550,11 @@ ${createStatBar("BST",cpuCombo.stats.burst)}
 
 </div>
 
-<h2 id="ripText">
-
-                Battle Begins In: 10
-
-            </h2>
-
-            <br>
-
             <button
                 class="menu-btn gold"
                 id="skipButton">
 
-                SKIP
+                CONTINUE
 
             </button>
 
@@ -5590,13 +5582,11 @@ ${createStatBar("BST",cpuCombo.stats.burst)}
 
     },1000);
 
-    document.getElementById("skipButton").onclick=()=>{
+   document.getElementById("skipButton").onclick=()=>{
 
-        clearInterval(timer);
+    generateArena();
 
-        generateArena();
-
-    };
+};
 
 }
 
