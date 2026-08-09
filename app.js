@@ -2888,6 +2888,24 @@ function playLaunchAnimation(){
                 cpuPath[step]
             );
 
+         if(
+    playerPath[step]==="XRailExit" &&
+    Game.player.launch.technique==="Drop Launch"
+){
+
+    applyDropLaunch("player");
+
+}
+
+if(
+    cpuPath[step]==="XRailExit" &&
+    Game.cpu.launch.technique==="Drop Launch"
+){
+
+    applyDropLaunch("cpu");
+
+}
+
         }
 
         renderBeys();
@@ -4460,11 +4478,12 @@ function showLaunchTechnique(){
 
     };
 
-    document.getElementById("xrailLaunch").onclick=()=>{
+  document.getElementById("railBtn").onclick=()=>{
 
-        chooseLaunchTechnique("X-Rail");
+    chooseLaunchTechnique(
+        getXRailTechnique("player")
+    );
 
-    };
 
     document.getElementById("clashLaunch").onclick=()=>{
 
@@ -4628,6 +4647,79 @@ function validateLaunch(blader){
             "Right-spin cannot catch the left X-Rail.";
 
     }
+
+}
+
+//=========================
+// APPLY DROP LAUNCH
+//=========================
+
+function applyDropLaunch(blader){
+
+    const launch=Game[blader].launch;
+    const battle=Game.battle[blader];
+
+    if(!battle) return;
+
+    battle.dropLaunch=true;
+    battle.rail=false;
+    battle.xExit=true;
+
+    switch(launch.quality){
+
+        case "Perfect":
+            battle.speed=28;
+            battle.balance+=8;
+            battle.spin+=3;
+            break;
+
+        case "Good":
+            battle.speed=35;
+            battle.balance+=4;
+            break;
+
+        case "Okay":
+            battle.speed=42;
+            break;
+
+        case "Bad":
+            battle.speed=52;
+            battle.balance-=6;
+            battle.spin-=4;
+            break;
+
+        case "Horrible":
+            battle.speed=60;
+            battle.balance-=12;
+            battle.spin-=8;
+            break;
+
+    }
+
+}
+
+//=========================
+// GET X-RAIL TECHNIQUE
+//=========================
+
+function getXRailTechnique(blader){
+
+    const side =
+        blader === "player"
+        ? Game.arena.playerSide
+        : Game.arena.cpuSide;
+
+    const spin =
+        Game[blader].spin || "Right";
+
+    const naturalSide =
+        spin === "Right"
+        ? "Right"
+        : "Left";
+
+    return side === naturalSide
+        ? "X-Rail Dash"
+        : "Reverse X-Dash";
 
 }
 
