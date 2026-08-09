@@ -1958,34 +1958,78 @@ function battleTick(){
     const player=Game.battle.player;
     const cpu=Game.battle.cpu;
 
-    // Check for rail interception BEFORE movement
+    const oldPlayerZone=player.zone;
+    const oldCpuZone=cpu.zone;
+
+    const oldPlayerRailSpeed=player.railSpeed;
+    const oldCpuRailSpeed=cpu.railSpeed;
+
+    // -------------------------
+    // RAIL INTERCEPTION
+    // -------------------------
+
+    const playerOnRail=player.rail;
+    const cpuOnRail=cpu.rail;
+
     checkRailInterception();
 
-    // Check collision before movement
+    // -------------------------
+    // COLLISION BEFORE MOVEMENT
+    // -------------------------
+
     if(canCollide(player.zone,cpu.zone)){
 
         resolveCollision();
+
+        saveBattleSequence(
+
+            "💥 COLLISION",
+
+            `${Game.player.blade.name} and ${Game.cpu.blade.name} collide.
+
+${Game.player.blade.name}
+Spin: ${Math.round(player.spin)}
+Balance: ${Math.round(player.balance)}
+
+${Game.cpu.blade.name}
+Spin: ${Math.round(cpu.spin)}
+Balance: ${Math.round(cpu.balance)}`
+
+        );
+
+        renderBattleSequence();
 
         return;
 
     }
 
-    // Move both Beys
+    // -------------------------
+    // NORMAL MOVEMENT
+    // -------------------------
+
+    const playerDestination=
+        getNaturalMovement("player");
+
+    const cpuDestination=
+        getNaturalMovement("cpu");
+
     moveBey(
         "player",
-        getNaturalMovement("player")
+        playerDestination
     );
 
     moveBey(
         "cpu",
-        getNaturalMovement("cpu")
+        cpuDestination
     );
 
-    // Build speed after movement
+    // -------------------------
+    // RAIL SPEED
+    // -------------------------
+
     updateRailSpeed("player");
     updateRailSpeed("cpu");
 
-    // Normal movement speed
     player.speed=
         player.rail
         ? player.railSpeed
@@ -1996,8 +2040,90 @@ function battleTick(){
         ? cpu.railSpeed
         : 50;
 
-    // Check events after movement
-    checkBattleEvents();
+    // -------------------------
+    // BUILD EVENT TEXT
+    // -------------------------
+
+    let eventText="";
+
+    // Player movement
+    if(oldPlayerZone!==player.zone){
+
+        eventText+=
+`${Game.player.blade.name} moves:
+
+${oldPlayerZone}
+→ ${player.zone}
+
+`;
+
+    }
+
+    // Player rail speed
+    if(player.rail){
+
+        eventText+=
+`${Game.player.blade.name} is riding the X-Rail.
+
+Speed:
+${oldPlayerRailSpeed}
+→ ${player.railSpeed}
+
+`;
+
+    }
+
+    // CPU movement
+    if(oldCpuZone!==cpu.zone){
+
+        eventText+=
+`${Game.cpu.blade.name} moves:
+
+${oldCpuZone}
+→ ${cpu.zone}
+
+`;
+
+    }
+
+    // CPU rail speed
+    if(cpu.rail){
+
+        eventText+=
+`${Game.cpu.blade.name} is riding the X-Rail.
+
+Speed:
+${oldCpuRailSpeed}
+→ ${cpu.railSpeed}
+
+`;
+
+    }
+
+    if(eventText===""){
+
+        eventText=
+`Both Beys continue moving.
+
+${Game.player.blade.name}: ${player.zone}
+
+${Game.cpu.blade.name}: ${cpu.zone}`;
+
+    }
+
+    // -------------------------
+    // SAVE SEQUENCE
+    // -------------------------
+
+    saveBattleSequence(
+
+        "BATTLE MOVEMENT",
+
+        eventText
+
+    );
+
+    renderBattleSequence();
 
 }
 
@@ -4941,6 +5067,280 @@ ${createStatBar("BST",cpuCombo.stats.burst)}
 }
 
 //=========================
+// BATTLE SEQUENCE SYSTEM
+//=========================
+
+function resetBattleHistory(){
+
+    Game.battle.history=[];
+    Game.battle.sequenceIndex=-1;
+
+}
+
+function saveBattleSequence(title,text){
+
+    Game.battle.history.push({
+
+        title:title,
+
+        text:text,
+
+        player:JSON.parse(
+            JSON.stringify(Game.battle.player)
+        ),
+
+        cpu:JSON.parse(
+            JSON.stringify(Game.battle.cpu)
+        )
+
+    });
+
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
+
+}
+
+function restoreBattleSequence(index){
+
+    const sequence=
+        Game.battle.history[index];
+
+    if(!sequence){
+
+        return;
+
+    }
+
+    Game.battle.sequenceIndex=index;
+
+    Game.battle.player=
+        JSON.parse(
+            JSON.stringify(sequence.player)
+        );
+
+    Game.battle.cpu=
+        JSON.parse(
+            JSON.stringify(sequence.cpu)
+        );
+
+    renderBattleSequence();
+
+}
+
+//=========================
+// BATTLE SEQUENCE VIEWER
+//=========================
+
+function renderBattleSequence(){
+
+    const app=document.getElementById("app");
+
+    const history=Game.battle.history;
+    const index=Game.battle.sequenceIndex;
+
+    const sequence=history[index];
+
+    if(!sequence){
+
+        return;
+
+    }
+
+    const previousDisabled=
+        index<=0
+        ? "disabled"
+        : "";
+
+    const nextDisabled=
+        index>=history.length-1
+        ? "disabled"
+        : "";
+
+    app.innerHTML=`
+
+        <div class="background"></div>
+
+        <main class="menu">
+
+            <section class="menu-card">
+
+                <h1>
+                    ROUND ${Game.match.round}
+                </h1>
+
+                <hr>
+
+                ${renderStadium()}
+
+                <div style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    margin:18px 0;
+                    gap:10px;
+                ">
+
+                    <button
+                        class="menu-btn silver"
+                        id="previousSequence"
+                        ${previousDisabled}
+                    >
+
+                        ←
+
+                    </button>
+
+                    <strong>
+
+                        ${index+1} / ${history.length}
+
+                    </strong>
+
+                    <button
+                        class="menu-btn silver"
+                        id="nextSequence"
+                        ${nextDisabled}
+                    >
+
+                        →
+
+                    </button>
+
+                </div>
+
+                <div style="
+                    min-height:130px;
+                    padding:18px;
+                    background:rgba(255,255,255,.06);
+                    border-radius:12px;
+                    margin-top:12px;
+                ">
+
+                    <h2>
+                        ${sequence.title}
+                    </h2>
+
+                    <p style="
+                        white-space:pre-line;
+                        line-height:1.6;
+                    ">
+
+                        ${sequence.text}
+
+                    </p>
+
+                </div>
+
+                <br>
+
+                <button
+                    class="menu-btn gold"
+                    id="continueBattle"
+                >
+
+                    CONTINUE
+
+                </button>
+
+            </section>
+
+        </main>
+
+    `;
+
+    renderBeys();
+
+    const previous=
+        document.getElementById(
+            "previousSequence"
+        );
+
+    const next=
+        document.getElementById(
+            "nextSequence"
+        );
+
+    previous.onclick=()=>{
+
+        restoreBattleSequence(
+            index-1
+        );
+
+    };
+
+    next.onclick=()=>{
+
+        restoreBattleSequence(
+            index+1
+        );
+
+    };
+
+    document.getElementById(
+        "continueBattle"
+    ).onclick=()=>{
+
+        // If reviewing an old event,
+        // return to the latest event first.
+        if(
+            Game.battle.sequenceIndex
+            <
+            Game.battle.history.length-1
+        ){
+
+            restoreBattleSequence(
+                Game.battle.history.length-1
+            );
+
+            return;
+
+        }
+
+        continueBattleSequence();
+
+    };
+
+}
+
+//=========================
+// CONTINUE BATTLE
+//=========================
+
+function continueBattleSequence(){
+
+    // Opening
+    if(Game.battle.phase==="Opening"){
+
+        Game.battle.phase="Battle";
+
+        battleTick();
+
+        saveBattleSequence(
+
+            "BATTLE STARTS",
+
+            "Both Beys begin moving through the stadium."
+
+        );
+
+        renderBattleSequence();
+
+        return;
+
+    }
+
+    // Normal battle exchange
+    if(Game.battle.phase==="Battle"){
+
+        generateDecision();
+
+        return;
+
+    }
+
+}
+
+//=========================
 // SHOW ARENA
 //=========================
 
@@ -4994,14 +5394,22 @@ ${renderStadium()}
 
    renderBeys();
 
-setTimeout(()=>{
+resetBattleHistory();
 
-    openingCommentary();
+Game.battle.phase="Opening";
 
-},2000);
+saveBattleSequence(
 
-}
+    "ENTERING THE STADIUM",
 
+    `${Game.player.blade.name} launches from the ${Game.arena.playerSide} side.
+
+${Game.cpu.blade.name} launches from the ${Game.arena.cpuSide} side.`
+
+);
+
+renderBattleSequence();
+ 
 //=========================
 // OPENING COMMENTARY
 //=========================
