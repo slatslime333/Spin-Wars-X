@@ -4061,57 +4061,272 @@ function applyPlayerIntentMovement(
 }
 
 //=========================
-// RESOLVE INTENT RESULT
+// RESOLVE INTENT VS INTENT
 //=========================
 
 function resolveIntentResult(
-    intent,
+    playerIntent,
     cpuIntent,
-    result
+    playerResult,
+    cpuResult
 ){
 
     let text="";
+    let event=null;
 
-    if(result==="perfect"){
+    //=========================
+    // ATTACK VS BRACE
+    //=========================
 
-        text=
-        "You time your move perfectly and gain a major advantage.";
+    if(
+        playerIntent==="attack" &&
+        cpuIntent==="brace"
+    ){
+
+        if(
+            playerResult==="perfect" ||
+            playerResult==="success"
+        ){
+
+            text=
+            "You attack, but the CPU braces for impact. The hit lands, but much of the force is absorbed.";
+
+            event="normalHit";
+
+        }else{
+
+            text=
+            "You try to attack, but the CPU holds its ground and your approach loses momentum.";
+
+            event="passBy";
+
+        }
 
     }
 
-    else if(result==="success"){
 
-        text=
-        "Your attempt works and you successfully execute the move.";
+    //=========================
+    // ATTACK VS EVADE / ESCAPE
+    //=========================
+
+    else if(
+        playerIntent==="attack" &&
+        (
+            cpuIntent==="evade" ||
+            cpuIntent==="escape"
+        )
+    ){
+
+        if(
+            playerResult==="perfect" &&
+            cpuResult!=="perfect"
+        ){
+
+            text=
+            "You read the escape perfectly and catch the CPU Bey with a clean hit.";
+         
+Game.battle.forcedWinner="player";
+            event="heavyHit";
+
+        }else if(
+            cpuResult==="perfect" ||
+            cpuResult==="success"
+        ){
+
+            text=
+            "You attack, but the CPU slips away before you can land a clean hit.";
+
+            event="passBy";
+
+        }else{
+
+            text=
+            "Both Beys scramble for position, but neither gains a clean advantage.";
+
+            event="normalHit";
+
+        }
 
     }
 
-    else if(result==="partial"){
 
-        text=
-        "Your move partly works, but the situation does not fully go your way.";
+    //=========================
+    // COUNTER VS ATTACK
+    //=========================
+
+    else if(
+        playerIntent==="counter" &&
+        cpuIntent==="attack"
+    ){
+
+        if(
+            playerResult==="perfect" &&
+            cpuResult!=="perfect"
+        ){
+
+            text=
+            "Perfect timing! You catch the CPU's attack and redirect the impact with a powerful counter.";
+
+            event="heavyHit";
+
+        }else if(
+            cpuResult==="perfect"
+        ){
+
+            text=
+            "You attempt the counter too early. The CPU breaks through with a powerful attack.";
+
+Game.battle.forcedWinner="cpu";
+event="heavyHit";
+         
+        }else{
+
+            text=
+            "The attack and counter collide in a hard clash.";
+
+            event="normalHit";
+
+        }
 
     }
+
+
+    //=========================
+    // CHASE VS ESCAPE
+    //=========================
+
+    else if(
+        playerIntent==="chase" &&
+        (
+            cpuIntent==="escape" ||
+            cpuIntent==="evade"
+        )
+    ){
+
+        if(
+            playerResult==="perfect" &&
+            cpuResult!=="perfect"
+        ){
+
+            text=
+            "You cut off the escape route and catch the CPU Bey.";
+
+            event="normalHit";
+
+        }else if(
+            cpuResult==="perfect" ||
+            cpuResult==="success"
+        ){
+
+            text=
+            "The CPU escapes and creates space between the Beys.";
+
+            event="passBy";
+
+        }else{
+
+            text=
+            "You close the distance, but the CPU barely avoids a direct clash.";
+
+            event="passBy";
+
+        }
+
+    }
+
+
+    //=========================
+    // ATTACK VS ATTACK
+    //=========================
+
+    else if(
+        playerIntent==="attack" &&
+        cpuIntent==="attack"
+    ){
+
+        if(
+            playerResult==="perfect" &&
+            cpuResult!=="perfect"
+        ){
+
+            text=
+            "You win the head-on clash and drive the CPU backward.";
+
+            event="heavyHit";
+
+        }else if(
+            cpuResult==="perfect" &&
+            playerResult!=="perfect"
+        ){
+
+            text=
+            "The CPU wins the head-on clash and knocks you backward.";
+
+            event="cpuHeavyHit";
+
+        }else{
+
+            text=
+            "Both Beys collide head-on in a violent clash.";
+
+            event="normalHit";
+
+        }
+
+    }
+
+
+    //=========================
+    // DEFAULT
+    //=========================
 
     else{
 
-        text=
-        "Your attempt fails to develop cleanly and the opponent disrupts your plan.";
+        if(
+            playerResult==="perfect" &&
+            cpuResult!=="perfect"
+        ){
+
+            text=
+            "Your move works perfectly and you gain the better position.";
+
+            event="separation";
+
+        }else if(
+            cpuResult==="perfect" &&
+            playerResult!=="perfect"
+        ){
+
+            text=
+            "The CPU reacts perfectly and takes control of the position.";
+
+            event="separation";
+
+        }else{
+
+            text=
+            "Both Beys continue battling for position.";
+
+            event="passBy";
+
+        }
 
     }
 
 
-    Game.battle.lastEvent="playerDecision";
+    Game.battle.lastEvent=event;
 
-    saveBattleSequence(
-        "YOUR MOVE: "+intent.toUpperCase(),
-        text
-    );
+    // Apply the actual battle event
+    if(event){
+
+        applyBattleEvent(event);
+
+    }
 
     showIntentResult(
-        intent,
+        playerIntent,
         cpuIntent,
-        result,
+        playerResult,
         text
     );
 
@@ -4426,23 +4641,43 @@ function applyBattleEvent(event){
     let winnerCombo;
     let loserCombo;
 
-    if(playerPower>cpuPower){
+   if(Game.battle.forcedWinner==="player"){
 
-        winner="player";
-        loser="cpu";
+    winner="player";
+    loser="cpu";
 
-        winnerCombo=playerCombo;
-        loserCombo=cpuCombo;
+    winnerCombo=playerCombo;
+    loserCombo=cpuCombo;
 
-    }else{
+    Game.battle.forcedWinner=null;
 
-        winner="cpu";
-        loser="player";
+}else if(Game.battle.forcedWinner==="cpu"){
 
-        winnerCombo=cpuCombo;
-        loserCombo=playerCombo;
+    winner="cpu";
+    loser="player";
 
-    }
+    winnerCombo=cpuCombo;
+    loserCombo=playerCombo;
+
+    Game.battle.forcedWinner=null;
+
+}else if(playerPower>cpuPower){
+
+    winner="player";
+    loser="cpu";
+
+    winnerCombo=playerCombo;
+    loserCombo=cpuCombo;
+
+}else{
+
+    winner="cpu";
+    loser="player";
+
+    winnerCombo=cpuCombo;
+    loserCombo=playerCombo;
+
+}
 
     Game.battle.lastHitWinner=winner;
 
