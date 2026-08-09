@@ -4179,9 +4179,77 @@ function showVS(){
 
     generateCPUCombo();
 
-    assignStadiumSides();
+    const app=document.getElementById("app");
 
-    showLaunchScreen();
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>ROUND ${Game.round}</h1>
+
+            <p>First to 7 Points</p>
+
+            <hr>
+
+            <div class="versus">
+
+                <div>
+
+                    <h2>YOU</h2>
+
+                    <p>
+                        ${Game.player.blade.name}<br>
+                        ${Game.player.ratchet.name}<br>
+                        ${Game.player.bit.name}
+                    </p>
+
+                    <h3>OVR ${Game.player.overall}</h3>
+
+                </div>
+
+                <div>
+
+                    <h2>CPU</h2>
+
+                    <p>
+                        ${Game.cpu.blade.name}<br>
+                        ${Game.cpu.ratchet.name}<br>
+                        ${Game.cpu.bit.name}
+                    </p>
+
+                    <h3>OVR ${Game.cpu.overall}</h3>
+
+                </div>
+
+            </div>
+
+            <br>
+
+            <button
+                class="menu-btn gold"
+                id="continueVS">
+
+                CONTINUE
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+    document.getElementById("continueVS").onclick=()=>{
+
+        assignStadiumSides();
+
+        showLaunchScreen();
+
+    };
 
 }
 
