@@ -4989,6 +4989,68 @@ function applyDirectClash(blader){
 }
 
 //=========================
+// RESOLVE OPENING CLASH
+//=========================
+
+function resolveOpeningClash(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    if(Game.battle.openingClashResolved) return;
+
+    Game.battle.openingClashResolved=true;
+
+    const playerImpact=
+        player.speed *
+        (Game.player.stats.attack / 100) *
+        (Game.player.stats.knockback / 100) *
+        (player.openingHitPower || 1);
+
+    const cpuImpact=
+        cpu.speed *
+        (Game.cpu.stats.attack / 100) *
+        (Game.cpu.stats.knockback / 100) *
+        (cpu.openingHitPower || 1);
+
+    const difference=
+        Math.abs(playerImpact-cpuImpact);
+
+    if(difference<8){
+
+        player.balance-=4;
+        cpu.balance-=4;
+
+        saveBattleSequence(
+            "OPENING CLASH",
+            "Both Beys collide head-on!"
+        );
+
+    }
+    else if(playerImpact>cpuImpact){
+
+        cpu.balance-=Math.min(30,difference*0.5);
+
+        saveBattleSequence(
+            "OPENING CLASH",
+            `${Game.player.blade.name} wins the opening clash!`
+        );
+
+    }
+    else{
+
+        player.balance-=Math.min(30,difference*0.5);
+
+        saveBattleSequence(
+            "OPENING CLASH",
+            `${Game.cpu.blade.name} wins the opening clash!`
+        );
+
+    }
+
+}
+
+//=========================
 // LAUNCH PATH
 //=========================
 
