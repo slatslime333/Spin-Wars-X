@@ -4426,11 +4426,11 @@ function showLaunchTechnique(){
 
             </button>
 
-            <button class="menu-btn bronze" id="pocketLaunch">
+            <button class="menu-btn bronze" id="dropLaunch">
 
-                Pocket Drop
+    Drop Launch
 
-            </button>
+</button>
 
             <button class="menu-btn silver" id="circleLaunch">
 
@@ -4472,11 +4472,11 @@ function showLaunchTechnique(){
 
     };
 
-    document.getElementById("pocketLaunch").onclick=()=>{
+   document.getElementById("dropLaunch").onclick=()=>{
 
-        chooseLaunchTechnique("Pocket Drop");
+    chooseLaunchTechnique("Drop Launch");
 
-    };
+};
 
     document.getElementById("circleLaunch").onclick=()=>{
 
@@ -4726,22 +4726,20 @@ function getLaunchPath(blader){
             ];
 
 
-        // POCKET DROP
-        case "Pocket Drop":
+        // DROP LAUNCH
+case "Drop Launch":
 
-            return [
+    return [
 
-                start,
+        start,
 
-                left
-                ? "BottomLeft"
-                : "BottomRight",
+        left
+        ? "LeftRail"
+        : "RightRail",
 
-                left
-                ? "LeftPocket"
-                : "RightPocket"
+        "XRailExit"
 
-            ];
+    ];
 
     }
 
@@ -4847,15 +4845,15 @@ function generateCPULaunch(){
 
     ];
 
-    const techniques=[
+   const techniques=[
 
-        "Center",
-        "X-Rail",
-        "Direct Clash",
-        "Pocket Drop",
-        "Wide Circle"
+    "Center",
+    "X-Rail",
+    "Direct Clash",
+    "Drop Launch",
+    "Wide Circle"
 
-    ];
+];
 
     Game.cpu.launch.angle=
 
