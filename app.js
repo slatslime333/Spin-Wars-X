@@ -4138,38 +4138,52 @@ function showIntentResult(
 
         <section class="menu-card">
 
-            <h1>BATTLE RESULT</h1>
-
-            <strong>🎙 COMMENTATOR</strong>
-
-            <p>${text}</p>
+            <h1>ROUND ${Game.match.round}</h1>
 
             <hr>
 
-            <p>
-                Your attempt:
-                <strong>${intent}</strong>
-            </p>
+            ${renderStadium()}
 
-            <p>
-                Opponent response:
-                <strong>${cpuIntent}</strong>
-            </p>
+            <hr>
 
-            <button
-                class="menu-btn gold"
-                id="continueBattle"
-            >
+            <div class="battle-decision">
 
-                CONTINUE
+                <h2>BATTLE RESULT</h2>
 
-            </button>
+                <strong>🎙 COMMENTATOR</strong>
+
+                <p>${text}</p>
+
+                <hr>
+
+                <p>
+                    <strong>YOUR MOVE:</strong>
+                    ${intent}
+                </p>
+
+                <p>
+                    <strong>CPU RESPONSE:</strong>
+                    ${cpuIntent}
+                </p>
+
+                <button
+                    class="menu-btn gold decision-btn"
+                    id="continueBattle"
+                >
+
+                    CONTINUE
+
+                </button>
+
+            </div>
 
         </section>
 
     </main>
 
     `;
+
+    renderBeys();
 
     document.getElementById(
         "continueBattle"
