@@ -5311,24 +5311,21 @@ function continueBattleSequence(){
     // Opening
     if(Game.battle.phase==="Opening"){
 
-        Game.battle.phase="Battle";
+       if(Game.battle.phase==="Opening"){
 
-        battleTick();
+    Game.battle.phase="Battle";
 
-        saveBattleSequence(
+    saveBattleSequence(
+        "BATTLE STARTS",
+        "Both Beys begin moving through the stadium."
+    );
 
-            "BATTLE STARTS",
+    renderBattleSequence();
 
-            "Both Beys begin moving through the stadium."
+    return;
 
-        );
-
-        renderBattleSequence();
-
-        return;
-
-    }
-
+}
+     
     // Normal battle exchange
     if(Game.battle.phase==="Battle"){
 
@@ -5409,6 +5406,8 @@ ${Game.cpu.blade.name} launches from the ${Game.arena.cpuSide} side.`
 );
 
 renderBattleSequence();
+
+}
  
 //=========================
 // OPENING COMMENTARY
