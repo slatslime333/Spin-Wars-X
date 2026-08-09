@@ -4181,7 +4181,7 @@ function showVS(){
 
     assignStadiumSides();
 
-    showLetItRip();
+    showLaunchScreen();
 
 }
 
