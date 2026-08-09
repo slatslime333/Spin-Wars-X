@@ -4353,7 +4353,9 @@ function showIntentResult(
 
         <section class="menu-card">
 
-            <h1>ROUND ${Game.match.round}</h1>
+            <h1>
+                ROUND ${Game.match.round}
+            </h1>
 
             <hr>
 
@@ -4369,25 +4371,21 @@ function showIntentResult(
 
                 <p>${text}</p>
 
-                <hr>
-
                 <p>
-                    <strong>YOUR MOVE:</strong>
+                    <strong>YOU:</strong>
                     ${intent}
                 </p>
 
                 <p>
-                    <strong>CPU RESPONSE:</strong>
+                    <strong>CPU:</strong>
                     ${cpuIntent}
                 </p>
 
                 <button
-                    class="menu-btn gold decision-btn"
+                    class="menu-btn gold"
                     id="continueBattle"
                 >
-
                     CONTINUE
-
                 </button>
 
             </div>
@@ -4403,17 +4401,6 @@ function showIntentResult(
     document.getElementById(
         "continueBattle"
     ).onclick=()=>{
-
-        if(
-            Game.battle.turn>=
-            Game.battle.maxTurns
-        ){
-
-            resolveBattleEnd();
-
-            return;
-
-        }
 
         simulateBattleRound();
 
@@ -4987,7 +4974,11 @@ function checkBattleFinish(){
 
 function decideNextBattleStep(){
 
-    if(Game.battle.turn>=Game.battle.maxTurns){
+    // Battle has reached its random length
+    if(
+        Game.battle.turn>=
+        Game.battle.maxTurns
+    ){
 
         resolveBattleEnd();
 
@@ -4995,44 +4986,83 @@ function decideNextBattleStep(){
 
     }
 
-    // Round 1 always continues automatically
+
+    //=========================
+    // ROUND 1 IS ALWAYS AUTO
+    //=========================
+
     if(Game.battle.turn===1){
 
-        simulateBattleRound();
+        setTimeout(()=>{
+
+            simulateBattleRound();
+
+        },1200);
 
         return;
 
     }
 
+
+    //=========================
+    // DECISION CHANCE
+    //=========================
+
     let decisionChance=20;
 
-    if(Game.battle.situation==="clash"){
+    // More likely to give a decision
+    // during dangerous situations
+    if(
+        Game.battle.situation==="clash"
+    ){
 
         decisionChance=50;
 
     }
 
-    if(Game.battle.lastEvent==="heavyHit"){
+    // Player is in danger
+    if(
+        Game.battle.player.balance<35
+    ){
 
-        decisionChance=60;
-
-    }
-
-    if(Game.battle.lastEvent==="extremeImpact"){
-
-        decisionChance=75;
+        decisionChance+=15;
 
     }
 
-    if(Math.random()*100<decisionChance){
+    // CPU is in danger
+    if(
+        Game.battle.cpu.balance<35
+    ){
+
+        decisionChance+=10;
+
+    }
+
+
+    //=========================
+    // ROLL
+    //=========================
+
+    const roll=Math.random()*100;
+
+    if(roll<decisionChance){
 
         generateDynamicDecision();
 
-    }else{
+        return;
+
+    }
+
+
+    //=========================
+    // KEEP AUTO SIMULATING
+    //=========================
+
+    setTimeout(()=>{
 
         simulateBattleRound();
 
-    }
+    },1200);
 
 }
 
