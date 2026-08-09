@@ -5085,15 +5085,28 @@ Game.battle.openingInteractionResolved=true;
     }
 
     // Player Direct Clash attacks CPU
-    if(playerTech==="Direct Clash"){
+if(playerTech==="Direct Clash"){
 
-        resolveOpeningAttack(
-            "player",
-            "cpu"
-        );
+    resolveOpeningAttack(
+        "player",
+        "cpu"
+    );
 
-    }
- 
+}
+
+// CPU Direct Clash attacks Player
+if(cpuTech==="Direct Clash"){
+
+    resolveOpeningAttack(
+        "cpu",
+        "player"
+    );
+
+}
+
+} // END checkOpeningInteraction()
+
+
 //=========================
 // RESOLVE OPENING ATTACK
 //=========================
@@ -5144,18 +5157,6 @@ function resolveOpeningAttack(attacker,defender){
         saveBattleSequence(
             "OPENING ATTACK",
             `${Game[attacker].blade.name} misses the opening attack!`
-        );
-
-    }
-
-}
- 
-    // CPU Direct Clash attacks Player
-    if(cpuTech==="Direct Clash"){
-
-        resolveOpeningAttack(
-            "cpu",
-            "player"
         );
 
     }
