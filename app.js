@@ -4798,10 +4798,10 @@ function getXRailTechnique(blader){
     const spin =
         Game[blader].spin || "Right";
 
-    const naturalSide =
-        spin === "Right"
-        ? "Right"
-        : "Left";
+  const naturalSide =
+    spin === "Right"
+    ? "Left"
+    : "Right";
 
     return side === naturalSide
         ? "X-Rail Dash"
