@@ -6345,149 +6345,55 @@ function resolveOpeningAttack(attacker,defender){
 
 function getLaunchPath(blader){
 
-    const launch = Game[blader].launch;
+    const launch=Game[blader].launch;
 
-    const side =
-        blader === "player"
+    const side=
+        blader==="player"
         ? Game.arena.playerSide
         : Game.arena.cpuSide;
 
-    const left = side === "Left";
+    const spin=
+        Game[blader].spin || "Right";
 
-    // Starting side
-    const start = left ? "LeftMid" : "RightMid";
+    const naturalSide=
+        spin==="Right"
+        ? "Left"
+        : "Right";
 
-    switch(launch.technique){
+    const startZone=
+        side==="Left"
+        ? "LeftMid"
+        : "RightMid";
 
-        // CENTER
-        case "Center":
+    if(launch.technique==="X-Rail"){
 
-            return [
-                start,
-                "Center"
-            ];
+        // Correct natural X-Rail flow
+        if(side===naturalSide){
 
+            return side==="Left"
+                ? [
+                    "LeftMid",
+                    "LeftRail",
+                    "XRailExit"
+                ]
+                : [
+                    "RightMid",
+                    "RightRail",
+                    "XRailExit"
+                ];
 
-       // X-RAIL DASH
-case "X-Rail Dash":
+        }
 
-    // Horrible launch misses the rail
-    if(launch.quality==="Horrible"){
-
+        // Wrong-side attempt: stay on normal path
         return [
-
-            start,
-            "Center"
-
+            startZone
         ];
 
     }
 
     return [
-
-        start,
-
-        left
-        ? "LeftRail"
-        : "RightRail",
-
-        "XRailExit"
-
+        Game.battle[blader].zone
     ];
-
-
-// REVERSE X-DASH
-case "Reverse X-Dash":
-
-    // Horrible reverse launch misses the rail
-    if(
-        launch.quality==="Horrible"
-    ){
-
-        return [
-
-            start,
-            "Center"
-
-        ];
-
-    }
-
-    return [
-
-        start,
-
-        "Center",
-
-        left
-        ? "RightRail"
-        : "LeftRail",
-
-        "XRailExit"
-
-    ];
-
-        // DIRECT CLASH
-     case "Direct Clash":
-
-    if(launch.quality==="Horrible"){
-
-        return [
-
-            start,
-            "Center"
-
-        ];
-
-    }
-
-    return [
-
-        start,
-        "Center"
-
-    ];
-
-        // WIDE CIRCLE
-        case "Wide Circle":
-
-            return [
-
-                start,
-
-                left
-                ? "BottomLeft"
-                : "BottomRight",
-
-                left
-                ? "TopLeft"
-                : "TopRight",
-
-                "TopCenter",
-
-                "Center"
-
-            ];
-
-
-        // DROP LAUNCH
-case "Drop Launch":
-
-    return [
-
-        start,
-
-        left
-        ? "LeftRail"
-        : "RightRail",
-
-        "XRailExit"
-
-    ];
-
-    }
-
-    return [start];
 
 }
 
