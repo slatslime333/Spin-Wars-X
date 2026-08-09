@@ -4920,7 +4920,7 @@ function checkBattleFinish(){
 
         resolveBattleEnd();
 
-        return;
+        return true;
 
     }
 
@@ -4933,7 +4933,7 @@ function checkBattleFinish(){
 
         resolveBattleEnd();
 
-        return;
+        return true;
 
     }
 
@@ -4946,7 +4946,7 @@ function checkBattleFinish(){
 
         resolveBattleEnd();
 
-        return;
+        return true;
 
     }
 
@@ -4959,12 +4959,12 @@ function checkBattleFinish(){
 
         resolveBattleEnd();
 
-        return;
+        return true;
 
     }
 
 
-    decideNextBattleStep();
+    return false;
 
 }
 
