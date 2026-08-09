@@ -2737,10 +2737,14 @@ function resolveCollision(){
 
 function pushBey(bey){
 
-    const data=Game.battle[bey];
+    const battle=Game.battle[bey];
+
+    if(!battle) return;
+
+    const currentZone=battle.zone;
 
     const neighbors=
-        STADIUM_MAP[data.zone].neighbors;
+        STADIUM_MAP[currentZone].neighbors;
 
     if(!neighbors || neighbors.length===0){
 
@@ -2748,11 +2752,28 @@ function pushBey(bey){
 
     }
 
-    // Stronger momentum can push farther
+    // Remember the previous zone so the Bey
+    // is less likely to be knocked backward
+    const previousZone=battle.previousZone;
+
+    let possibleZones=
+        neighbors.filter(
+            zone=>zone!==previousZone
+        );
+
+    // If every option was filtered out,
+    // allow all connected zones
+    if(possibleZones.length===0){
+
+        possibleZones=neighbors;
+
+    }
+
+    // Heavy momentum = possible extra push
     let pushes=1;
 
     if(
-        Math.abs(data.momentum)>80
+        Math.abs(battle.momentum)>80
     ){
 
         pushes=2;
@@ -2765,58 +2786,43 @@ function pushBey(bey){
         i++
     ){
 
-        const currentZone=
-            Game.battle[bey].zone;
+        const zone=
+            battle.zone;
 
-        const currentNeighbors=
-            STADIUM_MAP[
-                currentZone
-            ].neighbors;
+        const nextNeighbors=
+            STADIUM_MAP[zone].neighbors;
 
         if(
-            !currentNeighbors ||
-            currentNeighbors.length===0
+            !nextNeighbors ||
+            nextNeighbors.length===0
         ){
 
             break;
 
         }
 
-        // Prefer dangerous/special zones
-        const dangerousZones=
-            currentNeighbors.filter(
-                zone=>
-                zone==="LeftPocket" ||
-                zone==="RightPocket" ||
-                zone==="XRailExit"
+        let destinations=
+            nextNeighbors.filter(
+                nextZone=>
+                nextZone!==battle.previousZone
             );
 
-        let destination;
+        if(destinations.length===0){
 
-        if(
-            dangerousZones.length>0 &&
-            Math.random()<0.65
-        ){
-
-            destination=
-                dangerousZones[
-                    Math.floor(
-                        Math.random()*
-                        dangerousZones.length
-                    )
-                ];
-
-        }else{
-
-            destination=
-                currentNeighbors[
-                    Math.floor(
-                        Math.random()*
-                        currentNeighbors.length
-                    )
-                ];
+            destinations=nextNeighbors;
 
         }
+
+        // Remember where the Bey was
+        battle.previousZone=zone;
+
+        const destination=
+            destinations[
+                Math.floor(
+                    Math.random()*
+                    destinations.length
+                )
+            ];
 
         moveBey(
             bey,
