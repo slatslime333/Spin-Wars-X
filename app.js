@@ -3038,6 +3038,623 @@ function generateArena(){
     playLaunchAnimation();
 
 }
+
+//=========================
+// BATTLE COMMENTARY
+//=========================
+
+function getBattleCommentary(){
+
+    const event=Game.battle.lastEvent;
+    const situation=Game.battle.situation;
+
+    if(event==="passBy"){
+
+        return "Both Beys rush past each other without a clean hit. They quickly begin repositioning for another opening.";
+
+    }
+
+    if(event==="normalHit"){
+
+        return "The Beys collide with a solid hit. Neither loses control, but the battle is starting to get physical.";
+
+    }
+
+    if(event==="heavyHit"){
+
+        return "A heavy clash knocks both Beys off their lines. The next few moments could create an opening.";
+
+    }
+
+    if(event==="extremeImpact"){
+
+        return "A huge impact sends the Beys flying apart. Their positions are unstable and a dangerous opportunity is developing.";
+
+    }
+
+    if(event==="separation"){
+
+        return "The Beys are separated and circling the stadium, looking for the best path back into the fight.";
+
+    }
+
+    if(situation==="clash"){
+
+        return "The Beys are extremely close. Another collision could happen at any moment.";
+
+    }
+
+    if(situation==="approach"){
+
+        return "The Beys are closing the distance and heading toward another possible clash.";
+
+    }
+
+    return "Both Beys continue moving through the stadium.";
+}
+
+//=========================
+// GENERATE DYNAMIC DECISION
+//=========================
+
+function generateDynamicDecision(){
+
+    const event=Game.battle.lastEvent;
+
+    let scenario="";
+    let choices=[];
+
+
+    if(event==="passBy"){
+
+        scenario=
+        "The Beys have just passed each other. Your opponent is turning back toward the center.";
+
+        choices=[
+
+            {
+                name:"Chase the opponent",
+                intent:"chase"
+            },
+
+            {
+                name:"Reposition toward center",
+                intent:"reposition"
+            },
+
+            {
+                name:"Hold your current line",
+                intent:"hold"
+            }
+
+        ];
+
+    }
+
+
+    else if(event==="normalHit"){
+
+        scenario=
+        "Both Beys absorbed the last hit and remain close enough for another clash.";
+
+        choices=[
+
+            {
+                name:"Brace for another hit",
+                intent:"brace"
+            },
+
+            {
+                name:"Attempt a counter",
+                intent:"counter"
+            },
+
+            {
+                name:"Try to evade",
+                intent:"evade"
+            }
+
+        ];
+
+    }
+
+
+    else if(event==="heavyHit"){
+
+        scenario=
+        "The last impact knocked both Beys off their normal paths. An opening is developing.";
+
+        choices=[
+
+            {
+                name:"Attempt a strong counter",
+                intent:"counter"
+            },
+
+            {
+                name:"Stabilize first",
+                intent:"stabilize"
+            },
+
+            {
+                name:"Press the opening",
+                intent:"attack"
+            }
+
+        ];
+
+    }
+
+
+    else if(event==="extremeImpact"){
+
+        scenario=
+        "Both Beys were violently separated by the impact. Their next movements could be unpredictable.";
+
+        choices=[
+
+            {
+                name:"Regain stability",
+                intent:"stabilize"
+            },
+
+            {
+                name:"Chase the opening",
+                intent:"attack"
+            },
+
+            {
+                name:"Move away from danger",
+                intent:"escape"
+            }
+
+        ];
+
+    }
+
+
+    else{
+
+        scenario=
+        "The Beys are circling and searching for the next opening.";
+
+        choices=[
+
+            {
+                name:"Move toward center",
+                intent:"center"
+            },
+
+            {
+                name:"Try to close the distance",
+                intent:"approach"
+            },
+
+            {
+                name:"Keep your current path",
+                intent:"hold"
+            }
+
+        ];
+
+    }
+
+
+    Game.battle.decisionChoices=choices;
+
+
+    showDynamicDecision(
+        scenario,
+        choices
+    );
+
+}
+
+//=========================
+// SHOW DYNAMIC DECISION
+//=========================
+
+function showDynamicDecision(
+    scenario,
+    choices
+){
+
+    const app=document.getElementById("app");
+
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>MOVE</h1>
+
+            <strong>🎙 COMMENTATOR</strong>
+
+            <p>
+
+                ${scenario}
+
+            </p>
+
+            <hr>
+
+            ${choices.map(
+                (choice,index)=>`
+
+                <button
+                    class="menu-btn"
+                    onclick="chooseDynamicMove('${choice.intent}')"
+                >
+
+                    ${index+1}. ${choice.name}
+
+                </button>
+
+                `
+            ).join("")}
+
+        </section>
+
+    </main>
+
+    `;
+
+}
+
+//=========================
+// CHOOSE DYNAMIC MOVE
+//=========================
+
+function chooseDynamicMove(intent){
+
+    Game.battle.player.intent=intent;
+
+    resolvePlayerIntent();
+
+}
+
+//=========================
+// RESOLVE PLAYER INTENT
+//=========================
+
+function resolvePlayerIntent(){
+
+    const intent=Game.battle.player.intent;
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const playerStats=calculateComboStats(
+        Game.player.blade,
+        Game.player.ratchet,
+        Game.player.bit
+    );
+
+    const cpuStats=calculateComboStats(
+        Game.cpu.blade,
+        Game.cpu.ratchet,
+        Game.cpu.bit
+    );
+
+    // CPU reacts independently
+    const cpuRoll=Math.random()*100;
+
+    let cpuIntent="hold";
+
+    if(cpuRoll<25){
+
+        cpuIntent="attack";
+
+    }else if(cpuRoll<45){
+
+        cpuIntent="brace";
+
+    }else if(cpuRoll<65){
+
+        cpuIntent="evade";
+
+    }else if(cpuRoll<80){
+
+        cpuIntent="counter";
+
+    }
+
+    Game.battle.cpu.intent=cpuIntent;
+
+
+    // Base chance for the player's attempt
+    let chance=50;
+
+
+    // Player stats affect what they are trying to do
+    switch(intent){
+
+        case "brace":
+
+            chance+=
+                (playerStats.stats.defense-75)*0.8;
+
+            chance+=
+                (playerStats.stats.balance-75)*0.4;
+
+            break;
+
+
+        case "counter":
+
+            chance+=
+                (playerStats.stats.attack-75)*0.7;
+
+            chance+=
+                (playerStats.stats.knockback-75)*0.4;
+
+            break;
+
+
+        case "evade":
+
+        case "escape":
+
+            chance+=
+                (playerStats.stats.mobility-75)*0.9;
+
+            break;
+
+
+        case "attack":
+
+        case "chase":
+
+        case "approach":
+
+            chance+=
+                (playerStats.stats.attack-75)*0.7;
+
+            chance+=
+                (playerStats.stats.mobility-75)*0.3;
+
+            break;
+
+
+        case "stabilize":
+
+            chance+=
+                (playerStats.stats.balance-75)*0.9;
+
+            break;
+
+
+        case "center":
+
+        case "reposition":
+
+            chance+=
+                (playerStats.stats.mobility-75)*0.5;
+
+            chance+=
+                (playerStats.stats.balance-75)*0.4;
+
+            break;
+
+
+        case "hold":
+
+            chance+=
+                (playerStats.stats.balance-75)*0.5;
+
+            break;
+
+    }
+
+
+    // CPU can make the attempt harder
+    if(cpuIntent==="counter"){
+
+        chance-=8;
+
+    }
+
+    if(cpuIntent==="evade"){
+
+        chance-=5;
+
+    }
+
+    if(cpuIntent==="attack"){
+
+        chance-=3;
+
+    }
+
+
+    // Current condition matters
+    if(player.balance<40){
+
+        chance-=12;
+
+    }
+
+    if(player.speed>45){
+
+        chance-=5;
+
+    }
+
+
+    // Clamp chance
+    chance=Math.max(
+        15,
+        Math.min(85,chance)
+    );
+
+
+    const roll=Math.random()*100;
+
+    let result;
+
+    if(roll<chance*0.35){
+
+        result="perfect";
+
+    }else if(roll<chance){
+
+        result="success";
+
+    }else if(roll<chance+20){
+
+        result="partial";
+
+    }else{
+
+        result="fail";
+
+    }
+
+
+    resolveIntentResult(
+        intent,
+        cpuIntent,
+        result
+    );
+
+}
+
+//=========================
+// RESOLVE INTENT RESULT
+//=========================
+
+function resolveIntentResult(
+    intent,
+    cpuIntent,
+    result
+){
+
+    let text="";
+
+    if(result==="perfect"){
+
+        text=
+        "You time your move perfectly and gain a major advantage.";
+
+    }
+
+    else if(result==="success"){
+
+        text=
+        "Your attempt works and you successfully execute the move.";
+
+    }
+
+    else if(result==="partial"){
+
+        text=
+        "Your move partly works, but the situation does not fully go your way.";
+
+    }
+
+    else{
+
+        text=
+        "Your attempt fails to develop cleanly and the opponent disrupts your plan.";
+
+    }
+
+
+    Game.battle.lastEvent="playerDecision";
+
+    saveBattleSequence(
+        "YOUR MOVE: "+intent.toUpperCase(),
+        text
+    );
+
+    showIntentResult(
+        intent,
+        cpuIntent,
+        result,
+        text
+    );
+
+}
+
+//=========================
+// SHOW INTENT RESULT
+//=========================
+
+function showIntentResult(
+    intent,
+    cpuIntent,
+    result,
+    text
+){
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <section class="menu-card">
+
+            <h1>BATTLE RESULT</h1>
+
+            <strong>🎙 COMMENTATOR</strong>
+
+            <p>${text}</p>
+
+            <hr>
+
+            <p>
+                Your attempt:
+                <strong>${intent}</strong>
+            </p>
+
+            <p>
+                Opponent response:
+                <strong>${cpuIntent}</strong>
+            </p>
+
+            <button
+                class="menu-btn gold"
+                id="continueBattle"
+            >
+
+                CONTINUE
+
+            </button>
+
+        </section>
+
+    </main>
+
+    `;
+
+    document.getElementById(
+        "continueBattle"
+    ).onclick=()=>{
+
+        if(
+            Game.battle.turn>=
+            Game.battle.maxTurns
+        ){
+
+            resolveBattleEnd();
+
+            return;
+
+        }
+
+        simulateBattleRound();
+
+    };
+
+}
+
 //=========================
 // START BATTLE LOOP
 //=========================
@@ -3048,10 +3665,573 @@ function startBattleLoop(){
 
     Game.battle.turn=0;
 
-    nextBattleTurn();
+    Game.battle.maxTurns=
+        Math.floor(Math.random()*10)+1;
+
+    simulateBattleRound();
 
 }
 
+//=========================
+// SIMULATE BATTLE ROUND
+//=========================
+
+function simulateBattleRound(){
+
+    Game.battle.turn++;
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    // Stop if either Bey has already lost
+    if(
+        player.spin<=0 ||
+        cpu.spin<=0
+    ){
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+    // Safety limit: battle lasts 1-10 sequences
+    if(Game.battle.turn>Game.battle.maxTurns){
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+    const distance=Math.abs(
+        player.x-cpu.x
+    );
+
+    let situation;
+
+    // Decide what is physically happening
+    if(distance<60){
+
+        situation="clash";
+
+    }else if(distance<140){
+
+        situation="approach";
+
+    }else{
+
+        situation="separated";
+
+    }
+
+    Game.battle.situation=situation;
+
+    resolveAutomaticSituation();
+
+}
+
+//=========================
+// AUTOMATIC BATTLE EVENT
+//=========================
+
+function resolveAutomaticSituation(){
+
+    const situation=Game.battle.situation;
+
+    let event;
+
+    if(situation==="clash"){
+
+        const roll=Math.random()*100;
+
+        if(roll<20){
+
+            event="passBy";
+
+        }else if(roll<60){
+
+            event="normalHit";
+
+        }else if(roll<85){
+
+            event="heavyHit";
+
+        }else{
+
+            event="extremeImpact";
+
+        }
+
+    }
+
+    else if(situation==="approach"){
+
+        const roll=Math.random()*100;
+
+        event=
+            roll<45
+            ? "normalHit"
+            : "passBy";
+
+    }
+
+    else{
+
+        event="separation";
+
+    }
+
+    Game.battle.lastEvent=event;
+
+    resolveAutomaticEvent(event);
+
+}
+
+//=========================
+// APPLY BATTLE EVENT
+//=========================
+
+function applyBattleEvent(event){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+    const playerCombo=calculateComboStats(
+        Game.player.blade,
+        Game.player.ratchet,
+        Game.player.bit
+    );
+
+    const cpuCombo=calculateComboStats(
+        Game.cpu.blade,
+        Game.cpu.ratchet,
+        Game.cpu.bit
+    );
+
+    // PASS BY
+    if(event==="passBy"){
+
+        player.spin=Math.max(0,player.spin-1);
+        cpu.spin=Math.max(0,cpu.spin-1);
+
+        Game.battle.lastHitWinner=null;
+
+        return;
+
+    }
+
+
+    // SEPARATION
+    if(event==="separation"){
+
+        player.spin=Math.max(0,player.spin-1);
+        cpu.spin=Math.max(0,cpu.spin-1);
+
+        player.balance=Math.min(
+            100,
+            player.balance+2
+        );
+
+        cpu.balance=Math.min(
+            100,
+            cpu.balance+2
+        );
+
+        Game.battle.lastHitWinner=null;
+
+        return;
+
+    }
+
+
+    //=========================
+    // HIT POWER
+    //=========================
+
+    const playerPower=
+
+        playerCombo.stats.attack*0.45+
+        playerCombo.stats.knockback*0.35+
+        player.speed*0.20+
+        Math.random()*20;
+
+
+    const cpuPower=
+
+        cpuCombo.stats.attack*0.45+
+        cpuCombo.stats.knockback*0.35+
+        cpu.speed*0.20+
+        Math.random()*20;
+
+
+    //=========================
+    // HIT WINNER
+    //=========================
+
+    let winner;
+    let loser;
+
+    let winnerCombo;
+    let loserCombo;
+
+    if(playerPower>cpuPower){
+
+        winner="player";
+        loser="cpu";
+
+        winnerCombo=playerCombo;
+        loserCombo=cpuCombo;
+
+    }else{
+
+        winner="cpu";
+        loser="player";
+
+        winnerCombo=cpuCombo;
+        loserCombo=playerCombo;
+
+    }
+
+    Game.battle.lastHitWinner=winner;
+
+
+    //=========================
+    // EVENT STRENGTH
+    //=========================
+
+    let strength;
+
+    if(event==="normalHit"){
+
+        strength=0.35;
+
+    }
+
+    if(event==="heavyHit"){
+
+        strength=0.65;
+
+    }
+
+    if(event==="extremeImpact"){
+
+        strength=1;
+
+    }
+
+
+    //=========================
+    // DAMAGE CALCULATION
+    //=========================
+
+    const attackPower=
+
+        winnerCombo.stats.attack+
+        winnerCombo.stats.knockback;
+
+
+    const defensePower=
+
+        loserCombo.stats.defense+
+        loserCombo.stats.balance;
+
+
+    const advantage=
+
+        Math.max(
+            1,
+            attackPower-defensePower
+        );
+
+
+    const spinDamage=
+
+        Math.max(
+            2,
+            Math.round(
+                advantage*0.15*strength+
+                Math.random()*5
+            )
+        );
+
+
+    const balanceDamage=
+
+        Math.max(
+            3,
+            Math.round(
+                advantage*0.22*strength+
+                Math.random()*8
+            )
+        );
+
+
+    //=========================
+    // APPLY TO LOSER
+    //=========================
+
+    if(loser==="player"){
+
+        player.spin=Math.max(
+            0,
+            player.spin-spinDamage
+        );
+
+        player.balance=Math.max(
+            0,
+            player.balance-balanceDamage
+        );
+
+        player.speed+=
+            Math.round(8*strength);
+
+
+        cpu.spin=Math.max(
+            0,
+            cpu.spin-1
+        );
+
+    }else{
+
+        cpu.spin=Math.max(
+            0,
+            cpu.spin-spinDamage
+        );
+
+        cpu.balance=Math.max(
+            0,
+            cpu.balance-balanceDamage
+        );
+
+        cpu.speed+=
+            Math.round(8*strength);
+
+
+        player.spin=Math.max(
+            0,
+            player.spin-1
+        );
+
+    }
+
+
+    //=========================
+    // SAVE HIT DETAILS
+    //=========================
+
+    Game.battle.lastHitDamage={
+        spin:spinDamage,
+        balance:balanceDamage
+    };
+
+}
+
+//=========================
+// AFTER AUTO EVENT
+//=========================
+
+function resolveAutomaticEvent(event){
+
+    applyBattleEvent(event);
+
+    let text="";
+
+    const winner=Game.battle.lastHitWinner;
+
+
+    if(event==="passBy"){
+
+        text=
+        "Both Beys rush past each other without a clean hit.";
+
+    }
+
+
+    else if(event==="separation"){
+
+        text=
+        "The Beys circle apart and begin searching for another opening.";
+
+    }
+
+
+    else if(event==="normalHit"){
+
+        if(winner==="player"){
+
+            text=
+            "You land the cleaner hit and push the CPU Bey off its line.";
+
+        }else{
+
+            text=
+            "The CPU lands the cleaner hit and knocks your Bey off its line.";
+
+        }
+
+    }
+
+
+    else if(event==="heavyHit"){
+
+        if(winner==="player"){
+
+            text=
+            "You win a heavy clash and send the CPU Bey flying backward.";
+
+        }else{
+
+            text=
+            "The CPU wins a heavy clash and sends your Bey backward.";
+
+        }
+
+    }
+
+
+    else if(event==="extremeImpact"){
+
+        if(winner==="player"){
+
+            text=
+            "You land a massive hit. The CPU Bey is violently knocked away and becomes unstable.";
+
+        }else{
+
+            text=
+            "The CPU lands a massive hit. Your Bey is violently knocked away and becomes unstable.";
+
+        }
+
+    }
+
+
+    saveBattleSequence(
+        "ROUND "+Game.battle.turn,
+        text
+    );
+
+    checkBattleFinish();
+
+}
+
+//=========================
+// CHECK BATTLE FINISH
+//=========================
+
+function checkBattleFinish(){
+
+    const player=Game.battle.player;
+    const cpu=Game.battle.cpu;
+
+
+    if(player.spin<=0){
+
+        Game.battle.finish="Spin Finish";
+
+        Game.battle.winner="cpu";
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+
+    if(cpu.spin<=0){
+
+        Game.battle.finish="Spin Finish";
+
+        Game.battle.winner="player";
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+
+    if(player.balance<=0){
+
+        Game.battle.finish="Over Finish";
+
+        Game.battle.winner="cpu";
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+
+    if(cpu.balance<=0){
+
+        Game.battle.finish="Over Finish";
+
+        Game.battle.winner="player";
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+
+    decideNextBattleStep();
+
+}
+
+//=========================
+// DECIDE NEXT BATTLE STEP
+//=========================
+
+function decideNextBattleStep(){
+
+    // Round 1 is always automatic
+    if(Game.battle.turn===1){
+
+        showBattleResult();
+
+        return;
+
+    }
+
+    const situation=Game.battle.situation;
+
+    let decisionChance=20;
+
+    if(situation==="clash"){
+
+        decisionChance=50;
+
+    }
+
+    if(Game.battle.lastEvent==="heavyHit"){
+
+        decisionChance=60;
+
+    }
+
+    if(Game.battle.lastEvent==="extremeImpact"){
+
+        decisionChance=75;
+
+    }
+
+    const roll=Math.random()*100;
+
+    if(roll<decisionChance){
+
+        generateDynamicDecision();
+
+    }else{
+
+        showBattleResult();
+
+    }
+
+}
 
 //=========================
 // NEXT BATTLE TURN
