@@ -4179,11 +4179,9 @@ function showVS(){
 
     generateCPUCombo();
 
-        assignStadiumSides();
+    assignStadiumSides();
 
-        showLetItRip();
-
-    };
+    showLetItRip();
 
 }
 
