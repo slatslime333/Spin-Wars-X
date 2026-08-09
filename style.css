@@ -679,3 +679,23 @@ BEYS
     box-shadow:0 0 10px #ff4b4b;
 
 }
+
+.decision-btn{
+
+    background:#d9a900 !important;
+
+    color:#111 !important;
+
+    border:2px solid #ffd84d;
+
+    margin-top:10px;
+
+    text-shadow:none;
+
+}
+
+.decision-btn:hover{
+
+    background:#f0bf17 !important;
+
+}
