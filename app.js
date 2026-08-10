@@ -5086,17 +5086,28 @@ function resolveAutomaticSituation(){
     const situation=
         Game.battle.situation;
 
+    const player=
+        Game.battle.player;
+
+    const cpu=
+        Game.battle.cpu;
+
     let event;
+
+
+    //=========================
+    // CLASH
+    //=========================
 
     if(situation==="clash"){
 
         const roll=Math.random()*100;
 
-        if(roll<15){
+        if(roll<10){
 
             event="passBy";
 
-        }else if(roll<55){
+        }else if(roll<50){
 
             event="normalHit";
 
@@ -5112,11 +5123,41 @@ function resolveAutomaticSituation(){
 
     }
 
+
+    //=========================
+    // CROSSING
+    //=========================
+
     else if(situation==="crossing"){
 
         const roll=Math.random()*100;
 
-        if(roll<35){
+        if(roll<15){
+
+            event="passBy";
+
+        }else if(roll<65){
+
+            event="normalHit";
+
+        }else{
+
+            event="heavyHit";
+
+        }
+
+    }
+
+
+    //=========================
+    // APPROACH
+    //=========================
+
+    else if(situation==="approach"){
+
+        const roll=Math.random()*100;
+
+        if(roll<20){
 
             event="passBy";
 
@@ -5132,33 +5173,64 @@ function resolveAutomaticSituation(){
 
     }
 
-    else if(situation==="approach"){
 
-        const roll=Math.random()*100;
+    //=========================
+    // SEPARATED
+    //=========================
 
-        if(roll<60){
+    else{
+
+        const playerPressure=
+            player.momentum+
+            player.speed;
+
+        const cpuPressure=
+            cpu.momentum+
+            cpu.speed;
+
+        const totalPressure=
+            playerPressure+
+            cpuPressure;
+
+        const pressureRoll=
+            Math.random()*100;
+
+        // Fast/aggressive movement can still
+        // create an interception before both
+        // Beys fully separate.
+        if(
+            totalPressure>120 &&
+            pressureRoll<35
+        ){
 
             event="normalHit";
 
-        }else{
+        }
+
+        else if(
+            totalPressure>90 &&
+            pressureRoll<18
+        ){
 
             event="passBy";
 
         }
 
+        else{
+
+            event="separation";
+
+        }
+
     }
 
-    else{
-
-        event="separation";
-
-    }
 
     Game.battle.lastEvent=event;
 
     resolveAutomaticEvent(event);
 
 }
+
 //=========================
 // APPLY BATTLE EVENT
 //=========================
