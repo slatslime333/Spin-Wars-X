@@ -5079,32 +5079,6 @@ if(!targetZone){
 }
 
 //=========================
-// APPLY LAUNCH BONUSES
-//=========================
-
-const target=
-    Game[blader];
-
-const battleBey=
-    Game.battle[blader];
-
-
-battleBey.spin=
-    Math.max(
-        1,
-        battleBey.spin +
-        (target.launch.spinBonus || 0)
-    );
-
-
-battleBey.balance=
-    Math.max(
-        1,
-        battleBey.balance +
-        (target.launch.balanceBonus || 0)
-    );
-
-//=========================
 // SIMULATE BATTLE ROUND
 //=========================
 
