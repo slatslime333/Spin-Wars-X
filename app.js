@@ -6243,7 +6243,16 @@ function decideNextBattleStep(){
         Game.battle.maxTurns
     ){
 
-        resolveBattleEnd();
+        Game.battle.finish="Time Limit Decision";
+Game.battle.finishPoints=1;
+
+Game.battle.winner=
+    Game.battle.player.spin >=
+    Game.battle.cpu.spin
+    ? "player"
+    : "cpu";
+
+endBattleRound();
 
         return;
 
@@ -6490,6 +6499,66 @@ CPU: ${Game.battle.cpuScore} / 7`;
         startBattleRound();
 
     },1500);
+
+}
+
+//=========================
+// START NEW BATTLE ROUND
+//=========================
+
+function startBattleRound(){
+
+    Game.battle.finished=false;
+
+    Game.battle.turn=0;
+
+    Game.battle.sequenceEvents=[];
+
+    Game.battle.lastEvent=null;
+
+    Game.battle.lastHitWinner=null;
+
+    Game.battle.lastHitDamage=null;
+
+    Game.battle.railEvent=null;
+
+    Game.battle.situation="separated";
+
+
+    Game.battle.player.spin=100;
+    Game.battle.player.balance=100;
+    Game.battle.player.momentum=0;
+
+
+    Game.battle.cpu.spin=100;
+    Game.battle.cpu.balance=100;
+    Game.battle.cpu.momentum=0;
+
+
+    const roundText=
+`BATTLE ROUND ${Game.battle.round}
+
+MATCH SCORE
+
+YOU: ${Game.battle.playerScore} / 7
+CPU: ${Game.battle.cpuScore} / 7
+
+${Game.player.blade.name.toUpperCase()}
+VS
+${Game.cpu.blade.name.toUpperCase()}
+
+GET READY!`;
+
+
+    saveBattleSequence(
+        `BATTLE ROUND ${Game.battle.round}`,
+        roundText
+    );
+
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
+
+    renderBattleSequence();
 
 }
 
