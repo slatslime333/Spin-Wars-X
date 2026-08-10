@@ -6257,12 +6257,6 @@ function showBattleSimulation(text){
     renderBattleSequence();
 
 }
-    Game.battle.sequenceIndex=
-        Game.battle.history.length-1;
-
-    ();
-
-}
 
 //=========================
 // DECIDE NEXT BATTLE STEP
