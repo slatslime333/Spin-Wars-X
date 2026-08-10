@@ -4981,35 +4981,7 @@ if(
 
     return;
 
-}
-
-            const exitNeighbors=
-                STADIUM_MAP[
-                    battle.zone
-                ]?.neighbors || [];
-
-            if(
-                exitNeighbors.length>0
-            ){
-
-                moveBey(
-                    bey,
-                    exitNeighbors[
-                        Math.floor(
-                            Math.random()*
-                            exitNeighbors.length
-                        )
-                    ]
-                );
-
-            }
-
-        }
-
-        return;
-
     }
-
 
     const currentZone=
         battle.zone;
@@ -5465,8 +5437,26 @@ Game.battle.situation=situation;
 
 renderBeys();
 
-resolveAutomaticSituation();
+const railEvent=
+    Game.battle.railEvent;
 
+Game.battle.railEvent=null;
+
+if(railEvent){
+
+    Game.battle.lastEvent=
+        railEvent.event;
+
+    resolveAutomaticEvent(
+        railEvent.event
+    );
+
+    return;
+
+}
+
+resolveAutomaticSituation();
+ 
 }
 
 //=========================
