@@ -4641,7 +4641,10 @@ function simulateBattleMovement(bey){
 
     const opponent=
         Game.battle[opponentKey];
-
+ 
+const launchMovementBonus=
+    Game[bey].launch.movementBonus || 0;
+ 
     const blade=
         bey==="player"
         ? Game.player.blade
@@ -4794,7 +4797,8 @@ if(
                 opponent.zone
             ) &&
             Math.random()*100<
-            aggression
+            aggression+
+launchMovementBonus
         ){
 
             targetZone=
