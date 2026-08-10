@@ -8696,8 +8696,6 @@ function renderBattleSequence(){
     decideNextBattleStep();
 
 };
- 
-}
 
 //=========================
 // CONTINUE BATTLE
