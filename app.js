@@ -5130,6 +5130,7 @@ function checkBattleFinish(){
         resolveBattleEnd();
 
         return true;
+
     }
 
     if(cpu.spin<=0){
@@ -5140,6 +5141,7 @@ function checkBattleFinish(){
         resolveBattleEnd();
 
         return true;
+
     }
 
     if(player.balance<=0){
@@ -5150,6 +5152,7 @@ function checkBattleFinish(){
         resolveBattleEnd();
 
         return true;
+
     }
 
     if(cpu.balance<=0){
@@ -5160,9 +5163,11 @@ function checkBattleFinish(){
         resolveBattleEnd();
 
         return true;
+
     }
 
     return false;
+
 }
 
 //=========================
