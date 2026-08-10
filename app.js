@@ -6083,8 +6083,6 @@ function generateEventCommentary(event){
 
 function resolveAutomaticEvent(event){
 
-    // Start or continue the current
-    // multi-action battle sequence.
     if(!Game.battle.sequenceEvents){
 
         Game.battle.sequenceEvents=[];
@@ -6092,11 +6090,14 @@ function resolveAutomaticEvent(event){
     }
 
 
-    // Apply the event normally.
+    // Apply the actual battle event.
     applyBattleEvent(event);
 
 
+    // A finish should immediately take over.
     if(checkBattleFinish()){
+
+        Game.battle.sequenceEvents=[];
 
         return;
 
@@ -6123,66 +6124,35 @@ function resolveAutomaticEvent(event){
         generateEventCommentary(event);
 
 
-let situationText;
+    let situationText="";
 
 
-if(Game.battle.situation==="clash"){
+    if(Game.battle.situation==="clash"){
 
-    situationText=pick([
+        situationText=
+            "Both Beys meet in the same area of the stadium.";
 
-        "They arrive in the same area at the same time — contact is unavoidable.",
+    }
+    else if(Game.battle.situation==="crossing"){
 
-        "Both Beys converge on the same line and neither gives up position.",
+        situationText=
+            "Both Beys cross directly through each other's line.";
 
-        "The gap disappears as both Beys crash into the same section of the stadium."
+    }
+    else if(Game.battle.situation==="approach"){
 
-    ]);
+        situationText=
+            "The Beys close in and look for an opening.";
 
-}
+    }
+    else{
 
-else if(Game.battle.situation==="crossing"){
+        situationText=
+            "The Beys continue moving and fighting for position.";
 
-    situationText=pick([
+    }
 
-        "They cut directly across each other's path, but the timing is just off.",
 
-        "Both Beys flash past one another and narrowly avoid a clean collision.",
-
-        "They cross through the same battle line, forcing both to quickly adjust."
-
-    ]);
-
-}
-
-else if(Game.battle.situation==="approach"){
-
-    situationText=pick([
-
-        "The distance closes quickly as both Beys move into striking range.",
-
-        "They begin to pressure each other, each looking for the first clean opening.",
-
-        "One Bey cuts inward while the other holds its line — the next exchange is building."
-
-    ]);
-
-}
-
-else{
-
-    situationText=pick([
-
-        "Neither Bey finds a clean line yet. They circle the stadium and reset for another approach.",
-
-        "The Beys remain separated, trading position as they search for a better angle.",
-
-        "Both continue moving around the stadium, building momentum for the next engagement."
-
-    ]);
-
-}
-
-    // Save this action inside the current sequence.
     Game.battle.sequenceEvents.push(
 
 `${playerMove} / ${cpuMove}
@@ -6196,11 +6166,10 @@ ${eventText}`
 
     const importantEvent=
 
-    event==="normalHit" ||
-    event==="heavyHit" ||
-    event==="extremeImpact" ||
-    event==="passBy" ||
-    event==="separation";
+        event==="normalHit" ||
+        event==="heavyHit" ||
+        event==="extremeImpact";
+
 
     const railEvent=
 
@@ -6209,13 +6178,22 @@ ${eventText}`
         event==="railImpact";
 
 
-    // Normal sequences can contain several
-    // actions before stopping.
     const maxActions=
-        2+
-        Math.floor(
-            Math.random()*3
+        Game.battle.sequenceTarget ||
+        (
+            2+
+            Math.floor(
+                Math.random()*3
+            )
         );
+
+
+    if(!Game.battle.sequenceTarget){
+
+        Game.battle.sequenceTarget=
+            maxActions;
+
+    }
 
 
     const shouldShow=
@@ -6223,14 +6201,16 @@ ${eventText}`
         importantEvent ||
         railEvent ||
         Game.battle.sequenceEvents.length>=
-        maxActions;
+        Game.battle.sequenceTarget;
 
 
+    // Keep simulating internally until
+    // this sequence is ready to display.
     if(!shouldShow){
 
         setTimeout(()=>{
 
-            simulateBattleRound();
+            decideNextBattleStep();
 
         },250);
 
@@ -6239,7 +6219,6 @@ ${eventText}`
     }
 
 
-    // Combine all actions into one screen.
     const text=
         Game.battle.sequenceEvents.join(
             "\n\n━━━━━━━━━━━━━━━━━━\n\n"
@@ -6252,11 +6231,17 @@ ${eventText}`
     );
 
 
-    // Reset for the next sequence.
+    // Fully reset sequence state before
+    // showing the next Continue screen.
     Game.battle.sequenceEvents=[];
+    Game.battle.sequenceTarget=null;
 
 
-    showBattleSimulation(text);
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
+
+
+    renderBattleSequence();
 
 }
 
