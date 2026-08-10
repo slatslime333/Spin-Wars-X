@@ -4419,12 +4419,14 @@ function showIntentResult(
 
 function startBattleLoop(){
 
-    resetBattleHistory();
+    Game.battle.finished=false;
+    Game.battle.winner=null;
+    Game.battle.finish=null;
 
     Game.battle.turn=0;
 
-   Game.battle.maxTurns=
-    Math.floor(Math.random()*9)+2;
+    Game.battle.maxTurns=
+        Math.floor(Math.random()*9)+2;
 
     simulateBattleRound();
 
@@ -8156,29 +8158,26 @@ function renderBattleSequence(){
     };
 
     document.getElementById(
-        "continueBattle"
-    ).onclick=()=>{
+    "continueBattle"
+).onclick=()=>{
 
-        // If reviewing an old event,
-        // return to the latest event first.
-        if(
-            Game.battle.sequenceIndex
-            <
+    if(
+        Game.battle.sequenceIndex <
+        Game.battle.history.length-1
+    ){
+
+        restoreBattleSequence(
             Game.battle.history.length-1
-        ){
+        );
 
-            restoreBattleSequence(
-                Game.battle.history.length-1
-            );
+        return;
 
-            return;
+    }
 
-        }
+    decideNextBattleStep();
 
-        continueBattleSequence();
-
-    };
-
+};
+ 
 }
 
 //=========================
@@ -8187,30 +8186,29 @@ function renderBattleSequence(){
 
 function continueBattleSequence(){
 
-    // Opening
-    if(Game.battle.phase==="Opening"){
+    if(Game.battle.finished){
 
-        Game.battle.phase="Battle";
+        return;
 
-        saveBattleSequence(
-            "BATTLE STARTS",
-            "Both Beys begin moving through the stadium."
+    }
+
+    // History viewer is display-only.
+    // The current battle engine always resumes here.
+
+    if(
+        Game.battle.sequenceIndex <
+        Game.battle.history.length-1
+    ){
+
+        restoreBattleSequence(
+            Game.battle.history.length-1
         );
 
-        renderBattleSequence();
-
         return;
 
     }
 
-    // Normal battle
-    if(Game.battle.phase==="Battle"){
-
-        battleTick();
-
-        return;
-
-    }
+    decideNextBattleStep();
 
 }
 
