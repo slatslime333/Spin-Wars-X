@@ -4971,7 +4971,8 @@ launchMovementBonus
                 opponent.zone
             ) &&
             Math.random()*100<
-            aggression
+            aggression+
+(Game[bey].launch.movementBonus || 0)
         ){
 
             targetZone=
