@@ -4551,8 +4551,11 @@ function handleXRailMovement(bey){
 
     }
 
+    const beyName=
+        bey==="player"
+        ? Game.player.blade.name
+        : Game.cpu.blade.name;
 
-    // Build speed during the rail ride
     battle.momentum=
         Math.min(
             100,
@@ -4569,200 +4572,27 @@ function handleXRailMovement(bey){
             battle.spin-2
         );
 
+    if(
+        currentZone==="XRailTop" ||
+        currentZone==="XRailBottom"
+    ){
+
+        battle.railText=
+            `${beyName} enters the Xtreme Rail and starts building speed!`;
+
+    }else{
+
+        battle.railText=
+            `${beyName} races along the Xtreme Rail toward the X Exit!`;
+
+    }
+
     moveBey(
         bey,
         nextZone
     );
 
     return true;
-
-}
-
-
-function resolveXRailExit(bey){
-
-    const battle=
-        Game.battle[bey];
-
-    const opponentKey=
-        bey==="player"
-        ? "cpu"
-        : "player";
-
-    const opponent=
-        Game.battle[opponentKey];
-
-    if(
-        !battle ||
-        !opponent
-    ){
-
-        return {
-            resolved:false,
-            text:""
-        };
-
-    }
-
-
-    const combo=
-        bey==="player"
-        ? calculateComboStats(
-            Game.player.blade,
-            Game.player.ratchet,
-            Game.player.bit
-        )
-        : calculateComboStats(
-            Game.cpu.blade,
-            Game.cpu.ratchet,
-            Game.cpu.bit
-        );
-
-
-    const attackerName=
-        bey==="player"
-        ? Game.player.blade.name
-        : Game.cpu.blade.name;
-
-    const defenderName=
-        bey==="player"
-        ? Game.cpu.blade.name
-        : Game.player.blade.name;
-
-
-    // Dash launches out of the exit
-    battle.momentum=
-        Math.min(
-            100,
-            battle.momentum+20
-        );
-
-
-    // Is the opponent in range of the exit?
-    const exitNeighbors=
-        STADIUM_MAP[
-            battle.zone
-        ]?.neighbors || [];
-
-
-    const inRange=
-
-        opponent.zone===battle.zone ||
-
-        exitNeighbors.includes(
-            opponent.zone
-        );
-
-
-    // Opponent is too far away
-    if(!inRange){
-
-        battle.railDashing=false;
-
-        return {
-            resolved:false,
-            text:
-                `${attackerName} blasts out of the Xtreme Rail, `+
-                `but ${defenderName} is out of range!`
-        };
-
-    }
-
-
-    const attackPower=
-
-        combo.stats.attack*0.35+
-
-        combo.stats.knockback*0.30+
-
-        battle.momentum*0.35;
-
-
-    const defenseCombo=
-        opponentKey==="player"
-        ? calculateComboStats(
-            Game.player.blade,
-            Game.player.ratchet,
-            Game.player.bit
-        )
-        : calculateComboStats(
-            Game.cpu.blade,
-            Game.cpu.ratchet,
-            Game.cpu.bit
-        );
-
-
-    const defensePower=
-
-        defenseCombo.stats.defense*0.55+
-
-        defenseCombo.stats.balance*0.25+
-
-        opponent.balance*0.20;
-
-
-    const difference=
-        attackPower-defensePower;
-
-    const roll=
-        Math.random()*40-20;
-
-    const result=
-        difference+roll;
-
-
-    battle.railDashing=false;
-
-
-    // Clean dash hit
-    if(result>25){
-
-        Game.battle.lastHitWinner=bey;
-
-        applyBattleEvent(
-            "extremeImpact"
-        );
-
-        return {
-            resolved:true,
-            event:"extremeImpact",
-            text:
-                `${attackerName} rockets out of the Xtreme Rail! `+
-                `${Math.round(attackPower)} dash power crashes through `+
-                `${defenderName}'s ${Math.round(defensePower)} defense!`
-        };
-
-    }
-
-
-    // Glancing hit
-    if(result>-10){
-
-        Game.battle.lastHitWinner=bey;
-
-        applyBattleEvent(
-            "heavyHit"
-        );
-
-        return {
-            resolved:true,
-            event:"heavyHit",
-            text:
-                `${attackerName} launches from the Xtreme Rail and catches `+
-                `${defenderName} with a glancing high-speed hit!`
-        };
-
-    }
-
-
-    // Opponent survives / dodges
-    return {
-        resolved:true,
-        event:"passBy",
-        text:
-            `${attackerName} explodes out of the Xtreme Rail, `+
-            `but ${defenderName} avoids the full dash!`
-    };
 
 }
 
