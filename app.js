@@ -5666,10 +5666,14 @@ function applyBattleEvent(event){
     // DAMAGE CALCULATION
     //=========================
 
-    const attackPower=
+    const winnerLaunchBonus=
+    Game[winner].launch.attackBonus || 0;
 
-        winnerCombo.stats.attack+
-        winnerCombo.stats.knockback;
+const attackPower=
+
+    winnerCombo.stats.attack+
+    winnerCombo.stats.knockback+
+    winnerLaunchBonus;
 
 
     const defensePower=
@@ -8081,46 +8085,160 @@ target.launch.attackBonus=0;
 target.launch.burstBonus=0;
 target.launch.angleSpinBonus=0;
 target.launch.angleBalanceBonus=0;
+target.launch.movementBonus=0;
 
 
-if(target.launch.angle==="Flat"){
+const bitType=
+    target.bit.type;
 
+
+//=========================
+// FLAT
+//=========================
+
+if(
+    target.launch.angle==="Flat"
+){
+
+    // Safest and most stable launch.
     target.launch.angleBalanceBonus=8;
+
+
+    if(bitType==="Attack"){
+
+        target.launch.movementBonus=6;
+
+    }
+
+    else if(bitType==="Defense"){
+
+        target.launch.angleBalanceBonus+=6;
+
+    }
+
+    else if(bitType==="Stamina"){
+
+        target.launch.angleSpinBonus=6;
+
+    }
+
+    else if(bitType==="Balance"){
+
+        target.launch.angleSpinBonus=3;
+        target.launch.angleBalanceBonus+=3;
+
+    }
 
 }
 
+
+//=========================
+// SLIGHT TILT
+//=========================
 
 else if(
     target.launch.angle==="Slight Tilt"
 ){
 
-    target.launch.angleBalanceBonus=-4;
+    // Controlled angled launch.
+    target.launch.angleBalanceBonus=-3;
+    target.launch.movementBonus=5;
 
-    if(target.bit.type==="Attack"){
 
-        target.launch.angleSpinBonus=6;
+    if(bitType==="Attack"){
+
+        target.launch.angleSpinBonus=8;
         target.launch.attackBonus=8;
         target.launch.burstBonus=5;
+
+    }
+
+    else if(bitType==="Defense"){
+
+        target.launch.angleBalanceBonus+=3;
+        target.launch.attackBonus=3;
+
+    }
+
+    else if(bitType==="Stamina"){
+
+        target.launch.angleSpinBonus=4;
+        target.launch.angleBalanceBonus+=2;
+
+    }
+
+    else if(bitType==="Balance"){
+
+        target.launch.angleSpinBonus=4;
+        target.launch.attackBonus=4;
+        target.launch.angleBalanceBonus+=2;
 
     }
 
 }
 
 
+//=========================
+// HARD TILT
+//=========================
+
 else if(
     target.launch.angle==="Hard Tilt"
 ){
 
-    target.launch.angleBalanceBonus=-12;
+    // Aggressive but unstable launch.
+    target.launch.angleBalanceBonus=-10;
+    target.launch.movementBonus=12;
 
-    if(target.bit.type==="Attack"){
 
+    if(bitType==="Attack"){
+
+        // More controlled aggressive movement
+        // and better stamina than a flat attack launch.
         target.launch.angleSpinBonus=12;
         target.launch.attackBonus=15;
         target.launch.burstBonus=10;
+
     }
- 
+
+    else if(bitType==="Defense"){
+
+        target.launch.attackBonus=5;
+        target.launch.angleBalanceBonus+=4;
+
     }
+
+    else if(bitType==="Stamina"){
+
+        // Tilt gives movement options,
+        // but costs some stability.
+        target.launch.angleSpinBonus=3;
+
+    }
+
+    else if(bitType==="Balance"){
+
+        target.launch.angleSpinBonus=5;
+        target.launch.attackBonus=6;
+        target.launch.burstBonus=4;
+        target.launch.angleBalanceBonus+=4;
+
+    }
+
+}
+
+
+//=========================
+// APPLY ANGLE BONUSES
+//=========================
+
+target.launch.spinBonus=
+    (target.launch.spinBonus || 0) +
+    (target.launch.angleSpinBonus || 0);
+
+target.launch.balanceBonus=
+    (target.launch.balanceBonus || 0) +
+    (target.launch.angleBalanceBonus || 0);
  
 //=========================
 // APPLY ANGLE BONUSES
