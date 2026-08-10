@@ -8092,7 +8092,8 @@ else if(
         target.launch.angleSpinBonus=12;
         target.launch.attackBonus=15;
         target.launch.burstBonus=10;
-
+    }
+ 
     }
 
 }
