@@ -6280,36 +6280,47 @@ function decideNextBattleStep(){
     Game.battle.maxTurns
 ){
 
-    // Emergency anti-stall:
-    // drain both Beys so the battle
-    // reaches a real finish.
-
     Game.battle.player.spin=
         Math.max(
-            1,
+            0,
             Game.battle.player.spin-12
         );
 
     Game.battle.cpu.spin=
         Math.max(
-            1,
+            0,
             Game.battle.cpu.spin-12
         );
 
     Game.battle.player.balance=
         Math.max(
-            1,
+            0,
             Game.battle.player.balance-6
         );
 
     Game.battle.cpu.balance=
         Math.max(
-            1,
+            0,
             Game.battle.cpu.balance-6
         );
 
-}
 
+    if(checkBattleFinish()){
+
+        return;
+
+    }
+
+
+    setTimeout(()=>{
+
+        simulateBattleRound();
+
+    },300);
+
+    return;
+
+}
     // Always simulate at least the first
     // two rounds before allowing a decision.
     if(Game.battle.turn < 2){
