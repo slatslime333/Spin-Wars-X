@@ -4678,36 +4678,27 @@ function resolveAutomaticSituation(){
             event="extremeImpact";
 
         }
-if(situation==="clash"){
 
-    const roll=Math.random()*100;
-
-    if(roll<15){
-        event="passBy";
-    }else if(roll<55){
-        event="normalHit";
-    }else if(roll<85){
-        event="heavyHit";
-    }else{
-        event="extremeImpact";
     }
 
-else if(situation==="crossing"){
+    else if(situation==="crossing"){
 
-    const roll=Math.random()*100;
+        const roll=Math.random()*100;
 
-    if(roll<35){
-        event="passBy";
-    }else if(roll<80){
-        event="normalHit";
-    }else{
-        event="heavyHit";
-    }
+        if(roll<35){
 
-}
+            event="passBy";
 
-else if(situation==="approach"){
-     
+        }else if(roll<80){
+
+            event="normalHit";
+
+        }else{
+
+            event="heavyHit";
+
+        }
+
     }
 
     else if(situation==="approach"){
@@ -4737,7 +4728,6 @@ else if(situation==="approach"){
     resolveAutomaticEvent(event);
 
 }
-
 //=========================
 // APPLY BATTLE EVENT
 //=========================
