@@ -5775,11 +5775,117 @@ function generateEventCommentary(event){
             Game.cpu.bit
         );
 
+    const player=
+        Game.battle.player;
+
+    const cpu=
+        Game.battle.cpu;
+
     const winner=
         Game.battle.lastHitWinner;
 
     const damage=
         Game.battle.lastHitDamage;
+
+    const playerName=
+        Game.player.blade.name;
+
+    const cpuName=
+        Game.cpu.blade.name;
+
+    const pick=(list)=>{
+
+        return list[
+            Math.floor(
+                Math.random()*list.length
+            )
+        ];
+
+    };
+
+
+    //=========================
+    // PASS BY
+    //=========================
+
+    if(event==="passBy"){
+
+        const playerAggression=
+            player.momentum+
+            player.speed;
+
+        const cpuAggression=
+            cpu.momentum+
+            cpu.speed;
+
+        const attacker=
+            playerAggression>=cpuAggression
+            ? playerName
+            : cpuName;
+
+        const defender=
+            attacker===playerName
+            ? cpuName
+            : playerName;
+
+        return pick([
+
+`${playerName} and ${cpuName} race toward the same line, but neither finds clean contact. They fly past and immediately turn back into the stadium.`,
+
+`${attacker} makes the first move and charges through the center. ${defender} slips away at the last moment — a near miss!`,
+
+`Both Beys close in at speed. ${attacker} swings for the collision, but the timing is off and the attack cuts through empty space.`,
+
+`${playerName} and ${cpuName} cross paths with almost no room between them. No hit! Both Beys survive the exchange and reposition.`,
+
+`A fast approach turns into a miss as ${defender} escapes the collision. ${attacker} has to swing back around for another chance.`
+
+        ]);
+
+    }
+
+
+    //=========================
+    // SEPARATION
+    //=========================
+
+    if(event==="separation"){
+
+        return pick([
+
+`${playerName} and ${cpuName} drift apart and reset their positions. Neither wants to give the other an easy opening.`,
+
+`The action slows for a moment. Both Beys circle the stadium, rebuilding momentum and searching for a better angle.`,
+
+`No clean engagement develops. ${playerName} holds its line while ${cpuName} rotates away toward a safer position.`,
+
+`Both Beys break away from the center. The distance opens up, but the next collision could come from anywhere.`,
+
+`The attack window closes. ${playerName} and ${cpuName} separate, stabilize, and prepare for another exchange.`
+
+        ]);
+
+    }
+
+
+    //=========================
+    // NO CLEAR WINNER
+    //=========================
+
+    if(!winner || !damage){
+
+        return pick([
+
+`${playerName} and ${cpuName} collide, but neither Bey gains a clear advantage. The battle continues!`,
+
+`A messy collision sends both Beys away from the contact point. No clear winner in that exchange.`,
+
+`The Beys make contact, but both remain stable enough to keep fighting for position.`
+
+        ]);
+
+    }
+
 
     const winnerCombo=
         winner==="player"
@@ -5793,111 +5899,149 @@ function generateEventCommentary(event){
 
     const winnerName=
         winner==="player"
-        ? Game.player.blade.name
-        : Game.cpu.blade.name;
+        ? playerName
+        : cpuName;
 
     const loserName=
         winner==="player"
-        ? Game.cpu.blade.name
-        : Game.player.blade.name;
+        ? cpuName
+        : playerName;
 
-
-    if(event==="passBy"){
-
-        return `${winnerName || "Both Beys"} sweep past without finding a clean contact.`;
-
-    }
-
-
-    if(event==="separation"){
-
-        return "Both Beys separate and reposition, looking for a better attack angle.";
-
-    }
-
-
-    if(!winner || !damage){
-
-        return "The clash ends without a clear advantage.";
-
-    }
-
-
-    const attack=
-        winnerCombo.stats.attack;
-
-    const knockback=
-        winnerCombo.stats.knockback;
-
-    const defense=
-        loserCombo.stats.defense;
-
-    const balance=
-        loserCombo.stats.balance;
 
     const attackPower=
-        attack+knockback;
+        winnerCombo.stats.attack+
+        winnerCombo.stats.knockback;
 
     const defensePower=
-        defense+balance;
+        loserCombo.stats.defense+
+        loserCombo.stats.balance;
 
     const difference=
         attackPower-defensePower;
 
-    let interactionText;
+
+    let statCommentary;
 
 
     if(difference>=25){
 
-        interactionText=
-            `${winnerName}'s ${attack} Attack and ${knockback} Knockback overpower ${loserName}'s ${defense} Defense and ${balance} Balance.`;
+        statCommentary=
+            pick([
+
+`${winnerName}'s attack power completely overwhelms ${loserName}'s defensive stability.`,
+
+`${winnerName}'s Attack and Knockback are too much for ${loserName} to absorb cleanly.`,
+
+`${loserName}'s defense cannot hold against the force coming from ${winnerName}.`
+
+            ]);
 
     }
 
     else if(difference>=0){
 
-        interactionText=
-            `${winnerName}'s attack breaks through, but ${loserName}'s defense absorbs part of the impact.`;
+        statCommentary=
+            pick([
+
+`${winnerName}'s attack breaks through, but ${loserName}'s defense absorbs part of the impact.`,
+
+`${loserName} resists the hit, but ${winnerName}'s power gives it the edge.`,
+
+`The defensive stats keep ${loserName} from being completely blown away, but ${winnerName} still wins the exchange.`
+
+            ]);
 
     }
 
     else if(difference>=-25){
 
-        interactionText=
-            `${loserName}'s ${defense} Defense and ${balance} Balance resist most of the attack, but ${winnerName} still wins the exchange.`;
+        statCommentary=
+            pick([
+
+`${loserName}'s defense absorbs most of the force, but ${winnerName}'s timing creates the better collision.`,
+
+`${loserName} stays surprisingly stable through the hit, yet ${winnerName} still comes away with the advantage.`,
+
+`Defense keeps ${loserName} alive in the exchange, but momentum and timing favor ${winnerName}.`
+
+            ]);
 
     }
 
     else{
 
-        interactionText=
-            `${loserName}'s defense holds up strongly, but timing and momentum give ${winnerName} the better impact.`;
+        statCommentary=
+            pick([
+
+`${loserName}'s defense holds strong, but a perfectly timed impact gives ${winnerName} the edge.`,
+
+`${winnerName} finds an opening despite ${loserName}'s superior defensive stability.`,
+
+`${loserName} absorbs the majority of the attack, but ${winnerName} lands the more effective contact.`
+
+            ]);
 
     }
 
+
+    //=========================
+    // NORMAL HIT
+    //=========================
 
     if(event==="normalHit"){
 
-        return `${interactionText} ${loserName} loses ${damage.spin} spin and ${damage.balance} balance.`;
+        return pick([
+
+`${winnerName} catches ${loserName} with a clean hit! ${statCommentary} ${loserName} loses ${damage.spin} spin and ${damage.balance} balance.`,
+
+`IMPACT! ${winnerName} gets inside and lands first. ${statCommentary} ${loserName} is knocked off line and loses ${damage.spin} spin.`,
+
+`${winnerName} wins the collision! ${statCommentary} ${loserName} has to recover before the next attack.`
+
+        ]);
 
     }
 
+
+    //=========================
+    // HEAVY HIT
+    //=========================
 
     if(event==="heavyHit"){
 
-        return `${interactionText} A heavy collision sends ${loserName} backward and forces a retreat.`;
+        return pick([
+
+`HEAVY IMPACT! ${winnerName} crashes into ${loserName} and sends it backward. ${statCommentary} ${loserName} is forced into a difficult recovery.`,
+
+`${winnerName} SLAMS into ${loserName}! ${statCommentary} The collision breaks ${loserName}'s positioning and pushes it away from the battle line.`,
+
+`A powerful exchange! ${winnerName} lands the heavier blow. ${statCommentary} ${loserName} is thrown back and loses control of the better position.`
+
+        ]);
 
     }
 
+
+    //=========================
+    // EXTREME IMPACT
+    //=========================
 
     if(event==="extremeImpact"){
 
-        return `${interactionText} The extreme impact throws ${loserName} into a dangerous recovery!`;
+        return pick([
+
+`EXTREME IMPACT! ${winnerName} detonates into ${loserName} with maximum force! ${statCommentary} ${loserName} is thrown into a dangerous recovery!`,
+
+`MASSIVE COLLISION! ${winnerName} lands a devastating hit on ${loserName}. ${statCommentary} One bad recovery could end this battle!`,
+
+`${winnerName} CONNECTS HARD! The stadium erupts as ${loserName} is blasted away from the collision point. ${statCommentary}`
+
+        ]);
 
     }
 
 
-    return "The Beys collide and continue battling.";
+    return `${playerName} and ${cpuName} continue battling for position.`;
 
 }
 
@@ -5912,37 +6056,79 @@ function resolveAutomaticEvent(event){
     if(checkBattleFinish()){
 
         return;
+
     }
 
-  const movement=
-    Game.battle.lastMovement;
 
-const playerMove=
-    movement
-    ? `${movement.player.from} → ${movement.player.to}`
-    : Game.battle.player.zone;
+    const movement=
+        Game.battle.lastMovement;
 
-const cpuMove=
-    movement
-    ? `${movement.cpu.from} → ${movement.cpu.to}`
-    : Game.battle.cpu.zone;
 
-const eventText=
-    generateEventCommentary(event);
+    const playerMove=
+        movement
+        ? `${movement.player.from} → ${movement.player.to}`
+        : Game.battle.player.zone;
 
-const text=
-`PLAYER: ${playerMove}
 
-CPU: ${cpuMove}
+    const cpuMove=
+        movement
+        ? `${movement.cpu.from} → ${movement.cpu.to}`
+        : Game.battle.cpu.zone;
 
-SITUATION: ${Game.battle.situation.toUpperCase()}
+
+    const eventText=
+        generateEventCommentary(event);
+
+
+    let situationText;
+
+
+    if(Game.battle.situation==="clash"){
+
+        situationText=
+            "Both Beys meet in the same area of the stadium.";
+
+    }
+
+    else if(Game.battle.situation==="crossing"){
+
+        situationText=
+            "Both Beys cross directly through each other's previous line.";
+
+    }
+
+    else if(Game.battle.situation==="approach"){
+
+        situationText=
+            "The Beys close in from connected zones.";
+
+    }
+
+    else{
+
+        situationText=
+            "The Beys remain separated, but pressure continues to build.";
+
+    }
+
+
+    const text=
+`PLAYER MOVEMENT
+${playerMove}
+
+CPU MOVEMENT
+${cpuMove}
+
+${situationText}
 
 ${eventText}`;
 
-saveBattleSequence(
-    "ROUND "+Game.battle.turn,
-    text
-);
+
+    saveBattleSequence(
+        "BATTLE SEQUENCE",
+        text
+    );
+
 
     showBattleSimulation(text);
 
@@ -8486,10 +8672,9 @@ function renderBattleSequence(){
 
             <section class="menu-card">
 
-                <h1>
-                    ROUND ${Game.battle.turn}
-                </h1>
-
+               <h1>
+    BATTLE SEQUENCE ${index+1}
+</h1>
                 <hr>
 
                 ${renderStadium()}
@@ -8514,9 +8699,10 @@ function renderBattleSequence(){
 
                     <strong>
 
-                        ${index+1} / ${history.length}
+    BATTLE SEQUENCE
+    ${index+1} / ${history.length}
 
-                    </strong>
+</strong>
 
                     <button
                         class="menu-btn silver"
