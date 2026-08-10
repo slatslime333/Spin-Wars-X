@@ -8044,7 +8044,18 @@ function applyLaunchQuality(blader){
             target.launch.balanceBonus=8;
             target.launch.positionBonus=2;
             break;
+      
+//=========================
+// APPLY ANGLE BONUSES
+//=========================
 
+target.launch.spinBonus=
+    (target.launch.spinBonus || 0) +
+    (target.launch.angleSpinBonus || 0);
+
+target.launch.balanceBonus=
+    (target.launch.balanceBonus || 0) +
+    (target.launch.angleBalanceBonus || 0);
     }
  
 //=========================
