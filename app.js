@@ -4423,8 +4423,8 @@ function startBattleLoop(){
 
     Game.battle.turn=0;
 
-    Game.battle.maxTurns=
-        Math.floor(Math.random()*10)+1;
+   Game.battle.maxTurns=
+    Math.floor(Math.random()*9)+2;
 
     simulateBattleRound();
 
@@ -5110,6 +5110,79 @@ function showBattleSimulation(text){
         decideNextBattleStep();
 
     },1500);
+
+}
+
+//=========================
+// DECIDE NEXT BATTLE STEP
+//=========================
+
+function decideNextBattleStep(){
+
+    if(Game.battle.finished){
+
+        return;
+
+    }
+
+    if(checkBattleFinish()){
+
+        return;
+
+    }
+
+    if(
+        Game.battle.turn >=
+        Game.battle.maxTurns
+    ){
+
+        resolveBattleEnd();
+
+        return;
+
+    }
+
+    const roll=Math.random()*100;
+
+    let decisionChance=25;
+
+    if(
+        Game.battle.situation==="clash"
+    ){
+
+        decisionChance=45;
+
+    }
+
+    if(
+        Game.battle.lastEvent==="heavyHit"
+    ){
+
+        decisionChance=55;
+
+    }
+
+    if(
+        Game.battle.lastEvent==="extremeImpact"
+    ){
+
+        decisionChance=70;
+
+    }
+
+    if(roll<decisionChance){
+
+        generateDynamicDecision();
+
+        return;
+
+    }
+
+    setTimeout(()=>{
+
+        simulateBattleRound();
+
+    },300);
 
 }
 
