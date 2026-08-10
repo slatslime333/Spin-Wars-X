@@ -8619,6 +8619,8 @@ function renderBattleSequence(){
 
 };
 
+}
+
 //=========================
 // CONTINUE BATTLE
 //=========================
