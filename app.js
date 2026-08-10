@@ -3067,7 +3067,15 @@ function getBattleCommentary(){
 //=========================
 
 function generateDynamicDecision(){
+ 
+// Prevent duplicate decisions
+if(Game.battle.decisionActive){
 
+    return;
+
+}
+
+Game.battle.decisionActive=true;
     const player=
         Game.battle.player;
 
@@ -3483,6 +3491,14 @@ function showDynamicDecision(
 //=========================
 
 function chooseDynamicMove(intent){
+
+    if(!Game.battle.decisionActive){
+
+        return;
+
+    }
+
+    Game.battle.decisionActive=false;
 
     Game.battle.player.intent=intent;
 
