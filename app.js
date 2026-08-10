@@ -1910,46 +1910,6 @@ function getNaturalMovement(bey){
 }
 
 //=========================
-// RAIL SPEED
-//=========================
-
-function updateRailSpeed(bey){
-
-    const data=Game.battle[bey];
-
-    if(data.rail){
-
-        // Entering the rail
-        if(data.railSpeed===0){
-
-            data.railSpeed=65;
-
-        }else{
-
-            // Speed builds while riding
-            data.railSpeed+=15;
-
-        }
-
-        data.railSpeed=Math.min(
-            100,
-            data.railSpeed
-        );
-
-    }else{
-
-        // Lose rail speed after leaving
-        data.railSpeed=Math.max(
-            0,
-            data.railSpeed-30
-        );
-
-    }
-
- 
-}
-
-//=========================
 // BATTLE TICK
 //=========================
 
@@ -2024,23 +1984,6 @@ Balance: ${Math.round(cpu.balance)}`
     );
 
     // -------------------------
-    // RAIL SPEED
-    // -------------------------
-
-    updateRailSpeed("player");
-    updateRailSpeed("cpu");
-
-    player.speed=
-        player.rail
-        ? player.railSpeed
-        : 50;
-
-    cpu.speed=
-        cpu.rail
-        ? cpu.railSpeed
-        : 50;
-
-    // -------------------------
     // BUILD EVENT TEXT
     // -------------------------
 
@@ -2059,20 +2002,6 @@ ${oldPlayerZone}
 
     }
 
-    // Player rail speed
-    if(player.rail){
-
-        eventText+=
-`${Game.player.blade.name} is riding the X-Rail.
-
-Speed:
-${oldPlayerRailSpeed}
-→ ${player.railSpeed}
-
-`;
-
-    }
-
     // CPU movement
     if(oldCpuZone!==cpu.zone){
 
@@ -2081,20 +2010,6 @@ ${oldPlayerRailSpeed}
 
 ${oldCpuZone}
 → ${cpu.zone}
-
-`;
-
-    }
-
-    // CPU rail speed
-    if(cpu.rail){
-
-        eventText+=
-`${Game.cpu.blade.name} is riding the X-Rail.
-
-Speed:
-${oldCpuRailSpeed}
-→ ${cpu.railSpeed}
 
 `;
 
@@ -2124,47 +2039,6 @@ ${Game.cpu.blade.name}: ${cpu.zone}`;
     );
 
     renderBattleSequence();
-
-}
-
-//=========================
-// RAIL INTERCEPTION
-//=========================
-
-function checkRailInterception(){
-
-    const player=Game.battle.player;
-    const cpu=Game.battle.cpu;
-
-    // Player is riding the rail
-    if(player.rail && !cpu.rail){
-
-        if(
-            cpu.zone==="XRailExit" ||
-            cpu.zone==="TopCenter" ||
-            cpu.zone==="Center"
-        ){
-
-            resolveRailCounter("cpu","player");
-
-        }
-
-    }
-
-    // CPU is riding the rail
-    if(cpu.rail && !player.rail){
-
-        if(
-            player.zone==="XRailExit" ||
-            player.zone==="TopCenter" ||
-            player.zone==="Center"
-        ){
-
-            resolveRailCounter("player","cpu");
-
-        }
-
-    }
 
 }
 
@@ -2222,137 +2096,6 @@ function counterDestination(defender, attacker){
     return STADIUM_MAP[
         Game.battle[attacker].zone
     ].neighbors;
-
-}
-
-//=========================
-// RAIL COUNTER
-//=========================
-
-function resolveRailCounter(defender,attacker){
-
-    const defenderState=Game.battle[defender];
-    const attackerState=Game.battle[attacker];
-
-    const defenderCombo=
-        defender==="player"
-        ? calculateComboStats(
-            Game.player.blade,
-            Game.player.ratchet,
-            Game.player.bit
-        )
-        : calculateComboStats(
-            Game.cpu.blade,
-            Game.cpu.ratchet,
-            Game.cpu.bit
-        );
-
-    const attackerCombo=
-        attacker==="player"
-        ? calculateComboStats(
-            Game.player.blade,
-            Game.player.ratchet,
-            Game.player.bit
-        )
-        : calculateComboStats(
-            Game.cpu.blade,
-            Game.cpu.ratchet,
-            Game.cpu.bit
-        );
-
-    // Defender's counter strength
-    const counterPower=
-        defenderCombo.stats.knockback*
-        (
-            1+
-            defenderState.balance/200
-        )*
-        (
-            Game[defender].currentMove==="Counter"
-            ? 1.5
-            : 0.7
-        );
-
-    // Incoming rail impact
-    const railImpact=
-        attackerCombo.stats.knockback*
-        (
-            1+
-            attackerState.railSpeed/100
-        )*
-        (
-            1+
-            Math.abs(attackerState.momentum)/100
-        );
-
-    const counterRatio=
-        counterPower/
-        Math.max(1,railImpact);
-
-    // Counter succeeds
-    if(counterRatio>=1){
-
-        attackerState.balance-=10;
-        attackerState.spin-=7;
-
-        attackerState.momentum*=-0.8;
-
-        console.log(
-            defender+
-            " STOPPED "+
-            attacker+
-            " ON THE X-RAIL!"
-        );
-
-        const destinations=
-    counterDestination(
-        defender,
-        attacker
-    );
-
-const destination=
-    destinations[
-        Math.floor(
-            Math.random()*destinations.length
-        )
-    ];
-
-moveBey(
-    attacker,
-    destination
-);
-
-     // Extra danger when redirected toward a finish zone
-
-if(
-    destination==="LeftPocket" ||
-    destination==="RightPocket"
-){
-
-    attackerState.balance-=8;
-
-}
-
-if(destination==="XtremeZone"){
-
-    attackerState.balance-=12;
-
-}
-
-    }else{
-
-        // Failed counter attempt
-        defenderState.balance-=5;
-        defenderState.spin-=4;
-
-        console.log(
-            defender+
-            " MISSED THE RAIL COUNTER!"
-        );
-
-    }
-
-    renderBeys();
 
 }
 
