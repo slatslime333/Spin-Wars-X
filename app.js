@@ -5215,7 +5215,6 @@ function simulateBattleRound(){
 
     resolveAutomaticSituation();
 
-}
 
 //=========================
 // REMEMBER PREVIOUS ZONES
@@ -5226,8 +5225,6 @@ const playerPreviousZone=
 
 const cpuPreviousZone=
     Game.battle.cpu.zone;
-
-}
 
 //=========================
 // CHECK BATTLE SITUATION
