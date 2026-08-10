@@ -4582,6 +4582,133 @@ function resolveXRailExit(bey){
 }
 
 //=========================
+// BATTLE BEHAVIOR
+//=========================
+
+function updateBattleBehavior(bey){
+
+    const battle=Game.battle[bey];
+
+    const opponent=
+        Game.battle[
+            bey==="player"
+            ? "cpu"
+            : "player"
+        ];
+
+    const blade=
+        bey==="player"
+        ? Game.player.blade
+        : Game.cpu.blade;
+
+    if(!battle || !opponent){
+
+        return;
+
+    }
+
+    // Keep current behavior briefly
+    if(battle.behaviorTurns>0){
+
+        battle.behaviorTurns--;
+
+        return;
+
+    }
+
+    const type=
+        blade?.type || "Balance";
+
+    let behavior="holding";
+
+
+    // Low stability = recover
+    if(
+        battle.balance<35 ||
+        battle.spin<25
+    ){
+
+        behavior="recovering";
+
+    }
+
+
+    // Lost momentum after impact
+    else if(
+        battle.momentum< -20
+    ){
+
+        behavior="retreating";
+
+    }
+
+
+    // Attack types keep pressure
+    else if(
+        type==="Attack"
+    ){
+
+        behavior=
+            battle.momentum>15
+            ? "chasing"
+            : "circling";
+
+    }
+
+
+    // Stamina avoids unnecessary contact
+    else if(
+        type==="Stamina"
+    ){
+
+        behavior=
+            opponent.momentum>battle.momentum+20
+            ? "retreating"
+            : "holding";
+
+    }
+
+
+    // Defense holds position
+    else if(
+        type==="Defense"
+    ){
+
+        behavior="holding";
+
+    }
+
+
+    // Balance adapts
+    else{
+
+        const roll=Math.random()*100;
+
+        if(roll<35){
+
+            behavior="chasing";
+
+        }else if(roll<65){
+
+            behavior="circling";
+
+        }else{
+
+            behavior="holding";
+
+        }
+
+    }
+
+
+    battle.behavior=behavior;
+
+    battle.behaviorTurns=
+        Math.floor(Math.random()*2)+1;
+
+}
+
+//=========================
 // SIMULATE BATTLE MOVEMENT
 //=========================
 
@@ -4602,16 +4729,15 @@ function simulateBattleMovement(bey){
         ? Game.player.blade
         : Game.cpu.blade;
 
-    if(
-        !battle ||
-        !opponent ||
-        !blade
-    ){
+   if(
+    !battle ||
+    !opponent ||
+    !blade
+){
 
-        return;
+    return;
 
-    }
-
+}
 
     //=========================
     // ALREADY ON XTREME RAIL
@@ -4629,7 +4755,8 @@ function simulateBattleMovement(bey){
 
     }
 
-
+updateBattleBehavior(bey);
+ 
     //=========================
     // XTREME EXIT
     //=========================
