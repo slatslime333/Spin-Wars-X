@@ -5411,6 +5411,109 @@ function resolveAutomaticSituation(){
 }
 
 //=========================
+// HIT AFTERMATH
+//=========================
+
+function applyHitAftermath(
+    winner,
+    loser,
+    event
+){
+
+    const winnerState=
+        Game.battle[winner];
+
+    const loserState=
+        Game.battle[loser];
+
+    if(
+        !winnerState ||
+        !loserState
+    ){
+
+        return;
+
+    }
+
+    // Normal hit:
+    // winner keeps pressure,
+    // loser repositions.
+    if(event==="normalHit"){
+
+        winnerState.behavior=
+            "chasing";
+
+        winnerState.behaviorTurns=1;
+
+        loserState.behavior=
+            "circling";
+
+        loserState.behaviorTurns=1;
+
+    }
+
+
+    // Heavy hit:
+    // winner presses forward,
+    // loser must recover.
+    else if(event==="heavyHit"){
+
+        winnerState.behavior=
+            "chasing";
+
+        winnerState.behaviorTurns=2;
+
+        loserState.behavior=
+            "retreating";
+
+        loserState.behaviorTurns=2;
+
+        winnerState.momentum=
+            Math.min(
+                100,
+                winnerState.momentum+15
+            );
+
+        loserState.momentum=
+            Math.max(
+                -100,
+                loserState.momentum-15
+            );
+
+    }
+
+
+    // Extreme impact:
+    // strong follow-up pressure.
+    else if(event==="extremeImpact"){
+
+        winnerState.behavior=
+            "chasing";
+
+        winnerState.behaviorTurns=2;
+
+        loserState.behavior=
+            "recovering";
+
+        loserState.behaviorTurns=2;
+
+        winnerState.momentum=
+            Math.min(
+                100,
+                winnerState.momentum+25
+            );
+
+        loserState.momentum=
+            Math.max(
+                -100,
+                loserState.momentum-25
+            );
+
+    }
+
+}
+
+//=========================
 // APPLY BATTLE EVENT
 //=========================
 
@@ -5679,7 +5782,14 @@ if(
         spin:spinDamage,
         balance:balanceDamage
     };
-
+ 
+applyHitAftermath(
+    winner,
+    loser,
+    event
+ 
+);
+ 
 }
 
 //=========================
