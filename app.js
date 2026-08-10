@@ -5181,15 +5181,19 @@ if(!targetZone){
 
 function simulateBattleRound(){
 
-    const player=Game.battle.player;
-    const cpu=Game.battle.cpu;
+    const player=
+        Game.battle.player;
 
-    // Check before starting
+    const cpu=
+        Game.battle.cpu;
+
+
     if(checkBattleFinish()){
 
         return;
 
     }
+
 
     Game.battle.turn++;
 
@@ -5203,6 +5207,122 @@ function simulateBattleRound(){
         return;
 
     }
+
+
+    //=========================
+    // REMEMBER START POSITIONS
+    //=========================
+
+    const playerPreviousZone=
+        player.zone;
+
+    const cpuPreviousZone=
+        cpu.zone;
+
+
+    //=========================
+    // SIMULATE MOVEMENT
+    //=========================
+
+    simulateBattleMovement("player");
+
+    simulateBattleMovement("cpu");
+
+
+    //=========================
+    // RECORD WHAT ACTUALLY HAPPENED
+    //=========================
+
+    Game.battle.lastMovement={
+
+        player:{
+            from:playerPreviousZone,
+            to:player.zone
+        },
+
+        cpu:{
+            from:cpuPreviousZone,
+            to:cpu.zone
+        }
+
+    };
+
+
+    //=========================
+    // CHECK BATTLE SITUATION
+    //=========================
+
+    let situation;
+
+    if(
+        player.zone===cpu.zone
+    ){
+
+        situation="clash";
+
+    }
+
+    else if(
+        player.zone===cpuPreviousZone &&
+        cpu.zone===playerPreviousZone
+    ){
+
+        situation="crossing";
+
+    }
+
+    else if(
+        STADIUM_MAP[player.zone]
+        ?.neighbors
+        ?.includes(cpu.zone)
+    ){
+
+        situation="approach";
+
+    }
+
+    else{
+
+        situation="separated";
+
+    }
+
+
+    Game.battle.situation=
+        situation;
+
+
+    renderBeys();
+
+
+    //=========================
+    // RAIL EVENT PRIORITY
+    //=========================
+
+    const railEvent=
+        Game.battle.railEvent;
+
+    Game.battle.railEvent=
+        null;
+
+
+    if(railEvent){
+
+        Game.battle.lastEvent=
+            railEvent.event;
+
+        resolveAutomaticEvent(
+            railEvent.event
+        );
+
+        return;
+
+    }
+
+
+    resolveAutomaticSituation();
+
+}
 
 //=========================
 // REMEMBER PREVIOUS ZONES
