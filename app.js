@@ -5853,13 +5853,35 @@ function resolveAutomaticEvent(event){
         return;
     }
 
-   const text=
+  const movement=
+    Game.battle.lastMovement;
+
+const playerMove=
+    movement
+    ? `${movement.player.from} → ${movement.player.to}`
+    : Game.battle.player.zone;
+
+const cpuMove=
+    movement
+    ? `${movement.cpu.from} → ${movement.cpu.to}`
+    : Game.battle.cpu.zone;
+
+const eventText=
     generateEventCommentary(event);
- 
- saveBattleSequence(
-        "ROUND "+Game.battle.turn,
-        text
-    );
+
+const text=
+`PLAYER: ${playerMove}
+
+CPU: ${cpuMove}
+
+SITUATION: ${Game.battle.situation.toUpperCase()}
+
+${eventText}`;
+
+saveBattleSequence(
+    "ROUND "+Game.battle.turn,
+    text
+);
 
     showBattleSimulation(text);
 
