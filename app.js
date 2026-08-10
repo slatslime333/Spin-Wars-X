@@ -5079,6 +5079,32 @@ if(!targetZone){
 }
 
 //=========================
+// APPLY LAUNCH BONUSES
+//=========================
+
+const target=
+    Game[blader];
+
+const battleBey=
+    Game.battle[blader];
+
+
+battleBey.spin=
+    Math.max(
+        1,
+        battleBey.spin +
+        (target.launch.spinBonus || 0)
+    );
+
+
+battleBey.balance=
+    Math.max(
+        1,
+        battleBey.balance +
+        (target.launch.balanceBonus || 0)
+    );
+
+//=========================
 // SIMULATE BATTLE ROUND
 //=========================
 
@@ -8045,17 +8071,6 @@ function applyLaunchQuality(blader){
             target.launch.positionBonus=2;
             break;
       
-//=========================
-// APPLY ANGLE BONUSES
-//=========================
-
-target.launch.spinBonus=
-    (target.launch.spinBonus || 0) +
-    (target.launch.angleSpinBonus || 0);
-
-target.launch.balanceBonus=
-    (target.launch.balanceBonus || 0) +
-    (target.launch.angleBalanceBonus || 0);
     }
  
 //=========================
@@ -8106,7 +8121,19 @@ else if(
     }
  
     }
+ 
+//=========================
+// APPLY ANGLE BONUSES
+//=========================
 
+target.launch.spinBonus=
+    (target.launch.spinBonus || 0) +
+    (target.launch.angleSpinBonus || 0);
+
+target.launch.balanceBonus=
+    (target.launch.balanceBonus || 0) +
+    (target.launch.angleBalanceBonus || 0);
+ 
 }
 
 //=========================
