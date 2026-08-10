@@ -4640,17 +4640,12 @@ resolveAutomaticSituation();
 
 function resolveAutomaticSituation(){
 
-    const player=Game.battle.player;
-    const cpu=Game.battle.cpu;
-
-    const distance=Math.abs(
-        player.x-cpu.x
-    );
+    const situation=
+        Game.battle.situation;
 
     let event;
 
-    // Close enough for a real clash
-    if(distance<60){
+    if(situation==="clash"){
 
         const roll=Math.random()*100;
 
@@ -4674,8 +4669,7 @@ function resolveAutomaticSituation(){
 
     }
 
-    // Close enough that they may connect
-    else if(distance<140){
+    else if(situation==="approach"){
 
         const roll=Math.random()*100;
 
@@ -4691,7 +4685,6 @@ function resolveAutomaticSituation(){
 
     }
 
-    // Still far apart
     else{
 
         event="separation";
