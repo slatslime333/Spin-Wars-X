@@ -3474,7 +3474,7 @@ function showDynamicDecision(
 
         <section class="menu-card">
 
-            <h1>ROUND ${Game.match.round}</h1>
+            <h1>ROUND ${Game.battle.turn}</h1>
 
             <hr>
 
@@ -4359,7 +4359,7 @@ function showIntentResult(
         <section class="menu-card">
 
             <h1>
-                ROUND ${Game.match.round}
+                ROUND ${Game.battle.turn}
             </h1>
 
             <hr>
@@ -5493,30 +5493,10 @@ showBattleSimulation(text);
 
 function showBattleSimulation(text){
 
-    // The automatic event was already saved
-    // by resolveAutomaticEvent().
-    // Show the latest history entry instead
-    // of overwriting the history screen.
-
     Game.battle.sequenceIndex=
         Game.battle.history.length-1;
 
     renderBattleSequence();
-
-    setTimeout(()=>{
-
-        // Only continue if the player is still
-        // viewing the newest event.
-        if(
-            Game.battle.sequenceIndex ===
-            Game.battle.history.length-1
-        ){
-
-            decideNextBattleStep();
-
-        }
-
-    },1500);
 
 }
 
@@ -7824,7 +7804,7 @@ const prediction = getMatchPrediction();
 
         <section class="menu-card">
 
-            <h1>ROUND ${Game.match.round}</h1>
+            <h1>ROUND ${Game.battle.turn}</h1>
 
 <hr>
 
@@ -8046,7 +8026,7 @@ function renderBattleSequence(){
             <section class="menu-card">
 
                 <h1>
-                    ROUND ${Game.match.round}
+                    ROUND ${Game.battle.turn}
                 </h1>
 
                 <hr>
@@ -8228,7 +8208,7 @@ function showArena(){
 
         <section class="menu-card">
 
-            <h1>ROUND ${Game.match.round}</h1>
+            <h1>ROUND ${Game.battle.turn}</h1>
 
             <hr>
 
