@@ -9914,41 +9914,12 @@ function renderBattleSequence(){
 
     };
 
-    document.getElementById(
+   document.getElementById(
     "continueBattle"
 ).onclick=()=>{
 
-    if(
-        Game.battle.sequenceIndex <
-        Game.battle.history.length-1
-    ){
+    continueBattleSequence();
 
-        restoreBattleSequence(
-            Game.battle.history.length-1
-        );
-
-        return;
-
-    }
-
-const currentSequence=
-    Game.battle.history[
-        Game.battle.sequenceIndex
-    ];
-
-if(
-    currentSequence.title===
-    `BATTLE ROUND ${Game.battle.round}`
-){
-
-    showLaunchScreen();
-
-}
-else{
-
-    decideNextBattleStep();
-
-}
 };
 
 }
@@ -9965,9 +9936,9 @@ function continueBattleSequence(){
 
     }
 
-    // History viewer is display-only.
-    // The current battle engine always resumes here.
 
+    // If reviewing an older sequence,
+    // jump back to the live/latest sequence.
     if(
         Game.battle.sequenceIndex <
         Game.battle.history.length-1
@@ -9981,6 +9952,30 @@ function continueBattleSequence(){
 
     }
 
+
+    const currentSequence=
+        Game.battle.history[
+            Game.battle.sequenceIndex
+        ];
+
+
+    // After a round result,
+    // go to the next launch.
+    if(
+        currentSequence &&
+        currentSequence.title.includes(
+            "RESULT"
+        )
+    ){
+
+        showLaunchScreen();
+
+        return;
+
+    }
+
+
+    // Normal battle continuation
     decideNextBattleStep();
 
 }
