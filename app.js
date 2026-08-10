@@ -5062,52 +5062,28 @@ showBattleSimulation(text);
 
 function showBattleSimulation(text){
 
-    const app=document.getElementById("app");
+    // The automatic event was already saved
+    // by resolveAutomaticEvent().
+    // Show the latest history entry instead
+    // of overwriting the history screen.
 
-    app.innerHTML=`
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
 
-    <div class="background"></div>
-
-    <main class="menu">
-
-        <section class="menu-card">
-
-            <h1>
-                ROUND ${Game.battle.turn}
-            </h1>
-
-            ${renderStadium()}
-
-            <div class="battle-decision">
-
-                <strong>
-                    🎙 COMMENTATOR
-                </strong>
-
-                <p>
-                    ${text}
-                </p>
-
-                <p>
-                    <strong>
-                        Situation:
-                    </strong>
-                    ${Game.battle.situation}
-                </p>
-
-            </div>
-
-        </section>
-
-    </main>
-
-    `;
-
-    renderBeys();
+    renderBattleSequence();
 
     setTimeout(()=>{
 
-        decideNextBattleStep();
+        // Only continue if the player is still
+        // viewing the newest event.
+        if(
+            Game.battle.sequenceIndex ===
+            Game.battle.history.length-1
+        ){
+
+            decideNextBattleStep();
+
+        }
 
     },1500);
 
@@ -5142,15 +5118,29 @@ function decideNextBattleStep(){
 
     }
 
+    // Always simulate at least the first
+    // two rounds before allowing a decision.
+    if(Game.battle.turn < 2){
+
+        setTimeout(()=>{
+
+            simulateBattleRound();
+
+        },300);
+
+        return;
+
+    }
+
     const roll=Math.random()*100;
 
-    let decisionChance=25;
+    let decisionChance=20;
 
     if(
         Game.battle.situation==="clash"
     ){
 
-        decisionChance=45;
+        decisionChance=35;
 
     }
 
@@ -5158,7 +5148,7 @@ function decideNextBattleStep(){
         Game.battle.lastEvent==="heavyHit"
     ){
 
-        decisionChance=55;
+        decisionChance=45;
 
     }
 
@@ -5166,11 +5156,11 @@ function decideNextBattleStep(){
         Game.battle.lastEvent==="extremeImpact"
     ){
 
-        decisionChance=70;
+        decisionChance=60;
 
     }
 
-    if(roll<decisionChance){
+    if(roll < decisionChance){
 
         generateDynamicDecision();
 
