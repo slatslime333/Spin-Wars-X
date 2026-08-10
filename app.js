@@ -6269,7 +6269,7 @@ function showBattleSimulation(text){
     Game.battle.sequenceIndex=
         Game.battle.history.length-1;
 
-    renderBattleSequence();
+    ();
 
 }
 
@@ -6558,7 +6558,7 @@ CPU: ${Game.battle.cpuScore} / 7`;
     Game.battle.sequenceIndex=
         Game.battle.history.length-1;
 
-    renderBattleSequence();
+    ();
 
 
     if(matchWinner){
@@ -6637,7 +6637,7 @@ GET READY!`;
     Game.battle.sequenceIndex=
         Game.battle.history.length-1;
 
-    renderBattleSequence();
+    ();
 
 }
 
@@ -9761,7 +9761,7 @@ function restoreBattleSequence(index){
             JSON.stringify(sequence.cpu)
         );
 
-    renderBattleSequence();
+    ();
 
 }
 
@@ -9914,7 +9914,7 @@ function renderBattleSequence(){
 
     };
 
-   document.getElementById(
+  document.getElementById(
     "continueBattle"
 ).onclick=()=>{
 
@@ -9938,7 +9938,7 @@ function continueBattleSequence(){
 
 
     // If viewing an older sequence,
-    // return to the newest visible sequence.
+    // return to the live/latest sequence first.
     if(
         Game.battle.sequenceIndex <
         Game.battle.history.length-1
@@ -9959,12 +9959,12 @@ function continueBattleSequence(){
         ];
 
 
-    // Round result -> next launch
+    // If the last screen was a round result,
+    // start the next launch instead of
+    // simulating another battle.
     if(
         currentSequence &&
-        currentSequence.title.includes(
-            "RESULT"
-        )
+        currentSequence.title.includes("RESULT")
     ){
 
         showLaunchScreen();
@@ -9974,14 +9974,11 @@ function continueBattleSequence(){
     }
 
 
-    // IMPORTANT:
-    // Clear the current sequence position before
-    // simulating the next battle sequence.
-    Game.battle.sequenceIndex=
-        Game.battle.history.length;
-
-
-    simulateBattleRound();
+    // Resume through the main battle engine.
+    // This is important because this path handles:
+    // movement, automatic events, decisions,
+    // grouped commentary, and battle finishes.
+    decideNextBattleStep();
 
 }
 
