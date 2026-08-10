@@ -4579,8 +4579,17 @@ function simulateBattleRound(){
 
     }
 
+//=========================
+// REMEMBER PREVIOUS ZONES
+//=========================
 
-    //=========================
+const playerPreviousZone=
+    Game.battle.player.zone;
+
+const cpuPreviousZone=
+    Game.battle.cpu.zone;
+ 
+//=========================
 // SIMULATE MOVEMENT
 //=========================
 
@@ -4590,18 +4599,13 @@ simulateBattleMovement("cpu");
 
 
 //=========================
-// CHECK DISTANCE AFTER MOVE
+// CHECK BATTLE SITUATION
 //=========================
-
-const distance=Math.abs(
-    player.x-cpu.x
-);
 
 let situation;
 
 if(
-    player.zone===cpu.zone ||
-    distance<60
+    player.zone===cpu.zone
 ){
 
     situation="clash";
@@ -4609,10 +4613,18 @@ if(
 }
 
 else if(
+    player.zone===cpuPreviousZone &&
+    cpu.zone===playerPreviousZone
+){
+
+    situation="crossing";
+
+}
+
+else if(
     STADIUM_MAP[player.zone]
-    .neighbors
-    .includes(cpu.zone) ||
-    distance<140
+    ?.neighbors
+    ?.includes(cpu.zone)
 ){
 
     situation="approach";
@@ -4625,8 +4637,8 @@ else{
 
 }
 
-Game.battle.situation=
-    situation;
+Game.battle.situation=situation;
+
 
 renderBeys();
 
