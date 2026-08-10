@@ -7458,6 +7458,633 @@ function clamp(value){
 
 }
 
+//=========================
+// REAL COMBO SYNERGY
+//=========================
+
+function getComboSynergy(
+    blade,
+    ratchet,
+    bit
+){
+
+    const synergy={
+
+        attack:0,
+        knockback:0,
+        defense:0,
+        mobility:0,
+        balance:0,
+        stamina:0,
+        burst:0
+
+    };
+
+
+    const bladeType=
+        blade.type;
+
+    const bitName=
+        bit.name;
+
+
+    //=========================
+    // FLAT
+    //=========================
+
+    if(bitName==="Flat"){
+
+        synergy.attack+=6;
+        synergy.knockback+=4;
+        synergy.mobility+=8;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=4;
+            synergy.knockback+=3;
+            synergy.stamina-=4;
+            synergy.balance-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina-=12;
+            synergy.defense-=9;
+            synergy.balance-=8;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina-=14;
+            synergy.balance-=9;
+            synergy.defense-=6;
+
+        }
+
+        else{
+
+            synergy.stamina-=9;
+            synergy.balance-=5;
+
+        }
+
+    }
+
+
+    //=========================
+    // LOW FLAT
+    //=========================
+
+    else if(bitName==="Low Flat"){
+
+        synergy.attack+=7;
+        synergy.knockback+=5;
+        synergy.mobility+=9;
+        synergy.burst+=3;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=4;
+            synergy.knockback+=4;
+            synergy.balance+=2;
+            synergy.stamina-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina-=14;
+            synergy.defense-=10;
+            synergy.balance-=8;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina-=15;
+            synergy.balance-=10;
+            synergy.defense-=7;
+
+        }
+
+        else{
+
+            synergy.stamina-=10;
+            synergy.balance-=6;
+
+        }
+
+    }
+
+
+    //=========================
+    // RUSH
+    //=========================
+
+    else if(bitName==="Rush"){
+
+        synergy.attack+=8;
+        synergy.knockback+=6;
+        synergy.mobility+=10;
+        synergy.burst+=4;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=5;
+            synergy.knockback+=3;
+            synergy.stamina-=4;
+            synergy.balance-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina-=13;
+            synergy.defense-=9;
+            synergy.balance-=7;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina-=12;
+            synergy.balance-=8;
+            synergy.defense-=6;
+
+        }
+
+        else{
+
+            synergy.stamina-=8;
+            synergy.balance-=5;
+
+        }
+
+    }
+
+
+    //=========================
+    // LOW RUSH
+    //=========================
+
+    else if(bitName==="Low Rush"){
+
+        synergy.attack+=9;
+        synergy.knockback+=7;
+        synergy.mobility+=11;
+        synergy.burst+=5;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=5;
+            synergy.knockback+=4;
+            synergy.balance+=2;
+            synergy.stamina-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina-=14;
+            synergy.defense-=10;
+            synergy.balance-=8;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina-=13;
+            synergy.balance-=9;
+            synergy.defense-=7;
+
+        }
+
+        else{
+
+            synergy.stamina-=9;
+            synergy.balance-=6;
+
+        }
+
+    }
+
+
+    //=========================
+    // KICK
+    //=========================
+
+    else if(bitName==="Kick"){
+
+        synergy.attack+=5;
+        synergy.knockback+=4;
+        synergy.mobility+=5;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=3;
+            synergy.knockback+=3;
+            synergy.balance-=2;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina-=6;
+            synergy.defense-=4;
+            synergy.balance-=3;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina-=8;
+            synergy.balance-=5;
+
+        }
+
+        else{
+
+            synergy.attack+=2;
+            synergy.balance-=2;
+
+        }
+
+    }
+
+
+    //=========================
+    // LEVEL
+    //=========================
+
+    else if(bitName==="Level"){
+
+        synergy.attack+=4;
+        synergy.mobility+=4;
+        synergy.balance+=4;
+        synergy.stamina+=5;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=4;
+            synergy.stamina+=4;
+            synergy.balance+=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina+=2;
+            synergy.defense-=2;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.attack+=3;
+            synergy.stamina+=2;
+            synergy.balance+=2;
+
+        }
+
+        else{
+
+            synergy.attack+=3;
+            synergy.stamina+=3;
+            synergy.balance+=3;
+
+        }
+
+    }
+
+
+    //=========================
+    // BALL
+    //=========================
+
+    else if(bitName==="Ball"){
+
+        synergy.stamina+=10;
+        synergy.balance+=5;
+        synergy.mobility-=4;
+
+        if(bladeType==="Attack"){
+
+            synergy.stamina+=5;
+            synergy.attack-=7;
+            synergy.knockback-=6;
+            synergy.balance-=5;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina+=6;
+            synergy.defense+=2;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina+=7;
+            synergy.balance+=3;
+
+        }
+
+        else{
+
+            synergy.stamina+=5;
+            synergy.balance+=2;
+
+        }
+
+    }
+
+
+    //=========================
+    // ORB
+    //=========================
+
+    else if(bitName==="Orb"){
+
+        synergy.stamina+=10;
+        synergy.defense+=3;
+        synergy.balance+=2;
+        synergy.mobility-=3;
+
+        if(bladeType==="Attack"){
+
+            synergy.stamina+=5;
+            synergy.attack-=7;
+            synergy.knockback-=6;
+            synergy.balance-=7;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina+=5;
+            synergy.defense+=3;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina+=7;
+            synergy.balance+=2;
+
+        }
+
+        else{
+
+            synergy.stamina+=5;
+            synergy.balance-=1;
+
+        }
+
+    }
+
+
+    //=========================
+    // NEEDLE
+    //=========================
+
+    else if(bitName==="Needle"){
+
+        synergy.stamina+=8;
+        synergy.mobility-=7;
+
+        if(bladeType==="Attack"){
+
+            synergy.stamina+=5;
+            synergy.attack-=6;
+            synergy.knockback-=5;
+            synergy.defense-=8;
+            synergy.balance-=12;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.stamina+=4;
+            synergy.defense-=3;
+            synergy.balance-=5;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina+=5;
+            synergy.defense-=2;
+            synergy.balance-=4;
+
+        }
+
+        else{
+
+            synergy.stamina+=4;
+            synergy.defense-=4;
+            synergy.balance-=6;
+
+        }
+
+    }
+
+
+    //=========================
+    // HEXA
+    //=========================
+
+    else if(bitName==="Hexa"){
+
+        synergy.defense+=8;
+        synergy.balance+=8;
+        synergy.mobility-=4;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack-=4;
+            synergy.knockback-=4;
+            synergy.defense+=2;
+            synergy.balance+=3;
+            synergy.stamina-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.defense+=5;
+            synergy.balance+=4;
+            synergy.stamina+=2;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.defense+=4;
+            synergy.balance+=4;
+            synergy.stamina-=2;
+
+        }
+
+        else{
+
+            synergy.defense+=4;
+            synergy.balance+=4;
+
+        }
+
+    }
+
+
+    //=========================
+    // WEDGE
+    //=========================
+
+    else if(bitName==="Wedge"){
+
+        synergy.defense+=5;
+        synergy.balance+=7;
+        synergy.mobility-=5;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack-=5;
+            synergy.knockback-=5;
+            synergy.stamina+=2;
+            synergy.balance-=2;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.defense+=4;
+            synergy.balance+=3;
+            synergy.stamina+=2;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.stamina+=2;
+            synergy.balance+=3;
+
+        }
+
+        else{
+
+            synergy.balance+=3;
+            synergy.defense+=2;
+
+        }
+
+    }
+
+
+    //=========================
+    // ELEVATE
+    //=========================
+
+    else if(bitName==="Elevate"){
+
+        synergy.attack+=5;
+        synergy.mobility+=6;
+        synergy.stamina+=5;
+        synergy.burst-=8;
+
+        if(bladeType==="Attack"){
+
+            synergy.attack+=4;
+            synergy.knockback+=3;
+            synergy.stamina+=3;
+            synergy.balance-=3;
+
+        }
+
+        else if(bladeType==="Defense"){
+
+            synergy.attack+=2;
+            synergy.mobility+=3;
+            synergy.stamina+=3;
+            synergy.defense-=3;
+
+        }
+
+        else if(bladeType==="Stamina"){
+
+            synergy.attack+=3;
+            synergy.stamina+=5;
+            synergy.balance+=2;
+
+        }
+
+        else{
+
+            synergy.attack+=3;
+            synergy.stamina+=3;
+            synergy.balance+=2;
+
+        }
+
+    }
+
+
+    //=========================
+    // HEIGHT INTERACTION
+    //=========================
+
+    if(
+        ratchet.height==="Low"
+    ){
+
+        if(
+            bitName==="Low Flat" ||
+            bitName==="Low Rush"
+        ){
+
+            synergy.attack+=3;
+            synergy.knockback+=2;
+            synergy.balance+=2;
+
+        }
+
+        else if(
+            bitName==="Ball" ||
+            bitName==="Orb" ||
+            bitName==="Wedge"
+        ){
+
+            synergy.balance+=2;
+            synergy.stamina+=2;
+
+        }
+
+    }
+
+
+    //=========================
+    // CLAMP SYNERGY
+    //=========================
+
+    Object.keys(synergy).forEach(key=>{
+
+        synergy[key]=
+            Math.max(
+                -18,
+                Math.min(
+                    18,
+                    synergy[key]
+                )
+            );
+
+    });
+
+
+    return synergy;
+
+}
+
 function calculateComboStats(blade, ratchet, bit){
 
     const bladeData=getBladeEngine(blade);
@@ -7536,25 +8163,38 @@ stats.balance += Math.round((bit.card.balance - 70) / 10);
 stats.stamina += Math.round((bit.card.stamina - 70) / 10);
 stats.burst += Math.round((bit.card.burst - 70) / 10);
  
-    // Compatibility
+    //=========================
+// COMBO SYNERGY
+//=========================
 
-    const compatibility=getCompatibilityScore(
+const compatibility=
+    getCompatibilityScore(
         blade,
         ratchet,
         bit
     );
 
-    const modifier=Math.round(
-        (compatibility-50)/10
+
+const synergy=
+    getComboSynergy(
+        blade,
+        ratchet,
+        bit
     );
 
-    Object.keys(stats).forEach(key=>{
 
-        stats[key]=clamp(
-            stats[key]+modifier
-        );
+Object.keys(synergy).forEach(key=>{
 
-    });
+    if(
+        stats[key]!==undefined
+    ){
+
+        stats[key]+=
+            synergy[key];
+
+    }
+
+});
 
    const baseOVR = bladeData.card.ovr;
 
