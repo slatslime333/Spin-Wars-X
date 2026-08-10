@@ -6547,9 +6547,9 @@ CPU: ${Game.battle.cpuScore} / 7`;
 
 
     Game.battle.sequenceIndex=
-        Game.battle.history.length-1;
+    Game.battle.history.length-1;
 
-    ();
+renderBattleSequence();
 
 
     if(matchWinner){
@@ -6626,9 +6626,9 @@ GET READY!`;
     );
 
     Game.battle.sequenceIndex=
-        Game.battle.history.length-1;
+    Game.battle.history.length-1;
 
-    ();
+renderBattleSequence();
 
 }
 
