@@ -4384,7 +4384,14 @@ function startBattleLoop(){
 
     Game.battle.maxTurns=
         Math.floor(Math.random()*9)+2;
+ 
+Game.battle.round=1;
 
+Game.battle.playerScore=0;
+Game.battle.cpuScore=0;
+
+Game.battle.pointsToWin=7;
+ 
     simulateBattleRound();
 
 }
@@ -6309,49 +6316,58 @@ function checkBattleFinish(){
     const player=Game.battle.player;
     const cpu=Game.battle.cpu;
 
+
     if(player.spin<=0){
 
         Game.battle.finish="Spin Finish";
+        Game.battle.finishPoints=1;
         Game.battle.winner="cpu";
 
-        resolveBattleEnd();
+        endBattleRound();
 
         return true;
 
     }
+
 
     if(cpu.spin<=0){
 
         Game.battle.finish="Spin Finish";
+        Game.battle.finishPoints=1;
         Game.battle.winner="player";
 
-        resolveBattleEnd();
+        endBattleRound();
 
         return true;
 
     }
+
 
     if(player.balance<=0){
 
         Game.battle.finish="Over Finish";
+        Game.battle.finishPoints=2;
         Game.battle.winner="cpu";
 
-        resolveBattleEnd();
+        endBattleRound();
 
         return true;
 
     }
+
 
     if(cpu.balance<=0){
 
         Game.battle.finish="Over Finish";
+        Game.battle.finishPoints=2;
         Game.battle.winner="player";
 
-        resolveBattleEnd();
+        endBattleRound();
 
         return true;
 
     }
+
 
     return false;
 
@@ -6389,6 +6405,91 @@ function generateBattleSituation(){
     Game.battle.situation=situation;
 
     showBattleMoveScreen();
+
+}
+
+function endBattleRound(){
+
+    if(Game.battle.finished){
+
+        return;
+
+    }
+
+    Game.battle.finished=true;
+
+
+    const winner=
+        Game.battle.winner;
+
+    const points=
+        Game.battle.finishPoints;
+
+
+    if(winner==="player"){
+
+        Game.battle.playerScore+=points;
+
+    }else{
+
+        Game.battle.cpuScore+=points;
+
+    }
+
+
+    const winnerName=
+        winner==="player"
+        ? Game.player.blade.name
+        : Game.cpu.blade.name;
+
+
+    const matchWinner=
+
+        Game.battle.playerScore>=7
+        ||
+        Game.battle.cpuScore>=7;
+
+
+    const text=
+`${Game.battle.finish.toUpperCase()}!
+
+${winnerName} WINS BATTLE ROUND ${Game.battle.round}
+
++${points} POINT${points===1 ? "" : "S"}
+
+YOU: ${Game.battle.playerScore} / 7
+CPU: ${Game.battle.cpuScore} / 7`;
+
+
+    saveBattleSequence(
+        `BATTLE ROUND ${Game.battle.round} RESULT`,
+        text
+    );
+
+
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
+
+    renderBattleSequence();
+
+
+    if(matchWinner){
+
+        Game.battle.matchFinished=true;
+
+        return;
+
+    }
+
+
+    Game.battle.round++;
+
+
+    setTimeout(()=>{
+
+        startBattleRound();
+
+    },1500);
 
 }
 
