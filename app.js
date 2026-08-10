@@ -3068,20 +3068,54 @@ function getBattleCommentary(){
 
 function generateDynamicDecision(){
 
-    const player=Game.battle.player;
-    const cpu=Game.battle.cpu;
+    const player=
+        Game.battle.player;
 
-    const playerZone=player.zone;
-    const cpuZone=cpu.zone;
+    const cpu=
+        Game.battle.cpu;
 
-    const event=Game.battle.lastEvent;
+    const playerZone=
+        player.zone;
+
+    const cpuZone=
+        cpu.zone;
+
+    const event=
+        Game.battle.lastEvent;
+
+    const situation=
+        Game.battle.situation;
+
+    const playerLowSpin=
+        player.spin<35;
+
+    const playerLowBalance=
+        player.balance<35;
+
+    const playerHighMomentum=
+        player.momentum>=65;
+
+    const cpuLowBalance=
+        cpu.balance<40;
+
+    const playerOnRail=[
+        "LeftRail",
+        "RightRail",
+        "XRailExit"
+    ].includes(playerZone);
+
+    const cpuOnRail=[
+        "LeftRail",
+        "RightRail",
+        "XRailExit"
+    ].includes(cpuZone);
 
     let scenario="";
     let choices=[];
 
 
     //=========================
-    // PLAYER NEAR POCKET
+    // PLAYER IN DANGER
     //=========================
 
     if(
@@ -3090,7 +3124,7 @@ function generateDynamicDecision(){
     ){
 
         scenario=
-        "Your Bey has been pushed dangerously close to the pocket. You need to decide whether to escape, stabilize, or fight your way back.";
+        "⚠ DANGER! Your Bey is near the pocket and losing ground.";
 
         choices=[
 
@@ -3100,12 +3134,12 @@ function generateDynamicDecision(){
             },
 
             {
-                name:"Stabilize your Bey",
+                name:"Stabilize immediately",
                 intent:"stabilize"
             },
 
             {
-                name:"Attempt a defensive counter",
+                name:"Counter the pressure",
                 intent:"counter"
             }
 
@@ -3115,16 +3149,106 @@ function generateDynamicDecision(){
 
 
     //=========================
-    // CPU NEAR POCKET
+    // LOW BALANCE
     //=========================
 
-    else if(
-        cpuZone==="LeftPocket" ||
-        cpuZone==="RightPocket"
-    ){
+    else if(playerLowBalance){
 
         scenario=
-        "The CPU Bey is near the pocket. A well-timed attack could push it into serious danger.";
+        "Your Bey is wobbling after the recent exchange.";
+
+        choices=[
+
+            {
+                name:"Stabilize your Bey",
+                intent:"stabilize"
+            },
+
+            {
+                name:"Evade and recover",
+                intent:"evade"
+            },
+
+            {
+                name:"Counter anyway",
+                intent:"counter"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // LOW SPIN
+    //=========================
+
+    else if(playerLowSpin){
+
+        scenario=
+        "Your spin is running low. A reckless clash could end the battle.";
+
+        choices=[
+
+            {
+                name:"Avoid the clash",
+                intent:"evade"
+            },
+
+            {
+                name:"Hold and conserve spin",
+                intent:"hold"
+            },
+
+            {
+                name:"Go for one last attack",
+                intent:"attack"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // PLAYER ON X RAIL
+    //=========================
+
+    else if(playerOnRail){
+
+        scenario=
+        "Your Bey is on the Xtreme Rail with momentum building.";
+
+        choices=[
+
+            {
+                name:"Launch an Xtreme attack",
+                intent:"attack"
+            },
+
+            {
+                name:"Control the exit",
+                intent:"hold"
+            },
+
+            {
+                name:"Escape the rail",
+                intent:"escape"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // CPU ON RAIL / VULNERABLE
+    //=========================
+
+    else if(cpuOnRail || cpuLowBalance){
+
+        scenario=
+        "The CPU is unstable and an opening is developing.";
 
         choices=[
 
@@ -3134,13 +3258,13 @@ function generateDynamicDecision(){
             },
 
             {
-                name:"Attempt a strong counter",
+                name:"Intercept with a counter",
                 intent:"counter"
             },
 
             {
-                name:"Hold position and wait",
-                intent:"hold"
+                name:"Chase and keep pressure",
+                intent:"chase"
             }
 
         ];
@@ -3149,33 +3273,29 @@ function generateDynamicDecision(){
 
 
     //=========================
-    // PLAYER ON X-RAIL AREA
+    // HIGH MOMENTUM
     //=========================
 
-    else if(
-        playerZone==="LeftRail" ||
-        playerZone==="RightRail" ||
-        playerZone==="XRailExit"
-    ){
+    else if(playerHighMomentum){
 
         scenario=
-        "Your Bey is moving through the X-Rail area. The stadium's speed could create a powerful opening, but losing control is dangerous.";
+        "You have strong momentum and can force the next exchange.";
 
         choices=[
 
             {
-                name:"Attempt an X-Dash",
+                name:"Drive into the opponent",
                 intent:"attack"
             },
 
             {
-                name:"Move away from the rail",
-                intent:"escape"
+                name:"Set up a counter",
+                intent:"counter"
             },
 
             {
-                name:"Stabilize before attacking",
-                intent:"stabilize"
+                name:"Keep chasing",
+                intent:"chase"
             }
 
         ];
@@ -3184,10 +3304,11 @@ function generateDynamicDecision(){
 
 
     //=========================
-    // BOTH BEYS CLOSE
+    // CLOSE CLASH
     //=========================
 
     else if(
+        situation==="clash" ||
         playerZone===cpuZone ||
         event==="normalHit" ||
         event==="heavyHit" ||
@@ -3195,7 +3316,7 @@ function generateDynamicDecision(){
     ){
 
         scenario=
-        "The Beys are close and another clash could happen at any moment.";
+        "The Beys are close. Another collision could happen immediately.";
 
         choices=[
 
@@ -3210,7 +3331,7 @@ function generateDynamicDecision(){
             },
 
             {
-                name:"Try to evade",
+                name:"Evade the next hit",
                 intent:"evade"
             }
 
@@ -3220,13 +3341,44 @@ function generateDynamicDecision(){
 
 
     //=========================
-    // BOTH SEPARATED
+    // APPROACHING
+    //=========================
+
+    else if(situation==="approach"){
+
+        scenario=
+        "The Beys are closing in on each other.";
+
+        choices=[
+
+            {
+                name:"Meet the attack",
+                intent:"attack"
+            },
+
+            {
+                name:"Prepare a counter",
+                intent:"counter"
+            },
+
+            {
+                name:"Change your path",
+                intent:"evade"
+            }
+
+        ];
+
+    }
+
+
+    //=========================
+    // SEPARATED
     //=========================
 
     else{
 
         scenario=
-        "The Beys are separated and moving through different areas of the stadium.";
+        "The Beys are separated and searching for the next opening.";
 
         choices=[
 
@@ -3236,7 +3388,7 @@ function generateDynamicDecision(){
             },
 
             {
-                name:"Move toward center",
+                name:"Take the center",
                 intent:"center"
             },
 
@@ -3250,7 +3402,8 @@ function generateDynamicDecision(){
     }
 
 
-    Game.battle.decisionChoices=choices;
+    Game.battle.decisionChoices=
+        choices;
 
     showDynamicDecision(
         scenario,
