@@ -4368,8 +4368,6 @@ function showIntentResult(
 
 };
 
-}
-
 //=========================
 // START BATTLE LOOP
 //=========================
