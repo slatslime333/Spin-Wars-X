@@ -9937,8 +9937,8 @@ function continueBattleSequence(){
     }
 
 
-    // If reviewing an older sequence,
-    // jump back to the live/latest sequence.
+    // If viewing an older sequence,
+    // return to the newest visible sequence.
     if(
         Game.battle.sequenceIndex <
         Game.battle.history.length-1
@@ -9959,8 +9959,7 @@ function continueBattleSequence(){
         ];
 
 
-    // After a round result,
-    // go to the next launch.
+    // Round result -> next launch
     if(
         currentSequence &&
         currentSequence.title.includes(
@@ -9975,8 +9974,14 @@ function continueBattleSequence(){
     }
 
 
-    // Normal battle continuation
-    decideNextBattleStep();
+    // IMPORTANT:
+    // Clear the current sequence position before
+    // simulating the next battle sequence.
+    Game.battle.sequenceIndex=
+        Game.battle.history.length;
+
+
+    simulateBattleRound();
 
 }
 
