@@ -2747,46 +2747,73 @@ function pushBey(bey){
 
     const battle=Game.battle[bey];
 
-    if(!battle) return;
-
-    const currentZone=battle.zone;
-
-    const neighbors=
-        STADIUM_MAP[currentZone].neighbors;
-
-    if(!neighbors || neighbors.length===0){
+    if(!battle){
 
         return;
 
     }
 
-    // Remember the previous zone so the Bey
-    // is less likely to be knocked backward
-    const previousZone=battle.previousZone;
+    const opponentKey=
+        bey==="player"
+        ? "cpu"
+        : "player";
 
-    let possibleZones=
-        neighbors.filter(
-            zone=>zone!==previousZone
+    const opponent=
+        Game.battle[opponentKey];
+
+    const combo=
+        bey==="player"
+        ? calculateComboStats(
+            Game.player.blade,
+            Game.player.ratchet,
+            Game.player.bit
+        )
+        : calculateComboStats(
+            Game.cpu.blade,
+            Game.cpu.ratchet,
+            Game.cpu.bit
         );
 
-    // If every option was filtered out,
-    // allow all connected zones
-    if(possibleZones.length===0){
+    const defense=
+        combo.stats.defense;
 
-        possibleZones=neighbors;
+    const balance=
+        battle.balance;
 
-    }
+    // Stronger momentum and lower defense
+    // create longer knockback.
+    const force=
+        Math.abs(battle.momentum) +
+        Math.max(
+            0,
+            100-defense
+        )*0.5;
 
-    // Heavy momentum = possible extra push
     let pushes=1;
 
-    if(
-        Math.abs(battle.momentum)>80
-    ){
+    if(force>70){
 
         pushes=2;
 
     }
+
+    if(force>120){
+
+        pushes=3;
+
+    }
+
+    // Good defense/balance can resist
+    if(
+        defense>85 &&
+        balance>75 &&
+        pushes>1
+    ){
+
+        pushes--;
+
+    }
+
 
     for(
         let i=0;
@@ -2794,15 +2821,16 @@ function pushBey(bey){
         i++
     ){
 
-        const zone=
+        const currentZone=
             battle.zone;
 
-        const nextNeighbors=
-            STADIUM_MAP[zone].neighbors;
+        const neighbors=
+            STADIUM_MAP[currentZone]
+            ?.neighbors;
 
         if(
-            !nextNeighbors ||
-            nextNeighbors.length===0
+            !neighbors ||
+            neighbors.length===0
         ){
 
             break;
@@ -2810,19 +2838,39 @@ function pushBey(bey){
         }
 
         let destinations=
-            nextNeighbors.filter(
-                nextZone=>
-                nextZone!==battle.previousZone
+            neighbors.filter(
+                zone=>
+                zone!==battle.previousZone
             );
 
-        if(destinations.length===0){
+        if(
+            destinations.length===0
+        ){
 
-            destinations=nextNeighbors;
+            destinations=neighbors;
 
         }
 
-        // Remember where the Bey was
-        battle.previousZone=zone;
+
+        // Prefer movement away from opponent
+        const saferDestinations=
+            destinations.filter(
+                zone=>
+                zone!==opponent.zone
+            );
+
+        if(
+            saferDestinations.length>0
+        ){
+
+            destinations=
+                saferDestinations;
+
+        }
+
+
+        const oldZone=
+            battle.zone;
 
         const destination=
             destinations[
@@ -2836,6 +2884,19 @@ function pushBey(bey){
             bey,
             destination
         );
+
+        battle.previousZone=
+            oldZone;
+
+
+        // Check danger after every push.
+        if(
+            checkStadiumDanger(bey)
+        ){
+
+            return;
+
+        }
 
     }
 
