@@ -6051,7 +6051,18 @@ function generateEventCommentary(event){
 
 function resolveAutomaticEvent(event){
 
+    // Start or continue the current
+    // multi-action battle sequence.
+    if(!Game.battle.sequenceEvents){
+
+        Game.battle.sequenceEvents=[];
+
+    }
+
+
+    // Apply the event normally.
     applyBattleEvent(event);
+
 
     if(checkBattleFinish()){
 
@@ -6093,41 +6104,96 @@ function resolveAutomaticEvent(event){
     else if(Game.battle.situation==="crossing"){
 
         situationText=
-            "Both Beys cross directly through each other's previous line.";
+            "Both Beys cross directly through each other's line.";
 
     }
 
     else if(Game.battle.situation==="approach"){
 
         situationText=
-            "The Beys close in from connected zones.";
+            "The Beys close in and look for an opening.";
 
     }
 
     else{
 
         situationText=
-            "The Beys remain separated, but pressure continues to build.";
+            "The Beys circle and reposition around the stadium.";
 
     }
 
 
-    const text=
-`PLAYER MOVEMENT
-${playerMove}
+    // Save this action inside the current sequence.
+    Game.battle.sequenceEvents.push(
 
-CPU MOVEMENT
-${cpuMove}
+`${playerMove} / ${cpuMove}
 
 ${situationText}
 
-${eventText}`;
+${eventText}`
+
+    );
+
+
+    const importantEvent=
+
+        event==="normalHit" ||
+        event==="heavyHit" ||
+        event==="extremeImpact";
+
+
+    const railEvent=
+
+        event==="xtremeDash" ||
+        event==="railDash" ||
+        event==="railImpact";
+
+
+    // Normal sequences can contain several
+    // actions before stopping.
+    const maxActions=
+        2+
+        Math.floor(
+            Math.random()*3
+        );
+
+
+    const shouldShow=
+
+        importantEvent ||
+        railEvent ||
+        Game.battle.sequenceEvents.length>=
+        maxActions;
+
+
+    if(!shouldShow){
+
+        setTimeout(()=>{
+
+            simulateBattleRound();
+
+        },250);
+
+        return;
+
+    }
+
+
+    // Combine all actions into one screen.
+    const text=
+        Game.battle.sequenceEvents.join(
+            "\n\n━━━━━━━━━━━━━━━━━━\n\n"
+        );
 
 
     saveBattleSequence(
         "BATTLE SEQUENCE",
         text
     );
+
+
+    // Reset for the next sequence.
+    Game.battle.sequenceEvents=[];
 
 
     showBattleSimulation(text);
