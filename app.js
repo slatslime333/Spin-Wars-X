@@ -5228,6 +5228,19 @@ function simulateBattleRound(){
 
     simulateBattleMovement("cpu");
 
+ Game.battle.lastMovement={
+
+    player:{
+        from:playerPreviousZone,
+        to:player.zone
+    },
+
+    cpu:{
+        from:cpuPreviousZone,
+        to:cpu.zone
+    }
+
+};
 
     //=========================
     // RECORD WHAT ACTUALLY HAPPENED
@@ -5333,15 +5346,8 @@ const playerPreviousZone=
 
 const cpuPreviousZone=
     Game.battle.cpu.zone;
- 
-//=========================
-// SIMULATE MOVEMENT
-//=========================
 
-simulateBattleMovement("player");
-
-simulateBattleMovement("cpu");
-
+}
 
 //=========================
 // CHECK BATTLE SITUATION
