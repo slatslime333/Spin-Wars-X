@@ -5124,20 +5124,6 @@ function simulateBattleRound(){
 
     simulateBattleMovement("cpu");
 
- Game.battle.lastMovement={
-
-    player:{
-        from:playerPreviousZone,
-        to:player.zone
-    },
-
-    cpu:{
-        from:cpuPreviousZone,
-        to:cpu.zone
-    }
-
-};
-
     //=========================
     // RECORD WHAT ACTUALLY HAPPENED
     //=========================
