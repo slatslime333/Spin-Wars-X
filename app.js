@@ -4431,6 +4431,155 @@ function startBattleLoop(){
 }
 
 //=========================
+// XTREME RAIL SYSTEM
+//=========================
+
+function isXRailZone(zone){
+
+    return [
+        "XRailTop",
+        "XRailRight",
+        "XRailBottom",
+        "XRailLeft"
+    ].includes(zone);
+
+}
+
+
+function getXRailNextZone(zone){
+
+    const railPath={
+
+        XRailTop:"XRailRight",
+
+        XRailRight:"XExit",
+
+        XRailBottom:"XRailLeft",
+
+        XRailLeft:"XExit"
+
+    };
+
+    return railPath[zone] || null;
+
+}
+
+
+function handleXRailMovement(bey){
+
+    const battle=Game.battle[bey];
+
+    const currentZone=battle.zone;
+
+    if(!isXRailZone(currentZone)){
+
+        return false;
+
+    }
+
+    const nextZone=
+        getXRailNextZone(currentZone);
+
+    if(!nextZone){
+
+        return false;
+
+    }
+
+    // Build speed while riding the rail
+    battle.momentum=
+        Math.min(
+            100,
+            battle.momentum+20
+        );
+
+    // Rail travel costs a little spin
+    battle.spin=
+        Math.max(
+            0,
+            battle.spin-2
+        );
+
+    moveBey(
+        bey,
+        nextZone
+    );
+
+    return true;
+
+}
+
+
+function resolveXRailExit(bey){
+
+    const battle=Game.battle[bey];
+
+    const opponentKey=
+        bey==="player"
+        ? "cpu"
+        : "player";
+
+    const opponent=
+        Game.battle[opponentKey];
+
+    // Leaving the rail gives a speed boost
+    battle.momentum=
+        Math.min(
+            100,
+            battle.momentum+25
+        );
+
+    const neighbors=
+        STADIUM_MAP[
+            battle.zone
+        ]?.neighbors || [];
+
+    // Opponent close enough to intercept
+    const canHit=
+        neighbors.includes(opponent.zone) ||
+        battle.zone===opponent.zone;
+
+    if(!canHit){
+
+        return false;
+
+    }
+
+    const attackChance=
+        35+
+        (
+            battle.momentum*
+            0.45
+        );
+
+    if(
+        Math.random()*100<
+        attackChance
+    ){
+
+        Game.battle.lastEvent=
+            "extremeImpact";
+
+        applyBattleEvent(
+            "extremeImpact"
+        );
+
+        return true;
+
+    }
+
+    Game.battle.lastEvent=
+        "passBy";
+
+    applyBattleEvent(
+        "passBy"
+    );
+
+    return true;
+
+}
+
+//=========================
 // SIMULATE BATTLE MOVEMENT
 //=========================
 
@@ -4461,11 +4610,72 @@ function simulateBattleMovement(bey){
 
     }
 
+
+    //=========================
+    // ALREADY ON XTREME RAIL
+    //=========================
+
+    if(
+        isXRailZone(
+            battle.zone
+        )
+    ){
+
+        handleXRailMovement(bey);
+
+        return;
+
+    }
+
+
+    //=========================
+    // XTREME EXIT
+    //=========================
+
+    if(
+        battle.zone==="XExit"
+    ){
+
+        const hit=
+            resolveXRailExit(bey);
+
+        if(!hit){
+
+            const exitNeighbors=
+                STADIUM_MAP[
+                    battle.zone
+                ]?.neighbors || [];
+
+            if(
+                exitNeighbors.length>0
+            ){
+
+                moveBey(
+                    bey,
+                    exitNeighbors[
+                        Math.floor(
+                            Math.random()*
+                            exitNeighbors.length
+                        )
+                    ]
+                );
+
+            }
+
+        }
+
+        return;
+
+    }
+
+
     const currentZone=
         battle.zone;
 
     const neighbors=
-        STADIUM_MAP[currentZone]?.neighbors;
+        STADIUM_MAP[
+            currentZone
+        ]?.neighbors;
 
     if(
         !neighbors ||
@@ -4475,6 +4685,7 @@ function simulateBattleMovement(bey){
         return;
 
     }
+
 
     const type=
         blade.type || "Balance";
@@ -4492,10 +4703,11 @@ function simulateBattleMovement(bey){
         personality.risk || 50;
 
     const spinPercent=
-        battle.spin / 100;
+        battle.spin/100;
 
     const balancePercent=
-        battle.balance / 100;
+        battle.balance/100;
+
 
     const centerZones=[
         "Center",
@@ -4505,17 +4717,20 @@ function simulateBattleMovement(bey){
         "BottomCenter"
     ];
 
+
     const railZones=[
-        "LeftRail",
-        "RightRail",
-        "XtremeZone",
-        "XRailExit"
+        "XRailTop",
+        "XRailRight",
+        "XRailBottom",
+        "XRailLeft"
     ];
+
 
     const dangerZones=[
         "LeftPocket",
         "RightPocket"
     ];
+
 
     let targetZone=null;
 
@@ -4526,22 +4741,26 @@ function simulateBattleMovement(bey){
 
     if(type==="Attack"){
 
-        // Direct chase
+        // Direct interception
         if(
-            neighbors.includes(opponent.zone) &&
-            Math.random()*100 <
+            neighbors.includes(
+                opponent.zone
+            ) &&
+            Math.random()*100<
             aggression
         ){
 
-            targetZone=opponent.zone;
+            targetZone=
+                opponent.zone;
 
         }
 
-        // Aggressive rail entry
+
+        // Attack types actively seek rail
         if(
             !targetZone &&
-            Math.random()*100 <
-            risk*0.45
+            Math.random()*100<
+            risk*0.65
         ){
 
             const railOption=
@@ -4552,13 +4771,15 @@ function simulateBattleMovement(bey){
 
             if(railOption){
 
-                targetZone=railOption;
+                targetZone=
+                    railOption;
 
             }
 
         }
 
-        // High momentum = stronger chase
+
+        // Chase toward opponent
         if(
             !targetZone &&
             battle.momentum>15
@@ -4569,7 +4790,9 @@ function simulateBattleMovement(bey){
                     zone=>
                     STADIUM_MAP[zone]
                     ?.neighbors
-                    ?.includes(opponent.zone)
+                    ?.includes(
+                        opponent.zone
+                    )
                 );
 
             if(towardOpponent){
@@ -4590,46 +4813,36 @@ function simulateBattleMovement(bey){
 
     else if(type==="Defense"){
 
-        // Only engage when opponent is close
         if(
-            neighbors.includes(opponent.zone) &&
-            Math.random()*100 <
+            neighbors.includes(
+                opponent.zone
+            ) &&
+            Math.random()*100<
             aggression*0.35
         ){
 
-            targetZone=opponent.zone;
+            targetZone=
+                opponent.zone;
 
         }
 
-        // Prefer stable central positions
+
         if(!targetZone){
 
             const stableOption=
                 neighbors.find(
                     zone=>
                     centerZones.includes(zone) &&
-                    !dangerZones.includes(zone)
+                    !dangerZones.includes(zone) &&
+                    !railZones.includes(zone)
                 );
 
             if(stableOption){
 
-                targetZone=stableOption;
+                targetZone=
+                    stableOption;
 
             }
-
-        }
-
-        // High control avoids rails/pockets
-        if(
-            targetZone &&
-            (
-                railZones.includes(targetZone) ||
-                dangerZones.includes(targetZone)
-            ) &&
-            Math.random()*100<control
-        ){
-
-            targetZone=null;
 
         }
 
@@ -4642,7 +4855,6 @@ function simulateBattleMovement(bey){
 
     else if(type==="Stamina"){
 
-        // Avoid direct clashes unless forced
         const safeOptions=
             neighbors.filter(
                 zone=>
@@ -4655,31 +4867,20 @@ function simulateBattleMovement(bey){
             safeOptions.length>0
         ){
 
-            // Prefer controlled center movement
             const centerOption=
                 safeOptions.find(
                     zone=>
                     centerZones.includes(zone)
                 );
 
-            if(
-                centerOption &&
-                Math.random()*100<control
-            ){
-
-                targetZone=centerOption;
-
-            }else{
-
-                targetZone=
-                    safeOptions[
-                        Math.floor(
-                            Math.random()*
-                            safeOptions.length
-                        )
-                    ];
-
-            }
+            targetZone=
+                centerOption ||
+                safeOptions[
+                    Math.floor(
+                        Math.random()*
+                        safeOptions.length
+                    )
+                ];
 
         }
 
@@ -4692,104 +4893,51 @@ function simulateBattleMovement(bey){
 
     else{
 
-        // Low spin = conserve
         if(spinPercent<0.45){
 
-            const safeOption=
+            targetZone=
                 neighbors.find(
                     zone=>
                     zone!==opponent.zone &&
                     !dangerZones.includes(zone)
                 );
 
-            if(safeOption){
-
-                targetZone=safeOption;
-
-            }
-
         }
 
-        // Low balance = stabilize
         else if(balancePercent<0.45){
 
-            const stableOption=
+            targetZone=
                 neighbors.find(
                     zone=>
                     centerZones.includes(zone) &&
                     !railZones.includes(zone)
                 );
 
-            if(stableOption){
-
-                targetZone=stableOption;
-
-            }
-
         }
 
-        // Opponent nearby = adapt and engage
         else if(
-            neighbors.includes(opponent.zone) &&
+            neighbors.includes(
+                opponent.zone
+            ) &&
             Math.random()*100<
             aggression
         ){
 
-            targetZone=opponent.zone;
+            targetZone=
+                opponent.zone;
 
         }
 
-        // Controlled center movement
-        else{
-
-            const centerOption=
-                neighbors.find(
-                    zone=>
-                    centerZones.includes(zone)
-                );
-
-            if(
-                centerOption &&
-                Math.random()*100<control
-            ){
-
-                targetZone=centerOption;
-
-            }
-
-        }
-
-    }
-
-
-    //=========================
-    // HIGH EVASIVENESS
-    //=========================
-
-    if(
-        !targetZone &&
-        battle.evasionBonus>0 &&
-        neighbors.length>1 &&
-        Math.random()*100<
-        battle.evasionBonus*2
-    ){
-
-        const escapeOptions=
-            neighbors.filter(
-                zone=>
-                zone!==opponent.zone &&
-                !dangerZones.includes(zone)
-            );
-
-        if(escapeOptions.length>0){
+        else if(
+            Math.random()*100<
+            risk*0.25
+        ){
 
             targetZone=
-                escapeOptions[
-                    Math.floor(
-                        Math.random()*
-                        escapeOptions.length
-                    )
-                ];
+                neighbors.find(
+                    zone=>
+                    railZones.includes(zone)
+                );
 
         }
 
@@ -4823,10 +4971,6 @@ function simulateBattleMovement(bey){
 
     }
 
-
-    //=========================
-    // MOVE
-    //=========================
 
     moveBey(
         bey,
