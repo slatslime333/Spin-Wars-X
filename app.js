@@ -5073,32 +5073,84 @@ updateBattleBehavior(bey);
     }
 
 
-    //=========================
-    // FALLBACK
-    //=========================
+//=========================
+// PERSISTENT BEHAVIOR
+//=========================
 
-    if(!targetZone){
+if(!targetZone){
 
-        const safeNeighbors=
-            neighbors.filter(
+    if(battle.behavior==="chasing"){
+
+        targetZone=
+            neighbors.find(
                 zone=>
+                zone===opponent.zone
+            );
+
+    }
+
+    else if(battle.behavior==="retreating"){
+
+        targetZone=
+            neighbors.find(
+                zone=>
+                zone!==opponent.zone &&
                 !dangerZones.includes(zone)
             );
 
-        const choices=
-            safeNeighbors.length>0
-            ? safeNeighbors
-            : neighbors;
+    }
+
+    else if(battle.behavior==="circling"){
 
         targetZone=
-            choices[
-                Math.floor(
-                    Math.random()*
-                    choices.length
-                )
-            ];
+            neighbors.find(
+                zone=>
+                zone!==battle.previousZone &&
+                !dangerZones.includes(zone)
+            );
 
     }
+
+    else{
+
+        targetZone=
+            neighbors.find(
+                zone=>
+                centerZones.includes(zone) &&
+                !dangerZones.includes(zone)
+            );
+
+    }
+
+}
+
+
+//=========================
+// RANDOM FALLBACK
+//=========================
+
+if(!targetZone){
+
+    const safeNeighbors=
+        neighbors.filter(
+            zone=>
+            !dangerZones.includes(zone)
+        );
+
+    const choices=
+        safeNeighbors.length>0
+        ? safeNeighbors
+        : neighbors;
+
+    targetZone=
+        choices[
+            Math.floor(
+                Math.random()*
+                choices.length
+            )
+        ];
+
+}
 
 
     moveBey(
