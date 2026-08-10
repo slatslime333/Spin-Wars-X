@@ -6269,6 +6269,12 @@ function showBattleSimulation(text){
     Game.battle.sequenceIndex=
         Game.battle.history.length-1;
 
+    renderBattleSequence();
+
+}
+    Game.battle.sequenceIndex=
+        Game.battle.history.length-1;
+
     ();
 
 }
@@ -9761,7 +9767,7 @@ function restoreBattleSequence(index){
             JSON.stringify(sequence.cpu)
         );
 
-    ();
+    renderBattleSequence();
 
 }
 
