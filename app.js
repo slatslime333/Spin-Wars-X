@@ -6238,25 +6238,40 @@ function decideNextBattleStep(){
 
     }
 
-    if(
-        Game.battle.turn >=
-        Game.battle.maxTurns
-    ){
+   if(
+    Game.battle.turn >=
+    Game.battle.maxTurns
+){
 
-        Game.battle.finish="Time Limit Decision";
-Game.battle.finishPoints=1;
+    // Emergency anti-stall:
+    // drain both Beys so the battle
+    // reaches a real finish.
 
-Game.battle.winner=
-    Game.battle.player.spin >=
-    Game.battle.cpu.spin
-    ? "player"
-    : "cpu";
+    Game.battle.player.spin=
+        Math.max(
+            1,
+            Game.battle.player.spin-12
+        );
 
-endBattleRound();
+    Game.battle.cpu.spin=
+        Math.max(
+            1,
+            Game.battle.cpu.spin-12
+        );
 
-        return;
+    Game.battle.player.balance=
+        Math.max(
+            1,
+            Game.battle.player.balance-6
+        );
 
-    }
+    Game.battle.cpu.balance=
+        Math.max(
+            1,
+            Game.battle.cpu.balance-6
+        );
+
+}
 
     // Always simulate at least the first
     // two rounds before allowing a decision.
@@ -8031,6 +8046,54 @@ function applyLaunchQuality(blader){
             break;
 
     }
+ 
+//=========================
+// LAUNCH ANGLE EFFECTS
+//=========================
+
+target.launch.attackBonus=0;
+target.launch.burstBonus=0;
+target.launch.angleSpinBonus=0;
+target.launch.angleBalanceBonus=0;
+
+
+if(target.launch.angle==="Flat"){
+
+    target.launch.angleBalanceBonus=8;
+
+}
+
+
+else if(
+    target.launch.angle==="Slight Tilt"
+){
+
+    target.launch.angleBalanceBonus=-4;
+
+    if(target.bit.type==="Attack"){
+
+        target.launch.angleSpinBonus=6;
+        target.launch.attackBonus=8;
+        target.launch.burstBonus=5;
+
+    }
+
+}
+
+
+else if(
+    target.launch.angle==="Hard Tilt"
+){
+
+    target.launch.angleBalanceBonus=-12;
+
+    if(target.bit.type==="Attack"){
+
+        target.launch.angleSpinBonus=12;
+        target.launch.attackBonus=15;
+        target.launch.burstBonus=10;
+
+    }
 
 }
 
@@ -9037,8 +9100,24 @@ function renderBattleSequence(){
 
     }
 
+const currentSequence=
+    Game.battle.history[
+        Game.battle.sequenceIndex
+    ];
+
+if(
+    currentSequence.title===
+    `BATTLE ROUND ${Game.battle.round}`
+){
+
+    showLaunchScreen();
+
+}
+else{
+
     decideNextBattleStep();
 
+}
 };
 
 }
