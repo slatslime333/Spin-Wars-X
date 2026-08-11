@@ -173,7 +173,7 @@ const BLADE_ENGINE = {
                 spin:92,
                 burst:78,
                 knockout:34,
-                counter:100
+                counter:99
             }
         },
 
@@ -185,7 +185,7 @@ const BLADE_ENGINE = {
             },
 
             bits:{
-                Hexa:100,
+                Hexa:99,
                 Wedge:95,
                 Ball:98,
                 Orb:88,
@@ -196,7 +196,7 @@ const BLADE_ENGINE = {
                 Rush:40,
                 LowRush:42,
                 Kick:22,
-                Needle:78
+                Needle:76
             }
         },
 
