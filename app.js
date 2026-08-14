@@ -1718,10 +1718,6 @@ function renderStadium(){
 <svg class="stadium-svg" viewBox="0 0 1000 900" role="img" aria-label="BX-10 Xtreme Stadium">
 
 <defs>
-  <filter id="xRailGlow" x="-30%" y="-30%" width="160%" height="160%">
-    <feGaussianBlur stdDeviation="4" result="blur"/>
-    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-  </filter>
   <marker id="playerArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
     <path d="M0,0 L8,4 L0,8 z" fill="#3ba8ff"/>
   </marker>
@@ -1730,46 +1726,37 @@ function renderStadium(){
   </marker>
 </defs>
 
-<!-- BX-10 OUTER STADIUM BOWL -->
-<path d="M500 58
-         C735 58 870 190 872 430
-         C874 585 806 690 690 742
-         L570 786
-         L430 786
-         L310 742
-         C194 690 126 585 128 430
-         C130 190 265 58 500 58 Z"
-      fill="#24282e" stroke="#777d85" stroke-width="8"/>
-
-<!-- CENTRAL BATTLE BOWL -->
-<path d="M500 118
-         C690 118 810 230 812 415
-         C814 535 758 616 670 660
-         C614 688 386 688 330 660
-         C242 616 186 535 188 415
-         C190 230 310 118 500 118 Z"
-      fill="#0f1318" stroke="#525860" stroke-width="10"/>
-
-<!-- CONTINUOUS CLOSED X RAIL -->
-<path class="rail-track"
-      d="M500 88
-         C770 88 850 250 825 430
-         C805 575 700 674 500 674
-         C300 674 195 575 175 430
-         C150 250 230 88 500 88 Z"
-      style="stroke:#28d47f;stroke-width:28;filter:url(#xRailGlow)"/>
-
-<!-- RAIL INNER HIGHLIGHT -->
+<!-- MAIN BX-10 STADIUM BODY -->
 <path d="M500 88
-         C770 88 850 250 825 430
-         C805 575 700 674 500 674
-         C300 674 195 575 175 430
-         C150 250 230 88 500 88 Z"
-      fill="none" stroke="#8af0b8" stroke-width="3" opacity=".8"/>
+         C705 88 842 220 842 430
+         C842 575 770 674 655 720
+         C590 746 410 746 345 720
+         C230 674 158 575 158 430
+         C158 220 295 88 500 88 Z"
+      fill="#171b21" stroke="#858b93" stroke-width="10"/>
+
+<!-- CONTINUOUS CLOSED X RAIL: ONE PHYSICAL LOOP -->
+<path class="rail-track"
+      d="M500 112
+         C700 112 818 235 818 430
+         C818 570 735 665 620 705
+         C550 730 450 730 380 705
+         C265 665 182 570 182 430
+         C182 235 300 112 500 112 Z"
+      style="stroke:#28d47f;stroke-width:24;filter:none"/>
+
+<!-- CLEAN RAIL CORE: NO SHIELD SHADOW -->
+<path d="M500 112
+         C700 112 818 235 818 430
+         C818 570 735 665 620 705
+         C550 730 450 730 380 705
+         C265 665 182 570 182 430
+         C182 235 300 112 500 112 Z"
+      fill="none" stroke="#8af0b8" stroke-width="3" opacity=".65"/>
 
 <!-- SINGLE TOP X EXIT -->
-<path class="x-exit-gate" d="M500 78 L542 135 L458 135 Z"/>
-<path d="M482 125 L500 151 L518 125" fill="none" stroke="#fff5a6" stroke-width="4" stroke-linecap="round"/>
+<path class="x-exit-gate" d="M458 105 L542 105 L500 162 Z"/>
+<path d="M476 116 L500 150 L524 116" fill="none" stroke="#fff5a6" stroke-width="4" stroke-linecap="round"/>
 <text x="500" y="48" text-anchor="middle" fill="#ffd43b" font-size="15" font-weight="900" letter-spacing="2">X EXIT</text>
 
 <!-- BOTTOM FINISH OPENINGS -->
@@ -5519,10 +5506,9 @@ function getStadiumPreview(){
     return `
     <div style="text-align:center;margin:15px 0;">
         <svg viewBox="0 0 1000 900" style="width:100%;max-width:430px;height:auto;">
-            <path d="M500 58 C735 58 870 190 872 430 C874 585 806 690 690 742 L570 786 L430 786 L310 742 C194 690 126 585 128 430 C130 190 265 58 500 58Z" fill="#24282e" stroke="#777d85" stroke-width="8"/>
-            <path d="M500 118 C690 118 810 230 812 415 C814 535 758 616 670 660 C614 688 386 688 330 660 C242 616 186 535 188 415 C190 230 310 118 500 118Z" fill="#0f1318" stroke="#525860" stroke-width="10"/>
-            <path d="M500 88 C770 88 850 250 825 430 C805 575 700 674 500 674 C300 674 195 575 175 430 C150 250 230 88 500 88Z" fill="none" stroke="#28d47f" stroke-width="28" stroke-linecap="round"/>
-            <path d="M500 78 L542 135 L458 135Z" fill="#ffd43b" stroke="#fff0a5" stroke-width="3"/>
+            <path d="M500 88 C705 88 842 220 842 430 C842 575 770 674 655 720 C590 746 410 746 345 720 C230 674 158 575 158 430 C158 220 295 88 500 88Z" fill="#171b21" stroke="#858b93" stroke-width="10"/>
+            <path d="M500 112 C700 112 818 235 818 430 C818 570 735 665 620 705 C550 730 450 730 380 705 C265 665 182 570 182 430 C182 235 300 112 500 112Z" fill="none" stroke="#28d47f" stroke-width="24" stroke-linecap="round"/>
+            <path d="M458 105 L542 105 L500 162Z" fill="#ffd43b" stroke="#fff0a5" stroke-width="3"/>
             <ellipse cx="250" cy="735" rx="70" ry="38" fill="#08090b" stroke="#70757c" stroke-width="4"/>
             <rect x="405" y="718" width="190" height="52" rx="24" fill="#cf2429"/>
             <ellipse cx="750" cy="735" rx="70" ry="38" fill="#08090b" stroke="#70757c" stroke-width="4"/>
