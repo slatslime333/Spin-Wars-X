@@ -3771,6 +3771,33 @@ function showLetItRip(){
  battle progression are used.
 ========================================================*/
 
+const NEW_STADIUM_GEOMETRY = {
+    // Normalized top-down coordinates: x/y are percentages of the stadium.
+    // Screen orientation is fixed: players launch from LEFT and RIGHT.
+    battleZone: { cx:50, cy:45, rx:34, ry:36 },
+
+    // X Rail is a closed loop with a dedicated top exit trajectory.
+    xRail: {
+        loop: "closed",
+        path: "upper-inner-loop",
+        exit: { x:50, y:18, direction:"toward-center" }
+    },
+
+    bottomRail: {
+        y:82,
+        left: { x1:0, x2:35 },
+        center: { x1:35, x2:65 },
+        right: { x1:65, x2:100 }
+    },
+
+    pockets: {
+        left:  { x:20, y:91, w:24, h:9 },
+        right: { x:80, y:91, w:24, h:9 }
+    },
+
+    xtremeZone: { x:50, y:91, w:22, h:9 }
+};
+
 const NEW_BATTLE = {
     raf:null,
     last:0,
@@ -3848,9 +3875,9 @@ function renderNewBattle(){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
     const px=50+p.x*43;
-    const py=50+p.y*43;
+    const py=45+p.y*39;
     const cx=50+c.x*43;
-    const cy=50+c.y*43;
+    const cy=45+c.y*39;
 
     app.innerHTML=`
       <div class="background"></div>
@@ -3862,28 +3889,113 @@ function renderNewBattle(){
           </div>
 
           <div id="newStadium" style="
-            position:relative;width:min(86vw,700px);aspect-ratio:1/0.9;
-            margin:14px auto;border-radius:50%;overflow:hidden;
-            background:radial-gradient(circle,#26313b 0 48%,#182027 49% 70%,#0d1216 71%);
-            border:10px solid #4a545d;
-            box-shadow:inset 0 0 0 3px #10161b,0 8px 30px rgba(0,0,0,.45);">
+            position:relative;width:min(86vw,700px);aspect-ratio:1/1;
+            margin:14px auto;overflow:hidden;border-radius:24px;
+            background:#11181e;
+            border:9px solid #515b63;
+            box-shadow:inset 0 0 0 3px #0b1014,0 8px 30px rgba(0,0,0,.45);">
 
-            <div style="position:absolute;left:18%;right:18%;top:12%;bottom:12%;
-              border:3px solid rgba(70,210,110,.65);border-radius:50%;"></div>
+            <!-- Main bowl / Battle Zone -->
+            <div style="
+              position:absolute;left:10%;right:10%;top:7%;bottom:10%;
+              border-radius:50%;
+              background:radial-gradient(circle at 50% 43%,#2d3a44 0 42%,#25313a 43% 68%,#1b242b 69% 100%);
+              box-shadow:inset 0 8px 18px rgba(0,0,0,.28);">
+            </div>
 
-            <div style="position:absolute;left:50%;bottom:1%;transform:translateX(-50%);
-              width:25%;height:12%;border-radius:45% 45% 0 0;
-              background:#111820;border:2px solid #68737b;"></div>
+            <!-- X RAIL: closed loop around the battle surface.
+                 The top exit is deliberately visible as a shaped gap/spur. -->
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none"
+                 style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+              <path d="
+                M 16 45
+                C 14 26, 27 12, 50 11
+                C 73 12, 86 26, 84 45
+                C 82 66, 68 78, 50 79
+                C 32 78, 18 66, 16 45
+                Z"
+                fill="none"
+                stroke="rgba(42,190,91,.95)"
+                stroke-width="1.35"
+                vector-effect="non-scaling-stroke"/>
 
+              <!-- X Rail exit trajectory at the TOP -->
+              <path d="
+                M 45 12
+                C 47 8, 48 5.5, 50 3.5
+                C 52 5.5, 53 8, 55 12"
+                fill="none"
+                stroke="rgba(42,190,91,.95)"
+                stroke-width="1.35"
+                vector-effect="non-scaling-stroke"/>
+
+              <!-- directional chevrons show the rail flow toward exit -->
+              <path d="M 46.5 9 L 50 3.5 L 53.5 9"
+                fill="none"
+                stroke="rgba(42,190,91,.95)"
+                stroke-width="1.1"
+                vector-effect="non-scaling-stroke"/>
+            </svg>
+
+            <!-- X Rail exit label -->
+            <div style="
+              position:absolute;left:50%;top:2%;transform:translateX(-50%);
+              padding:3px 7px;border-radius:5px;
+              background:rgba(10,18,13,.82);color:#59d783;
+              font-size:9px;font-weight:700;letter-spacing:.5px;">
+              X RAIL EXIT
+            </div>
+
+            <!-- Bottom rail separating the battle surface from finish zones -->
+            <div style="
+              position:absolute;left:7%;right:7%;bottom:16%;
+              height:8px;border-radius:8px;
+              background:#6a7379;
+              box-shadow:0 -2px 0 #30383e,0 2px 0 #10161a;">
+            </div>
+
+            <!-- Left pocket -->
+            <div style="
+              position:absolute;left:6%;bottom:1%;width:25%;height:14%;
+              border-radius:0 0 16px 16px;
+              background:#0b1116;border:2px solid #626c73;
+              box-shadow:inset 0 7px 14px rgba(0,0,0,.55);">
+              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
+                font-size:8px;opacity:.7;">POCKET</span>
+            </div>
+
+            <!-- Xtreme Zone -->
+            <div style="
+              position:absolute;left:37.5%;bottom:1%;width:25%;height:14%;
+              border-radius:0 0 16px 16px;
+              background:#182029;border:2px solid #778188;
+              box-shadow:inset 0 7px 14px rgba(0,0,0,.45);">
+              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
+                font-size:8px;opacity:.8;">XTREME ZONE</span>
+            </div>
+
+            <!-- Right pocket -->
+            <div style="
+              position:absolute;right:6%;bottom:1%;width:25%;height:14%;
+              border-radius:0 0 16px 16px;
+              background:#0b1116;border:2px solid #626c73;
+              box-shadow:inset 0 7px 14px rgba(0,0,0,.55);">
+              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
+                font-size:8px;opacity:.7;">POCKET</span>
+            </div>
+
+            <!-- Beys -->
             <div id="newPlayerBey" style="
               position:absolute;left:${px}%;top:${py}%;width:38px;height:38px;
               transform:translate(-50%,-50%);border-radius:50%;
-              background:#d8a82c;border:4px solid #fff;box-shadow:0 0 14px rgba(255,210,70,.55);"></div>
+              background:#d8a82c;border:4px solid #fff;
+              box-shadow:0 0 14px rgba(255,210,70,.55);z-index:5;"></div>
 
             <div id="newCpuBey" style="
               position:absolute;left:${cx}%;top:${cy}%;width:38px;height:38px;
               transform:translate(-50%,-50%);border-radius:50%;
-              background:#aeb7c0;border:4px solid #fff;box-shadow:0 0 14px rgba(220,230,240,.45);"></div>
+              background:#aeb7c0;border:4px solid #fff;
+              box-shadow:0 0 14px rgba(220,230,240,.45);z-index:5;"></div>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
@@ -3972,7 +4084,8 @@ function newPhysicsStep(s,dt){
     const nvy=s.vx*Math.sin(turn)+s.vy*Math.cos(turn);
     s.vx=nvx; s.vy=nvy;
 
-    // Continuous stadium boundary. This is not zone movement.
+    // Temporary bowl boundary. Stadium geometry is now defined separately;
+    // rail/pocket/XTREME interactions will be wired into physics next.
     const r=Math.hypot(s.x,s.y);
     if(r>0.88){
         const nx=s.x/r, ny=s.y/r;
