@@ -3813,67 +3813,313 @@ function newBattleClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
 }
 
-function newBattleLaunchState(side){
-    const combo=Game[side];
-    const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
 
-    const startX=side==="player"?-0.55:0.55;
-    const direction=side==="player"?1:-1;
+function launchQualityRoll(){
+    // Original safe-roll distribution retained from the old launch system.
+    const roll=Math.random()*100;
+    if(roll<5) return "Horrible";
+    if(roll<12) return "Bad";
+    if(roll<45) return "Okay";
+    if(roll<90) return "Good";
+    return "Perfect";
+}
+
+function launchRiskQualityRoll(){
+    // Risking the launch gives a meaningfully different distribution.
+    const roll=Math.random()*100;
+    if(roll<5) return "Horrible";
+    if(roll<15) return "Bad";
+    if(roll<40) return "Okay";
+    if(roll<75) return "Good";
+    return "Perfect";
+}
+
+function launchQualityModifier(quality){
+    return {
+        Horrible:{speed:.70,accuracy:.42,rpm:.86,stability:.72},
+        Bad:{speed:.84,accuracy:.68,rpm:.94,stability:.86},
+        Okay:{speed:1.00,accuracy:.82,rpm:1.00,stability:1.00},
+        Good:{speed:1.07,accuracy:.94,rpm:1.03,stability:1.06},
+        Perfect:{speed:1.13,accuracy:1.00,rpm:1.06,stability:1.11}
+    }[quality] || {speed:1,accuracy:.82,rpm:1,stability:1};
+}
+
+function launchAngleModifier(angle,bit){
+    const movement=bit.movement||60;
+    const control=bit.control||70;
+
+    if(angle==="Flat"){
+        return {
+            speed:movement>=80?1.10:1.02,
+            control:movement>=80?.88:1.02,
+            drain:movement>=80?1.08:.98,
+            tilt:0
+        };
+    }
+
+    if(angle==="Slight Tilt"){
+        return {
+            speed:movement>=80?.90:.98,
+            control:1.08 + control/1000,
+            drain:.91,
+            tilt:4
+        };
+    }
 
     return {
-        side,
-        x:startX,
-        y:0,
-        vx:direction*(0.016 + (stats.mobility||70)*0.000035),
-        vy:(side==="player"?-1:1)*0.0015,
-        rpm:1,
-        stability:newBattleClamp((stats.balance||70)/100,0.45,1),
-        radius:0.055,
-        hitFlash:0,
-        stats,
-        blade:combo.blade,
-        bit:combo.bit
+        speed:movement>=80?.78:.90,
+        control:1.15 + control/900,
+        drain:.84,
+        tilt:8
     };
 }
 
-function startNewBattle(){
-    cancelAnimationFrame(NEW_BATTLE.raf);
-    Game.screen="battle";
-    Game.battle.engineMode="new_physics";
-    Game.battle.phase="Battle";
+function chooseCPUOpeningLaunch(){
+    const side=Game.cpu;
+    const combo=calculateComboStats(side.blade,side.ratchet,side.bit);
+    const type=side.blade?.type||"Balance";
+    const personality=side.blade?.personality||{};
+    const risk=personality.risk??50;
+    const aggression=personality.aggression??50;
+
+    const playerType=Game.player.blade?.type||"Balance";
+
+    // Matchup-aware, but imperfect. The CPU chooses an intention; execution
+    // quality is still resolved separately by the physical launch system.
+    let weights={Center:1,"X-Rail":1,"Direct Clash":1,"Drop Launch":1};
+
+    if(type==="Attack"){
+        weights["Direct Clash"]+=playerType==="Stamina"?3:1.4;
+        weights["X-Rail"]+=combo.knockback>=82?1.8:1;
+        weights.Center+=playerType==="Attack"?1.4:.6;
+        weights["Drop Launch"]+=playerType==="Defense"?1.3:.7;
+    }else if(type==="Stamina"){
+        weights.Center+=3;
+        weights["Drop Launch"]+=1.2;
+        weights["X-Rail"]+=.5;
+        weights["Direct Clash"]+=playerType==="Attack"?.7:0;
+    }else if(type==="Defense"){
+        weights.Center+=2.4;
+        weights["Drop Launch"]+=1.5;
+        weights["Direct Clash"]+=risk>65?1.1:.5;
+        weights["X-Rail"]+=.6;
+    }else{
+        weights.Center+=1.6;
+        weights["X-Rail"]+=1;
+        weights["Direct Clash"]+=aggression>70?1.4:.7;
+        weights["Drop Launch"]+=1;
+    }
+
+    // Personality nudges the decision rather than overriding the matchup.
+    weights["Direct Clash"]+=Math.max(0,aggression-60)/35;
+    weights["X-Rail"]+=Math.max(0,risk-55)/45;
+
+    const options=Object.keys(weights);
+    const total=options.reduce((sum,k)=>sum+Math.max(.1,weights[k]),0);
+    let roll=Math.random()*total;
+    let technique=options[0];
+    for(const option of options){
+        roll-=Math.max(.1,weights[option]);
+        if(roll<=0){ technique=option; break; }
+    }
+
+    const bit=getBitPhysics("cpu");
+    let angle;
+    if(bit.movement>=80){
+        angle=Math.random() < (risk>70?.65:.50) ? "Flat" :
+               Math.random() < .72 ? "Slight Tilt" : "Hard Tilt";
+    }else if(bit.control>=90){
+        angle=Math.random() < .65 ? "Flat" : "Slight Tilt";
+    }else{
+        angle=Math.random() < .45 ? "Flat" :
+               Math.random() < .80 ? "Slight Tilt" : "Hard Tilt";
+    }
+
+    side.launch.technique=technique;
+    side.launch.angle=angle;
+    side.launch.quality=launchQualityRoll();
+    side.launch.gamble=false;
+}
+
+function newBattlePreviewState(side){
+    const combo=Game[side];
+    const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+    return {
+        side,
+        x:side==="player"?-.72:.72,
+        y:0,
+        vx:0,
+        vy:0,
+        rpm:1,
+        stability:newBattleClamp((stats.balance||70)/100,.45,1),
+        tilt:0,
+        momentum:0,
+        radius:.055,
+        hitFlash:0,
+        stats,
+        blade:combo.blade,
+        bit:combo.bit,
+        launchComplete:false
+    };
+}
+
+function getLaunchTarget(side,technique){
+    if(technique==="Center") return {x:0,y:0};
+    if(technique==="Direct Clash"){
+        return side==="player"?{x:.55,y:0}:{x:-.55,y:0};
+    }
+
+    if(technique==="X-Rail"){
+        // Player-side dash catches the lower rail; CPU-side dash catches the
+        // right-side rail, which is much closer to the top exit.
+        return side==="player"
+            ? {x:-.43,y:.68}
+            : {x:.78,y:.05};
+    }
+
+    // Drop Launch: aim for the X Exit, stall there, then fall back inward.
+    return {x:0,y:-.55};
+}
+
+function makeLaunchState(side){
+    const combo=Game[side];
+    const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+    const bit=getBitPhysics(side);
+    const quality=launchQualityModifier(combo.launch?.quality);
+    const angle=launchAngleModifier(combo.launch?.angle,bit);
+    const technique=combo.launch?.technique||"Center";
+    const target=getLaunchTarget(side,technique);
+
+    const startX=side==="player"?-.76:.76;
+    const startY=0;
+    const dx=target.x-startX;
+    const dy=target.y-startY;
+    const distance=Math.max(.001,Math.hypot(dx,dy));
+
+    // Launch quality changes how closely the release follows the chosen line.
+    // Poor launches deviate; excellent launches track the intended trajectory.
+    const deviation=(1-quality.accuracy)*.18;
+    const jitterX=(Math.random()-.5)*deviation;
+    const jitterY=(Math.random()-.5)*deviation;
+    const tx=target.x+jitterX;
+    const ty=target.y+jitterY;
+    const vxBase=(tx-startX)/Math.max(.35,distance)*.020;
+    const vyBase=(ty-startY)/Math.max(.35,distance)*.020;
+
+    const inward=side==="player"?1:-1;
+    const techniqueSpeed={
+        Center:1.00,
+        "X-Rail":.96,
+        "Direct Clash":1.12,
+        "Drop Launch":.88
+    }[technique]||1;
+
+    const launchSpeed=techniqueSpeed*quality.speed*angle.speed;
+    const initialRPM=newBattleClamp(
+        (0.92 + (stats.stamina||70)/1000)*quality.rpm,
+        .65,1
+    );
+
+    let initialTilt=angle.tilt;
+    // Tilt is a physical angle, not a generic attack/defense switch.
+    // Higher Ratchets amplify the same selected launch angle.
+    const ratchetHeight=parseInt(String(combo.ratchet?.name||"").match(/-(\d+)/)?.[1]||60,10);
+    if(initialTilt>0) initialTilt += Math.max(0,(ratchetHeight-60)/10)*.7;
+
+    const state={
+        side,
+        x:startX,
+        y:startY,
+        vx:vxBase*launchSpeed,
+        vy:vyBase*launchSpeed,
+        rpm:initialRPM,
+        stability:newBattleClamp(
+            ((stats.balance||70)/100)*quality.stability,
+            .25,.99
+        ),
+        tilt:initialTilt,
+        momentum:0,
+        radius:.055,
+        hitFlash:0,
+        stats,
+        blade:combo.blade,
+        bit,
+        launchComplete:false,
+        launchTechnique:technique,
+        launchAngle:combo.launch?.angle||"Flat",
+        launchQuality:combo.launch?.quality||"Okay",
+        launchTarget:target,
+        launchStartedAt:performance.now(),
+        dropPhase:technique==="Drop Launch" ? "approach" : null,
+        railIntent:technique==="X-Rail",
+        launchSpinDirection:combo.blade?.spin||"Right",
+        inwardDirection:inward
+    };
+
+    return state;
+}
+
+function beginNewPhysicalLaunch(){
+    chooseCPUOpeningLaunch();
+
+    // The player has already selected angle, technique and quality.
+    Game.battle.phase="Launch";
     Game.battle.finished=false;
-    Game.battle.matchStarted=true;
-    Game.battle.matchFinished=false;
-    Game.battle.exchange=0;
 
-    // The player never went through the deleted launch screens, so the
-    // physical launch starts with a neutral/default launch condition.
-    Game.player.launch=Game.player.launch||{};
-    Game.player.launch.angle="Flat";
-    Game.player.launch.technique="Center";
-    Game.player.launch.quality="Good";
-
-    Game.cpu.launch=Game.cpu.launch||{};
-    Game.cpu.launch.angle="Flat";
-    Game.cpu.launch.technique="Center";
-    Game.cpu.launch.quality="Good";
-
-    NEW_BATTLE.player=newBattleLaunchState("player");
-    NEW_BATTLE.cpu=newBattleLaunchState("cpu");
+    NEW_BATTLE.player=makeLaunchState("player");
+    NEW_BATTLE.cpu=makeLaunchState("cpu");
     NEW_BATTLE.elapsed=0;
     NEW_BATTLE.active=true;
     NEW_BATTLE.last=performance.now();
 
-    renderNewBattle();
+    renderNewBattle("battle");
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
 
-function renderNewBattle(){
+function startNewBattle(){
+    cancelAnimationFrame(NEW_BATTLE.raf);
+
+    Game.screen="battle";
+    Game.battle.engineMode="new_physics";
+    Game.battle.phase="Launch Setup";
+    Game.battle.finished=false;
+    Game.battle.matchStarted=true;
+    Game.battle.matchFinished=false;
+    Game.battle.exchange=0;
+    Game.battle.newLaunchStage="tilt";
+
+    Game.player.launch=Game.player.launch||{};
+    Game.player.launch.angle=null;
+    Game.player.launch.technique=null;
+    Game.player.launch.quality=null;
+    Game.player.launch.gamble=false;
+
+    Game.cpu.launch=Game.cpu.launch||{};
+    Game.cpu.launch.angle=null;
+    Game.cpu.launch.technique=null;
+    Game.cpu.launch.quality=null;
+    Game.cpu.launch.gamble=false;
+
+    NEW_BATTLE.player=newBattlePreviewState("player");
+    NEW_BATTLE.cpu=newBattlePreviewState("cpu");
+    NEW_BATTLE.elapsed=0;
+    NEW_BATTLE.active=false;
+
+    renderNewBattle("launch");
+    wireNewLaunchControls();
+}
+
+function renderNewBattle(mode="battle"){
     const app=document.getElementById("app");
     if(!app) return;
 
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
+    const launchSetup=mode==="launch";
+    const launchStage=Game.battle.newLaunchStage||"tilt";
+    const selectedAngle=Game.player.launch?.angle;
+    const selectedTechnique=Game.player.launch?.technique;
+    const predictedQuality=Game.player.launch?.quality;
 
     // The game view is deliberately a top-down BX-10-style stadium:
     // square/octagonal outer body, circular battle bowl, closed X Rail,
@@ -3949,15 +4195,15 @@ function renderNewBattle(){
               <path d="M73 82 L90 82 L90 94"
                     fill="none" stroke="#eceeef" stroke-width="1"/>
 
-              <!-- X RAIL: one continuous closed loop with the real exit gap
-                   at the TOP. The loop follows the bowl perimeter, not a
-                   free-floating circle. -->
+              <!-- X RAIL: continuous green track around the bowl.
+                   The top section is shaped into the X exit rather than
+                   leaving awkward open/white gaps. -->
               <path d="
                 M 14.7 44.5
                 C 14.0 31.0 20.8 18.9 32.8 13.3
                 C 37.2 11.2 41.6 11.8 44.8 14.2
-                C 47.0 15.9 48.0 17.1 50.0 17.1
-                C 52.0 17.1 53.0 15.9 55.2 14.2
+                L 50 22.5
+                L 55.2 14.2
                 C 58.4 11.8 62.8 11.2 67.2 13.3
                 C 79.2 18.9 86.0 31.0 85.3 44.5
                 C 84.4 63.0 70.4 78.8 50.0 79.7
@@ -3965,27 +4211,28 @@ function renderNewBattle(){
                 fill="none" stroke="#18a84a" stroke-width="2.1"
                 stroke-linecap="round" stroke-linejoin="round"/>
 
-              <!-- X RAIL EXIT: two rail edges leave the loop and point
-                   DOWNWARD, into the Battle Zone. -->
-              <path d="M 44.8 14.2 C 45.8 18.8 47.7 21.0 50 25.0"
-                    fill="none" stroke="#18a84a" stroke-width="2.1"
-                    stroke-linecap="round"/>
-              <path d="M 55.2 14.2 C 54.2 18.8 52.3 21.0 50 25.0"
-                    fill="none" stroke="#18a84a" stroke-width="2.1"
-                    stroke-linecap="round"/>
+              <!-- FILLED X EXIT: solid green exit body removes the
+                   distracting white openings between the rail edges. -->
+              <path d="
+                M 44.8 14.2
+                L 50 22.5
+                L 55.2 14.2
+                L 52.3 24.5
+                L 50 28.0
+                L 47.7 24.5
+                Z"
+                fill="#18a84a"
+                stroke="#18a84a"
+                stroke-width="1.2"
+                stroke-linejoin="round"/>
 
-              <!-- Exit mouth / launch lane into center -->
-              <path d="M 47.8 24.0 L 50 27.5 L 52.2 24.0"
-                    fill="none" stroke="#18a84a" stroke-width="1.3"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-
-              <!-- Small X-Rail flow marks on the loop -->
-              <path d="M 24 23 L 27 20.5 L 26 25"
-                    fill="none" stroke="#18a84a" stroke-width="1.2"
-                    stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M 76 23 L 73 20.5 L 74 25"
-                    fill="none" stroke="#18a84a" stroke-width="1.2"
-                    stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- X EXIT LANE: the actual path back into the bowl. -->
+              <path d="M 47.7 24.5 L 50 28.0 L 52.3 24.5"
+                    fill="none"
+                    stroke="#18a84a"
+                    stroke-width="2.1"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
 
               <!-- Beys -->
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.35"
@@ -4008,12 +4255,98 @@ function renderNewBattle(){
             </div>
           </div>
 
+
+          ${launchSetup ? `
+          <div id="newLaunchControls" style="margin-top:10px;padding:12px;border-radius:10px;background:rgba(0,0,0,.18);">
+            <div style="font-size:12px;opacity:.7;margin-bottom:6px;">LAUNCH SETUP · ${launchStage==="tilt"?"1 / 3":launchStage==="technique"?"2 / 3":"3 / 3"}</div>
+
+            ${launchStage==="tilt" ? `
+              <strong>CHOOSE TILT</strong>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;">
+                <button class="menu-btn" data-new-launch-angle="Flat">FLAT</button>
+                <button class="menu-btn" data-new-launch-angle="Slight Tilt">SLIGHT TILT</button>
+                <button class="menu-btn" data-new-launch-angle="Hard Tilt">HARD TILT</button>
+              </div>
+              <div style="font-size:10px;opacity:.62;margin-top:7px;">
+                Tilt changes movement, control, attack angle, stability and burst exposure.
+              </div>
+            ` : launchStage==="technique" ? `
+              <strong>CHOOSE LAUNCH</strong>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;">
+                <button class="menu-btn" data-new-launch-technique="Center">CENTER</button>
+                <button class="menu-btn" data-new-launch-technique="X-Rail">X RAIL</button>
+                <button class="menu-btn" data-new-launch-technique="Direct Clash">DIRECT CLASH</button>
+                <button class="menu-btn" data-new-launch-technique="Drop Launch">DROP LAUNCH</button>
+              </div>
+              <div style="font-size:10px;opacity:.62;margin-top:7px;">
+                The technique sets a physical launch trajectory. It does not guarantee the result.
+              </div>
+            ` : `
+              <strong>LAUNCH EXECUTION</strong>
+              <div style="margin:8px 0;padding:9px;border-radius:8px;background:rgba(255,255,255,.05);">
+                <div>${selectedAngle} · ${selectedTechnique}</div>
+                <div style="font-size:22px;font-weight:800;margin-top:3px;">${predictedQuality}</div>
+                <div style="font-size:10px;opacity:.62;">Predicted release quality</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
+                <button class="menu-btn" id="newLaunchKeep">QUALITY</button>
+                <button class="menu-btn gold" id="newLaunchRisk">RISK</button>
+              </div>
+              <div style="font-size:10px;opacity:.62;margin-top:7px;">
+                QUALITY keeps the predetermined roll. RISK throws it back for a new result.
+              </div>
+            `}
+          </div>` : `
           <div id="newCommentary" style="margin-top:8px;padding:10px;background:rgba(0,0,0,.22);border-radius:8px;font-size:13px;">
             Both Beyblades launch into the stadium.
-          </div>
+          </div>`}
         </section>
       </main>`;
 }
+
+function wireNewLaunchControls(){
+    const angleButtons=document.querySelectorAll("[data-new-launch-angle]");
+    angleButtons.forEach(btn=>{
+        btn.onclick=()=>{
+            Game.player.launch.angle=btn.getAttribute("data-new-launch-angle");
+            Game.battle.newLaunchStage="technique";
+            renderNewBattle("launch");
+            wireNewLaunchControls();
+        };
+    });
+
+    const techniqueButtons=document.querySelectorAll("[data-new-launch-technique]");
+    techniqueButtons.forEach(btn=>{
+        btn.onclick=()=>{
+            Game.player.launch.technique=btn.getAttribute("data-new-launch-technique");
+            // Predetermined quality is rolled once and shown before the
+            // player decides whether to keep it or risk a reroll.
+            Game.player.launch.quality=launchQualityRoll();
+            Game.player.launch.gamble=false;
+            Game.battle.newLaunchStage="quality";
+            renderNewBattle("launch");
+            wireNewLaunchControls();
+        };
+    });
+
+    const keep=document.getElementById("newLaunchKeep");
+    if(keep){
+        keep.onclick=()=>{
+            Game.player.launch.gamble=false;
+            beginNewPhysicalLaunch();
+        };
+    }
+
+    const risk=document.getElementById("newLaunchRisk");
+    if(risk){
+        risk.onclick=()=>{
+            Game.player.launch.gamble=true;
+            Game.player.launch.quality=launchRiskQualityRoll();
+            beginNewPhysicalLaunch();
+        };
+    }
+}
+
 
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
@@ -4065,6 +4398,32 @@ function newBattleFrame(now){
 function newPhysicsStep(s,dt){
     const stats=s.stats||{};
     const speed=Math.hypot(s.vx,s.vy);
+
+    // Drop Launch physically approaches the top X Exit, briefly stalls,
+    // then redirects inward. It is not a teleport or zone sequence.
+    if(s.launchTechnique==="Drop Launch" && s.dropPhase){
+        const dx=s.x-0;
+        const dy=s.y-(-0.55);
+        const exitDistance=Math.hypot(dx,dy);
+
+        if(s.dropPhase==="approach" && exitDistance<0.12){
+            s.dropPhase="stall";
+            s.dropStall=0;
+            s.vx*=0.28;
+            s.vy*=0.28;
+        }else if(s.dropPhase==="stall"){
+            s.dropStall=(s.dropStall||0)+dt;
+            s.vx*=0.92;
+            s.vy*=0.92;
+            if(s.dropStall>=0.32){
+                s.dropPhase="drop";
+                const dx2=-s.x, dy2=-s.y;
+                const d2=Math.max(.001,Math.hypot(dx2,dy2));
+                s.vx=(dx2/d2)*0.021;
+                s.vy=(dy2/d2)*0.021;
+            }
+        }
+    }
     const mobility=(stats.mobility||70)/100;
     const friction=0.985 + mobility*0.004;
 
@@ -4096,9 +4455,25 @@ function newPhysicsStep(s,dt){
         }
     }
 
-    s.rpm=newBattleClamp(s.rpm-(0.00042+speed*0.0012)*dt*60,0,1);
+    const tiltFactor=1 + (s.tilt||0)*0.018;
+    const bitDrain=(s.bit?.spinDrain||0.8)/100;
+    s.rpm=newBattleClamp(
+        s.rpm-(0.00030+speed*0.00095*tiltFactor+bitDrain*0.00018)*dt*60,
+        0,1
+    );
+
+    // RPM helps a Bey recover from tilt; low RPM makes the same tilt much more
+    // dangerous. Tilt also reduces fine movement control.
+    const recovery=(s.bit?.recovery||65)/100;
+    if(s.rpm>.62 && s.tilt>0){
+        s.tilt=newBattleClamp(s.tilt-recovery*0.16*dt,0,12);
+    }else{
+        s.tilt=newBattleClamp(s.tilt+(speed*0.018+(1-s.rpm)*0.08)*dt*60,0,12);
+    }
+
+    const tiltInstability=(s.tilt/12)*0.0018;
     s.stability=newBattleClamp(
-        s.stability-((1-s.rpm)*0.0008+speed*0.002)*dt*60,
+        s.stability-((1-s.rpm)*0.0008+speed*0.0014+tiltInstability)*dt*60,
         0,1
     );
 }
@@ -4128,10 +4503,20 @@ function newPhysicsCollision(dt){
             c.x+=nx*separation*.5;
             c.y+=ny*separation*.5;
 
-            p.stability=newBattleClamp(p.stability-0.015,0,1);
-            c.stability=newBattleClamp(c.stability-0.015,0,1);
-            p.rpm=newBattleClamp(p.rpm-0.006,0,1);
-            c.rpm=newBattleClamp(c.rpm-0.006,0,1);
+            const impact=Math.max(0,-closing);
+            const pImpact=(c.stats?.attack||70)/100 * impact;
+            const cImpact=(p.stats?.attack||70)/100 * impact;
+
+            p.tilt=newBattleClamp((p.tilt||0)+cImpact*3.2,0,12);
+            c.tilt=newBattleClamp((c.tilt||0)+pImpact*3.2,0,12);
+
+            p.stability=newBattleClamp(p.stability-0.012-impact*0.012,0,1);
+            c.stability=newBattleClamp(c.stability-0.012-impact*0.012,0,1);
+
+            // Impact drains spin; the exact collision/knockback equation comes
+            // later, but the launch engine already hands it real state.
+            p.rpm=newBattleClamp(p.rpm-0.004-impact*0.006,0,1);
+            c.rpm=newBattleClamp(c.rpm-0.004-impact*0.006,0,1);
         }
     }
 }
