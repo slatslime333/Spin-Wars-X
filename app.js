@@ -4438,80 +4438,125 @@ function newPhysicsStep(s,dt){
     const stats=s.stats||{};
     s.launchAge=(s.launchAge||0)+dt;
 
-    const mobility=newBattleClamp((stats.mobility||70)/100,0.55,1);
+    const bit=s.bit||{};
+    const bitMovement=newBattleClamp(bit.movement||50,10,100);
+    const bitControl=newBattleClamp(bit.control||70,10,100);
+    const mobilityStat=newBattleClamp(stats.mobility||70,60,99);
     const balance=newBattleClamp((stats.balance||70)/100,0.5,1);
     const rpmFactor=newBattleClamp(s.rpm,0,1);
 
     // ------------------------------------------------------------
-    // CONTINUOUS TOP MOVEMENT
-    // A Bey should never lose all horizontal movement and simply
-    // spin in place. Spin/RPM keeps a moving top carrying speed,
-    // while the bit and balance determine how strongly it curves.
+    // MOVEMENT PROFILE
+    // A Bey's bit determines its basic travel personality. Orb/Ball/
+    // Needle stay controlled and close to center; Flat/Rush travel much
+    // farther. Combo mobility modifies that behavior, but cannot turn a
+    // high-control stamina bit into an attack-style movement pattern.
     // ------------------------------------------------------------
-    const speed=Math.hypot(s.vx,s.vy);
-    const cruiseSpeed=(0.052 + mobility*0.028) * (0.72 + rpmFactor*0.28);
+    const movementProfile=0.30 + (bitMovement/100)*0.70;
+    const controlProfile=0.35 + (bitControl/100)*0.65;
 
-    if(speed>0.0001){
-        const ux=s.vx/speed, uy=s.vy/speed;
+    // Keep the actual travel speed modest. A real Bey loses energy without
+    // suddenly becoming a rocket; lower RPM gradually reduces travel.
+    const cruiseSpeed=
+        (0.0085 + movementProfile*0.0105) *
+        (0.68 + rpmFactor*0.32) *
+        (0.88 + mobilityStat/1000);
 
-        // Small propulsion/rolling bias keeps the Bey moving while RPM
-        // remains high. Lower RPM naturally lets it slow down.
-        const speedCorrection=(cruiseSpeed-speed)*0.030*dt*60;
-        s.vx+=ux*speedCorrection;
-        s.vy+=uy*speedCorrection;
+    // Desired orbit radius is mostly a bit property. High-control bits
+    // naturally remain close to center; aggressive bits can travel outward.
+    const centerAffinity=newBattleClamp(bit.centerAffinity||50,0,100);
+    const orbitRadius=
+        0.08 +
+        (1-centerAffinity/100)*0.58 +
+        (bitMovement/100)*0.10;
 
-        // Realistic broad arcs instead of a fixed straight line.
-        // Balance/control makes the arc tighter; mobility makes it more
-        // willing to travel around the stadium.
-        const curveStrength=
-            (0.0009 + mobility*0.0018) *
-            (1.15-balance*0.35) *
-            (0.55+rpmFactor*0.45);
+    // ------------------------------------------------------------
+    // SPIN-COHERENT CIRCULAR MOVEMENT
+    // Right-spin = clockwise on the top-down stadium view.
+    // Left-spin = counter-clockwise.
+    //
+    // We blend the current velocity toward the tangent of an orbit instead
+    // of arbitrarily rotating velocity every frame. This makes movement look
+    // like a spinning top tracing a believable circular/elliptical path.
+    // ------------------------------------------------------------
+    const distanceFromCenter=Math.hypot(s.x,s.y);
+    const safeDistance=Math.max(distanceFromCenter,0.001);
 
-        const direction=s.side==="player"?1:-1;
-        const turn=direction*curveStrength*dt*60;
-        const nvx=s.vx*Math.cos(turn)-s.vy*Math.sin(turn);
-        const nvy=s.vx*Math.sin(turn)+s.vy*Math.cos(turn);
-        s.vx=nvx;
-        s.vy=nvy;
+    let radialX=s.x/safeDistance;
+    let radialY=s.y/safeDistance;
+
+    const spin=(s.launchSpinDirection||s.blade?.spin||"Right").toLowerCase();
+    const clockwise=spin!=="left";
+
+    // Screen coordinates: clockwise tangent is (-y, x).
+    let tangentX=clockwise ? -radialY : radialY;
+    let tangentY=clockwise ? radialX : -radialX;
+
+    // If the Bey is near the center, give it a launch-direction tangent so
+    // it doesn't jitter while trying to define an orbit from zero radius.
+    if(distanceFromCenter<0.08){
+        const launchSpeed=Math.hypot(s.vx,s.vy);
+        if(launchSpeed>0.001){
+            tangentX=s.vx/launchSpeed;
+            tangentY=s.vy/launchSpeed;
+        }
     }
+
+    // Attack-style bits have more radial freedom; stable bits are pulled
+    // back toward their preferred orbit radius.
+    const orbitError=distanceFromCenter-orbitRadius;
+    const radialCorrection=
+        -orbitError *
+        (0.018 + controlProfile*0.020) *
+        dt*60;
+
+    // The radial correction is intentionally gentle. Beyblades do not move
+    // like a logo pinned to a perfect circular track.
+    const targetVx=tangentX*cruiseSpeed + radialX*radialCorrection;
+    const targetVy=tangentY*cruiseSpeed + radialY*radialCorrection;
+
+    const steering=
+        (0.018 + controlProfile*0.030) *
+        (0.55 + rpmFactor*0.45) *
+        dt*60;
+
+    s.vx+=(targetVx-s.vx)*steering;
+    s.vy+=(targetVy-s.vy)*steering;
 
     // ------------------------------------------------------------
     // SELECTED LAUNCH TRAJECTORY
-    // Preserve the chosen opening long enough for the player to see
-    // Center / Direct Clash / X-Rail / Drop Launch actually happen.
+    // Keep the chosen launch meaningful during the opening, then let the
+    // bit's natural movement profile take over.
     // ------------------------------------------------------------
-    if(s.launchAge<0.85){
+    if(s.launchAge<0.75){
         const target=s.launchTarget;
         const dx=target.x-s.x;
         const dy=target.y-s.y;
         const d=Math.hypot(dx,dy);
 
-        if(d>0.06 && s.launchTechnique!=="Drop Launch"){
+        if(d>0.05 && s.launchTechnique!=="Drop Launch"){
             const aimStrength=
-                s.launchTechnique==="Direct Clash" ? 0.035 :
-                s.launchTechnique==="X-Rail" ? 0.026 :
-                0.020;
+                s.launchTechnique==="Direct Clash" ? 0.025 :
+                s.launchTechnique==="X-Rail" ? 0.020 :
+                0.015;
 
             s.vx+=(dx/d)*aimStrength*dt*60;
             s.vy+=(dy/d)*aimStrength*dt*60;
         }
     }
 
-    // Center launch establishes center instead of continuing forever.
-    if(s.centerLaunch){
-        const centerDistance=Math.hypot(s.x,s.y);
-        if(centerDistance<0.20){
-            const pull=Math.min(1,dt*3.2);
-            s.vx+=(0-s.x)*pull;
-            s.vy+=(0-s.y)*pull;
-        }
+    // Center launch deliberately settles toward center, but after the opening
+    // it follows a small spin-coherent orbit instead of freezing in place.
+    if(s.centerLaunch && distanceFromCenter<0.18){
+        const pull=Math.min(1,dt*2.2);
+        s.vx+=(0-s.x)*pull;
+        s.vy+=(0-s.y)*pull;
     }
 
     // ------------------------------------------------------------
     // DROP LAUNCH
-    // Start beside the X exit, approach it, briefly stabilize, then
-    // release downward/inward into the battle zone.
+    // Start beside the X exit, approach it, briefly stabilize, then release
+    // downward/inward into the Battle Zone.
     // ------------------------------------------------------------
     if(s.launchTechnique==="Drop Launch" && s.dropPhase){
         const exitX=0, exitY=-0.55;
@@ -4531,8 +4576,8 @@ function newPhysicsStep(s,dt){
                 s.dropPhase="drop";
                 const dx2=-s.x, dy2=-s.y;
                 const d2=Math.max(.001,Math.hypot(dx2,dy2));
-                s.vx=(dx2/d2)*0.070;
-                s.vy=(dy2/d2)*0.070;
+                s.vx=(dx2/d2)*0.055;
+                s.vy=(dy2/d2)*0.055;
             }
         }
     }
@@ -4543,15 +4588,47 @@ function newPhysicsStep(s,dt){
     s.x+=s.vx*dt*60;
     s.y+=s.vy*dt*60;
 
-    // Light continuous energy loss. Do not kill movement immediately.
-    const movementDrag=0.9965 - mobility*0.0007;
-    s.vx*=Math.pow(movementDrag,dt*60);
-    s.vy*=Math.pow(movementDrag,dt*60);
+    // Very light drag. RPM loss, not arbitrary friction, is what gradually
+    // reduces the top's ability to travel.
+    const drag=
+        0.9980 -
+        (bitMovement/100)*0.00045 +
+        (1-bitControl/100)*0.00015;
+    s.vx*=Math.pow(drag,dt*60);
+    s.vy*=Math.pow(drag,dt*60);
+
+    // ------------------------------------------------------------
+    // X-RAIL EXIT / TOP WALL
+    // Until the actual X-Rail system is engaged, the exit is a SOLID WALL.
+    // The visual opening is not a hole that Beys can pass through.
+    // A future railActive state will be the only thing allowed to use it.
+    // ------------------------------------------------------------
+    if(!s.railActive){
+        const exitY=-0.56;
+        const exitHalfWidth=0.12;
+
+        if(s.y<exitY && Math.abs(s.x)<exitHalfWidth){
+            // Drop Launch is intentionally traveling DOWN from the exit.
+            const validDrop=
+                s.launchTechnique==="Drop Launch" &&
+                s.dropPhase==="approach" &&
+                s.vy>0;
+
+            if(!validDrop){
+                s.y=exitY;
+                if(s.vy<0){
+                    s.vy=-s.vy*0.72;
+                    s.vx*=0.86;
+                    s.wallHits=(s.wallHits||0)+1;
+                    s.stability=newBattleClamp(s.stability-0.0025,0,1);
+                    s.rpm=newBattleClamp(s.rpm-0.001,0,1);
+                }
+            }
+        }
+    }
 
     // ------------------------------------------------------------
     // STADIUM WALL / BOWL BOUNCE
-    // Use the actual elliptical bowl rather than the old circular
-    // placeholder. Collision reflects the outward velocity.
     // ------------------------------------------------------------
     const rx=0.86;
     const ry=0.86;
@@ -4564,30 +4641,29 @@ function newPhysicsStep(s,dt){
         const nX=nx/normalLength;
         const nY=ny/normalLength;
 
-        // Push the Bey back onto the playing surface.
         const scale=1/Math.sqrt(ellipseValue);
         s.x*=scale*0.995;
         s.y*=scale*0.995;
 
-        // Reflect only if traveling into the wall.
         const outward=s.vx*nX+s.vy*nY;
         if(outward>0){
             s.vx-=2*outward*nX;
             s.vy-=2*outward*nY;
 
-            // Some energy is lost on impact, but the Bey keeps moving.
+            // Softer than a billiard-ball bounce. High-control/stamina
+            // combinations retain their line; mobile attack bits lose more
+            // energy when they strike the wall.
             const wallRetention=
-                0.72 + mobility*0.12 + balance*0.05;
+                0.68 +
+                controlProfile*0.18 +
+                balance*0.05;
+
             s.vx*=wallRetention;
             s.vy*=wallRetention;
 
             s.wallHits=(s.wallHits||0)+1;
             s.stability=newBattleClamp(
-                s.stability-(0.0035+(1-balance)*0.004),
-                0,1
-            );
-            s.rpm=newBattleClamp(
-                s.rpm-0.0015,
+                s.stability-(0.0025+(1-balance)*0.0035),
                 0,1
             );
         }
@@ -4598,18 +4674,21 @@ function newPhysicsStep(s,dt){
     // ------------------------------------------------------------
     const currentSpeed=Math.hypot(s.vx,s.vy);
     const tiltFactor=1+(s.tilt||0)*0.018;
-    const bitDrain=(s.bit?.spinDrain||0.8)/100;
+    const bitDrain=(bit.spinDrain||0.8)/100;
 
+    // Movement itself does not consume huge amounts of spin. The top should
+    // continue traveling as RPM gradually falls, with movement becoming less
+    // controlled and smaller rather than stopping abruptly.
     s.rpm=newBattleClamp(
         s.rpm-
-        (0.00012+
-         currentSpeed*0.00016*tiltFactor+
-         bitDrain*0.00008)*
+        (0.00010+
+         currentSpeed*0.00008*tiltFactor+
+         bitDrain*0.00007)*
         dt*60,
         0,1
     );
 
-    const recovery=(s.bit?.recovery||65)/100;
+    const recovery=(bit.recovery||65)/100;
     if(s.rpm>0.62 && s.tilt>0){
         s.tilt=newBattleClamp(
             s.tilt-recovery*0.16*dt,
@@ -4618,16 +4697,17 @@ function newPhysicsStep(s,dt){
     }else{
         s.tilt=newBattleClamp(
             s.tilt+
-            (currentSpeed*0.010+(1-s.rpm)*0.045)*dt*60,
+            (currentSpeed*0.007+(1-s.rpm)*0.040)*
+            dt*60,
             0,12
         );
     }
 
-    const tiltInstability=(s.tilt/12)*0.0015;
+    const tiltInstability=(s.tilt/12)*0.0013;
     s.stability=newBattleClamp(
         s.stability-
-        ((1-s.rpm)*0.00045+
-         currentSpeed*0.00045+
+        ((1-s.rpm)*0.00038+
+         currentSpeed*0.00028+
          tiltInstability)*
         dt*60,
         0,1
