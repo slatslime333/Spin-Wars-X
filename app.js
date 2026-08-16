@@ -4040,8 +4040,11 @@ function makeLaunchState(side){
     // Initial release impulse. The Bey begins at the launcher and immediately
     // accelerates along the selected physical trajectory. Technique, quality,
     // tilt and bit behavior all affect this vector.
-    const releaseSpeed = 0.030 * launchSpeed * (0.92 + (stats.mobility||70)/700);
-    const launchImpulse = isDropLaunch ? releaseSpeed*1.35 : releaseSpeed;
+    // The opening release is intentionally much stronger than the old
+    // placeholder movement. A real launch should visibly leave the launcher
+    // and travel along the selected line before normal friction takes over.
+    const releaseSpeed = 0.060 * launchSpeed * (0.92 + (stats.mobility||70)/700);
+    const launchImpulse = isDropLaunch ? releaseSpeed*1.15 : releaseSpeed;
 
     const state={
         side,
@@ -4067,6 +4070,9 @@ function makeLaunchState(side){
         launchQuality:combo.launch?.quality||"Okay",
         launchTarget:target,
         launchStartedAt:performance.now(),
+        launchAge:0,
+        centerLaunch:technique==="Center",
+        directClash:technique==="Direct Clash",
         dropPhase:technique==="Drop Launch" ? "approach" : null,
         railIntent:technique==="X-Rail",
         launchSpinDirection:combo.blade?.spin||"Right",
@@ -4430,87 +4436,203 @@ function newBattleFrame(now){
 
 function newPhysicsStep(s,dt){
     const stats=s.stats||{};
+    s.launchAge=(s.launchAge||0)+dt;
+
+    const mobility=newBattleClamp((stats.mobility||70)/100,0.55,1);
+    const balance=newBattleClamp((stats.balance||70)/100,0.5,1);
+    const rpmFactor=newBattleClamp(s.rpm,0,1);
+
+    // ------------------------------------------------------------
+    // CONTINUOUS TOP MOVEMENT
+    // A Bey should never lose all horizontal movement and simply
+    // spin in place. Spin/RPM keeps a moving top carrying speed,
+    // while the bit and balance determine how strongly it curves.
+    // ------------------------------------------------------------
     const speed=Math.hypot(s.vx,s.vy);
+    const cruiseSpeed=(0.052 + mobility*0.028) * (0.72 + rpmFactor*0.28);
 
-    // Drop Launch physically approaches the top X Exit, briefly stalls,
-    // then redirects inward. It is not a teleport or zone sequence.
+    if(speed>0.0001){
+        const ux=s.vx/speed, uy=s.vy/speed;
+
+        // Small propulsion/rolling bias keeps the Bey moving while RPM
+        // remains high. Lower RPM naturally lets it slow down.
+        const speedCorrection=(cruiseSpeed-speed)*0.030*dt*60;
+        s.vx+=ux*speedCorrection;
+        s.vy+=uy*speedCorrection;
+
+        // Realistic broad arcs instead of a fixed straight line.
+        // Balance/control makes the arc tighter; mobility makes it more
+        // willing to travel around the stadium.
+        const curveStrength=
+            (0.0009 + mobility*0.0018) *
+            (1.15-balance*0.35) *
+            (0.55+rpmFactor*0.45);
+
+        const direction=s.side==="player"?1:-1;
+        const turn=direction*curveStrength*dt*60;
+        const nvx=s.vx*Math.cos(turn)-s.vy*Math.sin(turn);
+        const nvy=s.vx*Math.sin(turn)+s.vy*Math.cos(turn);
+        s.vx=nvx;
+        s.vy=nvy;
+    }
+
+    // ------------------------------------------------------------
+    // SELECTED LAUNCH TRAJECTORY
+    // Preserve the chosen opening long enough for the player to see
+    // Center / Direct Clash / X-Rail / Drop Launch actually happen.
+    // ------------------------------------------------------------
+    if(s.launchAge<0.85){
+        const target=s.launchTarget;
+        const dx=target.x-s.x;
+        const dy=target.y-s.y;
+        const d=Math.hypot(dx,dy);
+
+        if(d>0.06 && s.launchTechnique!=="Drop Launch"){
+            const aimStrength=
+                s.launchTechnique==="Direct Clash" ? 0.035 :
+                s.launchTechnique==="X-Rail" ? 0.026 :
+                0.020;
+
+            s.vx+=(dx/d)*aimStrength*dt*60;
+            s.vy+=(dy/d)*aimStrength*dt*60;
+        }
+    }
+
+    // Center launch establishes center instead of continuing forever.
+    if(s.centerLaunch){
+        const centerDistance=Math.hypot(s.x,s.y);
+        if(centerDistance<0.20){
+            const pull=Math.min(1,dt*3.2);
+            s.vx+=(0-s.x)*pull;
+            s.vy+=(0-s.y)*pull;
+        }
+    }
+
+    // ------------------------------------------------------------
+    // DROP LAUNCH
+    // Start beside the X exit, approach it, briefly stabilize, then
+    // release downward/inward into the battle zone.
+    // ------------------------------------------------------------
     if(s.launchTechnique==="Drop Launch" && s.dropPhase){
-        const dx=s.x-0;
-        const dy=s.y-(-0.55);
-        const exitDistance=Math.hypot(dx,dy);
+        const exitX=0, exitY=-0.55;
+        const exitDistance=Math.hypot(s.x-exitX,s.y-exitY);
 
-        if(s.dropPhase==="approach" && exitDistance<0.12){
+        if(s.dropPhase==="approach" && exitDistance<0.11){
             s.dropPhase="stall";
             s.dropStall=0;
-            s.vx*=0.28;
-            s.vy*=0.28;
+            s.vx*=0.35;
+            s.vy*=0.35;
         }else if(s.dropPhase==="stall"){
             s.dropStall=(s.dropStall||0)+dt;
-            s.vx*=0.92;
-            s.vy*=0.92;
-            if(s.dropStall>=0.32){
+            s.vx*=0.94;
+            s.vy*=0.94;
+
+            if(s.dropStall>=0.28){
                 s.dropPhase="drop";
                 const dx2=-s.x, dy2=-s.y;
                 const d2=Math.max(.001,Math.hypot(dx2,dy2));
-                s.vx=(dx2/d2)*0.021;
-                s.vy=(dy2/d2)*0.021;
+                s.vx=(dx2/d2)*0.070;
+                s.vy=(dy2/d2)*0.070;
             }
         }
     }
-    const mobility=(stats.mobility||70)/100;
-    const friction=0.985 + mobility*0.004;
 
+    // ------------------------------------------------------------
+    // MOVE
+    // ------------------------------------------------------------
     s.x+=s.vx*dt*60;
     s.y+=s.vy*dt*60;
 
-    s.vx*=Math.pow(friction,dt*60);
-    s.vy*=Math.pow(friction,dt*60);
+    // Light continuous energy loss. Do not kill movement immediately.
+    const movementDrag=0.9965 - mobility*0.0007;
+    s.vx*=Math.pow(movementDrag,dt*60);
+    s.vy*=Math.pow(movementDrag,dt*60);
 
-    // Gentle natural curvature so movement isn't a straight-line demo.
-    const curve=(stats.balance||70)/1000;
-    const turn=s.side==="player"?curve:-curve;
-    const nvx=s.vx*Math.cos(turn)-s.vy*Math.sin(turn);
-    const nvy=s.vx*Math.sin(turn)+s.vy*Math.cos(turn);
-    s.vx=nvx; s.vy=nvy;
+    // ------------------------------------------------------------
+    // STADIUM WALL / BOWL BOUNCE
+    // Use the actual elliptical bowl rather than the old circular
+    // placeholder. Collision reflects the outward velocity.
+    // ------------------------------------------------------------
+    const rx=0.86;
+    const ry=0.86;
+    const ellipseValue=(s.x*s.x)/(rx*rx)+(s.y*s.y)/(ry*ry);
 
-    // Temporary bowl boundary. Stadium geometry is now defined separately;
-    // rail/pocket/XTREME interactions will be wired into physics next.
-    const r=Math.hypot(s.x,s.y);
-    if(r>0.88){
-        const nx=s.x/r, ny=s.y/r;
-        s.x=nx*0.88; s.y=ny*0.88;
-        const outward=s.vx*nx+s.vy*ny;
+    if(ellipseValue>1){
+        const nx=s.x/(rx*rx);
+        const ny=s.y/(ry*ry);
+        const normalLength=Math.hypot(nx,ny)||1;
+        const nX=nx/normalLength;
+        const nY=ny/normalLength;
+
+        // Push the Bey back onto the playing surface.
+        const scale=1/Math.sqrt(ellipseValue);
+        s.x*=scale*0.995;
+        s.y*=scale*0.995;
+
+        // Reflect only if traveling into the wall.
+        const outward=s.vx*nX+s.vy*nY;
         if(outward>0){
-            s.vx-=2*outward*nx;
-            s.vy-=2*outward*ny;
-            s.vx*=0.72;
-            s.vy*=0.72;
+            s.vx-=2*outward*nX;
+            s.vy-=2*outward*nY;
+
+            // Some energy is lost on impact, but the Bey keeps moving.
+            const wallRetention=
+                0.72 + mobility*0.12 + balance*0.05;
+            s.vx*=wallRetention;
+            s.vy*=wallRetention;
+
+            s.wallHits=(s.wallHits||0)+1;
+            s.stability=newBattleClamp(
+                s.stability-(0.0035+(1-balance)*0.004),
+                0,1
+            );
+            s.rpm=newBattleClamp(
+                s.rpm-0.0015,
+                0,1
+            );
         }
     }
 
-    const tiltFactor=1 + (s.tilt||0)*0.018;
+    // ------------------------------------------------------------
+    // RPM / TILT / STABILITY
+    // ------------------------------------------------------------
+    const currentSpeed=Math.hypot(s.vx,s.vy);
+    const tiltFactor=1+(s.tilt||0)*0.018;
     const bitDrain=(s.bit?.spinDrain||0.8)/100;
+
     s.rpm=newBattleClamp(
-        s.rpm-(0.00030+speed*0.00095*tiltFactor+bitDrain*0.00018)*dt*60,
+        s.rpm-
+        (0.00012+
+         currentSpeed*0.00016*tiltFactor+
+         bitDrain*0.00008)*
+        dt*60,
         0,1
     );
 
-    // RPM helps a Bey recover from tilt; low RPM makes the same tilt much more
-    // dangerous. Tilt also reduces fine movement control.
     const recovery=(s.bit?.recovery||65)/100;
-    if(s.rpm>.62 && s.tilt>0){
-        s.tilt=newBattleClamp(s.tilt-recovery*0.16*dt,0,12);
+    if(s.rpm>0.62 && s.tilt>0){
+        s.tilt=newBattleClamp(
+            s.tilt-recovery*0.16*dt,
+            0,12
+        );
     }else{
-        s.tilt=newBattleClamp(s.tilt+(speed*0.018+(1-s.rpm)*0.08)*dt*60,0,12);
+        s.tilt=newBattleClamp(
+            s.tilt+
+            (currentSpeed*0.010+(1-s.rpm)*0.045)*dt*60,
+            0,12
+        );
     }
 
-    const tiltInstability=(s.tilt/12)*0.0018;
+    const tiltInstability=(s.tilt/12)*0.0015;
     s.stability=newBattleClamp(
-        s.stability-((1-s.rpm)*0.0008+speed*0.0014+tiltInstability)*dt*60,
+        s.stability-
+        ((1-s.rpm)*0.00045+
+         currentSpeed*0.00045+
+         tiltInstability)*
+        dt*60,
         0,1
     );
 }
-
 function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
