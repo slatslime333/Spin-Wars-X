@@ -1706,16 +1706,12 @@ function getAnimationPath(animation,side){
 
 function renderStadium(){
 
-    const playerSide=Game.arena.playerSide || "Left";
-    const cpuSide=Game.arena.cpuSide || "Right";
-    const playerX=playerSide==="Left" ? 112 : 888;
-    const cpuX=cpuSide==="Left" ? 112 : 888;
-
-    return `
+return `
 
 <div class="stadium">
 
-<svg class="stadium-svg" viewBox="0 0 1000 900" role="img" aria-label="BX-10 Xtreme Stadium">
+<svg class="stadium-svg"
+viewBox="0 0 1000 900">
 
 <defs>
   <marker id="playerArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
@@ -1726,67 +1722,44 @@ function renderStadium(){
   </marker>
 </defs>
 
-<!-- MAIN BX-10 STADIUM BODY -->
-<path d="M500 88
-         C705 88 842 220 842 430
-         C842 575 770 674 655 720
-         C590 746 410 746 345 720
-         C230 674 158 575 158 430
-         C158 220 295 88 500 88 Z"
-      fill="#171b21" stroke="#858b93" stroke-width="10"/>
+    <!-- CONTINUOUS OVAL X-LINE -->
+<path class="rail-track" d="M500 92 C790 92 855 290 820 470 C790 610 650 675 500 675 C350 675 210 610 180 470 C145 290 210 92 500 92"/>
 
-<!-- CONTINUOUS CLOSED X RAIL: ONE PHYSICAL LOOP -->
-<path class="rail-track"
-      d="M500 112
-         C700 112 818 235 818 430
-         C818 570 735 665 620 705
-         C550 730 450 730 380 705
-         C265 665 182 570 182 430
-         C182 235 300 112 500 112 Z"
-      style="stroke:#28d47f;stroke-width:24;filter:none"/>
+<!-- SINGLE TOP X-EXIT -->
+<path class="x-exit-gate" d="M500 88 L538 136 L462 136 Z"/>
 
-<!-- CLEAN RAIL CORE: NO SHIELD SHADOW -->
-<path d="M500 112
-         C700 112 818 235 818 430
-         C818 570 735 665 620 705
-         C550 730 450 730 380 705
-         C265 665 182 570 182 430
-         C182 235 300 112 500 112 Z"
-      fill="none" stroke="#8af0b8" stroke-width="3" opacity=".65"/>
+<!-- XTREME -->
 
-<!-- SINGLE TOP X EXIT -->
-<path class="x-exit-gate" d="M458 105 L542 105 L500 162 Z"/>
-<path d="M476 116 L500 150 L524 116" fill="none" stroke="#fff5a6" stroke-width="4" stroke-linecap="round"/>
-<text x="500" y="48" text-anchor="middle" fill="#ffd43b" font-size="15" font-weight="900" letter-spacing="2">X EXIT</text>
+<rect
+    class="xtremeZone"
+    x="435"
+    y="690"
+    width="130"
+    height="45"
+    rx="18"
+/>
 
-<!-- BOTTOM FINISH OPENINGS -->
-<path d="M182 650 Q245 704 315 720" fill="none" stroke="#0b0d10" stroke-width="34" stroke-linecap="round"/>
-<path d="M685 720 Q755 704 818 650" fill="none" stroke="#0b0d10" stroke-width="34" stroke-linecap="round"/>
+<!-- LEFT OVER / POCKET -->
 
-<!-- LEFT POCKET -->
-<ellipse class="overZone" cx="250" cy="735" rx="70" ry="38"/>
-<text class="stadium-zone-label" x="250" y="740" text-anchor="middle">POCKET</text>
+<circle
+    class="overZone"
+    cx="255"
+    cy="705"
+    r="38"
+/>
 
-<!-- XTREME ZONE -->
-<rect class="xtremeZone" x="405" y="718" width="190" height="52" rx="24"/>
-<text class="stadium-zone-label xtreme-label" x="500" y="751" text-anchor="middle">XTREME ZONE</text>
+<!-- RIGHT OVER / POCKET -->
 
-<!-- RIGHT POCKET -->
-<ellipse class="overZone" cx="750" cy="735" rx="70" ry="38"/>
-<text class="stadium-zone-label" x="750" y="740" text-anchor="middle">POCKET</text>
+<circle
+    class="overZone"
+    cx="745"
+    cy="705"
+    r="38"
+/>
 
-<!-- PLAYER / CPU LAUNCH POSITIONS: LEFT / RIGHT -->
-<g pointer-events="none">
-  <line x1="${playerX}" y1="430" x2="235" y2="430" stroke="#3ba8ff" stroke-width="3" stroke-dasharray="6 7" opacity=".75"/>
-  <circle cx="${playerX}" cy="430" r="25" fill="rgba(59,168,255,.12)" stroke="#3ba8ff" stroke-width="3"/>
-  <text x="${playerX}" y="386" text-anchor="middle" fill="#3ba8ff" font-size="15" font-weight="900">YOU</text>
-  <text x="${playerX}" y="407" text-anchor="middle" fill="#9edcff" font-size="10" font-weight="700">LEFT SIDE</text>
-
-  <line x1="${cpuX}" y1="430" x2="765" y2="430" stroke="#ff4b4b" stroke-width="3" stroke-dasharray="6 7" opacity=".75"/>
-  <circle cx="${cpuX}" cy="430" r="25" fill="rgba(255,75,75,.12)" stroke="#ff4b4b" stroke-width="3"/>
-  <text x="${cpuX}" y="386" text-anchor="middle" fill="#ff4b4b" font-size="15" font-weight="900">CPU</text>
-  <text x="${cpuX}" y="407" text-anchor="middle" fill="#ffaaa8" font-size="10" font-weight="700">RIGHT SIDE</text>
-</g>
+<text class="stadium-zone-label" x="255" y="712" text-anchor="middle">POCKET</text>
+<text class="stadium-zone-label" x="745" y="712" text-anchor="middle">POCKET</text>
+<text class="stadium-zone-label xtreme-label" x="500" y="718" text-anchor="middle">XTREME</text>
 
 <g id="trajectoryLayer" pointer-events="none">
     <path id="playerTrajectory" d="" fill="none" stroke="#3ba8ff" stroke-width="3" stroke-dasharray="7 8" opacity="0" marker-end="url(#playerArrow)"/>
@@ -1796,8 +1769,22 @@ function renderStadium(){
     <circle id="contactMarker" cx="0" cy="0" r="7" fill="none" stroke="#ffd43b" stroke-width="2" stroke-dasharray="3 3" opacity="0"/>
 </g>
 
-<circle id="playerBey" cx="500" cy="420" r="12" fill="#3ba8ff"/>
-<circle id="cpuBey" cx="500" cy="420" r="12" fill="#ff4b4b"/>
+<circle
+    id="playerBey"
+    cx="500"
+    cy="420"
+    r="12"
+    fill="#3ba8ff"
+/>
+
+<circle
+    id="cpuBey"
+    cx="500"
+    cy="420"
+    r="12"
+    fill="#ff4b4b"
+/>
+
 <text id="playerBeyLabel" text-anchor="middle" font-size="16" font-weight="800" fill="#3ba8ff"></text>
 <text id="cpuBeyLabel" text-anchor="middle" font-size="16" font-weight="800" fill="#ff4b4b"></text>
 
@@ -3151,13 +3138,31 @@ function resolvePocket(bey){
 
 function assignStadiumSides(){
 
-    // Fixed player-facing BX-10 orientation.
-    // YOU is always on the LEFT and CPU is always on the RIGHT.
-    // The stadium camera never swaps sides between rounds.
-    Game.arena.playerSide="Left";
-    Game.arena.cpuSide="Right";
-    Game.arena.playerColor="Blue";
-    Game.arena.cpuColor="Red";
+    // Swap every 2 rounds
+    const swap=Math.floor((Game.match.round-1)/2)%2;
+
+    if(swap===0){
+
+        // Rounds 1-2
+
+        Game.arena.playerSide="Left";
+        Game.arena.cpuSide="Right";
+
+        Game.arena.playerColor="Blue";
+        Game.arena.cpuColor="Red";
+
+    }else{
+
+        // Rounds 3-4
+
+        Game.arena.playerSide="Right";
+        Game.arena.cpuSide="Left";
+
+        Game.arena.playerColor="Red";
+        Game.arena.cpuColor="Blue";
+
+    }
+
     Game.arena.playerLane="Outer";
     Game.arena.cpuLane="Outer";
 
@@ -5504,26 +5509,144 @@ OPENING · ${Math.round(p.spin)} STA / ${Math.round(p.balance)} BAL  vs  ${Math.
 function getStadiumPreview(){
 
     return `
-    <div style="text-align:center;margin:15px 0;">
-        <svg viewBox="0 0 1000 900" style="width:100%;max-width:430px;height:auto;">
-            <path d="M500 88 C705 88 842 220 842 430 C842 575 770 674 655 720 C590 746 410 746 345 720 C230 674 158 575 158 430 C158 220 295 88 500 88Z" fill="#171b21" stroke="#858b93" stroke-width="10"/>
-            <path d="M500 112 C700 112 818 235 818 430 C818 570 735 665 620 705 C550 730 450 730 380 705 C265 665 182 570 182 430 C182 235 300 112 500 112Z" fill="none" stroke="#28d47f" stroke-width="24" stroke-linecap="round"/>
-            <path d="M458 105 L542 105 L500 162Z" fill="#ffd43b" stroke="#fff0a5" stroke-width="3"/>
-            <ellipse cx="250" cy="735" rx="70" ry="38" fill="#08090b" stroke="#70757c" stroke-width="4"/>
-            <rect x="405" y="718" width="190" height="52" rx="24" fill="#cf2429"/>
-            <ellipse cx="750" cy="735" rx="70" ry="38" fill="#08090b" stroke="#70757c" stroke-width="4"/>
-            <circle cx="115" cy="430" r="22" fill="#3ba8ff" stroke="#fff" stroke-width="3"/>
-            <circle cx="885" cy="430" r="22" fill="#ff4b4b" stroke="#fff" stroke-width="3"/>
-            <text x="115" y="385" text-anchor="middle" fill="#3ba8ff" font-size="16" font-weight="900">YOU</text>
-            <text x="885" y="385" text-anchor="middle" fill="#ff4b4b" font-size="16" font-weight="900">CPU</text>
-            <text x="500" y="48" text-anchor="middle" fill="#ffd43b" font-size="15" font-weight="900">X EXIT</text>
-            <text x="250" y="740" text-anchor="middle" fill="#cbd1da" font-size="11" font-weight="800">POCKET</text>
-            <text x="500" y="751" text-anchor="middle" fill="#fff" font-size="11" font-weight="900">XTREME ZONE</text>
-            <text x="750" y="740" text-anchor="middle" fill="#cbd1da" font-size="11" font-weight="800">POCKET</text>
+
+    <div style="
+        text-align:center;
+        margin:15px 0;
+    ">
+
+        <svg
+            viewBox="0 0 1000 900"
+            style="
+                width:100%;
+                max-width:430px;
+                height:auto;
+            "
+        >
+
+            <!-- LEFT X-RAIL -->
+
+            <path
+                d="
+                M275 610
+                C205 520 185 360 220 245
+                C255 150 345 90 450 75
+                "
+                fill="none"
+                stroke="#666"
+                stroke-width="28"
+                stroke-linecap="round"
+            />
+
+            <!-- RIGHT X-RAIL -->
+
+            <path
+                d="
+                M725 610
+                C795 520 815 360 780 245
+                C745 150 655 90 550 75
+                "
+                fill="none"
+                stroke="#666"
+                stroke-width="28"
+                stroke-linecap="round"
+            />
+
+            <!-- BATTLE AREA -->
+
+            <path
+                d="
+                M260 210
+                Q500 120 740 210
+                Q820 300 800 470
+                Q790 560 730 605
+                Q655 655 565 620
+                L435 620
+                Q345 655 270 605
+                Q210 560 200 470
+                Q180 300 260 210
+                Z
+                "
+                fill="#191919"
+                stroke="#777"
+                stroke-width="10"
+            />
+
+            <!-- X EXIT -->
+
+            <rect
+                x="455"
+                y="62"
+                width="90"
+                height="40"
+                rx="12"
+                fill="#ffd43b"
+            />
+
+            <!-- POCKETS -->
+
+            <circle
+                cx="255"
+                cy="705"
+                r="38"
+                fill="#080808"
+                stroke="#777"
+                stroke-width="5"
+            />
+
+            <circle
+                cx="745"
+                cy="705"
+                r="38"
+                fill="#080808"
+                stroke="#777"
+                stroke-width="5"
+            />
+
+            <!-- XTREME ZONE -->
+
+            <rect
+                x="435"
+                y="690"
+                width="130"
+                height="45"
+                rx="18"
+                fill="#e33"
+            />
+
+            <!-- PLAYER SIDE -->
+
+            <circle
+                cx="${Game.arena.playerSide==="Left" ? 300 : 700}"
+                cy="420"
+                r="15"
+                fill="${Game.arena.playerColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
+            />
+
+            <!-- CPU SIDE -->
+
+            <circle
+                cx="${Game.arena.cpuSide==="Left" ? 300 : 700}"
+                cy="420"
+                r="15"
+                fill="${Game.arena.cpuColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
+            />
+
         </svg>
-        <p><strong>YOU: LEFT · CPU: RIGHT</strong></p>
-        <p style="opacity:.7;">Closed-loop X Rail · X Exit at top · Pockets and Xtreme Zone at bottom</p>
+
+        <p>
+            <strong>
+                ${Game.arena.playerColor} Bey:
+                ${Game.arena.playerSide} side
+            </strong>
+        </p>
+
+        <p style="opacity:.7;">
+            X-Rail is on both sides → X Exit is at the top
+        </p>
+
     </div>
+
     `;
 }
 
@@ -9215,3 +9338,494 @@ window.addEventListener("DOMContentLoaded",()=>{
 // battle render cannot fail with "chooseDynamicMove is not defined".
 window.chooseDynamicMove=chooseDynamicMove;
 
+/*
+ * SPIN WARS X — BATTLE ENGINE V1 FOUNDATION
+ *
+ * STEP 1:
+ * Replace zone-based battle state with a continuous physical state.
+ *
+ * This file is intentionally isolated from the old battle engine.
+ * It does NOT yet handle collisions, finishes, CPU decisions, or scoring.
+ *
+ * Integration order:
+ *   1. Load this file after the combo/bit databases.
+ *   2. Use SWX.initPhysicalBattleState() when a battle round starts.
+ *   3. Use SWX.stepPhysicalState() from the new simulation loop.
+ *   4. Once movement is verified, old zone movement can be deleted.
+ */
+
+const SWX = window.SWX || {};
+
+SWX.VERSION = "1.0.0-foundation";
+
+SWX.STADIUM = {
+    // Logical physics bounds. These are normalized coordinates so the engine
+    // is independent of the current SVG/UI dimensions.
+    minX: -1,
+    maxX: 1,
+    minY: -1,
+    maxY: 1,
+
+    // Finish geometry is deliberately separate from normal movement.
+    pockets: {
+        left:   { x: -0.72, y: 0.88, radius: 0.18 },
+        right:  { x:  0.72, y: 0.88, radius: 0.18 }
+    },
+
+    xtreme: {
+        x: 0,
+        y: 0.96,
+        radius: 0.20
+    },
+
+    // X Rail is a closed physical loop. The UI can later map this normalized
+    // path to its exact SVG geometry.
+    rail: {
+        enabled: true,
+        yTop: -0.82,
+        yBottom: 0.82,
+        xLeft: -0.86,
+        xRight: 0.86,
+        width: 0.10,
+        exit: { x: 0, y: -0.82 }
+    }
+};
+
+function swxClamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+function swxNum(v, fallback = 0) {
+    return Number.isFinite(Number(v)) ? Number(v) : fallback;
+}
+
+function swxVecLength(x, y) {
+    return Math.hypot(x, y);
+}
+
+function swxNormalize(x, y) {
+    const length = swxVecLength(x, y);
+    if (length <= 0.000001) return { x: 0, y: 0 };
+    return { x: x / length, y: y / length };
+}
+
+/*
+ * Convert the existing combo stats into physical tendencies.
+ * These are intentionally modest modifiers. Stats do not directly become
+ * movement speed, force, or outcome percentages.
+ */
+SWX.getPhysicalProfile = function(side) {
+    const combo = typeof getBattleCombo === "function"
+        ? getBattleCombo(side)
+        : null;
+
+    const bit = typeof getBitPhysics === "function"
+        ? getBitPhysics(side)
+        : null;
+
+    const stats = combo?.stats || {};
+    const blade = window.Game?.[side]?.blade || {};
+
+    return {
+        attack: swxNum(stats.attack, 70),
+        knockback: swxNum(stats.knockback, 70),
+        defense: swxNum(stats.defense, 70),
+        balance: swxNum(stats.balance, 70),
+        stamina: swxNum(stats.stamina, 70),
+        mobility: swxNum(stats.mobility, 70),
+
+        // Bit remains the primary stadium-contact driver.
+        bitMovement: swxNum(bit?.movement, 60),
+        bitFriction: swxNum(bit?.friction, 50),
+        bitStability: swxNum(bit?.stability, 60),
+        bitSpinDrain: swxNum(bit?.spinDrain, 1),
+        bitRailAffinity: swxNum(bit?.xRailAffinity, 50),
+
+        weight: swxNum(blade.weight, 38),
+        type: blade.type || "Balance"
+    };
+};
+
+/*
+ * This is now the authoritative physical state.
+ *
+ * zone/previousZone/neighbor graphs are NOT part of this state.
+ * They can still exist temporarily for the old renderer, but the new engine
+ * must never use them to decide movement.
+ */
+SWX.createPhysicalState = function(side, launch = {}) {
+    const p = SWX.getPhysicalProfile(side);
+
+    const startX = side === "player" ? -0.58 : 0.58;
+    const startY = swxNum(launch.y, 0);
+
+    const direction = side === "player" ? 1 : -1;
+
+    // Initial velocity is a physical vector. Launch quality modifies execution,
+    // not the battle result directly.
+    const qualityFactor = {
+        Perfect: 1.00,
+        Good: 0.94,
+        Okay: 0.84,
+        Bad: 0.68,
+        Horrible: 0.50
+    }[launch.quality] ?? 0.84;
+
+    const tilt = swxNum(launch.tiltDegrees, 0);
+
+    const baseSpeed =
+        0.010 +
+        (p.bitMovement / 100) * 0.010 +
+        (p.mobility / 100) * 0.004;
+
+    return {
+        side,
+
+        // Continuous position.
+        x: startX,
+        y: startY,
+
+        // Continuous velocity.
+        vx: direction * baseSpeed * qualityFactor,
+        vy: 0,
+
+        // Physical resources/states.
+        rpm: swxClamp(
+            0.86 +
+            (p.stamina - 70) * 0.0025 +
+            swxNum(launch.rpmFactor, 0),
+            0.68,
+            1.00
+        ),
+
+        momentumX: 0,
+        momentumY: 0,
+
+        tilt,
+        stability: swxClamp(
+            0.72 +
+            (p.balance - 70) * 0.004 +
+            (p.bitStability - 60) * 0.003,
+            0.35,
+            1.00
+        ),
+
+        spinDirection:
+            window.Game?.[side]?.blade?.spin === "Left"
+                ? "Left"
+                : "Right",
+
+        // Rail is a physical state, not a zone.
+        onRail: false,
+        railProgress: 0,
+        railVelocity: 0,
+
+        // Finish states.
+        insidePocket: null,
+        insideXtreme: false,
+
+        // Temporary battle state.
+        lastCollisionTime: -Infinity,
+        lastImpact: null,
+        lastEvent: null,
+
+        // Derived/control state.
+        control: swxClamp(
+            0.55 +
+            (p.mobility - 70) * 0.003 +
+            (p.balance - 70) * 0.003,
+            0.25,
+            1.00
+        ),
+
+        profile: p
+    };
+};
+
+/*
+ * Apply continuous drag and RPM loss.
+ *
+ * RPM is NOT HP. It changes the ability to maintain movement/stability.
+ */
+SWX.applyNaturalLoss = function(state, dt) {
+    const p = state.profile;
+
+    const speed = swxVecLength(state.vx, state.vy);
+
+    const movementDemand =
+        speed * (0.8 + p.bitFriction / 180);
+
+    const drain =
+        dt *
+        (0.0020 + p.bitSpinDrain * 0.00022) *
+        (0.92 + movementDemand * 5);
+
+    state.rpm = swxClamp(state.rpm - drain, 0, 1);
+
+    // Lower RPM progressively reduces control and recovery ability.
+    const rpmFactor = 0.45 + state.rpm * 0.55;
+
+    state.control = swxClamp(
+        state.control * 0.985 + rpmFactor * 0.015,
+        0.15,
+        1
+    );
+
+    // Simple stadium friction. Bit properties influence it, but no Bit is
+    // allowed to teleport or select zones.
+    const drag =
+        swxClamp(
+            0.985 -
+            p.bitFriction * 0.000025,
+            0.965,
+            0.992
+        );
+
+    state.vx *= Math.pow(drag, dt * 60);
+    state.vy *= Math.pow(drag, dt * 60);
+};
+
+/*
+ * Continuous movement step.
+ *
+ * This is deliberately small and boring. That is a feature.
+ * The first implementation must prove that a Bey can physically move before
+ * we add collisions, rails, finishes, and decision logic.
+ */
+SWX.stepPhysicalState = function(state, dt = 1 / 30) {
+    if (!state) return;
+
+    dt = swxClamp(dt, 0.001, 0.05);
+
+    SWX.applyNaturalLoss(state, dt);
+
+    const speed = swxVecLength(state.vx, state.vy);
+    const rpmFactor = 0.45 + state.rpm * 0.55;
+
+    // Movement is driven by the existing velocity vector.
+    // The Bit controls how effectively the Bey maintains that movement.
+    const movementEfficiency =
+        swxClamp(
+            0.70 +
+            state.profile.bitMovement * 0.003 +
+            state.control * 0.20,
+            0.65,
+            1.15
+        );
+
+    state.x += state.vx * movementEfficiency * rpmFactor;
+    state.y += state.vy * movementEfficiency * rpmFactor;
+
+    // Gentle inward stadium boundary response.
+    // This is NOT a finish check.
+    if (state.x < SWX.STADIUM.minX) {
+        state.x = SWX.STADIUM.minX;
+        state.vx = Math.abs(state.vx) * 0.35;
+    }
+
+    if (state.x > SWX.STADIUM.maxX) {
+        state.x = SWX.STADIUM.maxX;
+        state.vx = -Math.abs(state.vx) * 0.35;
+    }
+
+    if (state.y < SWX.STADIUM.minY) {
+        state.y = SWX.STADIUM.minY;
+        state.vy = Math.abs(state.vy) * 0.35;
+    }
+
+    if (state.y > SWX.STADIUM.maxY) {
+        state.y = SWX.STADIUM.maxY;
+        state.vy = -Math.abs(state.vy) * 0.35;
+    }
+
+    // Momentum follows actual velocity rather than being an arbitrary 0–100
+    // gameplay meter.
+    state.momentumX =
+        state.momentumX * 0.90 +
+        state.vx * state.profile.weight * 0.10;
+
+    state.momentumY =
+        state.momentumY * 0.90 +
+        state.vy * state.profile.weight * 0.10;
+
+    // Natural stability decay/recovery.
+    const lateralMotion = Math.abs(state.vx) + Math.abs(state.vy);
+    const tiltStress = Math.abs(state.tilt) * 0.002;
+
+    state.stability = swxClamp(
+        state.stability +
+        (state.rpm > 0.45 ? 0.0008 : -0.0015) -
+        lateralMotion * 0.012 -
+        tiltStress,
+        0,
+        1
+    );
+
+    return {
+        x: state.x,
+        y: state.y,
+        vx: state.vx,
+        vy: state.vy,
+        rpm: state.rpm,
+        stability: state.stability
+    };
+};
+
+/*
+ * Convert the new physical state to a temporary compatibility view.
+ *
+ * IMPORTANT:
+ * This exists only so the current renderer can display the new coordinates.
+ * It is not used by the new physics engine for decisions.
+ */
+SWX.getCompatibilityView = function(state) {
+    return {
+        x: state.x,
+        y: state.y,
+        rpm: state.rpm,
+        stability: state.stability,
+        tilt: state.tilt,
+        onRail: state.onRail,
+        zone: null
+    };
+};
+
+/*
+ * Initialize both Beys without deleting the old engine yet.
+ *
+ * This gives us a clean physical state we can test independently before
+ * replacing simulateBattleMovement().
+ */
+SWX.initPhysicalBattleState = function() {
+    if (!window.Game?.battle) return false;
+
+    const pLaunch = window.Game.player?.launch || {};
+    const cLaunch = window.Game.cpu?.launch || {};
+
+    Game.battle.physics = {
+        version: SWX.VERSION,
+        time: 0,
+        dt: 1 / 30,
+        active: true,
+        player: SWX.createPhysicalState("player", pLaunch),
+        cpu: SWX.createPhysicalState("cpu", cLaunch)
+    };
+
+    return true;
+};
+
+/*
+ * One safe foundation tick.
+ *
+ * For now this intentionally does NOT call the old collision/event engine.
+ * It proves that continuous coordinates can advance independently.
+ */
+SWX.stepPhysicalBattle = function(dt = 1 / 30) {
+    const physics = Game.battle?.physics;
+
+    if (!physics?.active) return null;
+
+    physics.time += dt;
+
+    SWX.stepPhysicalState(physics.player, dt);
+    SWX.stepPhysicalState(physics.cpu, dt);
+
+    return physics;
+};
+
+window.SWX = SWX;
+
+// ============================================================================
+// SPIN WARS X — NEW PHYSICS FOUNDATION INTEGRATION
+// STEP 1A: continuous physical state + renderer test loop
+// ============================================================================
+(function installPhysicsFoundation(){
+    const SWX = window.SWX || {};
+    SWX.VERSION = "1.1.0-foundation-integrated";
+
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+    SWX.RENDER={cx:500,cy:420,rx:350,ry:315};
+    SWX.toScreen=function(state){return {x:SWX.RENDER.cx+state.x*SWX.RENDER.rx,y:SWX.RENDER.cy+state.y*SWX.RENDER.ry};};
+
+    SWX.updateRenderedBeys=function(){
+        const physics=Game.battle?.physics;
+        const player=document.getElementById("playerBey"), cpu=document.getElementById("cpuBey");
+        const playerLabel=document.getElementById("playerBeyLabel"), cpuLabel=document.getElementById("cpuBeyLabel");
+        if(!physics||!player||!cpu)return;
+        const p=SWX.toScreen(physics.player), c=SWX.toScreen(physics.cpu);
+        player.setAttribute("cx",p.x); player.setAttribute("cy",p.y);
+        cpu.setAttribute("cx",c.x); cpu.setAttribute("cy",c.y);
+        if(playerLabel){playerLabel.setAttribute("x",p.x);playerLabel.setAttribute("y",p.y-18);playerLabel.textContent="YOU";}
+        if(cpuLabel){cpuLabel.setAttribute("x",c.x);cpuLabel.setAttribute("y",c.y-18);cpuLabel.textContent="CPU";}
+    };
+
+    SWX.applyBowlBoundary=function(state){
+        const radius=Math.hypot(state.x,state.y), limit=0.88;
+        if(radius<=limit)return;
+        const nx=state.x/radius, ny=state.y/radius;
+        state.x=nx*limit; state.y=ny*limit;
+        const outward=state.vx*nx+state.vy*ny;
+        if(outward>0){state.vx-=2*outward*nx;state.vy-=2*outward*ny;state.vx*=0.72;state.vy*=0.72;}
+    };
+
+    SWX.stepFoundation=function(dt){
+        const physics=Game.battle?.physics; if(!physics||!physics.active)return false;
+        dt=clamp(dt,0.001,0.05); physics.time+=dt;
+        SWX.stepPhysicalState(physics.player,dt); SWX.stepPhysicalState(physics.cpu,dt);
+        SWX.applyBowlBoundary(physics.player); SWX.applyBowlBoundary(physics.cpu);
+        SWX.updateRenderedBeys(); return true;
+    };
+
+    SWX.stopFoundationLoop=function(){
+        if(Game.battle?.physics)Game.battle.physics.active=false;
+        if(Game.battle)Game.battle.physicsLoopRunning=false;
+        if(SWX._raf)cancelAnimationFrame(SWX._raf); SWX._raf=null;
+    };
+
+    SWX.startFoundationLoop=function(durationMs=8000){
+        SWX.stopFoundationLoop(); const physics=Game.battle?.physics; if(!physics)return false;
+        physics.active=true; Game.battle.physicsLoopRunning=true;
+        const start=performance.now(); let previous=start;
+        const frame=(now)=>{
+            if(!Game.battle?.physicsLoopRunning)return;
+            const dt=Math.min(0.05,(now-previous)/1000||1/60); previous=now; SWX.stepFoundation(dt);
+            if(now-start<durationMs&&Game.battle.physicsLoopRunning)SWX._raf=requestAnimationFrame(frame);
+            else{SWX.stopFoundationLoop();SWX.finishFoundationTest();}
+        };
+        SWX._raf=requestAnimationFrame(frame); return true;
+    };
+
+    SWX.finishFoundationTest=function(){
+        if(!Game.battle?.physics)return;
+        const p=Game.battle.physics.player,c=Game.battle.physics.cpu;
+        const fmt=s=>`${Math.round(s.x*100)/100}, ${Math.round(s.y*100)/100}`;
+        Game.battle.lastEvent="foundationTestComplete";
+        saveBattleSequence("PHYSICS FOUNDATION TEST",
+            `Continuous movement test complete.\n\n${Game.player.blade.name}: position ${fmt(p)} · RPM ${Math.round(p.rpm*100)}% · stability ${Math.round(p.stability*100)}%\n${Game.cpu.blade.name}: position ${fmt(c)} · RPM ${Math.round(c.rpm*100)}% · stability ${Math.round(c.stability*100)}%\n\nNo collision, rail, finish, CPU decision, or scoring system was used. This step only verifies continuous physical state and rendering.`);
+        Game.battle.sequenceIndex=Game.battle.history.length-1; renderBattleSequence();
+    };
+
+    const legacyRenderBeys=window.renderBeys;
+    window.renderBeys=function(){
+        if(Game.battle?.engineMode==="physics_v1"&&Game.battle?.physics){SWX.updateRenderedBeys();return;}
+        if(typeof legacyRenderBeys==="function")legacyRenderBeys();
+    };
+
+    const legacyStartBattleRound=window.startBattleRound||startBattleRound;
+    window.startBattleRound=function(){
+        legacyStartBattleRound(); Game.battle.engineMode="physics_v1";
+        SWX.initPhysicalBattleState(); SWX.updateRenderedBeys();
+    };
+
+    const legacyContinue=window.continueBattleSequence||continueBattleSequence;
+    window.continueBattleSequence=function(){
+        if(Game.battle?.engineMode==="physics_v1"&&Game.battle?.physics){
+            const latest=Game.battle.history?.[Game.battle.history.length-1];
+            if(latest?.title==="PHYSICS FOUNDATION TEST")return;
+            SWX.startFoundationLoop(8000); return;
+        }
+        return legacyContinue();
+    };
+    window.SWX=SWX;
+})();
