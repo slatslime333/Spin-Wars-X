@@ -3965,20 +3965,27 @@ function newBattlePreviewState(side){
 
 function getLaunchTarget(side,technique){
     if(technique==="Center") return {x:0,y:0};
+
     if(technique==="Direct Clash"){
-        return side==="player"?{x:.55,y:0}:{x:-.55,y:0};
+        const opponent=side==="player" ? NEW_BATTLE.cpu : NEW_BATTLE.player;
+        // If the opponent has already been created, aim at its real launch
+        // position. Otherwise use the known opposite launcher position.
+        return opponent
+            ? {x:opponent.x,y:opponent.y}
+            : (side==="player"?{x:.76,y:0}:{x:-.76,y:0});
     }
 
     if(technique==="X-Rail"){
         // Player-side dash catches the lower rail; CPU-side dash catches the
-        // right-side rail, which is much closer to the top exit.
+        // right-side rail. These are approach points, not teleports.
         return side==="player"
             ? {x:-.43,y:.68}
             : {x:.78,y:.05};
     }
 
-    // Drop Launch: aim for the X Exit, stall there, then fall back inward.
-    return {x:0,y:-.55};
+    // Drop Launch is different: it starts at the X-Rail exit itself,
+    // then releases DOWN into the Battle Zone.
+    return {x:0,y:0};
 }
 
 function makeLaunchState(side){
@@ -3990,8 +3997,12 @@ function makeLaunchState(side){
     const technique=combo.launch?.technique||"Center";
     const target=getLaunchTarget(side,technique);
 
-    const startX=side==="player"?-.76:.76;
-    const startY=0;
+    // Launchers normally begin from the player's side. Drop Launch is the
+    // exception: the Bey begins immediately beside the top X-Rail exit and
+    // travels DOWN into the Battle Zone, matching the intended technique.
+    const isDropLaunch=technique==="Drop Launch";
+    const startX=isDropLaunch ? 0 : (side==="player"?-.76:.76);
+    const startY=isDropLaunch ? -.58 : 0;
     const dx=target.x-startX;
     const dy=target.y-startY;
     const distance=Math.max(.001,Math.hypot(dx,dy));
@@ -4030,13 +4041,14 @@ function makeLaunchState(side){
     // accelerates along the selected physical trajectory. Technique, quality,
     // tilt and bit behavior all affect this vector.
     const releaseSpeed = 0.030 * launchSpeed * (0.92 + (stats.mobility||70)/700);
+    const launchImpulse = isDropLaunch ? releaseSpeed*1.35 : releaseSpeed;
 
     const state={
         side,
         x:startX,
         y:startY,
-        vx:(tx-startX)/Math.max(.35,distance)*releaseSpeed,
-        vy:(ty-startY)/Math.max(.35,distance)*releaseSpeed,
+        vx:(tx-startX)/Math.max(.35,distance)*launchImpulse,
+        vy:(ty-startY)/Math.max(.35,distance)*launchImpulse,
         rpm:initialRPM,
         stability:newBattleClamp(
             ((stats.balance||70)/100)*quality.stability,
