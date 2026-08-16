@@ -3377,15 +3377,8 @@ renderBeys();
 //=========================
 
 function generateArena(){
-
-    // NEW ENGINE: launch choices become initial physical conditions.
-    // Do not run the legacy zone/path launch animation.
-    setLaunchPositions();
-
-    if(typeof startNewPhysicalBattle==="function"){
-        startNewPhysicalBattle();
-    }
-
+    // Compatibility wrapper only. Never call the legacy launch animation.
+    if(typeof startNewPhysicalBattle==="function") startNewPhysicalBattle();
 }
 
 //=========================
@@ -8353,7 +8346,22 @@ function generateCPULaunch(){
     side.launch.quality=rollQuality();
     applyLaunchQuality("cpu");
     validateLaunch("cpu");
-    generateArena();
+
+    // FINAL LAUNCH HANDOFF: bypass the legacy arena/launch-animation chain.
+    // The new engine owns the battle from this point forward.
+    try{
+        startNewPhysicalBattle();
+    }catch(error){
+        console.error("Spin Wars X launch handoff failed:",error);
+        const app=document.getElementById("app");
+        if(app){
+            app.innerHTML=`<div class="background"><main class="menu"><section class="menu-card" style="max-width:560px;text-align:center;">
+              <h1>BATTLE ENGINE ERROR</h1><hr>
+              <p>The launch completed, but the new battle engine threw an error.</p>
+              <pre style="text-align:left;white-space:pre-wrap;font-size:10px;opacity:.75;">${String(error?.stack||error)}</pre>
+            </section></main></div>`;
+        }
+    }
 }
 
 
@@ -9941,5 +9949,14 @@ window.SWX=window.SWX||{};
 SWX.getPhysicalState=()=>Game.battle?.physics||null;
 SWX.stopPhysics=()=>{if(Game.battle?.physics) Game.battle.physics.active=false;};
 SWX.startPhysics=()=>{if(Game.battle?.physics){Game.battle.physics.active=true;runPhysics();}};
+
+// Development sanity check: these are the functions the launch handoff must have.
+SWX.engineReady=()=>({
+    startNewPhysicalBattle:typeof startNewPhysicalBattle==="function",
+    createPhysicalState:typeof createPhysicalState==="function",
+    makeBattleScreen:typeof makeBattleScreen==="function",
+    runPhysics:typeof runPhysics==="function",
+    renderStadium:typeof renderStadium==="function"
+});
 
 })();
