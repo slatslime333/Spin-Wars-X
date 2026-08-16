@@ -3780,6 +3780,12 @@ const NEW_BATTLE = {
     cpu:null
 };
 
+// Self-contained helper for the NEW engine.
+// Do not depend on any removed legacy battle helpers.
+function newBattleClamp(value,min,max){
+    return Math.max(min,Math.min(max,value));
+}
+
 function newBattleLaunchState(side){
     const combo=Game[side];
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
@@ -3794,7 +3800,7 @@ function newBattleLaunchState(side){
         vx:direction*(0.016 + (stats.mobility||70)*0.000035),
         vy:(side==="player"?-1:1)*0.0015,
         rpm:1,
-        stability:clampBattleValue((stats.balance||70)/100,0.45,1),
+        stability:newBattleClamp((stats.balance||70)/100,0.45,1),
         radius:0.055,
         hitFlash:0,
         stats,
@@ -3980,8 +3986,8 @@ function newPhysicsStep(s,dt){
         }
     }
 
-    s.rpm=clampBattleValue(s.rpm-(0.00042+speed*0.0012)*dt*60,0,1);
-    s.stability=clampBattleValue(
+    s.rpm=newBattleClamp(s.rpm-(0.00042+speed*0.0012)*dt*60,0,1);
+    s.stability=newBattleClamp(
         s.stability-((1-s.rpm)*0.0008+speed*0.002)*dt*60,
         0,1
     );
@@ -4012,10 +4018,10 @@ function newPhysicsCollision(dt){
             c.x+=nx*separation*.5;
             c.y+=ny*separation*.5;
 
-            p.stability=clampBattleValue(p.stability-0.015,0,1);
-            c.stability=clampBattleValue(c.stability-0.015,0,1);
-            p.rpm=clampBattleValue(p.rpm-0.006,0,1);
-            c.rpm=clampBattleValue(c.rpm-0.006,0,1);
+            p.stability=newBattleClamp(p.stability-0.015,0,1);
+            c.stability=newBattleClamp(c.stability-0.015,0,1);
+            p.rpm=newBattleClamp(p.rpm-0.006,0,1);
+            c.rpm=newBattleClamp(c.rpm-0.006,0,1);
         }
     }
 }
