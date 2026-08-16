@@ -3378,9 +3378,13 @@ renderBeys();
 
 function generateArena(){
 
+    // NEW ENGINE: launch choices become initial physical conditions.
+    // Do not run the legacy zone/path launch animation.
     setLaunchPositions();
 
-    playLaunchAnimation();
+    if(typeof startNewPhysicalBattle==="function"){
+        startNewPhysicalBattle();
+    }
 
 }
 
@@ -9692,6 +9696,9 @@ function makeBattleScreen(){
           <div id="liveCommentary" style="font-size:11px;line-height:1.35;min-height:30px;">The Beys are entering the stadium...</div>
         </div>
         <div id="liveBattleStats" style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px;"></div>
+        <div id="engineStatus" style="margin-top:6px;font-size:8px;opacity:.45;text-align:center;letter-spacing:.5px;">
+          LIVE PHYSICS · CONTINUOUS SIMULATION
+        </div>
       </section>
     </main>`;
     updateBattleVisuals();
@@ -9926,8 +9933,7 @@ window.showLaunchExecution=function(){
 // generateCPULaunch() ultimately calls generateArena(), whose global showArena
 // is replaced below.
 window.showArena=function(){
-    if(Game.battle.engineMode==="physics_v1") return startNewPhysicalBattle();
-    return undefined;
+    return startNewPhysicalBattle();
 };
 
 // Expose a small debug API without making it part of normal gameplay.
