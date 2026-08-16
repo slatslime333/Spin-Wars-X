@@ -4441,94 +4441,130 @@ function newPhysicsStep(s,dt){
     const bit=s.bit||{};
     const bitMovement=newBattleClamp(bit.movement||50,10,100);
     const bitControl=newBattleClamp(bit.control||70,10,100);
-    const mobilityStat=newBattleClamp(stats.mobility||70,60,99);
+    const centerAffinity=newBattleClamp(bit.centerAffinity||50,0,100);
     const balance=newBattleClamp((stats.balance||70)/100,0.5,1);
     const rpmFactor=newBattleClamp(s.rpm,0,1);
+    const mobility=newBattleClamp((stats.mobility||70),60,99)/100;
 
     // ------------------------------------------------------------
-    // MOVEMENT PROFILE
-    // A Bey's bit determines its basic travel personality. Orb/Ball/
-    // Needle stay controlled and close to center; Flat/Rush travel much
-    // farther. Combo mobility modifies that behavior, but cannot turn a
-    // high-control stamina bit into an attack-style movement pattern.
-    // ------------------------------------------------------------
-    const movementProfile=0.30 + (bitMovement/100)*0.70;
-    const controlProfile=0.35 + (bitControl/100)*0.65;
-
-    // Keep the actual travel speed modest. A real Bey loses energy without
-    // suddenly becoming a rocket; lower RPM gradually reduces travel.
-    const cruiseSpeed=
-        (0.0085 + movementProfile*0.0105) *
-        (0.68 + rpmFactor*0.32) *
-        (0.88 + mobilityStat/1000);
-
-    // Desired orbit radius is mostly a bit property. High-control bits
-    // naturally remain close to center; aggressive bits can travel outward.
-    const centerAffinity=newBattleClamp(bit.centerAffinity||50,0,100);
-    const orbitRadius=
-        0.08 +
-        (1-centerAffinity/100)*0.58 +
-        (bitMovement/100)*0.10;
-
-    // ------------------------------------------------------------
-    // SPIN-COHERENT CIRCULAR MOVEMENT
-    // Right-spin = clockwise on the top-down stadium view.
-    // Left-spin = counter-clockwise.
+    // REALISTIC MOVEMENT MODEL
     //
-    // We blend the current velocity toward the tangent of an orbit instead
-    // of arbitrarily rotating velocity every frame. This makes movement look
-    // like a spinning top tracing a believable circular/elliptical path.
+    // We do NOT put the Bey on a perfect circle. A Bey is a spinning top
+    // sliding/rolling on a stadium surface. Its spin gives it a general
+    // travel direction, while launch line, friction, stadium slope, tiny
+    // surface differences and impacts constantly disturb that line.
+    //
+    // Top-down convention for this game:
+    // RIGHT SPIN -> COUNTER-CLOCKWISE travel tendency.
+    // LEFT SPIN  -> CLOCKWISE travel tendency.
+    // This is the movement/precession direction, not the direction the
+    // top itself visually rotates.
     // ------------------------------------------------------------
-    const distanceFromCenter=Math.hypot(s.x,s.y);
-    const safeDistance=Math.max(distanceFromCenter,0.001);
 
-    let radialX=s.x/safeDistance;
-    let radialY=s.y/safeDistance;
+    const distance=Math.hypot(s.x,s.y);
+    const safeDistance=Math.max(distance,0.001);
+    const radialX=s.x/safeDistance;
+    const radialY=s.y/safeDistance;
 
-    const spin=(s.launchSpinDirection||s.blade?.spin||"Right").toLowerCase();
-    const clockwise=spin!=="left";
+    const spinDirection=(s.launchSpinDirection||"Right").toLowerCase();
+    const rightSpin=spinDirection!=="left";
 
-    // Screen coordinates: clockwise tangent is (-y, x).
-    let tangentX=clockwise ? -radialY : radialY;
-    let tangentY=clockwise ? radialX : -radialX;
+    // Counter-clockwise tangent for right spin: (y, -x).
+    // Clockwise tangent for left spin: (-y, x).
+    let tangentX=rightSpin ? radialY : -radialY;
+    let tangentY=rightSpin ? -radialX : radialX;
 
-    // If the Bey is near the center, give it a launch-direction tangent so
-    // it doesn't jitter while trying to define an orbit from zero radius.
-    if(distanceFromCenter<0.08){
+    // Near center there is no useful radial angle. Keep the launch vector
+    // alive until a natural orbit direction develops.
+    if(distance<0.10){
         const launchSpeed=Math.hypot(s.vx,s.vy);
-        if(launchSpeed>0.001){
+        if(launchSpeed>0.002){
             tangentX=s.vx/launchSpeed;
             tangentY=s.vy/launchSpeed;
+        }else{
+            tangentX=rightSpin?0:-0;
+            tangentY=rightSpin?-1:1;
         }
     }
 
-    // Attack-style bits have more radial freedom; stable bits are pulled
-    // back toward their preferred orbit radius.
-    const orbitError=distanceFromCenter-orbitRadius;
-    const radialCorrection=
-        -orbitError *
-        (0.018 + controlProfile*0.020) *
+    // Movement personality comes primarily from the BIT.
+    // Orb/Ball/Needle should not be turned into Attack movement by blade
+    // mobility alone.
+    const mobilityProfile=0.20+(bitMovement/100)*0.80;
+
+    // Preferred radius: stamina/defense bits stay close to center; mobile
+    // bits are allowed to roam farther. This is a target tendency, not a
+    // hard circular track.
+    const preferredRadius=
+        0.055 +
+        (1-centerAffinity/100)*0.48 +
+        (bitMovement/100)*0.16;
+
+    // Speed is intentionally moderate. A Bey should visibly travel, but
+    // should not look like an air-hockey puck.
+    const baseTravel=
+        0.022 +
+        mobilityProfile*0.030 +
+        mobility*0.006;
+
+    // RPM affects control and available travel, but does NOT directly force
+    // the Bey toward the center. That comes from bit geometry + declining
+    // precession/energy below.
+    const targetSpeed=
+        baseTravel*(0.78+rpmFactor*0.22);
+
+    // Soft radial tendency. As RPM falls, stable bits increasingly settle
+    // inward; aggressive bits retain some radius longer.
+    const radialError=distance-preferredRadius;
+    const centerSettling=(1-rpmFactor)*
+        (0.012+centerAffinity/100*0.040);
+
+    let radialAccel=
+        (-radialError*0.030*controlProfileSafe(bitControl))*dt*60;
+
+    // Extra inward settling at low RPM, strongest for non-aggressive bits.
+    radialAccel += -distance*centerSettling*dt*60;
+
+    // Do not make the path perfectly circular: blend in small persistent
+    // steering noise. It changes slowly so it looks like a physical drift,
+    // not random teleportation.
+    s.driftTimer=(s.driftTimer||0)-dt;
+    if(s.driftTimer<=0){
+        s.driftTimer=0.16+Math.random()*0.34;
+        s.driftAngle=(s.driftAngle||0)+(Math.random()-0.5)*0.55;
+        s.driftAmount=(Math.random()-0.5)*
+            (0.010+(1-bitControl/100)*0.025);
+    }
+
+    const drift=s.driftAmount||0;
+    const cosD=Math.cos(s.driftAngle||0);
+    const sinD=Math.sin(s.driftAngle||0);
+    const driftX=tangentX*cosD-radialX*sinD;
+    const driftY=tangentY*cosD-radialY*sinD;
+
+    const desiredX=
+        driftX*targetSpeed +
+        radialX*radialAccel;
+    const desiredY=
+        driftY*targetSpeed +
+        radialY*radialAccel;
+
+    // Control determines how strongly the Bey can correct itself. Low-control
+    // attack bits wander more; high-control stamina/defense bits settle.
+    const steeringStrength=
+        (0.020+bitControl/100*0.035) *
+        (0.60+rpmFactor*0.40) *
         dt*60;
 
-    // The radial correction is intentionally gentle. Beyblades do not move
-    // like a logo pinned to a perfect circular track.
-    const targetVx=tangentX*cruiseSpeed + radialX*radialCorrection;
-    const targetVy=tangentY*cruiseSpeed + radialY*radialCorrection;
-
-    const steering=
-        (0.018 + controlProfile*0.030) *
-        (0.55 + rpmFactor*0.45) *
-        dt*60;
-
-    s.vx+=(targetVx-s.vx)*steering;
-    s.vy+=(targetVy-s.vy)*steering;
+    s.vx+=(desiredX-s.vx)*steeringStrength;
+    s.vy+=(desiredY-s.vy)*steeringStrength;
 
     // ------------------------------------------------------------
-    // SELECTED LAUNCH TRAJECTORY
-    // Keep the chosen launch meaningful during the opening, then let the
-    // bit's natural movement profile take over.
+    // LAUNCH TRAJECTORY OVERRIDE
+    // The selected launch is a temporary intention, not the Bey's entire
+    // battle movement model.
     // ------------------------------------------------------------
-    if(s.launchAge<0.75){
+    if(s.launchAge<0.70){
         const target=s.launchTarget;
         const dx=target.x-s.x;
         const dy=target.y-s.y;
@@ -4536,27 +4572,25 @@ function newPhysicsStep(s,dt){
 
         if(d>0.05 && s.launchTechnique!=="Drop Launch"){
             const aimStrength=
-                s.launchTechnique==="Direct Clash" ? 0.025 :
-                s.launchTechnique==="X-Rail" ? 0.020 :
-                0.015;
+                s.launchTechnique==="Direct Clash" ? 0.030 :
+                s.launchTechnique==="X-Rail" ? 0.024 :
+                0.018;
 
             s.vx+=(dx/d)*aimStrength*dt*60;
             s.vy+=(dy/d)*aimStrength*dt*60;
         }
     }
 
-    // Center launch deliberately settles toward center, but after the opening
-    // it follows a small spin-coherent orbit instead of freezing in place.
-    if(s.centerLaunch && distanceFromCenter<0.18){
-        const pull=Math.min(1,dt*2.2);
-        s.vx+=(0-s.x)*pull;
-        s.vy+=(0-s.y)*pull;
+    // Center launch establishes center, then immediately resumes natural
+    // spin-consistent movement instead of freezing.
+    if(s.centerLaunch && distance<0.18){
+        const pull=Math.min(1,dt*1.8);
+        s.vx+=(-s.x)*pull;
+        s.vy+=(-s.y)*pull;
     }
 
     // ------------------------------------------------------------
     // DROP LAUNCH
-    // Start beside the X exit, approach it, briefly stabilize, then release
-    // downward/inward into the Battle Zone.
     // ------------------------------------------------------------
     if(s.launchTechnique==="Drop Launch" && s.dropPhase){
         const exitX=0, exitY=-0.55;
@@ -4574,7 +4608,7 @@ function newPhysicsStep(s,dt){
 
             if(s.dropStall>=0.28){
                 s.dropPhase="drop";
-                const dx2=-s.x, dy2=-s.y;
+                const dx2=-s.x,dy2=-s.y;
                 const d2=Math.max(.001,Math.hypot(dx2,dy2));
                 s.vx=(dx2/d2)*0.055;
                 s.vy=(dy2/d2)*0.055;
@@ -4588,50 +4622,48 @@ function newPhysicsStep(s,dt){
     s.x+=s.vx*dt*60;
     s.y+=s.vy*dt*60;
 
-    // Very light drag. RPM loss, not arbitrary friction, is what gradually
-    // reduces the top's ability to travel.
-    const drag=
-        0.9980 -
-        (bitMovement/100)*0.00045 +
-        (1-bitControl/100)*0.00015;
+    // Very light surface drag. RPM loss controls long-term behavior.
+    const drag=0.9990-(bitMovement/100)*0.00018;
     s.vx*=Math.pow(drag,dt*60);
     s.vy*=Math.pow(drag,dt*60);
 
     // ------------------------------------------------------------
-    // X-RAIL EXIT / TOP WALL
-    // Until the actual X-Rail system is engaged, the exit is a SOLID WALL.
-    // The visual opening is not a hole that Beys can pass through.
-    // A future railActive state will be the only thing allowed to use it.
+    // X-RAIL EXIT = SOLID WALL UNTIL RAIL PHYSICS EXISTS
+    //
+    // The visible exit is not a hole. A Bey may only cross it while
+    // railActive is true. This keeps the stadium physically coherent now
+    // and leaves the opening available for the future rail system.
     // ------------------------------------------------------------
-    if(!s.railActive){
-        const exitY=-0.56;
-        const exitHalfWidth=0.12;
+    const exitY=-0.56;
+    const exitHalfWidth=0.14;
 
-        if(s.y<exitY && Math.abs(s.x)<exitHalfWidth){
-            // Drop Launch is intentionally traveling DOWN from the exit.
-            const validDrop=
-                s.launchTechnique==="Drop Launch" &&
-                s.dropPhase==="approach" &&
-                s.vy>0;
+    if(!s.railActive && s.y<exitY && Math.abs(s.x)<exitHalfWidth){
+        s.y=exitY;
+        if(s.vy<0){
+            // Impact normal points down into the stadium.
+            const impactSpeed=Math.hypot(s.vx,s.vy);
+            s.vy=-s.vy*0.58;
+            s.vx*=0.78;
 
-            if(!validDrop){
-                s.y=exitY;
-                if(s.vy<0){
-                    s.vy=-s.vy*0.72;
-                    s.vx*=0.86;
-                    s.wallHits=(s.wallHits||0)+1;
-                    s.stability=newBattleClamp(s.stability-0.0025,0,1);
-                    s.rpm=newBattleClamp(s.rpm-0.001,0,1);
-                }
-            }
+            // Fast impacts lose more energy and stability.
+            const impactFactor=Math.min(1,impactSpeed/0.07);
+            s.vx*=1-0.10*impactFactor;
+            s.vy*=1-0.16*impactFactor;
+            s.rpm=newBattleClamp(s.rpm-0.0025*impactFactor,0,1);
+            s.stability=newBattleClamp(
+                s.stability-0.0055*impactFactor,
+                0,1
+            );
+            s.wallHits=(s.wallHits||0)+1;
         }
     }
 
     // ------------------------------------------------------------
-    // STADIUM WALL / BOWL BOUNCE
+    // STADIUM WALL IMPACT
+    // Fast hits should visibly change direction and lose momentum.
+    // After the bounce, the natural movement model takes over again.
     // ------------------------------------------------------------
-    const rx=0.86;
-    const ry=0.86;
+    const rx=0.86,ry=0.86;
     const ellipseValue=(s.x*s.x)/(rx*rx)+(s.y*s.y)/(ry*ry);
 
     if(ellipseValue>1){
@@ -4642,30 +4674,56 @@ function newPhysicsStep(s,dt){
         const nY=ny/normalLength;
 
         const scale=1/Math.sqrt(ellipseValue);
-        s.x*=scale*0.995;
-        s.y*=scale*0.995;
+        s.x*=scale*0.992;
+        s.y*=scale*0.992;
 
         const outward=s.vx*nX+s.vy*nY;
         if(outward>0){
+            const impactSpeed=Math.hypot(s.vx,s.vy);
+            const speedFactor=Math.min(1,impactSpeed/0.075);
+
+            // Reflect around the wall normal.
             s.vx-=2*outward*nX;
             s.vy-=2*outward*nY;
 
-            // Softer than a billiard-ball bounce. High-control/stamina
-            // combinations retain their line; mobile attack bits lose more
-            // energy when they strike the wall.
-            const wallRetention=
-                0.68 +
-                controlProfile*0.18 +
-                balance*0.05;
+            // Harder/faster impacts shed more speed. High-control bits keep
+            // their line better; aggressive bits rebound more dramatically.
+            const retention=
+                0.64 +
+                (bitControl/100)*0.18 +
+                balance*0.06 -
+                speedFactor*0.12;
 
-            s.vx*=wallRetention;
-            s.vy*=wallRetention;
+            s.vx*=newBattleClamp(retention,0.45,0.88);
+            s.vy*=newBattleClamp(retention,0.45,0.88);
+
+            // Add a tiny post-impact tangent bias so the Bey doesn't look
+            // like a perfect billiard ball. Its spin direction determines
+            // which way it begins curving after the impact.
+            const tangentImpactX=rightSpin ? nY : -nY;
+            const tangentImpactY=rightSpin ? -nX : nX;
+            const impactKick=(0.004+speedFactor*0.009)*
+                (0.6+rpmFactor*0.4);
+
+            s.vx+=tangentImpactX*impactKick;
+            s.vy+=tangentImpactY*impactKick;
 
             s.wallHits=(s.wallHits||0)+1;
-            s.stability=newBattleClamp(
-                s.stability-(0.0025+(1-balance)*0.0035),
+
+            // Impact cost is meaningful, but not catastrophic.
+            s.rpm=newBattleClamp(
+                s.rpm-(0.0012+speedFactor*0.0055),
                 0,1
             );
+            s.stability=newBattleClamp(
+                s.stability-
+                (0.002+speedFactor*0.012+(1-bitControl/100)*0.003),
+                0,1
+            );
+
+            // Force a fresh drift sample after an impact so the next arc
+            // begins from the new trajectory rather than the old one.
+            s.driftTimer=0;
         }
     }
 
@@ -4676,14 +4734,13 @@ function newPhysicsStep(s,dt){
     const tiltFactor=1+(s.tilt||0)*0.018;
     const bitDrain=(bit.spinDrain||0.8)/100;
 
-    // Movement itself does not consume huge amounts of spin. The top should
-    // continue traveling as RPM gradually falls, with movement becoming less
-    // controlled and smaller rather than stopping abruptly.
+    // A real top continues moving after losing RPM. Lower RPM progressively
+    // reduces travel/control and increases the center-settling tendency.
     s.rpm=newBattleClamp(
         s.rpm-
-        (0.00010+
-         currentSpeed*0.00008*tiltFactor+
-         bitDrain*0.00007)*
+        (0.000095+
+         currentSpeed*0.000055*tiltFactor+
+         bitDrain*0.000060)*
         dt*60,
         0,1
     );
@@ -4697,7 +4754,8 @@ function newPhysicsStep(s,dt){
     }else{
         s.tilt=newBattleClamp(
             s.tilt+
-            (currentSpeed*0.007+(1-s.rpm)*0.040)*
+            (currentSpeed*0.006+
+             (1-s.rpm)*0.035)*
             dt*60,
             0,12
         );
@@ -4706,12 +4764,16 @@ function newPhysicsStep(s,dt){
     const tiltInstability=(s.tilt/12)*0.0013;
     s.stability=newBattleClamp(
         s.stability-
-        ((1-s.rpm)*0.00038+
-         currentSpeed*0.00028+
+        ((1-s.rpm)*0.00036+
+         currentSpeed*0.00020+
          tiltInstability)*
         dt*60,
         0,1
     );
+}
+
+function controlProfileSafe(control){
+    return newBattleClamp(control/100,0.35,1);
 }
 function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
