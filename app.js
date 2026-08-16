@@ -4009,9 +4009,9 @@ function makeLaunchState(side){
     const inward=side==="player"?1:-1;
     const techniqueSpeed={
         Center:1.00,
-        "X-Rail":.96,
-        "Direct Clash":1.12,
-        "Drop Launch":.88
+        "X-Rail":1.08,
+        "Direct Clash":1.18,
+        "Drop Launch":.92
     }[technique]||1;
 
     const launchSpeed=techniqueSpeed*quality.speed*angle.speed;
@@ -4026,12 +4026,17 @@ function makeLaunchState(side){
     const ratchetHeight=parseInt(String(combo.ratchet?.name||"").match(/-(\d+)/)?.[1]||60,10);
     if(initialTilt>0) initialTilt += Math.max(0,(ratchetHeight-60)/10)*.7;
 
+    // Initial release impulse. The Bey begins at the launcher and immediately
+    // accelerates along the selected physical trajectory. Technique, quality,
+    // tilt and bit behavior all affect this vector.
+    const releaseSpeed = 0.030 * launchSpeed * (0.92 + (stats.mobility||70)/700);
+
     const state={
         side,
         x:startX,
         y:startY,
-        vx:vxBase*launchSpeed,
-        vy:vyBase*launchSpeed,
+        vx:(tx-startX)/Math.max(.35,distance)*releaseSpeed,
+        vy:(ty-startY)/Math.max(.35,distance)*releaseSpeed,
         rpm:initialRPM,
         stability:newBattleClamp(
             ((stats.balance||70)/100)*quality.stability,
@@ -4257,15 +4262,23 @@ function renderNewBattle(mode="battle"){
 
 
           ${launchSetup ? `
+          <div id="newLaunchStatus" style="margin-top:10px;padding:9px 10px;border-radius:9px;background:#202831;color:#fff;border:1px solid #46515a;font-size:12px;">
+            ${launchStage==="tilt"
+                ? "Choose your launch angle first."
+                : launchStage==="technique"
+                    ? `Tilt locked: <strong>${selectedAngle}</strong> · Now choose your launch technique.`
+                    : `Launch locked: <strong>${selectedTechnique}</strong> · ${selectedAngle}.`
+            }
+          </div>
           <div id="newLaunchControls" style="margin-top:10px;padding:12px;border-radius:10px;background:rgba(0,0,0,.18);">
             <div style="font-size:12px;opacity:.7;margin-bottom:6px;">LAUNCH SETUP · ${launchStage==="tilt"?"1 / 3":launchStage==="technique"?"2 / 3":"3 / 3"}</div>
 
             ${launchStage==="tilt" ? `
               <strong>CHOOSE TILT</strong>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px;">
-                <button class="menu-btn" data-new-launch-angle="Flat">FLAT</button>
-                <button class="menu-btn" data-new-launch-angle="Slight Tilt">SLIGHT TILT</button>
-                <button class="menu-btn" data-new-launch-angle="Hard Tilt">HARD TILT</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-angle="Flat">FLAT</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-angle="Slight Tilt">SLIGHT TILT</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-angle="Hard Tilt">HARD TILT</button>
               </div>
               <div style="font-size:10px;opacity:.62;margin-top:7px;">
                 Tilt changes movement, control, attack angle, stability and burst exposure.
@@ -4273,10 +4286,10 @@ function renderNewBattle(mode="battle"){
             ` : launchStage==="technique" ? `
               <strong>CHOOSE LAUNCH</strong>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;">
-                <button class="menu-btn" data-new-launch-technique="Center">CENTER</button>
-                <button class="menu-btn" data-new-launch-technique="X-Rail">X RAIL</button>
-                <button class="menu-btn" data-new-launch-technique="Direct Clash">DIRECT CLASH</button>
-                <button class="menu-btn" data-new-launch-technique="Drop Launch">DROP LAUNCH</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-technique="Center">CENTER</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-technique="X-Rail">X RAIL</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-technique="Direct Clash">DIRECT CLASH</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" data-new-launch-technique="Drop Launch">DROP LAUNCH</button>
               </div>
               <div style="font-size:10px;opacity:.62;margin-top:7px;">
                 The technique sets a physical launch trajectory. It does not guarantee the result.
@@ -4289,16 +4302,16 @@ function renderNewBattle(mode="battle"){
                 <div style="font-size:10px;opacity:.62;">Predicted release quality</div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
-                <button class="menu-btn" id="newLaunchKeep">QUALITY</button>
-                <button class="menu-btn gold" id="newLaunchRisk">RISK</button>
+                <button class="menu-btn" style="background:#202831;color:#ffffff;border:1px solid #68747d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" id="newLaunchKeep">QUALITY</button>
+                <button class="menu-btn gold" style="background:#b47a16;color:#fff;border:1px solid #e2b54d;box-shadow:0 2px 5px rgba(0,0,0,.28);font-weight:800;" id="newLaunchRisk">RISK</button>
               </div>
               <div style="font-size:10px;opacity:.62;margin-top:7px;">
                 QUALITY keeps the predetermined roll. RISK throws it back for a new result.
               </div>
             `}
           </div>` : `
-          <div id="newCommentary" style="margin-top:8px;padding:10px;background:rgba(0,0,0,.22);border-radius:8px;font-size:13px;">
-            Both Beyblades launch into the stadium.
+          <div id="newCommentary" style="margin-top:8px;padding:10px;background:#202831;color:#fff;border-radius:8px;font-size:13px;">
+            ${getLaunchTechniqueText("player").replace("aims","launches and aims")} · ${Game.player.launch.angle||"Flat"}.
           </div>`}
         </section>
       </main>`;
@@ -4382,10 +4395,18 @@ function newBattleFrame(now){
         if(el) el.textContent=Math.round(v*100);
     });
 
-    if(NEW_BATTLE.elapsed>1.5){
-        const commentary=document.getElementById("newCommentary");
-        if(commentary){
-            const distance=Math.hypot(p.x-c.x,p.y-c.y);
+    const commentary=document.getElementById("newCommentary");
+    if(commentary){
+        const distance=Math.hypot(p.x-c.x,p.y-c.y);
+        if(NEW_BATTLE.elapsed<0.85){
+            commentary.textContent =
+                `${Game.player.blade.name} launches ${Game.player.launch.technique==="X-Rail"?"toward the X Rail.":Game.player.launch.technique==="Direct Clash"?"straight toward the opponent.":Game.player.launch.technique==="Drop Launch"?"toward the X Exit.":"toward the center."}`;
+        }else if(NEW_BATTLE.elapsed<1.6){
+            commentary.textContent =
+                distance<0.22
+                    ?"The opening lines are converging — first contact is coming."
+                    :"Both Beys are establishing their launch trajectories.";
+        }else{
             commentary.textContent=distance<0.18
                 ?"They're closing fast — contact is imminent."
                 :"Both Beys are carving their paths around the stadium.";
