@@ -3377,8 +3377,17 @@ renderBeys();
 //=========================
 
 function generateArena(){
-    // Compatibility wrapper only. Never call the legacy launch animation.
-    if(typeof startNewPhysicalBattle==="function") startNewPhysicalBattle();
+    // The new physics engine is inside its own IIFE. The launch pipeline is
+    // outside that scope, so it must enter through the explicit public bridge.
+    if(window.SWX && typeof window.SWX.startNewPhysicalBattle==="function"){
+        window.SWX.startNewPhysicalBattle();
+        return;
+    }
+
+    // Safety fallback to the public battle entry point.
+    if(typeof window.startBattleRound==="function"){
+        window.startBattleRound();
+    }
 }
 
 //=========================
@@ -9949,6 +9958,9 @@ window.SWX=window.SWX||{};
 SWX.getPhysicalState=()=>Game.battle?.physics||null;
 SWX.stopPhysics=()=>{if(Game.battle?.physics) Game.battle.physics.active=false;};
 SWX.startPhysics=()=>{if(Game.battle?.physics){Game.battle.physics.active=true;runPhysics();}};
+
+// Explicit bridge from the launch/setup code into the new physics engine.
+window.SWX.startNewPhysicalBattle=()=>startNewPhysicalBattle();
 
 // Development sanity check: these are the functions the launch handoff must have.
 SWX.engineReady=()=>({
