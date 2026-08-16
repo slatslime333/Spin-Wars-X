@@ -3874,14 +3874,18 @@ function renderNewBattle(){
 
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
-    const px=50+p.x*43;
-    const py=45+p.y*39;
-    const cx=50+c.x*43;
-    const cy=45+c.y*39;
+
+    // The game view is deliberately a top-down BX-10-style stadium:
+    // square/octagonal outer body, circular battle bowl, closed X Rail,
+    // top-center X Rail exit, and three lower finish openings.
+    const px=50+p.x*39;
+    const py=46+p.y*39;
+    const cx=50+c.x*39;
+    const cy=46+c.y*39;
 
     app.innerHTML=`
       <div class="background"></div>
-      <main class="menu" style="max-width:900px;">
+      <main class="menu" style="max-width:920px;">
         <section class="menu-card" style="padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <strong>LIVE BATTLE</strong>
@@ -3889,113 +3893,106 @@ function renderNewBattle(){
           </div>
 
           <div id="newStadium" style="
-            position:relative;width:min(86vw,700px);aspect-ratio:1/1;
-            margin:14px auto;overflow:hidden;border-radius:24px;
-            background:#11181e;
-            border:9px solid #515b63;
-            box-shadow:inset 0 0 0 3px #0b1014,0 8px 30px rgba(0,0,0,.45);">
+            position:relative;width:min(88vw,760px);aspect-ratio:1/1;
+            margin:14px auto;background:#c9cdd0;
+            border:2px solid #6d757b;overflow:hidden;
+            clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
+            box-shadow:0 10px 28px rgba(0,0,0,.38);">
 
-            <!-- Main bowl / Battle Zone -->
-            <div style="
-              position:absolute;left:10%;right:10%;top:7%;bottom:10%;
-              border-radius:50%;
-              background:radial-gradient(circle at 50% 43%,#2d3a44 0 42%,#25313a 43% 68%,#1b242b 69% 100%);
-              box-shadow:inset 0 8px 18px rgba(0,0,0,.28);">
-            </div>
+            <svg viewBox="0 0 100 100"
+                 preserveAspectRatio="none"
+                 style="position:absolute;inset:0;width:100%;height:100%;">
 
-            <!-- X RAIL: closed loop around the battle surface.
-                 The top exit is deliberately visible as a shaped gap/spur. -->
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none"
-                 style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;">
+              <!-- Outer BX-10 body / frame -->
+              <polygon points="7,3 93,3 97,7 97,93 93,97 7,97 3,93 3,7"
+                       fill="#b9bdc0" stroke="#6d757b" stroke-width="1.2"/>
+
+              <!-- Main bowl -->
+              <ellipse cx="50" cy="45" rx="39" ry="39"
+                       fill="#e8eaeb" stroke="#9da3a7" stroke-width="1.1"/>
+              <ellipse cx="50" cy="45" rx="34.5" ry="34.5"
+                       fill="#d7dbdd" stroke="#b2b7ba" stroke-width=".8"/>
+
+              <!-- Recessed lower finish area -->
+              <path d="M7 76 L24 76 L29 84 L71 84 L76 76 L93 76 L93 97 L7 97 Z"
+                    fill="#aeb3b6" stroke="#777f84" stroke-width="1"/>
+
+              <!-- Bottom rail / ledge -->
+              <path d="M8 78 L29 78 L33 84 L67 84 L71 78 L92 78"
+                    fill="none" stroke="#737b80" stroke-width="2.8"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M8 79.8 L29.5 79.8 L33.5 85.6 L66.5 85.6 L70.5 79.8 L92 79.8"
+                    fill="none" stroke="#eef0f1" stroke-width=".8"
+                    stroke-linecap="round" opacity=".8"/>
+
+              <!-- LEFT POCKET: angled opening behind bottom rail -->
+              <path d="M10 82 L27 82 L32 88 L32 94 L10 94 Z"
+                    fill="#6f7579" stroke="#555c61" stroke-width="1"/>
+              <path d="M12 84 L25.5 84 L29.5 89 L29.5 93 L12 93 Z"
+                    fill="#30363a"/>
+              <path d="M10 82 L27 82 L32 88"
+                    fill="none" stroke="#eceeef" stroke-width="1"/>
+
+              <!-- XTREME ZONE: center opening behind the lower rail -->
+              <path d="M34 84 L66 84 L62 96 L38 96 Z"
+                    fill="#777d81" stroke="#555c61" stroke-width="1"/>
+              <path d="M37 86 L63 86 L60 94 L40 94 Z"
+                    fill="#363c40"/>
+              <path d="M34 84 L66 84"
+                    stroke="#f0f1f2" stroke-width="1"/>
+
+              <!-- RIGHT POCKET -->
+              <path d="M73 82 L90 82 L90 94 L68 94 L68 88 Z"
+                    fill="#6f7579" stroke="#555c61" stroke-width="1"/>
+              <path d="M74.5 84 L88 84 L88 93 L70.5 93 L70.5 89 Z"
+                    fill="#30363a"/>
+              <path d="M73 82 L90 82 L90 94"
+                    fill="none" stroke="#eceeef" stroke-width="1"/>
+
+              <!-- X RAIL: one continuous closed loop with the real exit gap
+                   at the TOP. The loop follows the bowl perimeter, not a
+                   free-floating circle. -->
               <path d="
-                M 16 45
-                C 14 26, 27 12, 50 11
-                C 73 12, 86 26, 84 45
-                C 82 66, 68 78, 50 79
-                C 32 78, 18 66, 16 45
-                Z"
-                fill="none"
-                stroke="rgba(42,190,91,.95)"
-                stroke-width="1.35"
-                vector-effect="non-scaling-stroke"/>
+                M 14.7 44.5
+                C 14.0 31.0 20.8 18.9 32.8 13.3
+                C 37.2 11.2 41.6 11.8 44.8 14.2
+                C 47.0 15.9 48.0 17.1 50.0 17.1
+                C 52.0 17.1 53.0 15.9 55.2 14.2
+                C 58.4 11.8 62.8 11.2 67.2 13.3
+                C 79.2 18.9 86.0 31.0 85.3 44.5
+                C 84.4 63.0 70.4 78.8 50.0 79.7
+                C 29.6 78.8 15.6 63.0 14.7 44.5 Z"
+                fill="none" stroke="#18a84a" stroke-width="2.1"
+                stroke-linecap="round" stroke-linejoin="round"/>
 
-              <!-- X Rail exit trajectory at the TOP -->
-              <path d="
-                M 45 12
-                C 47 8, 48 5.5, 50 3.5
-                C 52 5.5, 53 8, 55 12"
-                fill="none"
-                stroke="rgba(42,190,91,.95)"
-                stroke-width="1.35"
-                vector-effect="non-scaling-stroke"/>
+              <!-- X RAIL EXIT: two rail edges leave the loop and point
+                   DOWNWARD, into the Battle Zone. -->
+              <path d="M 44.8 14.2 C 45.8 18.8 47.7 21.0 50 25.0"
+                    fill="none" stroke="#18a84a" stroke-width="2.1"
+                    stroke-linecap="round"/>
+              <path d="M 55.2 14.2 C 54.2 18.8 52.3 21.0 50 25.0"
+                    fill="none" stroke="#18a84a" stroke-width="2.1"
+                    stroke-linecap="round"/>
 
-              <!-- directional chevrons show the rail flow toward exit -->
-              <path d="M 46.5 9 L 50 3.5 L 53.5 9"
-                fill="none"
-                stroke="rgba(42,190,91,.95)"
-                stroke-width="1.1"
-                vector-effect="non-scaling-stroke"/>
+              <!-- Exit mouth / launch lane into center -->
+              <path d="M 47.8 24.0 L 50 27.5 L 52.2 24.0"
+                    fill="none" stroke="#18a84a" stroke-width="1.3"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Small X-Rail flow marks on the loop -->
+              <path d="M 24 23 L 27 20.5 L 26 25"
+                    fill="none" stroke="#18a84a" stroke-width="1.2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 76 23 L 73 20.5 L 74 25"
+                    fill="none" stroke="#18a84a" stroke-width="1.2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Beys -->
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.35"
+                      fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="2.35"
+                      fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
-
-            <!-- X Rail exit label -->
-            <div style="
-              position:absolute;left:50%;top:2%;transform:translateX(-50%);
-              padding:3px 7px;border-radius:5px;
-              background:rgba(10,18,13,.82);color:#59d783;
-              font-size:9px;font-weight:700;letter-spacing:.5px;">
-              X RAIL EXIT
-            </div>
-
-            <!-- Bottom rail separating the battle surface from finish zones -->
-            <div style="
-              position:absolute;left:7%;right:7%;bottom:16%;
-              height:8px;border-radius:8px;
-              background:#6a7379;
-              box-shadow:0 -2px 0 #30383e,0 2px 0 #10161a;">
-            </div>
-
-            <!-- Left pocket -->
-            <div style="
-              position:absolute;left:6%;bottom:1%;width:25%;height:14%;
-              border-radius:0 0 16px 16px;
-              background:#0b1116;border:2px solid #626c73;
-              box-shadow:inset 0 7px 14px rgba(0,0,0,.55);">
-              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
-                font-size:8px;opacity:.7;">POCKET</span>
-            </div>
-
-            <!-- Xtreme Zone -->
-            <div style="
-              position:absolute;left:37.5%;bottom:1%;width:25%;height:14%;
-              border-radius:0 0 16px 16px;
-              background:#182029;border:2px solid #778188;
-              box-shadow:inset 0 7px 14px rgba(0,0,0,.45);">
-              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
-                font-size:8px;opacity:.8;">XTREME ZONE</span>
-            </div>
-
-            <!-- Right pocket -->
-            <div style="
-              position:absolute;right:6%;bottom:1%;width:25%;height:14%;
-              border-radius:0 0 16px 16px;
-              background:#0b1116;border:2px solid #626c73;
-              box-shadow:inset 0 7px 14px rgba(0,0,0,.55);">
-              <span style="position:absolute;top:3px;left:50%;transform:translateX(-50%);
-                font-size:8px;opacity:.7;">POCKET</span>
-            </div>
-
-            <!-- Beys -->
-            <div id="newPlayerBey" style="
-              position:absolute;left:${px}%;top:${py}%;width:38px;height:38px;
-              transform:translate(-50%,-50%);border-radius:50%;
-              background:#d8a82c;border:4px solid #fff;
-              box-shadow:0 0 14px rgba(255,210,70,.55);z-index:5;"></div>
-
-            <div id="newCpuBey" style="
-              position:absolute;left:${cx}%;top:${cy}%;width:38px;height:38px;
-              transform:translate(-50%,-50%);border-radius:50%;
-              background:#aeb7c0;border:4px solid #fff;
-              box-shadow:0 0 14px rgba(220,230,240,.45);z-index:5;"></div>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
@@ -4035,12 +4032,12 @@ function newBattleFrame(now){
     const pe=document.getElementById("newPlayerBey");
     const ce=document.getElementById("newCpuBey");
     if(pe){
-        pe.style.left=(50+p.x*43)+"%";
-        pe.style.top=(50+p.y*43)+"%";
+        pe.setAttribute("cx",50+p.x*39);
+        pe.setAttribute("cy",46+p.y*39);
     }
     if(ce){
-        ce.style.left=(50+c.x*43)+"%";
-        ce.style.top=(50+c.y*43)+"%";
+        ce.setAttribute("cx",50+c.x*39);
+        ce.setAttribute("cy",46+c.y*39);
     }
 
     const ids=[
