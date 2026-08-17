@@ -5359,13 +5359,21 @@ function newPhysicsStep(s,dt){
                 s.launchTilt==="Hard Tilt" ? 0.24 :
                 s.launchTilt==="Slight Tilt" ? 0.14 : 0.08;
 
+            const dropQualityFactor={
+                Horrible:0.72,
+                Bad:0.86,
+                Okay:1.00,
+                Good:1.08,
+                Perfect:1.15
+            }[s.launchQuality]||1;
+
             s.vx=
                 dropSide*
                 dropTilt*
-                (0.012+0.003*qualityFactor);
+                (0.012+0.003*dropQualityFactor);
 
             s.vy=
-                (0.0155+0.0025*qualityFactor)*
+                (0.0155+0.0025*dropQualityFactor)*
                 (s.launchTilt==="Hard Tilt" ? 0.92 : 1.0);
 
             s.launchDropReleased=true;
@@ -5545,6 +5553,28 @@ function newPhysicsStep(s,dt){
                     ? NEW_BATTLE.cpu
                     : NEW_BATTLE.player;
 
+            const currentAttackBit =
+                Number(bp.movement||60)>=80;
+
+            const opponentAttackBit =
+                opponent &&
+                (
+                    opponent.bitPhysicsType==="attack" ||
+                    Number(
+                        opponent.stats &&
+                        opponent.stats.movement ||
+                        60
+                    )>=80
+                );
+
+            const bothNonAttack =
+                !!opponent &&
+                !currentAttackBit &&
+                !opponentAttackBit;
+                s===NEW_BATTLE.player
+                    ? NEW_BATTLE.cpu
+                    : NEW_BATTLE.player;
+
             if(opponent){
                 const ox=Number(opponent.x);
                 const oy=Number(opponent.y);
@@ -5584,20 +5614,6 @@ function newPhysicsStep(s,dt){
                                 Number(s.stats && s.stats.knockback || 70)/99,
                                 0,1
                             );
-
-                        const attackBit=
-                            Number(bp.movement||60)>=80;
-
-                        const opponentAttackBit=
-                            opponent.bitPhysicsType==="attack" ||
-                            Number(
-                                opponent.stats &&
-                                opponent.stats.movement ||
-                                60
-                            )>=80;
-
-                        const bothNonAttack=
-                            !attackBit && !opponentAttackBit;
 
                         /*
                           The wave creates windows of engagement. It is not a
