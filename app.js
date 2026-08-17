@@ -1442,8 +1442,8 @@ const BIT_PHYSICS = {
     Wedge:{movement:32,control:96,spinDrain:0.58,xRailAffinity:24,centerAffinity:94,recovery:90,attackBias:-4},
     Hexa:{movement:38,control:99,spinDrain:0.52,xRailAffinity:20,centerAffinity:98,recovery:95,attackBias:-5},
     Needle:{movement:16,control:98,spinDrain:0.38,xRailAffinity:12,centerAffinity:100,recovery:96,attackBias:-8},
-    Ball:{movement:25,control:95,spinDrain:0.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7},
-    Orb:{movement:34,control:94,spinDrain:0.40,xRailAffinity:25,centerAffinity:92,recovery:91,attackBias:-5},
+    Ball:{movement:20,control:98,spinDrain:0.34,xRailAffinity:18,centerAffinity:98,recovery:94,attackBias:-7},
+    Orb:{movement:17,control:99,spinDrain:0.40,xRailAffinity:25,centerAffinity:99,recovery:92,attackBias:-5},
     Point:{movement:58,control:82,spinDrain:0.74,xRailAffinity:48,centerAffinity:70,recovery:72,attackBias:1},
     "High Needle":{movement:19,control:93,spinDrain:0.34,xRailAffinity:10,centerAffinity:100,recovery:94,attackBias:-7},
     Quake:{movement:88,control:42,spinDrain:1.72,xRailAffinity:72,centerAffinity:22,recovery:30,attackBias:8}
@@ -4519,18 +4519,31 @@ function newPhysicsStep(s,dt){
     // becomes stronger as the Bey loses energy. Stable bits receive more of
     // this downhill effect.
     const stableBitFactor=
-        bitMovement<75
-            ? 1.35
-            : 0.72;
+        bitMovement<25
+            ? 2.15
+            : bitMovement<45
+                ? 1.70
+                : bitMovement<75
+                    ? 1.25
+                    : 0.72;
 
-    const lowRpmFactor=Math.pow(1-rpm,1.35);
+    const lowRpmFactor=Math.pow(1-rpm,1.25);
+
+    // Low-movement stamina/defense bits behave like a top sitting in the
+    // bottom of the bowl: they can leave center from the launch, but the
+    // stadium continually encourages them back inward.
+    const centerPreference=
+        bitMovement<25 ? 1.65 :
+        bitMovement<45 ? 1.35 :
+        1;
 
     const slopeAccel=
         distance *
-        (0.00055+
-         lowRpmFactor*0.0055+
-         centerAffinity/100*0.0012) *
-        stableBitFactor;
+        (0.00075+
+         lowRpmFactor*0.0068+
+         centerAffinity/100*0.0018) *
+        stableBitFactor*
+        centerPreference;
 
     s.vx+=(-radialX)*slopeAccel*dt*60;
     s.vy+=(-radialY)*slopeAccel*dt*60;
@@ -4542,10 +4555,16 @@ function newPhysicsStep(s,dt){
     // the Bey a general circling tendency without forcing an orbit.
     const attackMovement=newBattleClamp((bitMovement-60)/40,0,1);
 
+    const lowMovementMultiplier=
+        bitMovement<25 ? 0.22 :
+        bitMovement<45 ? 0.45 :
+        1;
+
     const precessionStrength=
-        (0.00012+
+        (0.00008+
          attackMovement*0.00115) *
-        Math.pow(rpm,1.35);
+        lowMovementMultiplier *
+        Math.pow(rpm,1.45);
 
     // A wall impact temporarily suppresses this so the new trajectory can
     // develop naturally rather than snapping back onto an orbit.
@@ -4622,9 +4641,15 @@ function newPhysicsStep(s,dt){
 
     // Very light surface drag. We want RPM, impacts and slope to control the
     // battle, not an invisible giant friction multiplier.
+    const movementFriction=
+        bitMovement<25 ? 0.9950 :
+        bitMovement<45 ? 0.9968 :
+        bitMovement<70 ? 0.9980 :
+        0.9987;
+
     const drag=
-        0.9987-
-        (bitMovement/100)*0.00008;
+        movementFriction-
+        (bitMovement/100)*0.00004;
 
     s.vx*=Math.pow(drag,dt*60);
     s.vy*=Math.pow(drag,dt*60);
