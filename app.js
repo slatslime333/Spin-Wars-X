@@ -3887,7 +3887,7 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.065,
+        radius:0.075,
         hitFlash:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
@@ -3896,7 +3896,14 @@ function newBattleLaunchState(side){
         launchStall:tiltStall,
         launchStallElapsed:0,
         launchComplete:false,
+
+        // Natural movement state: these alter forces over time rather than
+        // drawing a fixed orbit.
+        motionPhase:Math.random()*Math.PI*2,
+        motionPhase2:Math.random()*Math.PI*2,
+        tiltLevel:0.08,
         railUses:0,
+
         // Right spin = counter-clockwise; left spin = clockwise.
         spinDirection:(combo.blade?.spin==="Left" ? 1 : -1),
         railEngaged:false,railProgress:0,railDistance:0,
@@ -4072,9 +4079,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.35"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.80"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="2.35"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="2.80"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4176,10 +4183,10 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            pe.setAttribute("r",p.hitFlash>0?2.55:2.35);
+            pe.setAttribute("r",p.hitFlash>0?3.05:2.80);
         }
         if(ce){
-            ce.setAttribute("r",c.hitFlash>0?2.55:2.35);
+            ce.setAttribute("r",c.hitFlash>0?3.05:2.80);
         }
         p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
@@ -4417,253 +4424,192 @@ function bounceOffRail(s,nearest){
 
 function tryNewXRailEngagement(s){
 
-        if(s.railEngaged) return true;
+    if(s.railEngaged) return true;
 
-        const nearest = newXRailNearest(s.x,s.y);
-        if(!nearest) return false;
+    const nearest=newXRailNearest(s.x,s.y);
+    if(!nearest) return false;
 
-        const distance = Math.sqrt(nearest.dist2);
-        const bp = bitPhysics(s);
-        const speed = speedOf(s);
+    const distance=Math.sqrt(nearest.dist2);
+    const bp=bitPhysics(s);
+    const speed=speedOf(s);
+    const rpm=newBattleClamp(s.rpm,0,1);
+    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
 
-        // Actual physical contact envelope.
-        const contactRadius = 0.030 + s.radius * 0.24;
-        if(distance > contactRadius) return false;
+    const contactRadius=0.030+s.radius*0.24;
+    if(distance>contactRadius) return false;
 
-        if(speed < 0.004) return false;
+    /*
+      A rail capture needs usable momentum. Slow contact is a wall hit,
+      not an automatic rail grab.
+    */
+    const effectiveMomentum=
+        speed*
+        (0.55+0.45*rpm)*
+        (1-0.58*tilt);
 
-        const dx = s.x - nearest.x;
-        const dy = s.y - nearest.y;
-        const len = Math.hypot(dx,dy) || 1;
+    const minimumMomentum=
+        0.017+
+        tilt*0.014;
 
-        const nx = dx/len;
-        const ny = dy/len;
+    if(effectiveMomentum<minimumMomentum) return false;
 
-        // Velocity toward the rail is negative along the outward normal.
-        const normalVelocity = s.vx*nx + s.vy*ny;
-        const approachSpeed = Math.max(0,-normalVelocity);
+    const dx=s.x-nearest.x;
+    const dy=s.y-nearest.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=dx/len;
+    const ny=dy/len;
 
-        // If the Bey is moving away from the rail, it already bounced.
-        if(approachSpeed <= 0.0015) return false;
+    const normalVelocity=s.vx*nx+s.vy*ny;
+    const approachSpeed=Math.max(0,-normalVelocity);
 
-        const desiredTx = nearest.tx * railDirection(s);
-        const desiredTy = nearest.ty * railDirection(s);
+    if(approachSpeed<0.010+tilt*0.008) return false;
 
-        const tangentVelocity = s.vx*desiredTx + s.vy*desiredTy;
-        const absTangent = Math.abs(tangentVelocity);
+    const direction=railDirection(s);
+    const desiredTx=nearest.tx*direction;
+    const desiredTy=nearest.ty*direction;
+    const tangentVelocity=s.vx*desiredTx+s.vy*desiredTy;
 
-        const approachRatio = approachSpeed / Math.max(speed,0.001);
-        const tangentRatio = absTangent / Math.max(speed,0.001);
+    if(tangentVelocity<=0) return false;
 
-        /*
-          Capture cone.
+    const tangentRatio=
+        Math.abs(tangentVelocity)/Math.max(speed,0.001);
+    const approachRatio=
+        approachSpeed/Math.max(speed,0.001);
 
-          A shallow/glancing impact with useful tangential velocity can
-          latch onto the rail.
+    const control=(bp.control||60)/100;
+    const movement=(bp.movement||60)/100;
+    const affinity=(bp.xRailAffinity||50)/100;
 
-          A hard, square impact mostly moving into the rail should bounce.
-        */
-        const control = (bp.control || 60)/100;
-        const movement = (bp.movement || 60)/100;
-        const affinity = (bp.xRailAffinity || 50)/100;
+    /*
+      Rail capture is a glancing impact. A square hit is supposed to bounce.
+    */
+    const minimumTangent=0.43-control*0.055;
+    const maximumApproach=0.70+control*0.045;
 
-        // Higher control gives a wider usable capture cone.
-        const minTangentRatio =
-            0.30 -
-            control*0.08;
+    if(tangentRatio<minimumTangent) return false;
+    if(approachRatio>maximumApproach) return false;
 
-        const maxApproachRatio =
-            0.82 +
-            control*0.08;
+    // A significantly tilted Bey cannot hook the rail reliably.
+    if(tilt>0.34) return false;
 
-        if(tangentVelocity <= 0) {
-            // Wrong rail direction for this spin: physical bounce.
-            return false;
-        }
+    const speedQuality=newBattleClamp(
+        (effectiveMomentum-minimumMomentum)/0.040,0,1
+    );
+    const angleQuality=newBattleClamp(
+        (tangentRatio-minimumTangent)/
+        Math.max(0.01,1-minimumTangent),0,1
+    );
+    const approachQuality=newBattleClamp(
+        1-Math.abs(approachRatio-0.38)/0.38,0,1
+    );
+    const tiltQuality=1-newBattleClamp(tilt/0.34,0,1);
 
-        if(tangentRatio < minTangentRatio ||
-           approachRatio > maxApproachRatio){
-            return false;
-        }
+    const physicalScore=
+        speedQuality*0.34+
+        angleQuality*0.28+
+        approachQuality*0.18+
+        tiltQuality*0.14+
+        control*0.04+
+        affinity*0.02;
 
-        /*
-          Speed matters, but more speed does NOT guarantee capture.
-          Extremely fast square impacts are more likely to bounce.
-        */
-        const speedFactor = newBattleClamp(
-            (speed-0.010)/0.040,
-            0,1
-        );
+    const threshold=0.56+(movement<0.80?0.06:0);
+    const variance=(Math.random()-0.5)*0.025;
 
-        const angleFactor = newBattleClamp(
-            (tangentRatio-minTangentRatio) /
-            Math.max(0.01,1-minTangentRatio),
-            0,1
-        );
+    if(physicalScore+variance<threshold) return false;
 
-        const attackBit = movement >= 0.80;
+    const g=getNewXRailGeometry();
 
-        const captureScore =
-            0.32 +
-            angleFactor*0.30 +
-            control*0.14 +
-            affinity*0.12 +
-            speedFactor*0.12 -
-            Math.max(0,approachRatio-0.62)*0.35;
+    s.railEngaged=true;
+    s.railUses=(s.railUses||0)+1;
+    s.railContactPoint={x:nearest.x,y:nearest.y};
+    s.railDistance=nearest.distance;
+    s.railProgress=nearest.distance/g.total;
 
-        /*
-          Small physical variance represents tiny differences in contact
-          position/friction. It is not the mechanism deciding rail access.
-        */
-        const variance =
-            (Math.random()-0.5) *
-            (0.035 + (1-control)*0.025);
+    s.railSpeed=newBattleClamp(
+        speed*(1.00+movement*0.08+affinity*0.04),
+        0.020,0.072
+    );
 
-        const captureThreshold =
-            newBattleClamp(captureScore + variance,0,1);
+    s.railRideTime=0;
+    s.railTravelDistance=0;
+    s.railLoops=0;
 
-        if(captureThreshold < 0.50){
-            return false;
-        }
+    s.x=nearest.x;
+    s.y=nearest.y;
 
-        const g = getNewXRailGeometry();
+    if(normalVelocity<0){
+        s.vx-=normalVelocity*nx;
+        s.vy-=normalVelocity*ny;
+    }
 
-        s.railEngaged = true;
-        s.railUses = (s.railUses || 0) + 1;
-
-        s.railContactPoint = {
-            x:nearest.x,
-            y:nearest.y
-        };
-
-        s.railDistance = nearest.distance;
-        s.railProgress =
-            nearest.distance / g.total;
-
-        /*
-          Do not manufacture rail speed.
-
-          The Bey enters with its existing physical speed. The rail can
-          accelerate it after capture.
-        */
-        s.railSpeed = newBattleClamp(
-            speed * (
-                1.00 +
-                movement*0.10 +
-                affinity*0.06
-            ),
-            0.014,
-            0.070
-        );
-
-        s.railRideTime = 0;
-        s.railTravelDistance = 0;
-        s.railLoops = 0;
-
-        // Snap only to the actual contact point.
-        s.x = nearest.x;
-        s.y = nearest.y;
-
-        // Remove only the normal component into the rail.
-        // Tangential momentum survives.
-        if(normalVelocity < 0){
-            s.vx -= normalVelocity*nx;
-            s.vy -= normalVelocity*ny;
-        }
-
-        return true;
-    };
-
+    return true;
+}
 
 function newXRailExit(s){
 
-        const exit =
-            newXRailPointAtDistance(
-                getNewXRailGeometry().exitDistance
-            );
+    const exit=newXRailPointAtDistance(
+        getNewXRailGeometry().exitDistance
+    );
 
-        const bp = bitPhysics(s);
-        const rpm = newBattleClamp(s.rpm,0,1);
+    const bp=bitPhysics(s);
+    const rpm=newBattleClamp(s.rpm,0,1);
+    const speed=newBattleClamp(
+        s.railSpeed*(0.90+rpm*0.08),
+        0.018,
+        0.078
+    );
 
-        const exitSpeed = newBattleClamp(
-            s.railSpeed *
-            (
-                0.92 +
-                rpm*0.10
-            ),
-            0.018,
-            0.078
-        );
+    const direction=railDirection(s);
+    const tangentX=exit.tx*direction;
+    const tangentY=exit.ty*direction;
 
-        const direction = railDirection(s);
+    const tangentCarry=newBattleClamp(
+        0.07+(bp.control||60)/100*0.06,
+        0.07,0.13
+    );
 
-        const tangentX = exit.tx*direction;
-        const tangentY = exit.ty*direction;
+    /*
+      The X Exit is a continuation of the rail's actual momentum.
+      It does not teleport the Bey or manufacture a giant launch.
+    */
+    s.railEngaged=false;
+    s.railExited=true;
 
-        /*
-          The X Exit redirects most energy inward, while preserving only
-          a modest tangent component from the rail.
-        */
-        const tangentCarry =
-            newBattleClamp(
-                0.08 +
-                (bp.control||60)/100*0.06,
-                0.08,
-                0.14
-            );
+    s.railRideTime=0;
+    s.railProgress=0;
+    s.railDistance=0;
+    s.railTravelDistance=0;
+    s.railLoops=0;
+    s.railContactPoint=null;
 
-        s.railEngaged = false;
-        s.railExited = true;
+    // Spatial separation only. There is no arbitrary timed rail cooldown.
+    s.railExitRefractory=1;
+    s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
-        s.railRideTime = 0;
-        s.railProgress = 0;
-        s.railDistance = 0;
-        s.railTravelDistance = 0;
-        s.railLoops = 0;
-        s.railContactPoint = null;
+    s.x=exit.x;
+    s.y=exit.y+0.045;
 
-        /*
-          No timed anti-repeat lock.
+    s.vx=tangentX*speed*tangentCarry;
+    s.vy=speed+tangentY*speed*tangentCarry;
 
-          The Bey simply has to move away from the exit/contact geometry
-          before it can physically interact with the rail again.
-        */
-        s.railExitRefractory = 0.16;
-        s.railExitRefractoryPoint = {
-            x:exit.x,
-            y:exit.y
-        };
+    s.rpm=newBattleClamp(
+        s.rpm-
+        (0.014+s.railSpeed*0.12),
+        0,1
+    );
 
-        s.x = exit.x;
-        s.y = exit.y + 0.045;
+    s.stability=newBattleClamp(
+        s.stability-0.010,
+        0,1
+    );
 
-        s.vx =
-            tangentX*exitSpeed*tangentCarry;
+    s.tiltLevel=newBattleClamp(
+        (s.tiltLevel||0)+0.025,
+        0,1
+    );
 
-        s.vy =
-            exitSpeed +
-            tangentY*exitSpeed*tangentCarry;
-
-        // Exit costs spin because the rail ride transferred energy into speed.
-        s.rpm = newBattleClamp(
-            s.rpm -
-            (
-                0.018 +
-                s.railSpeed*0.16
-            ),
-            0,1
-        );
-
-        s.stability = newBattleClamp(
-            s.stability -
-            0.012,
-            0,1
-        );
-
-        s.surfaceRecovery = 0.12;
-    };
-
-
+    s.surfaceRecovery=0.12;
+}
 
 function updateNewXRailRide(s,dt){
 
@@ -4836,6 +4782,31 @@ function newPhysicsStep(s,dt){
         const centerAffinity = (bp.centerAffinity||60)/100;
         const movement = (bp.movement||60)/100;
 
+        /*
+          Dynamic tilt/precession:
+          high RPM + stability + speed = stable top;
+          low RPM, low stability and slow movement = increasing wobble.
+        */
+        const currentSpeed=Math.hypot(s.vx,s.vy);
+        const speedStability=newBattleClamp(currentSpeed/0.055,0,1);
+
+        const targetTilt=newBattleClamp(
+            (1-s.stability)*0.62+
+            (1-rpm)*0.28+
+            (1-speedStability)*0.10,
+            0.02,0.94
+        );
+
+        s.tiltLevel +=
+            (targetTilt-(s.tiltLevel||0))*
+            Math.min(1,dt*4.5);
+
+        if(s.surfaceBounce>0){
+            s.tiltLevel=newBattleClamp(
+                s.tiltLevel+0.12*dt,0,1
+            );
+        }
+
         if(s.surfaceRecovery>0){
             s.surfaceRecovery =
                 Math.max(0,s.surfaceRecovery-dt);
@@ -4936,33 +4907,80 @@ function newPhysicsStep(s,dt){
 
         if(r>0.02 && rpm>0.01){
 
-            const invR = 1/r;
+            const invR=1/r;
 
-            const spinSign =
+            const spinSign=
                 s.spinDirection===-1 ? 1 : -1;
 
-            const tangentX =
+            const tangentX=
                 s.y*invR*spinSign;
-
-            const tangentY =
+            const tangentY=
                 -s.x*invR*spinSign;
 
-            const spinForce =
-                (
-                    0.00014 +
-                    movement*0.00030
-                ) *
-                Math.pow(rpm,1.20) *
-                (
-                    0.55 +
-                    control*0.45
+            /*
+              Precession changes continuously. This is force-based
+              wandering, not a fixed orbit.
+            */
+            s.motionPhase +=
+                dt*(0.85+rpm*1.35+movement*0.55);
+
+            s.motionPhase2 +=
+                dt*(0.31+(1-rpm)*0.75);
+
+            const wobbleA=Math.sin(s.motionPhase);
+            const wobbleB=Math.sin(s.motionPhase2+1.7);
+
+            const lateralStrength=
+                (0.00012+movement*0.00028)*
+                Math.pow(rpm,1.28)*
+                (0.55+control*0.45);
+
+            const radialX=s.x*invR;
+            const radialY=s.y*invR;
+
+            /*
+              The direction of the travel force breathes in/out instead of
+              remaining perfectly tangent to the bowl.
+            */
+            const radialWander=
+                Math.sin(s.motionPhase*0.73+s.motionPhase2)*
+                lateralStrength*
+                (0.28+(1-centerAffinity)*0.48);
+
+            const tangentScale=
+                0.72+0.28*Math.cos(
+                    wobbleA*0.95+wobbleB*0.55
                 );
 
             s.vx +=
-                tangentX*spinForce*dt*60;
+                tangentX*lateralStrength*tangentScale*dt*60+
+                radialX*radialWander*dt*60;
 
             s.vy +=
-                tangentY*spinForce*dt*60;
+                tangentY*lateralStrength*tangentScale*dt*60+
+                radialY*radialWander*dt*60;
+
+            /*
+              Small cross-track disturbances are stronger for less
+              controlled/non-attack movement, but vanish with RPM.
+            */
+            const crossX=-tangentY;
+            const crossY=tangentX;
+
+            const driftForce=
+                (0.000018+(1-centerAffinity)*0.000030)*
+                Math.pow(rpm,0.85)*
+                (0.65+(1-control)*0.35);
+
+            s.vx +=
+                crossX*
+                Math.sin(s.motionPhase2*1.17)*
+                driftForce*dt*60;
+
+            s.vy +=
+                crossY*
+                Math.sin(s.motionPhase2*1.17)*
+                driftForce*dt*60;
         }
 
         /*
@@ -4975,11 +4993,11 @@ function newPhysicsStep(s,dt){
             const slopeForce =
                 (
                     0.00024 +
-                    centerAffinity*0.00042
+                    centerAffinity*0.00050
                 ) *
                 (
                     0.55 +
-                    (1-rpm)*0.55
+                    (1-rpm)*0.72
                 );
 
             s.vx -= s.x*slopeForce*dt*60;
@@ -5021,13 +5039,13 @@ function newPhysicsStep(s,dt){
           direction. No reverse-spin behavior is possible.
         */
         const lowRpm =
-            newBattleClamp((0.48-rpm)/0.48,0,1);
+            newBattleClamp((0.58-rpm)/0.58,0,1);
 
         if(lowRpm>0){
 
             const lateralDamp =
                 Math.pow(
-                    0.988,
+                    0.982,
                     lowRpm*dt*60
                 );
 
@@ -5149,6 +5167,11 @@ function newPhysicsStep(s,dt){
                     tangentY*tangent*tangentRetention;
 
                 s.surfaceRecovery=0.20;
+                s.tiltLevel=newBattleClamp(
+                    (s.tiltLevel||0)+0.06+outward*0.25,
+                    0,1
+                );
+                s.motionPhase+=0.45+Math.random()*0.40;
 
                 s.rpm=newBattleClamp(
                     s.rpm-
@@ -5344,6 +5367,16 @@ function newPhysicsCollision(dt){
         c.stability-(0.004+impactSpeed*0.055)*(1-cDef*0.30),
         0,1
     );
+
+    p.tiltLevel=newBattleClamp(
+        (p.tiltLevel||0)+0.045+impactSpeed*0.35,0,1
+    );
+    c.tiltLevel=newBattleClamp(
+        (c.tiltLevel||0)+0.045+impactSpeed*0.35,0,1
+    );
+
+    p.motionPhase+=0.35+Math.random()*0.35;
+    c.motionPhase+=0.35+Math.random()*0.35;
 
     p.hitFlash=0.08;
     c.hitFlash=0.08;
