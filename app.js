@@ -3992,12 +3992,23 @@ function newBattleLaunchState(side){
 
     const isDropLaunch=plan.technique==="Drop Launch";
     const sideSign=side==="player"?1:-1;
+    const isXRailLaunch=plan.technique==="X-Rail";
+
+    /*
+      X-Rail is a deliberate rail-seeking launch. Start near the appropriate
+      upper rail rather than at the normal center-entry lane, then let the
+      physical rail-capture test decide whether the Bey actually latches.
+    */
     const startX=isDropLaunch
         ? 0
-        : sideSign*(-0.70 + placementJitter*0.18);
+        : isXRailLaunch
+            ? sideSign*0.66 + placementJitter*0.10
+            : sideSign*(-0.70 + placementJitter*0.18);
     const startY=isDropLaunch
         ? -0.47 + placementJitter*0.30
-        : placementJitter;
+        : isXRailLaunch
+            ? -0.36 + placementJitter*0.16
+            : placementJitter;
     const direction=isDropLaunch ? 0 : sideSign;
 
     // Launch angle is a real release vector:
@@ -4025,8 +4036,18 @@ function newBattleLaunchState(side){
     let vx=direction*launchSpeed;
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
-    if(plan.technique==="X-Rail"){
-        vy+=tiltSign*0.008;
+    if(isXRailLaunch){
+        const railAimX=-sideSign*0.085;
+        const railAimY=-0.014;
+        const aimLen=Math.hypot(railAimX,railAimY)||1;
+
+        vx=railAimX/aimLen*launchSpeed*1.04;
+        vy=railAimY/aimLen*launchSpeed*1.04;
+
+        // The launch technique adds a little lateral commitment; the rail
+        // still has to be physically captured rather than being guaranteed.
+        vx+=sideSign*0.0020;
+        vy-=0.0015;
     }
 
     if(plan.technique==="Drop Launch"){
@@ -4294,10 +4315,15 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
 
+    const finishPoints =
+        finishType==="Xtreme" ? 3 :
+        finishType==="Over" ? 2 :
+        1;
+
     if(winnerSide==="player"){
-        Game.battle.score.player++;
+        Game.battle.score.player+=finishPoints;
     }else{
-        Game.battle.score.cpu++;
+        Game.battle.score.cpu+=finishPoints;
     }
 
     Game.battle.finishType=finishType;
@@ -4326,10 +4352,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(commentary){
         commentary.textContent=
             finishType==="Xtreme"
-                ? `${loser.blade.name} falls into the XTREME ZONE!`
-                : finishType==="Pocket"
-                    ? `${loser.blade.name} falls into the POCKET!`
-                    : `${winner.blade.name} wins by SPIN FINISH.`;
+                ? `${loser.blade.name} falls into the XTREME ZONE! +3`
+                : finishType==="Over"
+                    ? `${loser.blade.name} is knocked into the OVER ZONE! +2`
+                    : `${winner.blade.name} wins by SPIN FINISH. +1`;
     }
 
     setTimeout(()=>{
@@ -4355,7 +4381,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                     </div>
                     <section class="menu-card" style="text-align:center;">
                       <h2>${playerScore} — ${cpuScore}</h2>
-                      <p>${finishType.toUpperCase()} · FIRST TO 7</p>
+                      <p>${finishType.toUpperCase()} · +${finishPoints} POINTS · FIRST TO 7</p>
                       <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
                     </section>
                   </main>`;
@@ -4455,7 +4481,7 @@ function checkForcedStadiumFinish(s){
         s.y>0.80 &&
         pocketAlignment>=0.58
     ){
-        return "Pocket";
+        return "Over";
     }
 
     return null;
@@ -4617,8 +4643,8 @@ function newBattleFrame(now){
                 commentary.textContent=
                     Game.battle.finishType==="Xtreme"
                         ? "XTREME FINISH!"
-                        : Game.battle.finishType==="Pocket"
-                            ? "POCKET FINISH!"
+                        : Game.battle.finishType==="Over"
+                            ? "OVER FINISH!"
                             : "SPIN FINISH!";
             }else if(p.rpm<=0.001 || c.rpm<=0.001){
                 const winner=p.rpm>c.rpm?p:c;
@@ -4694,11 +4720,11 @@ function newBattleFrame(now){
         }
 
         if(checkPocketFinish(p)){
-            finishNewBattle("cpu","Pocket");
+            finishNewBattle("cpu","Over");
             return;
         }
         if(checkPocketFinish(c)){
-            finishNewBattle("player","Pocket");
+            finishNewBattle("player","Over");
             return;
         }
 
@@ -4934,15 +4960,15 @@ function bounceOffRail(s,nearest){
     const tangent=s.vx*tx+s.vy*ty;
 
     const restitution=newBattleClamp(
-        0.26+balance*0.18+control*0.10+
-        Math.min(0.10,speed*1.2),
+        0.34+balance*0.20+control*0.12+
+        Math.min(0.14,speed*1.5),
         0.24,0.54
     );
 
     const resolvedNormal=-incomingNormal*restitution;
     const tangentDamp=newBattleClamp(
-        0.78+control*0.10,
-        0.76,0.90
+        0.82+control*0.10,
+        0.80,0.94
     );
 
     s.vx=nx*resolvedNormal+tx*tangent*tangentDamp;
@@ -4997,11 +5023,11 @@ function tryNewXRailEngagement(s){
     const minimumMomentum=0.024+tilt*0.016+(1-stability)*0.006;
     if(effectiveMomentum<minimumMomentum) return false;
 
-    const minimumTangent=0.56-control*0.06-affinity*0.035;
-    const maximumApproach=0.54+control*0.08+movement*0.03;
+    const minimumTangent=0.48-control*0.07-affinity*0.045;
+    const maximumApproach=0.62+control*0.08+movement*0.04;
     if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
 
-    const tiltLimit=0.255+stability*0.045+control*0.025;
+    const tiltLimit=0.31+stability*0.055+control*0.03;
     if(tilt>tiltLimit) return false;
 
     const speedQuality=newBattleClamp((effectiveMomentum-minimumMomentum)/0.045,0,1);
@@ -5014,14 +5040,14 @@ function tryNewXRailEngagement(s){
         speedQuality*0.30+angleQuality*0.25+approachQuality*0.17+
         tiltQuality*0.18+statusQuality*0.08+control*0.015+affinity*0.005;
 
-    const threshold=0.70-movement*0.055-affinity*0.025;
+    const threshold=0.61-movement*0.065-affinity*0.035;
     if(physicalScore+(Math.random()-0.5)*0.018<threshold) return false;
 
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.24+movement*0.14+rpm*0.12+affinity*0.05),
-        0.065,0.220
+        tangentialCarry*(1.30+movement*0.15+rpm*0.13+affinity*0.06),
+        0.070,0.235
     );
 
     s.railDirection=direction;
@@ -5171,7 +5197,7 @@ function newXRailRailRelease(s,direction){
     s.rpm=newBattleClamp(s.rpm-0.0025,0,1);
     s.stability=newBattleClamp(s.stability-0.006,0,1);
     s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
-    s.surfaceBounce=0.16; s.surfaceRecovery=0.12;
+    s.surfaceBounce=0.20; s.surfaceRecovery=0.12;
     s.motionPhase+=0.70+Math.random()*0.55;
     s.motionPhase2+=0.30+Math.random()*0.45;
     s.railExitRefractory=0;
