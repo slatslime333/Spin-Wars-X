@@ -2587,7 +2587,7 @@ function calculateLaunchQuality(side,angle,technique){
         "Center":3,
         "X-Rail":0,
         "Direct Clash":-2,
-        "X-Drop":1
+        "Center":1
     }[technique] ?? 0;
 
     const score=clampBattleValue(
@@ -3606,7 +3606,6 @@ function getLaunchTechniqueText(blader){
         "X-Rail Dash":"attempts an X Rail line",
         "Reverse X-Dash":"attempts a reverse X Rail line",
         "Direct Clash":"aims to meet the opponent early",
-        "X-Drop":"takes a low opening line",
         "Center":"takes a wide opening line"
     };
     return text[technique]||"takes a neutral opening line";
@@ -3684,8 +3683,7 @@ function showLetItRip(){
           ${techButton("CENTER","Center","launchCenter")}
           ${techButton("X-RAIL","X-Rail","launchRail")}
           ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
-          ${techButton("DROP LAUNCH","X-Drop","launchDrop")}
-          ${techButton("X-DROP","X-Drop","launchDrop")}
+
         </div>
 
         <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.78;text-align:center;">
@@ -3722,7 +3720,6 @@ function showLetItRip(){
     document.getElementById("launchCenter").onclick=()=>setLaunch(Game.player.launch.angle,"Center");
     document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
     document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
-    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"X-Drop");
 
     document.getElementById("startBattleNow").onclick=startNewBattle;
     document.getElementById("backToVS").onclick=showVS;
@@ -3843,10 +3840,9 @@ function newBattleLaunchState(side){
               }
             : getAutomaticLaunchPlan(side);
 
-    const isXDrop=plan.technique==="X-Drop";
-    const startX=isXDrop ? 0 : (side==="player"?-0.70:0.70);
-    const startY=isXDrop ? -0.56 : 0;
-    const direction=isXDrop ? 0 : (side==="player"?1:-1);
+    const startX=side==="player"?-0.70:0.70;
+    const startY=0;
+    const direction=side==="player"?1:-1;
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
@@ -3865,8 +3861,7 @@ function newBattleLaunchState(side){
     const techniqueSpeed={
         Center:1.00,
         "Direct Clash":1.10,
-        "X-Rail":1.00,
-        "X-Drop":0.88
+        "X-Rail":1.00
     }[plan.technique]||1;
 
     const launchSpeed=
@@ -3877,10 +3872,7 @@ function newBattleLaunchState(side){
     let vx=direction*launchSpeed;
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
-    if(plan.technique==="X-Drop"){
-        vx=0;
-        vy=0.022*(0.90+qualityFactor*0.10);
-    }else if(plan.technique==="X-Rail"){
+    if(plan.technique==="X-Rail"){
         vy+=tiltSign*0.008;
     }
 
@@ -4239,7 +4231,7 @@ function getNewXRailGeometry(){
     // Point order is clockwise; right-spin uses the reverse direction (CCW).
     const points=[
         [-0.905,-0.01],[-0.75,-0.50],[-0.44,-0.79],[-0.133,-0.79],
-        [0.00,-0.603], // top-center X Exit transition point
+        [0.00,-0.603], // X Exit transition point
         [0.133,-0.79],[0.44,-0.79],[0.75,-0.50],[0.905,-0.01],
         [0.82,0.48],[0.50,0.78],[0.00,0.865],[-0.50,0.78],[-0.82,0.48]
     ].map(([x,y])=>({x,y}));
@@ -4432,7 +4424,7 @@ function newXRailExit(s){
     );
 
     s.railEngaged=false;
-    s.railExitCooldown=1.35;
+    s.railExitCooldown=1.80;
     s.railRideTime=0;
     s.railProgress=0;
     s.railDistance=0;
@@ -4440,14 +4432,14 @@ function newXRailExit(s){
     s.railLoops=0;
     s.railContactPoint=null;
 
+    // Spawn just inside the X Exit mouth, then launch DOWN into the bowl.
+    // This is the only normal-state path that may cross the exit transition.
     s.x=exit.x;
-    s.y=exit.y+0.035;
+    s.y=exit.y+0.055;
 
-    // The physical X Exit launches inward/downward. Preserve only a small
-    // amount of tangential carry so the exit isn't a scripted straight line.
     const tangentX=exit.tx*(s.spinDirection||-1);
     const tangentY=exit.ty*(s.spinDirection||-1);
-    const tangentCarry=isAttack?0.14:0.08;
+    const tangentCarry=isAttack?0.10:0.055;
 
     s.vx=tangentX*exitSpeed*tangentCarry;
     s.vy=exitSpeed+tangentY*exitSpeed*tangentCarry;
@@ -4539,8 +4531,8 @@ function updateNewXRailRide(s,dt){
         direction
     );
 
-    const minimumRide=0.34;
-    const maximumRide=Math.min(g.total*0.86,isAttack?g.total*0.86:g.total*0.48);
+    const minimumRide=0.24;
+    const maximumRide=Math.min(g.total*0.72,isAttack?g.total*0.72:g.total*0.40);
 
     if(
         (crossed && s.railTravelDistance>=minimumRide) ||
@@ -4610,8 +4602,8 @@ function newPhysicsStep(s,dt){
 
     // Precession is acceleration, not a fixed circular path.
     const precession=
-        (0.00075+
-         movement*0.0012)*
+        (0.00024+
+         movement*0.00038)*
         newBattleClamp(travelFactor,0.18,1.25)*
         (0.48+rpm*0.72);
 
@@ -4622,9 +4614,9 @@ function newPhysicsStep(s,dt){
     // RPM falls. This is a gentle force, not a magnetic center snap.
     if(r>0.015){
         const centerForce=
-            (0.00022+
-             lowRpm*0.00070+
-             centerAffinity*0.00030)*
+            (0.00034+
+             lowRpm*0.00105+
+             centerAffinity*0.00042)*
             (0.60+rpm*0.40);
 
         s.vx-=s.x*centerForce*dt*60;
@@ -4639,6 +4631,15 @@ function newPhysicsStep(s,dt){
     }else if(tilt==="Hard Tilt"){
         s.vx+=tx*0.00028*dt*60;
         s.vy+=ty*0.00028*dt*60;
+    }
+
+    // Radial correction prevents the Bey from becoming locked into a perfect
+    // stadium orbit. Real Beys repeatedly change radius as they precess.
+    if(r>0.08){
+        const radialStrength=(0.00010+movement*0.00016)*(0.35+rpm*0.65);
+        const radialPulse=Math.sin(NEW_BATTLE.elapsed*2.1 + (s.side==="player"?0:1.7));
+        s.vx-=s.x*radialStrength*radialPulse*dt*60;
+        s.vy-=s.y*radialStrength*radialPulse*dt*60;
     }
 
     // RPM-dependent damping. High-mobility Attack Bits travel more at high
@@ -4662,6 +4663,29 @@ function newPhysicsStep(s,dt){
     // Rail engagement must happen before the outer wall clamps the Bey.
     tryNewXRailEngagement(s);
     if(s.railEngaged) return;
+
+    // X EXIT is a one-way rail transition. A Bey that is NOT currently
+    // riding the rail cannot pass through the exit mouth. If ordinary stadium
+    // motion approaches it, push the Bey back into the bowl instead of letting
+    // it phase through the opening/marker.
+    if(!s.railEngaged && s.railExitCooldown<=0){
+        const exit=getNewXRailGeometry().exitDistance;
+        const exitPoint=newXRailPointAtDistance(exit);
+        const ex=s.x-exitPoint.x;
+        const ey=s.y-exitPoint.y;
+        const exitDist=Math.hypot(ex,ey);
+        if(exitDist<0.075 && s.y<exitPoint.y+0.045){
+            const len=exitDist||1;
+            const nx=ex/len, ny=ey/len;
+            s.x=exitPoint.x+nx*0.075;
+            s.y=exitPoint.y+ny*0.075;
+            const towardExit=s.vx*nx+s.vy*ny;
+            if(towardExit<0){
+                s.vx-=towardExit*1.8*nx;
+                s.vy-=towardExit*1.8*ny;
+            }
+        }
+    }
 
     // Stadium outer wall.
     const radius=Math.hypot(s.x,s.y);
