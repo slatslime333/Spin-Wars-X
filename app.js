@@ -4729,10 +4729,15 @@ function railDirection(s){
     return s.spinDirection || -1;
 }
 function railDirectionAtPoint(s,point){
-    const spin=s.spinDirection || -1;
-    const desiredX=spin===-1 ? point.y : -point.y;
-    const desiredY=spin===-1 ? -point.x : point.x;
-    return (point.tx*desiredX+point.ty*desiredY)>=0 ? 1 : -1;
+    /*
+      The rail geometry is stored in clockwise order in screen coordinates.
+      Right-spin Beys travel counter-clockwise, so right spin follows the
+      reverse path. Left spin follows the stored path.
+
+      Do not infer direction from the local radial vector: doing that made
+      right-spin Beys select the wrong rail direction on different segments.
+    */
+    return s.spinDirection===1 ? 1 : -1;
 }
 
 function bounceOffRail(s,nearest){
@@ -4748,50 +4753,53 @@ function bounceOffRail(s,nearest){
     const balance=(s.stats?.balance||70)/99;
     const control=(bp.control||60)/100;
     const speed=speedOf(s);
-    const rpm=newBattleClamp(s.rpm,0,1);
 
-    // Always separate from the rail. This prevents a tangent/zero-velocity
-    // contact from becoming a stuck state.
-    const push=0.008+s.radius*0.24;
-    s.x=nearest.x+nx*push;
-    s.y=nearest.y+ny*push;
+    /*
+      IMPORTANT:
+      Merely being close to the rail is not a collision. If the Bey is moving
+      away from the rail or nearly tangent to it, do nothing. The old code
+      bounced every frame while inside the contact radius, which is the direct
+      cause of the "stuck to rail" behavior.
+    */
+    const incomingNormal=s.vx*nx+s.vy*ny;
+    if(incomingNormal>=-0.0015){
+        return false;
+    }
 
-    const normal=s.vx*nx+s.vy*ny;
+    const contactRadius=0.030+s.radius*0.24;
+    const separation=Math.max(
+        contactRadius+0.006,
+        0.060+s.radius*0.04
+    );
+
+    s.x=nearest.x+nx*separation;
+    s.y=nearest.y+ny*separation;
+
     const tx=-ny;
     const ty=nx;
     const tangent=s.vx*tx+s.vy*ty;
 
-    // If the Bey is entering the rail, reflect the incoming normal velocity.
-    // If it is already tangent/away, create a small physical rebound instead
-    // of leaving it pinned to the surface.
     const restitution=newBattleClamp(
-        0.24+balance*0.18+control*0.10+
+        0.26+balance*0.18+control*0.10+
         Math.min(0.10,speed*1.2),
-        0.22,0.52
+        0.24,0.54
     );
 
-    let resolvedNormal;
-    if(normal<0){
-        resolvedNormal=-normal*restitution;
-    }else{
-        resolvedNormal=Math.max(normal*0.25,0.0045+speed*0.10);
-    }
-
+    const resolvedNormal=-incomingNormal*restitution;
     const tangentDamp=newBattleClamp(
-        0.72+control*0.12,
-        0.70,0.90
+        0.78+control*0.10,
+        0.76,0.90
     );
 
     s.vx=nx*resolvedNormal+tx*tangent*tangentDamp;
     s.vy=ny*resolvedNormal+ty*tangent*tangentDamp;
 
-    // A failed rail catch changes the trajectory and costs a little energy.
     s.surfaceBounce=0.20;
     s.surfaceRecovery=0.12;
     s.motionPhase+=0.75+Math.random()*0.60;
     s.motionPhase2+=0.35+Math.random()*0.50;
 
-    const impactSpeed=Math.max(0,-normal);
+    const impactSpeed=Math.max(0,-incomingNormal);
     s.rpm=newBattleClamp(
         s.rpm-(0.0012+impactSpeed*0.014),
         0,1
@@ -4801,8 +4809,7 @@ function bounceOffRail(s,nearest){
         0,1
     );
 
-    // A rail bounce is allowed to try again later only if the Bey genuinely
-    // approaches the rail again; no timed "anti-rail" patch is used.
+    return true;
 }
 function tryNewXRailEngagement(s){
     if(s.railEngaged) return true;
@@ -4859,8 +4866,8 @@ function tryNewXRailEngagement(s){
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.28+movement*0.13+rpm*0.12+affinity*0.05),
-        0.050,0.180
+        tangentialCarry*(1.24+movement*0.14+rpm*0.12+affinity*0.05),
+        0.065,0.220
     );
 
     s.railDirection=direction;
@@ -4888,7 +4895,7 @@ function newXRailExit(s){
     const control=(bp.control||60)/100;
     const speed=newBattleClamp(
         Math.max(s.railSpeed||0,speedOf(s)*0.82)*(0.98+rpm*0.08),
-        0.040,0.180
+        0.055,0.220
     );
     const direction=s.railDirection||railDirectionAtPoint(s,exit);
     const tangentX=exit.tx*direction, tangentY=exit.ty*direction;
@@ -4897,7 +4904,7 @@ function newXRailExit(s){
     s.railRideTime=0; s.railProgress=0; s.railDistance=0;
     s.railTravelDistance=0; s.railLoops=0; s.railGrip=0;
     s.railContactPoint=null; s.railDirection=0;
-    s.railExitRefractory=0;
+    s.railExitRefractory=0.20;
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
     const exitForward=0.88+rpm*0.12+Math.min(0.12,speed*0.80);
@@ -4930,7 +4937,7 @@ function updateNewXRailRide(s,dt){
     const tx0=pointNow.tx*direction, ty0=pointNow.ty*direction;
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.018){
+    if(tangentVelocity<0.050){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -4939,11 +4946,11 @@ function updateNewXRailRide(s,dt){
     const railFriction=0.00035+(1-rpm)*0.00040+tilt*0.00030;
 
     tangentVelocity=Math.max(
-        0.035,
+        0.050,
         tangentVelocity+(railDrive-railFriction)*dt*60
     );
 
-    const speedSupport=newBattleClamp((tangentVelocity-0.035)/0.090,0,1);
+    const speedSupport=newBattleClamp((tangentVelocity-0.050)/0.120,0,1);
     const rpmSupport=newBattleClamp((rpm-0.16)/0.70,0,1);
     const tiltSupport=1-newBattleClamp((tilt-0.06)/0.34,0,1);
     const stabilitySupport=0.45+stability*0.55;
@@ -5000,9 +5007,10 @@ function newXRailRailRelease(s,direction){
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
     s.railGrip=0; s.railDirection=0;
 
-    const tangential=speed*0.88, normal=Math.max(0.006,speed*0.20);
-    s.x=point.x+normalX*0.028;
-    s.y=point.y+normalY*0.028;
+    const tangential=speed*0.92, normal=Math.max(0.008,speed*0.24);
+    const separation=0.060+s.radius*0.04;
+    s.x=point.x+normalX*separation;
+    s.y=point.y+normalY*separation;
     s.vx=tangentX*tangential+normalX*normal;
     s.vy=tangentY*tangential+normalY*normal;
 
@@ -5185,10 +5193,26 @@ function newPhysicsStep(s,dt){
             const contactRadius =
                 0.030+s.radius*0.24;
 
-            if(railDistance<=contactRadius){
+            if(
+                railDistance<=contactRadius &&
+                !s.railExited
+            ){
+
+                const dx=s.x-nearest.x;
+                const dy=s.y-nearest.y;
+                const len=Math.hypot(dx,dy)||1;
+                const nx=dx/len;
+                const ny=dy/len;
+                const incomingNormal=s.vx*nx+s.vy*ny;
 
                 if(!tryNewXRailEngagement(s)){
-                    bounceOffRail(s,nearest);
+                    /*
+                      Only bounce when the Bey is actually entering the rail.
+                      Tangential/away movement is allowed to continue normally.
+                    */
+                    if(incomingNormal < -0.0015){
+                        bounceOffRail(s,nearest);
+                    }
                 }
 
                 if(s.railEngaged) return;
