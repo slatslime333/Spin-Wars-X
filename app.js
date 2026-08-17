@@ -4251,42 +4251,64 @@ function renderNewBattle(){
       </main>`;
 }
 
-function finishNewBattle(winnerSide){
-    if(!NEW_BATTLE.active) return;
+function finishNewBattle(winnerSide,finishType="Spin Finish"){
+    if(NEW_BATTLE.finishPending) return;
 
+    NEW_BATTLE.finishPending=true;
     NEW_BATTLE.active=false;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
 
     Game.battle.finished=true;
     Game.battle.matchFinished=true;
     Game.battle.winner=winnerSide;
+    Game.battle.finishType=finishType;
 
     const winner=winnerSide==="player"
         ? NEW_BATTLE.player
         : NEW_BATTLE.cpu;
 
-    const app=document.getElementById("app");
-    if(app){
-        app.innerHTML=`
-          <div class="background"></div>
-          <main class="menu">
-            <div class="logo">
-              <div class="logo-icon">⚔</div>
-              <h1>WINNER</h1>
-              <p>${winner.blade.name}</p>
-            </div>
-            <section class="menu-card" style="text-align:center;">
-              <h2 style="margin:8px 0;">${winner.blade.name}</h2>
-              <p>SPIN FINISH</p>
-              <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
-            </section>
-          </main>`;
+    const loser=winnerSide==="player"
+        ? NEW_BATTLE.cpu
+        : NEW_BATTLE.player;
+
+    // Keep the stadium visible for two seconds so the player can actually
+    // see the Bey enter/fall into the pocket or Xtreme zone.
+    const commentary=document.getElementById("newCommentary");
+    if(commentary){
+        commentary.textContent=
+            finishType==="Xtreme"
+                ? `${loser.blade.name} falls into the XTREME ZONE!`
+                : finishType==="Pocket"
+                    ? `${loser.blade.name} falls into the POCKET!`
+                    : `${winner.blade.name} wins by SPIN FINISH.`;
     }
 
-    // Give the result screen a moment to be read, then return to the
-    // existing main menu. Reload is intentional because the main menu is
-    // owned by index.html and we are not changing index/style.
-    setTimeout(()=>location.reload(),1800);
+    const app=document.getElementById("app");
+    setTimeout(()=>{
+        const winnerNow=winnerSide==="player"
+            ? NEW_BATTLE.player
+            : NEW_BATTLE.cpu;
+
+        if(app){
+            app.innerHTML=`
+              <div class="background"></div>
+              <main class="menu">
+                <div class="logo">
+                  <div class="logo-icon">⚔</div>
+                  <h1>${finishType==="Xtreme"?"XTREME FINISH":
+                            finishType==="Pocket"?"POCKET FINISH":"WINNER"}</h1>
+                  <p>${winnerNow.blade.name}</p>
+                </div>
+                <section class="menu-card" style="text-align:center;">
+                  <h2 style="margin:8px 0;">${winnerNow.blade.name}</h2>
+                  <p>${finishType.toUpperCase()}</p>
+                  <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
+                </section>
+              </main>`;
+        }
+
+        setTimeout(()=>location.reload(),1200);
+    },2000);
 }
 
 
@@ -4312,9 +4334,9 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0145 &&
-        speed>=0.038 &&
-        (s.vy>0.012 || s.railExited)
+        effectiveForce>=0.0130 &&
+        speed>=0.032 &&
+        (s.vy>0.010 || s.railExited)
     ){
         return "Xtreme";
     }
@@ -4333,9 +4355,10 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0110 &&
+        effectiveForce>=0.0095 &&
+        speed>=0.028 &&
         s.y>0.80 &&
-        (s.vy>0.008 || Math.abs(s.vx)>0.018)
+        (s.vy>0.006 || Math.abs(s.vx)>0.016)
     ){
         return "Pocket";
     }
@@ -4402,7 +4425,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.30;
+            const life=0.38;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -4421,28 +4444,28 @@ function newBattleFrame(now){
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
-                    flash.setAttribute("r",String(13+u*18*strength));
-                    flash.setAttribute("stroke-width",String(3.5-u*1.4));
+                    flash.setAttribute("r",String(14+u*24*strength));
+                    flash.setAttribute("stroke-width",String(4.0-u*1.5));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
-                    ring.setAttribute("r",String(7+u*25*strength));
+                    ring.setAttribute("r",String(8+u*32*strength));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
                     ring2.setAttribute("cy",y);
-                    ring2.setAttribute("r",String(5+u*18*strength));
+                    ring2.setAttribute("r",String(6+u*24*strength));
                 }
                 if(ring3){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
-                    ring3.setAttribute("r",String(3+u*12*strength));
+                    ring3.setAttribute("r",String(4+u*17*strength));
                 }
                 if(txt){
                     txt.setAttribute("x",x);
-                    txt.setAttribute("y",String(y-20-u*10));
-                    txt.setAttribute("font-size",String(18+Math.min(5,strength*2)));
+                    txt.setAttribute("y",String(y-22-u*12));
+                    txt.setAttribute("font-size",String(19+Math.min(6,strength*2.2)));
                     txt.textContent=imp.heavy?"HEAVY HIT!":"HIT!";
                 }
             }else{
@@ -4476,6 +4499,13 @@ function newBattleFrame(now){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
                     `${rider.blade.name} is riding the X Rail and building speed.`;
+            }else if(NEW_BATTLE.finishPending){
+                commentary.textContent=
+                    Game.battle.finishType==="Xtreme"
+                        ? "XTREME FINISH!"
+                        : Game.battle.finishType==="Pocket"
+                            ? "POCKET FINISH!"
+                            : "SPIN FINISH!";
             }else if(p.rpm<=0.001 || c.rpm<=0.001){
                 const winner=p.rpm>c.rpm?p:c;
                 commentary.textContent=
@@ -4520,10 +4550,10 @@ function newBattleFrame(now){
             // This is intentionally difficult: pocket finishes require a
             // genuine knockback event, not a tap or slow drift.
             return (
-                impactForce>=0.0105 &&
-                speed>=0.032 &&
-                outward>=0.010 &&
-                radial>=0.86
+                impactForce>=0.0095 &&
+                speed>=0.028 &&
+                outward>=0.008 &&
+                radial>=0.84
             );
         };
 
@@ -4531,20 +4561,20 @@ function newBattleFrame(now){
         const cForcedFinish=checkForcedStadiumFinish(c);
 
         if(pForcedFinish){
-            finishNewBattle("cpu");
+            finishNewBattle("cpu",pForcedFinish);
             return;
         }
         if(cForcedFinish){
-            finishNewBattle("player");
+            finishNewBattle("player",cForcedFinish);
             return;
         }
 
         if(checkPocketFinish(p)){
-            finishNewBattle("cpu");
+            finishNewBattle("cpu","Pocket");
             return;
         }
         if(checkPocketFinish(c)){
-            finishNewBattle("player");
+            finishNewBattle("player","Pocket");
             return;
         }
 
@@ -5868,20 +5898,20 @@ function newPhysicsCollision(dt){
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0135;
-    const railCollisionBreakThreshold=0.0018;
+    const railCollisionBreakThreshold=0.0012;
 
     // IMPORTANT: each Bey's own force is applied to the opponent.
     // This restores the directional Knockback model.
     const pKnockback=
         Math.max(
-            0.0024+contactEnergy*0.070,
-            pForce*(0.98-cDef*0.30)
+            0.0040+contactEnergy*0.095,
+            pForce*(1.08-cDef*0.26)
         );
 
     const cKnockback=
         Math.max(
-            0.0024+contactEnergy*0.070,
-            cForce*(0.98-pDef*0.30)
+            0.0040+contactEnergy*0.095,
+            cForce*(1.08-pDef*0.26)
         );
 
     // Opponent displacement.
@@ -5933,9 +5963,9 @@ function newPhysicsCollision(dt){
       doesn't automatically equal an instant Spin Finish.
     */
     const baseRPMDamage=
-        0.0038+
-        effectiveImpact*0.034+
-        Math.pow(momentumFactor,1.42)*0.0015;
+        0.0046+
+        effectiveImpact*0.041+
+        Math.pow(momentumFactor,1.42)*0.0018;
 
     const pToCDamage=
         baseRPMDamage*
@@ -5964,20 +5994,26 @@ function newPhysicsCollision(dt){
 
     const centerCombatQuality=
         bothNonAttackBits
-            ? 1.0+
-              ((pAttack+pKB+cAttack+cKB)/396)*0.42
+            ? 1.16+
+              ((pAttack+pKB+cAttack+cKB)/396)*0.58
             : 1.0;
 
-    p.rpm=newBattleClamp(
-        p.rpm-
-        (cToPDamage*0.10*(centerCombatQuality-1)),
-        0,1
-    );
-    c.rpm=newBattleClamp(
-        c.rpm-
-        (pToCDamage*0.10*(centerCombatQuality-1)),
-        0,1
-    );
+    if(bothNonAttackBits){
+        const centerImpactBoost=centerCombatQuality;
+        p.vx-=nx*(cKnockback*(centerImpactBoost-1)*0.42);
+        p.vy-=ny*(cKnockback*(centerImpactBoost-1)*0.42);
+        c.vx+=nx*(cKnockback*(centerImpactBoost-1)*0.42);
+        c.vy+=ny*(cKnockback*(centerImpactBoost-1)*0.42);
+
+        p.rpm=newBattleClamp(
+            p.rpm-cToPDamage*(centerImpactBoost-1)*0.42,
+            0,1
+        );
+        c.rpm=newBattleClamp(
+            c.rpm-pToCDamage*(centerImpactBoost-1)*0.42,
+            0,1
+        );
+    }
 
     const stabilityHit=
         0.007+
