@@ -1789,9 +1789,12 @@ viewBox="0 0 1000 900">
 <text id="cpuBeyLabel" text-anchor="middle" font-size="16" font-weight="800" fill="#ff4b4b"></text>
 
 <g id="impactEffect" opacity="0" pointer-events="none">
-    <circle id="impactFlash" cx="500" cy="420" r="22" fill="none" stroke="#ffffff" stroke-width="5"/>
-    <circle id="impactRing" cx="500" cy="420" r="8" fill="none" stroke="#ffd43b" stroke-width="3"/>
-    <text id="impactText" x="500" y="380" text-anchor="middle" font-size="22" font-weight="900" fill="#ffffff">HIT!</text>
+    <!-- Restored multi-ring impact effect, intentionally restrained. -->
+    <circle id="impactFlash" cx="500" cy="420" r="18" fill="none" stroke="#ffffff" stroke-width="3.5"/>
+    <circle id="impactRing" cx="500" cy="420" r="8" fill="none" stroke="#ffd43b" stroke-width="2.5"/>
+    <circle id="impactRing2" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <circle id="impactRing3" cx="500" cy="420" r="3" fill="none" stroke="#ffd43b" stroke-width="1.5"/>
+    <text id="impactText" x="500" y="380" text-anchor="middle" font-size="20" font-weight="900" fill="#ffffff">HIT!</text>
 </g>
 
 </svg>
@@ -3902,7 +3905,7 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.090,
+        radius:0.096,
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
@@ -4099,9 +4102,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="3.05"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="3.65"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="3.05"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="3.65"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4207,12 +4210,65 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            const ps=3.35*(p.hitFlash>0?(p.impactScale||1):1);
+            const ps=3.65*(p.hitFlash>0?(p.impactScale||1):1);
             pe.setAttribute("r",ps);
         }
         if(ce){
-            const cs=3.35*(c.hitFlash>0?(c.impactScale||1):1);
+            const cs=3.65*(c.hitFlash>0?(c.impactScale||1):1);
             ce.setAttribute("r",cs);
+        }
+
+        const impactGroup=document.getElementById("impactEffect");
+        if(impactGroup && NEW_BATTLE.lastImpact){
+            const imp=NEW_BATTLE.lastImpact;
+            const age=Math.max(0,(performance.now()-imp.time)/1000);
+            const life=0.30;
+            if(age<life){
+                const u=age/life;
+                const x=50+imp.x*39;
+                const y=46+imp.y*39;
+                const strength=imp.strength||1;
+
+                impactGroup.setAttribute("opacity",
+                    String(Math.max(0,0.90-u*0.90)));
+
+                const flash=document.getElementById("impactFlash");
+                const ring=document.getElementById("impactRing");
+                const ring2=document.getElementById("impactRing2");
+                const ring3=document.getElementById("impactRing3");
+                const txt=document.getElementById("impactText");
+
+                if(flash){
+                    flash.setAttribute("cx",x);
+                    flash.setAttribute("cy",y);
+                    flash.setAttribute("r",String(13+u*18*strength));
+                    flash.setAttribute("stroke-width",String(3.5-u*1.4));
+                }
+                if(ring){
+                    ring.setAttribute("cx",x);
+                    ring.setAttribute("cy",y);
+                    ring.setAttribute("r",String(7+u*25*strength));
+                }
+                if(ring2){
+                    ring2.setAttribute("cx",x);
+                    ring2.setAttribute("cy",y);
+                    ring2.setAttribute("r",String(5+u*18*strength));
+                }
+                if(ring3){
+                    ring3.setAttribute("cx",x);
+                    ring3.setAttribute("cy",y);
+                    ring3.setAttribute("r",String(3+u*12*strength));
+                }
+                if(txt){
+                    txt.setAttribute("x",x);
+                    txt.setAttribute("y",String(y-20-u*10));
+                    txt.setAttribute("font-size",String(18+Math.min(5,strength*2)));
+                    txt.textContent=imp.heavy?"HEAVY HIT!":"HIT!";
+                }
+            }else{
+                impactGroup.setAttribute("opacity","0");
+                NEW_BATTLE.lastImpact=null;
+            }
         }
         p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
@@ -5359,9 +5415,9 @@ function newPhysicsCollision(dt){
     const closing=rvx*nx+rvy*ny;
     const relativeSpeed=Math.hypot(rvx,rvy);
 
-    // A grazing contact can still transfer force. Only ignore a contact when
-    // there is essentially no relative movement at all.
-    if(closing>=0 && relativeSpeed<0.0028) return;
+    // Allow meaningful glancing/tangential contact, but reject a truly
+    // stationary overlap.
+    if(closing>=0 && relativeSpeed<0.0022) return;
 
     const pAttack=(p.stats.attack||70)/99;
     const cAttack=(c.stats.attack||70)/99;
@@ -5376,168 +5432,196 @@ function newPhysicsCollision(dt){
     const tangentRelative=rvx*tx+rvy*ty;
     const totalRelative=Math.max(relativeSpeed,0.0001);
 
-    // Glancing contact still has meaningful energy. This prevents the
-    // late-battle "two tops gently tapping forever" problem.
-    const grazingEnergy=totalRelative*0.22;
+    // Tangential clashes still have real energy. This is deliberately higher
+    // than V9 so stamina/defense mirrors cannot devolve into tiny taps.
+    const grazingEnergy=totalRelative*0.30;
     const effectiveImpact=Math.max(impactSpeed,grazingEnergy);
     const directness=newBattleClamp(impactSpeed/totalRelative,0,1);
-
     const avgRPM=(pRPM+cRPM)*0.5;
-    const contactEnergy=
-        effectiveImpact *
-        (0.72+avgRPM*0.48);
 
-    /*
-      Attack is not just a stat on the card anymore:
-      it directly raises how much offensive energy a Bey transfers.
-      Knockback then determines how much of that energy becomes displacement.
-    */
-    const pMomentum =
+    // High RPM makes impacts energetic; the force falls naturally as RPM
+    // falls. Attack is offensive transfer, Knockback converts it to travel.
+    const contactEnergy=effectiveImpact*(0.76+avgRPM*0.58);
+
+    const pHit =
         contactEnergy *
-        (0.62+pKB*1.18) *
-        (0.62+pAttack*0.58) *
-        (0.72+pRPM*0.42);
+        (0.62+pKB*1.28) *
+        (0.64+pAttack*0.70) *
+        (0.68+pRPM*0.50);
 
-    const cMomentum =
+    const cHit =
         contactEnergy *
-        (0.62+cKB*1.18) *
-        (0.62+cAttack*0.58) *
-        (0.72+cRPM*0.42);
+        (0.62+cKB*1.28) *
+        (0.64+cAttack*0.70) *
+        (0.68+cRPM*0.50);
 
-    const momentumFactor=
-        newBattleClamp(effectiveImpact/0.024,0,3.5);
-
-    const hitRoll=0.86+Math.random()*0.28;
-
+    const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
+    const hitRoll=0.90+Math.random()*0.20;
     const heavyFactor=
-        Math.pow(momentumFactor,1.28)*
-        (0.68+directness*0.52);
+        Math.pow(momentumFactor,1.22)*
+        (0.70+directness*0.55);
 
     const pForce=
-        pMomentum*
-        (0.76+directness*0.34)*
-        (0.82+heavyFactor*0.42)*
+        pHit*
+        (0.78+directness*0.34)*
+        (0.86+heavyFactor*0.44)*
         hitRoll;
 
     const cForce=
-        cMomentum*
-        (0.76+directness*0.34)*
-        (0.82+heavyFactor*0.42)*
+        cHit*
+        (0.78+directness*0.34)*
+        (0.86+heavyFactor*0.44)*
         hitRoll;
 
-    // Defense absorbs displacement, but cannot turn a meaningful hit into
-    // a stationary tap.
+    // IMPORTANT: each Bey's own force is applied to the opponent.
+    // This restores the directional Knockback model.
     const pKnockback=
         Math.max(
-            0.0019 + contactEnergy*0.055,
-            pForce*(0.96-pDef*0.25)
+            0.0024+contactEnergy*0.070,
+            pForce*(0.98-cDef*0.30)
         );
 
     const cKnockback=
         Math.max(
-            0.0019 + contactEnergy*0.055,
-            cForce*(0.96-cDef*0.25)
+            0.0024+contactEnergy*0.070,
+            cForce*(0.98-pDef*0.30)
         );
 
+    // Opponent displacement.
     p.vx-=nx*pKnockback;
     p.vy-=ny*pKnockback;
-    c.vx+=nx*cKnockback;
-    c.vy+=ny*cKnockback;
+    c.vx+=nx*pKnockback;
+    c.vy+=ny*pKnockback;
 
-    // Attackers create more follow-through; high Knockback makes the hit
-    // travel farther rather than simply deleting RPM.
+    p.vx+=nx*cKnockback;
+    p.vy+=ny*cKnockback;
+    c.vx-=nx*cKnockback;
+    c.vy-=ny*cKnockback;
+
+    // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.0010+
-        effectiveImpact*0.018+
-        Math.abs(tangentRelative)*0.0040+
-        heavyFactor*0.0009;
+        0.0012+
+        effectiveImpact*0.024+
+        Math.abs(tangentRelative)*0.0050+
+        heavyFactor*0.0012;
 
-    const pFollow=followThrough*(0.76+0.44*pAttack)*(0.72+0.34*pKB);
-    const cFollow=followThrough*(0.76+0.44*cAttack)*(0.72+0.34*cKB);
+    const pFollow=
+        followThrough*
+        (0.74+0.50*pAttack)*
+        (0.70+0.40*pKB);
+
+    const cFollow=
+        followThrough*
+        (0.74+0.50*cAttack)*
+        (0.70+0.40*cKB);
 
     p.vx+=tx*pFollow;
     p.vy+=ty*pFollow;
     c.vx-=tx*cFollow;
     c.vy-=ty*cFollow;
 
-    // Separate bodies so they do not become glued together in the center.
+    // Separate them so the same collision cannot fire repeatedly on adjacent
+    // frames while they are still overlapping.
     const separation=minDist-dist;
-    p.x-=nx*(separation*0.60+0.0030);
-    p.y-=ny*(separation*0.60+0.0030);
-    c.x+=nx*(separation*0.60+0.0030);
-    c.y+=ny*(separation*0.60+0.0030);
+    p.x-=nx*(separation*0.62+0.0040);
+    p.y-=ny*(separation*0.62+0.0040);
+    c.x+=nx*(separation*0.62+0.0040);
+    c.y+=ny*(separation*0.62+0.0040);
 
     /*
-      RPM damage is separate from displacement.
-      Attack affects stamina damage; Knockback affects movement.
-    */
-    const pDamage=
-        0.0028+
-        effectiveImpact*0.026+
-        pForce*0.009+
-        Math.pow(momentumFactor,1.55)*0.0011;
+      RPM damage is now attacker -> target.
 
-    const cDamage=
-        0.0028+
-        effectiveImpact*0.026+
-        cForce*0.009+
-        Math.pow(momentumFactor,1.55)*0.0011;
+      Big/high-RPM/high-Attack impacts remove more RPM from the Bey that
+      actually received the hit. Knockback is separate, so a massive shove
+      doesn't automatically equal an instant Spin Finish.
+    */
+    const baseRPMDamage=
+        0.0038+
+        effectiveImpact*0.034+
+        Math.pow(momentumFactor,1.42)*0.0015;
+
+    const pToCDamage=
+        baseRPMDamage*
+        (0.82+pAttack*0.58)*
+        (0.72+pRPM*0.42)*
+        (1-cDef*0.30);
+
+    const cToPDamage=
+        baseRPMDamage*
+        (0.82+cAttack*0.58)*
+        (0.72+cRPM*0.42)*
+        (1-pDef*0.30);
+
+    c.rpm=newBattleClamp(c.rpm-pToCDamage,0,1);
+    p.rpm=newBattleClamp(p.rpm-cToPDamage,0,1);
+
+    // Non-attack center clashes still matter: repeated contact has a real
+    // RPM cost instead of becoming an endless low-energy tapping match.
+    const centerPressure=
+        (pAttack<0.82 && cAttack<0.82)
+            ? 1.16
+            : 1.0;
 
     p.rpm=newBattleClamp(
-        p.rpm-pDamage*(0.80+cAttack*0.30)*(1-pDef*0.26),
+        p.rpm-(cToPDamage*0.12*(centerPressure-1)),
         0,1
     );
     c.rpm=newBattleClamp(
-        c.rpm-cDamage*(0.80+pAttack*0.30)*(1-cDef*0.26),
+        c.rpm-(pToCDamage*0.12*(centerPressure-1)),
         0,1
     );
 
-    // Meaningful contact always disturbs both tops, including stamina/
-    // defense mirrors. Higher momentum creates a much larger disturbance.
     const stabilityHit=
-        0.006+
-        effectiveImpact*0.075+
-        heavyFactor*0.010;
+        0.007+
+        effectiveImpact*0.085+
+        heavyFactor*0.012;
 
     p.stability=newBattleClamp(
-        p.stability-stabilityHit*(1-pDef*0.34),
+        p.stability-stabilityHit*(1-pDef*0.36),
         0,1
     );
     c.stability=newBattleClamp(
-        c.stability-stabilityHit*(1-cDef*0.34),
+        c.stability-stabilityHit*(1-cDef*0.36),
         0,1
     );
 
     const tiltHit=
-        0.055+
-        effectiveImpact*0.46+
-        newBattleClamp(heavyFactor,0,2.4)*0.020;
+        0.060+
+        effectiveImpact*0.52+
+        newBattleClamp(heavyFactor,0,2.5)*0.024;
 
     p.tiltLevel=newBattleClamp((p.tiltLevel||0)+tiltHit,0,1);
     c.tiltLevel=newBattleClamp((c.tiltLevel||0)+tiltHit,0,1);
 
-    // Every impact changes the trajectory. No two center collisions should
-    // repeatedly produce the same straight-line exchange.
-    p.motionPhase+=0.55+Math.random()*0.65;
-    c.motionPhase+=0.55+Math.random()*0.65;
-    p.motionPhase2+=0.30+Math.random()*0.55;
-    c.motionPhase2+=0.30+Math.random()*0.55;
+    // Every impact changes the precession phase.
+    p.motionPhase+=0.62+Math.random()*0.80;
+    c.motionPhase+=0.62+Math.random()*0.80;
+    p.motionPhase2+=0.34+Math.random()*0.65;
+    c.motionPhase2+=0.34+Math.random()*0.65;
 
-    const visualStrength=
-        newBattleClamp(
-            0.78+
-            effectiveImpact/0.022*0.34+
-            heavyFactor*0.10,
-            0.78,1.75
-        );
+    const visualStrength=newBattleClamp(
+        0.82+
+        effectiveImpact/0.020*0.42+
+        heavyFactor*0.12,
+        0.82,1.95
+    );
 
-    p.hitFlash=0.125*visualStrength;
-    c.hitFlash=0.125*visualStrength;
-    p.impactScale=1.06+0.16*visualStrength;
-    c.impactScale=1.06+0.16*visualStrength;
+    p.hitFlash=0.16*visualStrength;
+    c.hitFlash=0.16*visualStrength;
+    p.impactScale=1.08+0.20*visualStrength;
+    c.impactScale=1.08+0.20*visualStrength;
 
-    p.lastKnockback=Math.abs(pKnockback);
-    c.lastKnockback=Math.abs(cKnockback);
+    // Used by the multi-ring visual system.
+    NEW_BATTLE.lastImpact={
+        x:(p.x+c.x)*0.5,
+        y:(p.y+c.y)*0.5,
+        strength:visualStrength,
+        heavy:heavyFactor>1.25,
+        time:performance.now()
+    };
+
+    p.lastKnockback=pKnockback;
+    c.lastKnockback=cKnockback;
 }
 
 // Launch angle and technique are selected on the stadium setup view.
