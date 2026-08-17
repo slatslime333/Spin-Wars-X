@@ -4227,6 +4227,69 @@ function finishNewBattle(winnerSide){
 }
 
 
+function checkForcedStadiumFinish(s){
+
+    const age=performance.now()-(s.lastImpactAt||0);
+    if(age>900) return null;
+
+    const force=s.lastImpactForce||0;
+    const speed=speedOf(s);
+
+    // A rail-exit knockback gets a real advantage because the Bey is already
+    // moving toward the lower stadium when it leaves the rail.
+    const exitBoost=s.railExited?1.18:1.0;
+    const effectiveForce=force*exitBoost;
+
+    // Xtreme zone: central lower opening. Require a genuine high-force
+    // displacement, not merely entering the red area.
+    const inXtreme=
+        s.y>=0.78 &&
+        s.y<=0.98 &&
+        Math.abs(s.x)<=0.19;
+
+    if(
+        inXtreme &&
+        effectiveForce>=0.0145 &&
+        speed>=0.038 &&
+        (s.vy>0.012 || s.railExited)
+    ){
+        return "Xtreme";
+    }
+
+    // Pockets are wider and require slightly less force than Xtreme, but
+    // still require a recent impact and meaningful outward travel.
+    const leftPocket=
+        s.x<=-0.64 &&
+        s.y>=0.76 &&
+        speed>=0.030;
+
+    const rightPocket=
+        s.x>=0.64 &&
+        s.y>=0.76 &&
+        speed>=0.030;
+
+    if(
+        (leftPocket||rightPocket) &&
+        effectiveForce>=0.0110 &&
+        s.y>0.80 &&
+        (s.vy>0.008 || Math.abs(s.vx)>0.018)
+    ){
+        return "Pocket";
+    }
+
+    return null;
+}
+
+function applyKnockbackBoundaryOverride(s){
+
+    if(!s.knockbackOverrideUntil) return;
+
+    if(performance.now()>s.knockbackOverrideUntil){
+        s.knockbackOverrideUntil=0;
+        s.knockbackOverrideForce=0;
+    }
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -4400,6 +4463,18 @@ function newBattleFrame(now){
                 radial>=0.86
             );
         };
+
+        const pForcedFinish=checkForcedStadiumFinish(p);
+        const cForcedFinish=checkForcedStadiumFinish(c);
+
+        if(pForcedFinish){
+            finishNewBattle("cpu");
+            return;
+        }
+        if(cForcedFinish){
+            finishNewBattle("player");
+            return;
+        }
 
         if(checkPocketFinish(p)){
             finishNewBattle("cpu");
@@ -4942,6 +5017,15 @@ function enforceXRailExitBarrier(s){
 
         if(s.railEngaged) return;
 
+        // A strong recent collision is allowed to carry the Bey through the
+        // exit boundary. Weak normal movement still treats it as a wall.
+        if(
+            s.knockbackOverrideUntil>performance.now() &&
+            (s.knockbackOverrideForce||0)>=0.0135
+        ){
+            return;
+        }
+
         const exit =
             newXRailPointAtDistance(
                 getNewXRailGeometry().exitDistance
@@ -5074,6 +5158,8 @@ function newPhysicsStep(s,dt){
             }
         }
 
+        applyKnockbackBoundaryOverride(s);
+
         if(s.railEngaged){
             if(!Number.isFinite(s.railDistance) ||
                !Number.isFinite(s.railSpeed) ||
@@ -5116,6 +5202,8 @@ function newPhysicsStep(s,dt){
         */
         s.x += s.vx*dt*60;
         s.y += s.vy*dt*60;
+
+        enforceXRailExitBarrier(s);
 
         /*
           The X Exit is a physical opening only for a Bey that is actually
@@ -5533,10 +5621,82 @@ function newPhysicsStep(s,dt){
                 0,1
             );
     };
+function breakXRailFromImpact(s,nx,ny,force){
+
+    if(!s.railEngaged) return false;
+
+    const direction=railDirection(s);
+    const point=newXRailPointAtDistance(s.railDistance);
+    const tangentX=point.tx*direction;
+    const tangentY=point.ty*direction;
+
+    // Current rail tangent + incoming impact vector. This makes the release
+    // direction depend on the actual collision rather than a canned bounce.
+    const impactMagnitude=Math.max(0.012,force);
+    const impactX=nx*impactMagnitude;
+    const impactY=ny*impactMagnitude;
+
+    const tangentSpeed=Math.max(
+        0.010,
+        (s.railSpeed||speedOf(s))*0.56
+    );
+
+    s.railEngaged=false;
+    s.railExited=false;
+    s.railGrip=0;
+    s.railContactPoint=null;
+    s.railTravelDistance=0;
+    s.railRideTime=0;
+
+    // Start just outside the rail so the next frame cannot immediately
+    // re-capture the exact same point.
+    const normalX=-tangentY;
+    const normalY=tangentX;
+    s.x=point.x+normalX*0.035;
+    s.y=point.y+normalY*0.035;
+
+    s.vx=
+        tangentX*tangentSpeed+
+        impactX*0.90;
+    s.vy=
+        tangentY*tangentSpeed+
+        impactY*0.90;
+
+    // Strong impacts temporarily have priority over the exit barrier.
+    // This is a physical displacement override, not a rail cooldown.
+    s.knockbackOverrideUntil=performance.now()+280;
+    s.knockbackOverrideForce=force;
+
+    s.rpm=newBattleClamp(
+        s.rpm-(0.0035+force*0.20),
+        0,1
+    );
+    s.stability=newBattleClamp(
+        s.stability-(0.008+force*0.35),
+        0,1
+    );
+    s.tiltLevel=newBattleClamp(
+        (s.tiltLevel||0)+0.045+force*0.55,
+        0,1
+    );
+
+    s.surfaceBounce=0.20;
+    s.surfaceRecovery=0.12;
+    s.motionPhase+=1.0+Math.random()*0.7;
+    s.motionPhase2+=0.4+Math.random()*0.5;
+
+    return true;
+}
+
 function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
-    if(!p||!c||p.railEngaged||c.railEngaged) return;
+    if(!p||!c) return;
+
+    // A Bey riding the X Rail is still physically hittable. A sufficiently
+    // strong impact can break its rail grip; weak contact does not.
+    const pWasOnRail=!!p.railEngaged;
+    const cWasOnRail=!!c.railEngaged;
 
     const dx=c.x-p.x, dy=c.y-p.y;
     const dist=Math.hypot(dx,dy);
@@ -5681,6 +5841,12 @@ function newPhysicsCollision(dt){
         (0.78+directness*0.34)*
         (0.86+heavyFactor*0.44)*
         hitRoll;
+
+    // Rail riding is not immunity. A genuinely heavy collision can break the
+    // rider's grip and send it back into normal stadium physics.
+    const pRailBreakForce=cForce;
+    const cRailBreakForce=pForce;
+    const railBreakThreshold=0.0135;
 
     // IMPORTANT: each Bey's own force is applied to the opponent.
     // This restores the directional Knockback model.
@@ -5851,6 +6017,13 @@ function newPhysicsCollision(dt){
     c.lastImpactForce=pKnockback;
     p.lastImpactAttacker="cpu";
     c.lastImpactAttacker="player";
+
+    if(pWasOnRail && pRailBreakForce>=railBreakThreshold){
+        breakXRailFromImpact(p,nx,ny,pRailBreakForce);
+    }
+    if(cWasOnRail && cRailBreakForce>=railBreakThreshold){
+        breakXRailFromImpact(c,-nx,-ny,cRailBreakForce);
+    }
 }
 
 // Launch angle and technique are selected on the stadium setup view.
