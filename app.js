@@ -3691,8 +3691,13 @@ function showLetItRip(){
 
         </div>
 
-        <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.78;text-align:center;">
+        <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.82;text-align:center;">
           ${Game.player.launch.angle} · ${Game.player.launch.technique}
+          <br>
+          <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
+          · START RPM: ${({
+              Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
+          }[Game.player.launch.quality]||97)}%
         </div>
 
         <div style="display:flex;gap:8px;margin-top:9px;">
@@ -3851,13 +3856,38 @@ function newBattleLaunchState(side){
             : getAutomaticLaunchPlan(side);
 
     const isDropLaunch=plan.technique==="Drop Launch";
-    const startX=isDropLaunch ? 0 : (side==="player"?-0.70:0.70);
-    const startY=isDropLaunch ? -0.47 : 0;
-    const direction=isDropLaunch ? 0 : (side==="player"?1:-1);
+    const sideSign=side==="player"?1:-1;
+    const startX=isDropLaunch
+        ? 0
+        : sideSign*(-0.70 + placementJitter*0.18);
+    const startY=isDropLaunch
+        ? -0.47 + placementJitter*0.30
+        : placementJitter;
+    const direction=isDropLaunch ? 0 : sideSign;
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
     }[plan.quality]||1;
+
+    // Launch quality is a physical starting condition.
+    // Better quality means a cleaner placement and more RPM at release.
+    const qualityRPM={
+        Horrible:0.90,
+        Bad:0.94,
+        Okay:0.97,
+        Good:0.99,
+        Perfect:1.00
+    }[plan.quality]||0.97;
+
+    const qualityPlacement={
+        Horrible:0.085,
+        Bad:0.055,
+        Okay:0.030,
+        Good:0.014,
+        Perfect:0.004
+    }[plan.quality]||0.030;
+
+    const placementJitter=(Math.random()-0.5)*qualityPlacement;
 
     // Launch angle is a real release vector:
     // Flat = forward/stable
@@ -3899,7 +3929,7 @@ function newBattleLaunchState(side){
         plan.angle==="Hard Tilt" ? 0.30 : 0;
 
     return {
-        side,x:startX,y:startY,vx,vy,rpm:1,
+        side,x:startX,y:startY,vx,vy,rpm:qualityRPM,
         stability:newBattleClamp(
             ((stats.balance||70)/100)-tilt.stability+
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
@@ -3909,6 +3939,9 @@ function newBattleLaunchState(side){
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
+        launchQuality:plan.quality,
+        launchQualityRPM:qualityRPM,
+        launchPlacementError:qualityPlacement,
         launchRpmLossMultiplier:tilt.rpm,
         launchTilt:plan.angle,
         launchStall:tiltStall,
@@ -4288,7 +4321,11 @@ function newBattleFrame(now){
         const commentary=document.getElementById("newCommentary");
         if(commentary){
             const distance=Math.hypot(p.x-c.x,p.y-c.y);
-            if(p.railEngaged || c.railEngaged){
+            if(NEW_BATTLE.elapsed<0.55){
+                commentary.textContent=
+                    `${p.blade.name}: ${p.launchQuality} launch · ${Math.round(p.rpm*100)}% RPM | `+
+                    `${c.blade.name}: ${c.launchQuality} launch · ${Math.round(c.rpm*100)}% RPM`;
+            }else if(p.railEngaged || c.railEngaged){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
                     `${rider.blade.name} is riding the X Rail and building speed.`;
@@ -4303,6 +4340,53 @@ function newBattleFrame(now){
             }else{
                 commentary.textContent="Both Beys are moving through the stadium.";
             }
+        }
+
+        // Pocket finish validation:
+        // entering a pocket is not enough. The Bey must have been driven by
+        // a recent, substantial impact with enough outward/downward velocity.
+        const checkPocketFinish=(defender)=>{
+            const x=defender.x;
+            const y=defender.y;
+            const leftPocket =
+                x < -0.60 && y > 0.78;
+            const rightPocket =
+                x > 0.60 && y > 0.78;
+
+            if(!leftPocket && !rightPocket) return false;
+
+            const age=
+                performance.now()-
+                (defender.lastImpactAt||0);
+
+            if(age>850) return false;
+
+            const radial=Math.hypot(x,y);
+            const speed=Math.hypot(defender.vx,defender.vy);
+            const outward=
+                radial>0.001
+                    ? (defender.vx*x+defender.vy*y)/radial
+                    : 0;
+
+            const impactForce=defender.lastImpactForce||0;
+
+            // This is intentionally difficult: pocket finishes require a
+            // genuine knockback event, not a tap or slow drift.
+            return (
+                impactForce>=0.0105 &&
+                speed>=0.032 &&
+                outward>=0.010 &&
+                radial>=0.86
+            );
+        };
+
+        if(checkPocketFinish(p)){
+            finishNewBattle("cpu");
+            return;
+        }
+        if(checkPocketFinish(c)){
+            finishNewBattle("player");
+            return;
         }
 
         if(p.rpm<=0.001 || c.rpm<=0.001){
@@ -4435,77 +4519,73 @@ function railDirection(s){
 
 function bounceOffRail(s,nearest){
 
-        const dx = s.x-nearest.x;
-        const dy = s.y-nearest.y;
-        const len = Math.hypot(dx,dy) || 1;
+    const dx=s.x-nearest.x;
+    const dy=s.y-nearest.y;
+    const len=Math.hypot(dx,dy)||1;
 
-        const nx = dx/len;
-        const ny = dy/len;
+    const nx=dx/len;
+    const ny=dy/len;
 
-        const outward = s.vx*nx + s.vy*ny;
+    const bp=bitPhysics(s);
+    const balance=(s.stats?.balance||70)/99;
+    const control=(bp.control||60)/100;
+    const speed=speedOf(s);
+    const rpm=newBattleClamp(s.rpm,0,1);
 
-        if(outward >= 0) return;
+    // Always separate from the rail. This prevents a tangent/zero-velocity
+    // contact from becoming a stuck state.
+    const push=0.008+s.radius*0.24;
+    s.x=nearest.x+nx*push;
+    s.y=nearest.y+ny*push;
 
-        const bp = bitPhysics(s);
-        const balance = (s.stats?.balance || 70)/99;
-        const control = (bp.control || 60)/100;
+    const normal=s.vx*nx+s.vy*ny;
+    const tx=-ny;
+    const ty=nx;
+    const tangent=s.vx*tx+s.vy*ty;
 
-        // Low-friction attack tips lose more speed on a bad rail hit.
-        const restitution =
-            newBattleClamp(
-                0.20 +
-                balance*0.16 +
-                control*0.10,
-                0.18,
-                0.44
-            );
+    // If the Bey is entering the rail, reflect the incoming normal velocity.
+    // If it is already tangent/away, create a small physical rebound instead
+    // of leaving it pinned to the surface.
+    const restitution=newBattleClamp(
+        0.24+balance*0.18+control*0.10+
+        Math.min(0.10,speed*1.2),
+        0.22,0.52
+    );
 
-        // Reflect the component entering the wall.
-        s.vx -= (1+restitution)*outward*nx;
-        s.vy -= (1+restitution)*outward*ny;
-
-        // Tangential friction at the rail contact.
-        const tangentDamp =
-            newBattleClamp(
-                0.78 +
-                control*0.10,
-                0.74,
-                0.90
-            );
-
-        const tx = -ny;
-        const ty = nx;
-
-        const tangent = s.vx*tx+s.vy*ty;
-        const normal = s.vx*nx+s.vy*ny;
-
-        s.vx = nx*normal + tx*tangent*tangentDamp;
-        s.vy = ny*normal + ty*tangent*tangentDamp;
-
-        // Separate the Bey from the rail.
-        const push = 0.006 + s.radius*0.18;
-        s.x = nearest.x + nx*push;
-        s.y = nearest.y + ny*push;
-
-        // A rail impact creates a new trajectory state.
-        s.surfaceBounce = 0.16;
-        s.surfaceRecovery = 0.10;
-
-        const impactSpeed = Math.abs(outward);
-
-        s.rpm = newBattleClamp(
-            s.rpm -
-            (0.0015 + impactSpeed*0.020),
-            0,1
-        );
-
-        s.stability = newBattleClamp(
-            s.stability -
-            (0.003 + impactSpeed*0.035),
-            0,1
-        );
+    let resolvedNormal;
+    if(normal<0){
+        resolvedNormal=-normal*restitution;
+    }else{
+        resolvedNormal=Math.max(normal*0.25,0.0045+speed*0.10);
     }
 
+    const tangentDamp=newBattleClamp(
+        0.72+control*0.12,
+        0.70,0.90
+    );
+
+    s.vx=nx*resolvedNormal+tx*tangent*tangentDamp;
+    s.vy=ny*resolvedNormal+ty*tangent*tangentDamp;
+
+    // A failed rail catch changes the trajectory and costs a little energy.
+    s.surfaceBounce=0.20;
+    s.surfaceRecovery=0.12;
+    s.motionPhase+=0.75+Math.random()*0.60;
+    s.motionPhase2+=0.35+Math.random()*0.50;
+
+    const impactSpeed=Math.max(0,-normal);
+    s.rpm=newBattleClamp(
+        s.rpm-(0.0012+impactSpeed*0.014),
+        0,1
+    );
+    s.stability=newBattleClamp(
+        s.stability-(0.0025+impactSpeed*0.030),
+        0,1
+    );
+
+    // A rail bounce is allowed to try again later only if the Bey genuinely
+    // approaches the rail again; no timed "anti-rail" patch is used.
+}
 function tryNewXRailEngagement(s){
 
     if(s.railEngaged) return true;
@@ -5435,13 +5515,41 @@ function newPhysicsCollision(dt){
     // Tangential clashes still have real energy. This is deliberately higher
     // than V9 so stamina/defense mirrors cannot devolve into tiny taps.
     const grazingEnergy=totalRelative*0.30;
-    const effectiveImpact=Math.max(impactSpeed,grazingEnergy);
-    const directness=newBattleClamp(impactSpeed/totalRelative,0,1);
+
+    // Blade Attack + Knockback are combat stats, not Bit-type permissions.
+    // A Phoenix Wing + Hexa can therefore hit hard even though Hexa does
+    // not move like Rush. The bit controls how it gets there; the blade and
+    // combo stats control what happens when contact occurs.
+    const pCombatRating=
+        0.58+
+        pAttack*0.78+
+        pKB*0.52;
+    const cCombatRating=
+        0.58+
+        cAttack*0.78+
+        cKB*0.52;
+
+    const statDrivenContact=
+        (0.0018+Math.min(pCombatRating,cCombatRating)*0.0018)*
+        Math.pow((pRPM+cRPM)*0.5,0.70);
+
+    const effectiveImpact=Math.max(
+        impactSpeed,
+        grazingEnergy,
+        statDrivenContact
+    );
+
+    const directness=newBattleClamp(
+        impactSpeed/Math.max(totalRelative,0.0001),
+        0,1
+    );
     const avgRPM=(pRPM+cRPM)*0.5;
 
-    // High RPM makes impacts energetic; the force falls naturally as RPM
-    // falls. Attack is offensive transfer, Knockback converts it to travel.
-    const contactEnergy=effectiveImpact*(0.76+avgRPM*0.58);
+    // High RPM makes impacts energetic; Attack/Knockback amplify the
+    // offensive side without making a slow Stamina tip move like Attack.
+    const contactEnergy=
+        effectiveImpact*
+        (0.88+avgRPM*0.72);
 
     const pHit =
         contactEnergy *
@@ -5557,17 +5665,26 @@ function newPhysicsCollision(dt){
 
     // Non-attack center clashes still matter: repeated contact has a real
     // RPM cost instead of becoming an endless low-energy tapping match.
-    const centerPressure=
-        (pAttack<0.82 && cAttack<0.82)
-            ? 1.16
+    const bothNonAttackBits =
+        !((p.bit?.name==="Flat") ||
+          (p.bit?.name==="Rush") ||
+          (p.bit?.name==="Low Flat") ||
+          (p.bit?.name==="Low Rush"));
+
+    const centerCombatQuality=
+        bothNonAttackBits
+            ? 1.0+
+              ((pAttack+pKB+cAttack+cKB)/396)*0.42
             : 1.0;
 
     p.rpm=newBattleClamp(
-        p.rpm-(cToPDamage*0.12*(centerPressure-1)),
+        p.rpm-
+        (cToPDamage*0.10*(centerCombatQuality-1)),
         0,1
     );
     c.rpm=newBattleClamp(
-        c.rpm-(pToCDamage*0.12*(centerPressure-1)),
+        c.rpm-
+        (pToCDamage*0.10*(centerCombatQuality-1)),
         0,1
     );
 
@@ -5622,6 +5739,15 @@ function newPhysicsCollision(dt){
 
     p.lastKnockback=pKnockback;
     c.lastKnockback=cKnockback;
+
+    // Record who generated the displacement. Pocket finishes use this
+    // information so a light accidental drift cannot become a finish.
+    p.lastImpactAt=performance.now();
+    c.lastImpactAt=performance.now();
+    p.lastImpactForce=cKnockback;
+    c.lastImpactForce=pKnockback;
+    p.lastImpactAttacker="cpu";
+    c.lastImpactAttacker="player";
 }
 
 // Launch angle and technique are selected on the stadium setup view.
