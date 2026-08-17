@@ -3634,6 +3634,10 @@ function getMatchPrediction(){
 function showVS(){
     generateCPUCombo();
     assignStadiumSides();
+
+    // Match is first-to-7 points. Only initialize this when creating the
+    // matchup; individual battle sequences preserve the score.
+    Game.battle.score=Game.battle.score||{player:0,cpu:0};
     Game.battle.round=1;
 
     // NEW BATTLE FLOW:
@@ -3691,11 +3695,39 @@ function showLetItRip(){
         Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
     }[Game.player.launch.quality]||97;
 
-    if(stage==="quality"){
+    if(stage==="qualityReveal"){
+        controls.innerHTML=`
+          <div style="padding:18px;background:rgba(0,0,0,.20);border-radius:9px;text-align:center;">
+            <div style="font-size:12px;opacity:.72;">LAUNCH QUALITY</div>
+            <div style="font-size:30px;font-weight:800;margin:10px 0;">
+              ${Game.player.launch.quality}
+            </div>
+            <div style="font-size:12px;opacity:.70;">
+              ${Game.player.launch.qualityMode==="Roll" ? "ROLLED QUALITY" : "FIXED QUALITY"}
+            </div>
+            <div style="font-size:11px;opacity:.55;margin-top:8px;">
+              Quality locked · next: launch angle & technique
+            </div>
+          </div>
+        `;
+
+        // Reveal exactly once. No buttons exist during this stage, so there
+        // is no way to reroll or go backward during the reveal.
+        if(!Game.player.launch.qualityRevealStarted){
+            Game.player.launch.qualityRevealStarted=Date.now();
+            setTimeout(()=>{
+                if(Game.player.launch.setupStage==="qualityReveal"){
+                    Game.player.launch.setupStage="launch";
+                    Game.player.launch.qualityRevealStarted=0;
+                    showLetItRip();
+                }
+            },2000);
+        }
+    }else if(stage==="quality"){
         controls.innerHTML=`
           <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
             <div style="font-size:12px;opacity:.72;margin-bottom:7px;">
-              LAUNCH QUALITY
+              LAUNCH QUALITY · SCORE ${Game.battle.score?.player||0}-${Game.battle.score?.cpu||0}
             </div>
             <div style="font-size:12px;opacity:.78;text-align:center;margin-bottom:9px;">
               Choose your launch quality. Your choice is locked for this launch.
@@ -3772,13 +3804,13 @@ function showLetItRip(){
     if(stage==="quality"){
         document.getElementById("fixedQualityBtn").onclick=()=>{
             setFixedLaunchQuality("player");
-            Game.player.launch.setupStage="launch";
+            Game.player.launch.setupStage="qualityReveal";
             showLetItRip();
         };
 
         document.getElementById("rollQualityBtn").onclick=()=>{
             rollLaunchQuality("player");
-            Game.player.launch.setupStage="launch";
+            Game.player.launch.setupStage="qualityReveal";
             showLetItRip();
         };
 
@@ -4075,6 +4107,7 @@ function startNewBattle(){
     Game.battle.matchStarted=true;
     Game.battle.matchFinished=false;
     Game.battle.exchange=0;
+    NEW_BATTLE.finishPending=false;
 
     // Rebuild once from the selected launch choices. This is the ONLY place
     // that starts physical battle state.
@@ -4119,7 +4152,8 @@ function renderNewBattle(){
         <section class="menu-card" style="padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <strong>LIVE BATTLE</strong>
-            <span style="opacity:.65;font-size:12px;">CONTINUOUS SIMULATION</span>
+            <span style="font-weight:700;">${Game.battle.score?.player||0} — ${Game.battle.score?.cpu||0}</span>
+            <span style="opacity:.65;font-size:12px;">FIRST TO 7</span>
           </div>
 
           <div id="newStadium" style="
@@ -4258,10 +4292,17 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     NEW_BATTLE.active=false;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
 
-    Game.battle.finished=true;
-    Game.battle.matchFinished=true;
-    Game.battle.winner=winnerSide;
+    Game.battle.score=Game.battle.score||{player:0,cpu:0};
+
+    if(winnerSide==="player"){
+        Game.battle.score.player++;
+    }else{
+        Game.battle.score.cpu++;
+    }
+
     Game.battle.finishType=finishType;
+    Game.battle.matchFinished=false;
+    Game.battle.finished=false;
 
     const winner=winnerSide==="player"
         ? NEW_BATTLE.player
@@ -4271,8 +4312,16 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         ? NEW_BATTLE.cpu
         : NEW_BATTLE.player;
 
-    // Keep the stadium visible for two seconds so the player can actually
-    // see the Bey enter/fall into the pocket or Xtreme zone.
+    const playerScore=Game.battle.score.player;
+    const cpuScore=Game.battle.score.cpu;
+    const matchWinner=
+        playerScore>=7 ? "player" :
+        cpuScore>=7 ? "cpu" : null;
+
+    /*
+      Keep the actual stadium visible after a Pocket/Xtreme. The Bey has
+      already entered the finish area; don't replace it with a menu instantly.
+    */
     const commentary=document.getElementById("newCommentary");
     if(commentary){
         commentary.textContent=
@@ -4283,35 +4332,63 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                     : `${winner.blade.name} wins by SPIN FINISH.`;
     }
 
-    const app=document.getElementById("app");
     setTimeout(()=>{
-        const winnerNow=winnerSide==="player"
-            ? NEW_BATTLE.player
-            : NEW_BATTLE.cpu;
+        if(matchWinner){
+            Game.battle.matchFinished=true;
+            Game.battle.finished=true;
+            Game.battle.winner=matchWinner;
 
-        if(app){
-            app.innerHTML=`
-              <div class="background"></div>
-              <main class="menu">
-                <div class="logo">
-                  <div class="logo-icon">⚔</div>
-                  <h1>${finishType==="Xtreme"?"XTREME FINISH":
-                            finishType==="Pocket"?"POCKET FINISH":"WINNER"}</h1>
-                  <p>${winnerNow.blade.name}</p>
-                </div>
-                <section class="menu-card" style="text-align:center;">
-                  <h2 style="margin:8px 0;">${winnerNow.blade.name}</h2>
-                  <p>${finishType.toUpperCase()}</p>
-                  <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
-                </section>
-              </main>`;
+            const finalWinner=
+                matchWinner==="player"
+                    ? NEW_BATTLE.player
+                    : NEW_BATTLE.cpu;
+
+            const app=document.getElementById("app");
+            if(app){
+                app.innerHTML=`
+                  <div class="background"></div>
+                  <main class="menu">
+                    <div class="logo">
+                      <div class="logo-icon">⚔</div>
+                      <h1>${finalWinner.blade.name}</h1>
+                      <p>WINS THE MATCH</p>
+                    </div>
+                    <section class="menu-card" style="text-align:center;">
+                      <h2>${playerScore} — ${cpuScore}</h2>
+                      <p>${finishType.toUpperCase()} · FIRST TO 7</p>
+                      <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
+                    </section>
+                  </main>`;
+            }
+            setTimeout(()=>location.reload(),1800);
+            return;
         }
 
-        setTimeout(()=>location.reload(),1200);
+        /*
+          Point scored. Reset only the battle physics and launch choices.
+          Keep the same matchup and score. The next sequence starts at the
+          quality screen.
+        */
+        Game.battle.round=(Game.battle.round||0)+1;
+        Game.battle.finished=false;
+        Game.battle.matchFinished=false;
+
+        Game.player.launch=Game.player.launch||{};
+        Game.player.launch.setupStage="quality";
+        Game.player.launch.quality=null;
+        Game.player.launch.qualityMode=null;
+        Game.player.launch.qualityRevealStarted=0;
+        Game.player.launch.angle="Flat";
+        Game.player.launch.technique="Center";
+
+        NEW_BATTLE.finishPending=false;
+        NEW_BATTLE.active=false;
+        NEW_BATTLE.player=null;
+        NEW_BATTLE.cpu=null;
+
+        showLetItRip();
     },2000);
 }
-
-
 function checkForcedStadiumFinish(s){
 
     const age=performance.now()-(s.lastImpactAt||0);
@@ -4332,11 +4409,20 @@ function checkForcedStadiumFinish(s){
         s.y<=0.98 &&
         Math.abs(s.x)<=0.19;
 
+    const xtremeTargetX=0;
+    const xtremeTargetY=0.91;
+    const xtremeDx=xtremeTargetX-s.x;
+    const xtremeDy=xtremeTargetY-s.y;
+    const xtremeDistance=Math.hypot(xtremeDx,xtremeDy)||1;
+    const xtremeAlignment=
+        (s.vx*xtremeDx+s.vy*xtremeDy)/
+        Math.max(speed*xtremeDistance,0.0001);
+
     if(
         inXtreme &&
-        effectiveForce>=0.0130 &&
-        speed>=0.032 &&
-        (s.vy>0.010 || s.railExited)
+        effectiveForce>=0.0180 &&
+        speed>=0.045 &&
+        xtremeAlignment>=0.55
     ){
         return "Xtreme";
     }
@@ -4353,12 +4439,21 @@ function checkForcedStadiumFinish(s){
         s.y>=0.76 &&
         speed>=0.030;
 
+    const pocketTargetX=leftPocket ? -0.82 : 0.82;
+    const pocketTargetY=0.90;
+    const pocketDx=pocketTargetX-s.x;
+    const pocketDy=pocketTargetY-s.y;
+    const pocketDistance=Math.hypot(pocketDx,pocketDy)||1;
+    const pocketAlignment=
+        (s.vx*pocketDx+s.vy*pocketDy)/
+        Math.max(speed*pocketDistance,0.0001);
+
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0095 &&
-        speed>=0.028 &&
+        effectiveForce>=0.0145 &&
+        speed>=0.042 &&
         s.y>0.80 &&
-        (s.vy>0.006 || Math.abs(s.vx)>0.016)
+        pocketAlignment>=0.58
     ){
         return "Pocket";
     }
@@ -4568,11 +4663,21 @@ function newBattleFrame(now){
 
             // This is intentionally difficult: pocket finishes require a
             // genuine knockback event, not a tap or slow drift.
+            const targetX=leftPocket ? -0.82 : 0.82;
+            const targetY=0.90;
+            const tdX=targetX-x;
+            const tdY=targetY-y;
+            const targetDistance=Math.hypot(tdX,tdY)||1;
+            const targetAlignment=
+                (defender.vx*tdX+defender.vy*tdY)/
+                Math.max(speed*targetDistance,0.0001);
+
             return (
-                impactForce>=0.0095 &&
-                speed>=0.028 &&
-                outward>=0.008 &&
-                radial>=0.84
+                impactForce>=0.0145 &&
+                speed>=0.042 &&
+                outward>=0.012 &&
+                radial>=0.84 &&
+                targetAlignment>=0.58
             );
         };
 
@@ -6140,31 +6245,30 @@ function newPhysicsCollision(dt){
 
     // Non-attack center clashes still matter: repeated contact has a real
     // RPM cost instead of becoming an endless low-energy tapping match.
-    const bothNonAttackBits =
-        !((p.bit?.name==="Flat") ||
-          (p.bit?.name==="Rush") ||
-          (p.bit?.name==="Low Flat") ||
-          (p.bit?.name==="Low Rush"));
+    const attackBits=["Flat","Rush","Low Flat","Low Rush","Kick","Quake"];
+    const pIsNonAttack=!attackBits.includes(p.bit?.name);
+    const cIsNonAttack=!attackBits.includes(c.bit?.name);
+    const bothNonAttackBits=pIsNonAttack&&cIsNonAttack;
 
     const centerCombatQuality=
         bothNonAttackBits
-            ? 1.16+
-              ((pAttack+pKB+cAttack+cKB)/396)*0.58
+            ? 1.28+
+              ((pAttack+pKB+cAttack+cKB)/396)*0.68
             : 1.0;
 
     if(bothNonAttackBits){
         const centerImpactBoost=centerCombatQuality;
-        p.vx-=nx*(cKnockback*(centerImpactBoost-1)*0.42);
-        p.vy-=ny*(cKnockback*(centerImpactBoost-1)*0.42);
-        c.vx+=nx*(cKnockback*(centerImpactBoost-1)*0.42);
-        c.vy+=ny*(cKnockback*(centerImpactBoost-1)*0.42);
+        p.vx-=nx*(cKnockback*(centerImpactBoost-1)*0.52);
+        p.vy-=ny*(cKnockback*(centerImpactBoost-1)*0.52);
+        c.vx+=nx*(cKnockback*(centerImpactBoost-1)*0.52);
+        c.vy+=ny*(cKnockback*(centerImpactBoost-1)*0.52);
 
         p.rpm=newBattleClamp(
-            p.rpm-cToPDamage*(centerImpactBoost-1)*0.42,
+            p.rpm-cToPDamage*(centerImpactBoost-1)*0.52,
             0,1
         );
         c.rpm=newBattleClamp(
-            c.rpm-pToCDamage*(centerImpactBoost-1)*0.42,
+            c.rpm-pToCDamage*(centerImpactBoost-1)*0.52,
             0,1
         );
     }
