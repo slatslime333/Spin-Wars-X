@@ -4324,9 +4324,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="5.35"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="5.35"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4604,11 +4604,11 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            const ps=5.35*(p.hitFlash>0?(p.impactScale||1):1);
+            const ps=4.85*(p.hitFlash>0?(p.impactScale||1):1);
             pe.setAttribute("r",ps);
         }
         if(ce){
-            const cs=5.35*(c.hitFlash>0?(c.impactScale||1):1);
+            const cs=4.85*(c.hitFlash>0?(c.impactScale||1):1);
             ce.setAttribute("r",cs);
         }
 
@@ -4659,8 +4659,8 @@ function newBattleFrame(now){
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(5+u*30*strength));
-                    explosion.setAttribute("stroke-width",String(Math.max(1.2,4.5-u*3.2)));
+                    explosion.setAttribute("r",String(4+u*17*strength));
+                    explosion.setAttribute("stroke-width",String(Math.max(0.9,3.0-u*2.0)));
                     explosion.setAttribute("opacity",String(Math.max(0,0.92-u*1.15)));
                 }
                 if(burst1){
@@ -4979,7 +4979,8 @@ function bitPhysics(s){
 
 function railDirection(s){
     if(s.railDirection===1 || s.railDirection===-1) return s.railDirection;
-    return s.spinDirection || -1;
+    // Rail geometry is clockwise; right-spin movement is CCW.
+    return s.spinDirection===1 ? -1 : 1;
 }
 function railDirectionAtPoint(s,point){
     /*
@@ -4990,7 +4991,9 @@ function railDirectionAtPoint(s,point){
       Do not infer direction from the local radial vector: doing that made
       right-spin Beys select the wrong rail direction on different segments.
     */
-    return s.spinDirection===1 ? 1 : -1;
+    // Geometry is clockwise in screen coordinates.
+    // Right-spin (+1) MUST traverse the reverse path: -1 (CCW).
+    return s.spinDirection===1 ? -1 : 1;
 }
 
 function bounceOffRail(s,nearest){
@@ -5066,6 +5069,7 @@ function bounceOffRail(s,nearest){
 }
 function tryNewXRailEngagement(s){
     if(s.railEngaged) return true;
+    if((s.railExitRefractory||0)>0) return false;
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
@@ -5211,6 +5215,11 @@ function updateNewXRailRide(s,dt){
     const control=(bp.control||60)/100;
     const previousDistance=s.railDistance;
 
+    // Resolve the current rail tangent before any impact/ejection branch.
+    const impactPoint=newXRailPointAtDistance(s.railDistance);
+    const tx0=impactPoint.tx*direction;
+    const ty0=impactPoint.ty*direction;
+
     // Hard impact always overrides rail grip.
     const impactAge=performance.now()-(s.lastImpactAt||0);
     if(impactAge<320 && (s.lastImpactForce||0)>=0.0055){
@@ -5231,8 +5240,6 @@ function updateNewXRailRide(s,dt){
 
     // The Bey remains the source of truth. The rail redirects its velocity;
     // it does not create a slow canned orbit.
-    const pointNow=newXRailPointAtDistance(s.railDistance);
-    const tx0=pointNow.tx*direction, ty0=pointNow.ty*direction;
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
     if(tangentVelocity<0.050){
@@ -5324,7 +5331,7 @@ function newXRailRailRelease(s,direction){
     s.surfaceBounce=0.20; s.surfaceRecovery=0.12;
     s.motionPhase+=0.70+Math.random()*0.55;
     s.motionPhase2+=0.30+Math.random()*0.45;
-    s.railExitRefractory=0.38;
+    s.railExitRefractory=0.55;
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 }
 function enforceXRailExitBarrier(s){
@@ -6508,8 +6515,18 @@ function newPhysicsCollision(dt){
     const bothNonAttackCollision=
         pNonAttackType && cNonAttackType;
 
+    const attackBitNames=["Flat","Rush","Low Flat","Low Rush","Kick","Quake"];
+    const pAttackBit=attackBitNames.includes(p.bit?.name);
+    const cAttackBit=attackBitNames.includes(c.bit?.name);
+    const bothAttackCollision=pAttackBit&&cAttackBit;
+
     const nonAttackImpactMultiplier=
         bothNonAttackCollision ? 1.14 : 1.0;
+
+    // Attack-vs-Attack is energetic, but it should not produce excessive
+    // recoil/RPM loss on every collision.
+    const attackVsAttackImpactMultiplier=
+        bothAttackCollision ? 0.86 : 1.0;
 
     // Rail riding is not immunity. A genuinely heavy collision can break the
     // rider's grip and send it back into normal stadium physics.
@@ -6523,13 +6540,17 @@ function newPhysicsCollision(dt){
     const pKnockback=
         Math.max(
             0.0048+contactEnergy*0.112,
-            pForce*nonAttackImpactMultiplier*(1.18-cDef*0.24)
+            pForce*nonAttackImpactMultiplier*
+            attackVsAttackImpactMultiplier*
+            (1.18-cDef*0.24)
         );
 
     const cKnockback=
         Math.max(
             0.0048+contactEnergy*0.112,
-            cForce*nonAttackImpactMultiplier*(1.18-pDef*0.24)
+            cForce*nonAttackImpactMultiplier*
+            attackVsAttackImpactMultiplier*
+            (1.18-pDef*0.24)
         );
 
     // Opponent displacement.
@@ -6553,12 +6574,14 @@ function newPhysicsCollision(dt){
     const pFollow=
         followThrough*
         (0.74+0.50*pAttack)*
-        (0.70+0.40*pKB);
+        (0.70+0.40*pKB)*
+        attackVsAttackImpactMultiplier;
 
     const cFollow=
         followThrough*
         (0.74+0.50*cAttack)*
-        (0.70+0.40*cKB);
+        (0.70+0.40*cKB)*
+        attackVsAttackImpactMultiplier;
 
     p.vx+=tx*pFollow;
     p.vy+=ty*pFollow;
@@ -6634,9 +6657,13 @@ function newPhysicsCollision(dt){
     const nonAttackRPMMultiplier=
         (pNonAttackType && cNonAttackType) ? 1.62 : 1.0;
 
+    const attackVsAttackRPMMultiplier=
+        bothAttackCollision ? 0.84 : 1.0;
+
     const pToCDamage=
         baseRPMDamage*
         nonAttackRPMMultiplier*
+        attackVsAttackRPMMultiplier*
         (0.82+pAttack*0.58)*
         (0.72+pRPM*0.42)*
         (0.82+newBattleClamp(pMomentum/0.035,0,2.2)*0.22)*
@@ -6645,6 +6672,7 @@ function newPhysicsCollision(dt){
     const cToPDamage=
         baseRPMDamage*
         nonAttackRPMMultiplier*
+        attackVsAttackRPMMultiplier*
         (0.82+cAttack*0.58)*
         (0.72+cRPM*0.42)*
         (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
