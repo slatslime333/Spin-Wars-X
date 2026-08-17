@@ -3902,7 +3902,7 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.082,
+        radius:0.090,
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
@@ -4207,11 +4207,11 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            const ps=3.05*(p.hitFlash>0?(p.impactScale||1):1);
+            const ps=3.35*(p.hitFlash>0?(p.impactScale||1):1);
             pe.setAttribute("r",ps);
         }
         if(ce){
-            const cs=3.05*(c.hitFlash>0?(c.impactScale||1):1);
+            const cs=3.35*(c.hitFlash>0?(c.impactScale||1):1);
             ce.setAttribute("r",cs);
         }
         p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
@@ -4810,10 +4810,12 @@ function newPhysicsStep(s,dt){
         const centerAffinity = (bp.centerAffinity||60)/100;
         const movement = (bp.movement||60)/100;
         const attackBit = movement>=0.80;
+        const attackStat=(stats.attack||70)/99;
+        const knockbackStat=(stats.knockback||70)/99;
         const attackSpeedBoost =
             attackBit
-                ? (1.18 + 0.18*Math.pow(rpm,0.75))
-                : (0.98 + 0.05*rpm);
+                ? (1.28 + 0.28*attackStat + 0.18*Math.pow(rpm,0.70))
+                : (0.98 + 0.06*rpm + 0.04*attackStat);
 
         /*
           Dynamic tilt/precession:
@@ -4827,7 +4829,10 @@ function newPhysicsStep(s,dt){
         // This boost fades rapidly with RPM so it cannot create the old
         // "100% movement at 20% RPM" problem.
         if(attackBit && rpm>0.34){
-            const targetAttackSpeed=0.0245*attackSpeedBoost*Math.pow(rpm,0.72);
+            const targetAttackSpeed=
+                (0.0295 + 0.0045*attackStat) *
+                attackSpeedBoost *
+                Math.pow(rpm,0.66);
             const speedNow=Math.hypot(s.vx,s.vy);
             if(speedNow>0.001 && speedNow<targetAttackSpeed){
                 const gain=newBattleClamp(
@@ -4985,11 +4990,12 @@ function newPhysicsStep(s,dt){
                     : 1;
 
             const lateralStrength=
-                (0.00013+movement*0.00034)*
-                Math.pow(rpm,1.12)*
+                (0.00018+movement*0.00046)*
+                Math.pow(rpm,1.08)*
                 (0.55+control*0.45)*
+                (0.82+0.28*attackStat)*
                 (attackBit
-                    ? (0.48+0.78*lowRpmAttackSuppression)
+                    ? (0.62+0.92*lowRpmAttackSuppression)
                     : 1.0);
 
             const radialX=s.x*invR;
@@ -5102,10 +5108,10 @@ function newPhysicsStep(s,dt){
           problem. Velocity decays independently of RPM.
         */
         const baseFriction =
-            0.982 +
+            0.984 +
             control*0.008 -
             movement*0.004 -
-            (attackBit ? 0.0022*rpm : 0);
+            (attackBit ? 0.0018*rpm : 0);
 
         const rpmFrictionBonus =
             0.004*rpm;
@@ -5351,8 +5357,11 @@ function newPhysicsCollision(dt){
     const tx=-ny, ty=nx;
     const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
     const closing=rvx*nx+rvy*ny;
+    const relativeSpeed=Math.hypot(rvx,rvy);
 
-    if(closing>=0) return;
+    // A grazing contact can still transfer force. Only ignore a contact when
+    // there is essentially no relative movement at all.
+    if(closing>=0 && relativeSpeed<0.0028) return;
 
     const pAttack=(p.stats.attack||70)/99;
     const cAttack=(c.stats.attack||70)/99;
@@ -5360,154 +5369,172 @@ function newPhysicsCollision(dt){
     const cKB=(c.stats.knockback||70)/99;
     const pDef=(p.stats.defense||70)/99;
     const cDef=(c.stats.defense||70)/99;
+    const pRPM=newBattleClamp(p.rpm,0,1);
+    const cRPM=newBattleClamp(c.rpm,0,1);
 
     const impactSpeed=Math.abs(closing);
     const tangentRelative=rvx*tx+rvy*ty;
-    const totalRelative=Math.hypot(rvx,rvy)||0.001;
+    const totalRelative=Math.max(relativeSpeed,0.0001);
+
+    // Glancing contact still has meaningful energy. This prevents the
+    // late-battle "two tops gently tapping forever" problem.
+    const grazingEnergy=totalRelative*0.22;
+    const effectiveImpact=Math.max(impactSpeed,grazingEnergy);
     const directness=newBattleClamp(impactSpeed/totalRelative,0,1);
 
-    /*
-      Knockback is momentum-driven.
+    const avgRPM=(pRPM+cRPM)*0.5;
+    const contactEnergy=
+        effectiveImpact *
+        (0.72+avgRPM*0.48);
 
-      Attack + Knockback + actual closing speed determine how much force is
-      transferred. Defense absorbs some of it, but does not erase it.
-      This restores the old game's intended "light hit / solid hit / heavy hit"
-      spread instead of every collision feeling identical.
+    /*
+      Attack is not just a stat on the card anymore:
+      it directly raises how much offensive energy a Bey transfers.
+      Knockback then determines how much of that energy becomes displacement.
     */
     const pMomentum =
-        impactSpeed *
-        (0.68+pKB*1.05) *
-        (0.68+pAttack*0.42) *
-        (0.72+newBattleClamp(p.rpm,0,1)*0.38);
+        contactEnergy *
+        (0.62+pKB*1.18) *
+        (0.62+pAttack*0.58) *
+        (0.72+pRPM*0.42);
 
     const cMomentum =
-        impactSpeed *
-        (0.68+cKB*1.05) *
-        (0.68+cAttack*0.42) *
-        (0.72+newBattleClamp(c.rpm,0,1)*0.38);
+        contactEnergy *
+        (0.62+cKB*1.18) *
+        (0.62+cAttack*0.58) *
+        (0.72+cRPM*0.42);
 
     const momentumFactor=
-        newBattleClamp(impactSpeed/0.028,0,3.0);
+        newBattleClamp(effectiveImpact/0.024,0,3.5);
 
-    const hitRoll=0.88+Math.random()*0.24;
+    const hitRoll=0.86+Math.random()*0.28;
 
-    // Heavy hit probability rises with directness and momentum.
     const heavyFactor=
-        Math.pow(momentumFactor,1.35)*
-        (0.70+directness*0.45);
+        Math.pow(momentumFactor,1.28)*
+        (0.68+directness*0.52);
 
     const pForce=
         pMomentum*
-        (0.74+directness*0.36)*
-        (0.78+heavyFactor*0.34)*
+        (0.76+directness*0.34)*
+        (0.82+heavyFactor*0.42)*
         hitRoll;
 
     const cForce=
         cMomentum*
-        (0.74+directness*0.36)*
-        (0.78+heavyFactor*0.34)*
+        (0.76+directness*0.34)*
+        (0.82+heavyFactor*0.42)*
         hitRoll;
 
-    // Defense reduces displacement, but a strong impact still moves the Bey.
+    // Defense absorbs displacement, but cannot turn a meaningful hit into
+    // a stationary tap.
     const pKnockback=
-        pForce*
-        (0.92-pDef*0.26);
+        Math.max(
+            0.0019 + contactEnergy*0.055,
+            pForce*(0.96-pDef*0.25)
+        );
 
     const cKnockback=
-        cForce*
-        (0.92-cDef*0.26);
+        Math.max(
+            0.0019 + contactEnergy*0.055,
+            cForce*(0.96-cDef*0.25)
+        );
 
-    // Small hits remain small; high momentum can produce the big launch.
-    const lowRpmShove=
-        (p.rpm<0.50||c.rpm<0.50)
-            ? 0.0028+0.0028*(1-Math.min(p.rpm,c.rpm)*2)
-            : 0;
+    p.vx-=nx*pKnockback;
+    p.vy-=ny*pKnockback;
+    c.vx+=nx*cKnockback;
+    c.vy+=ny*cKnockback;
 
-    p.vx-=nx*(pKnockback+lowRpmShove);
-    p.vy-=ny*(pKnockback+lowRpmShove);
-    c.vx+=nx*(cKnockback+lowRpmShove);
-    c.vy+=ny*(cKnockback+lowRpmShove);
+    // Attackers create more follow-through; high Knockback makes the hit
+    // travel farther rather than simply deleting RPM.
+    const followThrough=
+        0.0010+
+        effectiveImpact*0.018+
+        Math.abs(tangentRelative)*0.0040+
+        heavyFactor*0.0009;
 
-    // Recoil and glancing contact change the exit path.
-    const tangentKick=
-        (0.0010+
-         impactSpeed*0.014+
-         Math.abs(tangentRelative)*0.0035)*
-        (0.64+newBattleClamp(heavyFactor,0,2)*0.24);
+    const pFollow=followThrough*(0.76+0.44*pAttack)*(0.72+0.34*pKB);
+    const cFollow=followThrough*(0.76+0.44*cAttack)*(0.72+0.34*cKB);
 
-    p.vx+=tx*tangentKick;
-    p.vy+=ty*tangentKick;
-    c.vx-=tx*tangentKick;
-    c.vy-=ty*tangentKick;
+    p.vx+=tx*pFollow;
+    p.vy+=ty*pFollow;
+    c.vx-=tx*cFollow;
+    c.vy-=ty*cFollow;
 
+    // Separate bodies so they do not become glued together in the center.
     const separation=minDist-dist;
-    p.x-=nx*(separation*0.58+0.0025);
-    p.y-=ny*(separation*0.58+0.0025);
-    c.x+=nx*(separation*0.58+0.0025);
-    c.y+=ny*(separation*0.58+0.0025);
+    p.x-=nx*(separation*0.60+0.0030);
+    p.y-=ny*(separation*0.60+0.0030);
+    c.x+=nx*(separation*0.60+0.0030);
+    c.y+=ny*(separation*0.60+0.0030);
 
     /*
-      RPM damage remains separate from knockback. A big shove doesn't
-      automatically mean instant stamina deletion.
+      RPM damage is separate from displacement.
+      Attack affects stamina damage; Knockback affects movement.
     */
     const pDamage=
-        0.0024+
-        impactSpeed*0.022+
-        pForce*0.008+
-        Math.pow(momentumFactor,1.7)*0.0010;
+        0.0028+
+        effectiveImpact*0.026+
+        pForce*0.009+
+        Math.pow(momentumFactor,1.55)*0.0011;
 
     const cDamage=
-        0.0024+
-        impactSpeed*0.022+
-        cForce*0.008+
-        Math.pow(momentumFactor,1.7)*0.0010;
+        0.0028+
+        effectiveImpact*0.026+
+        cForce*0.009+
+        Math.pow(momentumFactor,1.55)*0.0011;
 
     p.rpm=newBattleClamp(
-        p.rpm-pDamage*(0.82+cAttack*0.24)*(1-pDef*0.25),
+        p.rpm-pDamage*(0.80+cAttack*0.30)*(1-pDef*0.26),
         0,1
     );
     c.rpm=newBattleClamp(
-        c.rpm-cDamage*(0.82+pAttack*0.24)*(1-cDef*0.25),
+        c.rpm-cDamage*(0.80+pAttack*0.30)*(1-cDef*0.26),
         0,1
     );
 
+    // Meaningful contact always disturbs both tops, including stamina/
+    // defense mirrors. Higher momentum creates a much larger disturbance.
+    const stabilityHit=
+        0.006+
+        effectiveImpact*0.075+
+        heavyFactor*0.010;
+
     p.stability=newBattleClamp(
-        p.stability-(0.0045+impactSpeed*0.060)*(1-pDef*0.32),
+        p.stability-stabilityHit*(1-pDef*0.34),
         0,1
     );
     c.stability=newBattleClamp(
-        c.stability-(0.0045+impactSpeed*0.060)*(1-cDef*0.32),
+        c.stability-stabilityHit*(1-cDef*0.34),
         0,1
     );
 
-    // Impact increases tilt and changes the motion phase so the Bey doesn't
-    // immediately resume its previous orbit.
     const tiltHit=
-        0.050+
-        impactSpeed*0.40+
-        newBattleClamp(heavyFactor,0,2)*0.018;
+        0.055+
+        effectiveImpact*0.46+
+        newBattleClamp(heavyFactor,0,2.4)*0.020;
 
     p.tiltLevel=newBattleClamp((p.tiltLevel||0)+tiltHit,0,1);
     c.tiltLevel=newBattleClamp((c.tiltLevel||0)+tiltHit,0,1);
 
-    p.motionPhase+=0.45+Math.random()*0.50;
-    c.motionPhase+=0.45+Math.random()*0.50;
-    p.motionPhase2+=0.25+Math.random()*0.45;
-    c.motionPhase2+=0.25+Math.random()*0.45;
+    // Every impact changes the trajectory. No two center collisions should
+    // repeatedly produce the same straight-line exchange.
+    p.motionPhase+=0.55+Math.random()*0.65;
+    c.motionPhase+=0.55+Math.random()*0.65;
+    p.motionPhase2+=0.30+Math.random()*0.55;
+    c.motionPhase2+=0.30+Math.random()*0.55;
 
-    // Slightly stronger impact animation, still restrained.
     const visualStrength=
         newBattleClamp(
-            0.65+
-            impactSpeed/0.025*0.30+
-            heavyFactor*0.08,
-            0.65,1.45
+            0.78+
+            effectiveImpact/0.022*0.34+
+            heavyFactor*0.10,
+            0.78,1.75
         );
 
-    p.hitFlash=0.105*visualStrength;
-    c.hitFlash=0.105*visualStrength;
-    p.impactScale=1.0+0.10*visualStrength;
-    c.impactScale=1.0+0.10*visualStrength;
+    p.hitFlash=0.125*visualStrength;
+    c.hitFlash=0.125*visualStrength;
+    p.impactScale=1.06+0.16*visualStrength;
+    c.impactScale=1.06+0.16*visualStrength;
 
     p.lastKnockback=Math.abs(pKnockback);
     c.lastKnockback=Math.abs(cKnockback);
