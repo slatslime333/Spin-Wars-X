@@ -3644,7 +3644,6 @@ function showVS(){
 }
 
 function showLetItRip(){
-
     if(!Game.player.blade || !Game.player.ratchet || !Game.player.bit ||
        !Game.cpu.blade || !Game.cpu.ratchet || !Game.cpu.bit){
         console.error("Launch setup blocked: combo data is missing.");
@@ -3654,14 +3653,7 @@ function showLetItRip(){
     Game.player.launch=Game.player.launch||{};
     Game.player.launch.angle=Game.player.launch.angle||"Flat";
     Game.player.launch.technique=Game.player.launch.technique||"Center";
-
-    if(!Game.player.launch.setupStage){
-        Game.player.launch.setupStage="quality";
-    }
-
-    // setupStage is deliberately separate from qualityMode.
-    // Quality is selected once, then the user moves to angle/technique.
-    const stage=Game.player.launch.setupStage || "quality";
+    ensureLaunchQuality("player");
 
     Game.cpu.launch=getAutomaticLaunchPlan("cpu");
     rollLaunchQuality("cpu");
@@ -3682,137 +3674,83 @@ function showLetItRip(){
     const angleButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.angle===value?"gold":"silver"}"
         type="button">${label}</button>`;
-
     const techButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.technique===value?"gold":"silver"}"
         type="button">${label}</button>`;
 
-    const qualityRPM={
-        Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
-    }[Game.player.launch.quality]||97;
+    controls.innerHTML=`
+      <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
+        <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">
+          ${angleButton("FLAT","Flat","launchFlat")}
+          ${angleButton("SLIGHT TILT","Slight Tilt","launchSlight")}
+          ${angleButton("HARD TILT","Hard Tilt","launchHard")}
+        </div>
 
-    if(stage==="quality"){
-        controls.innerHTML=`
-          <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
-            <div style="font-size:12px;opacity:.72;margin-bottom:7px;">
-              LAUNCH QUALITY
-            </div>
-            <div style="font-size:12px;opacity:.78;text-align:center;margin-bottom:9px;">
-              Choose your launch quality. Your choice is locked for this launch.
-            </div>
+        <div style="font-size:12px;opacity:.72;margin:10px 0 7px;">LAUNCH TECHNIQUE</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;">
+          ${techButton("CENTER","Center","launchCenter")}
+          ${techButton("X-RAIL","X-Rail","launchRail")}
+          ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
+          ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <button class="menu-btn silver" id="fixedQualityBtn" type="button">
-                FIXED QUALITY
-              </button>
-              <button class="menu-btn gold" id="rollQualityBtn" type="button">
-                ROLL QUALITY
-              </button>
-            </div>
+        </div>
 
-            <div style="font-size:11px;opacity:.60;text-align:center;margin-top:8px;">
-              Fixed = random quality locked in · Roll = random quality revealed now
-            </div>
+        <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.82;text-align:center;">
+          ${Game.player.launch.angle} · ${Game.player.launch.technique}
+          <br>
+          <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
+          · ${Game.player.launch.qualityMode==="Roll" ? "ROLL MODE" : "FIXED MODE"}
+          · START RPM: ${({
+              Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
+          }[Game.player.launch.quality]||97)}%
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;">
+          <button class="menu-btn silver" id="fixedQualityBtn" type="button">FIXED QUALITY</button>
+          <button class="menu-btn gold" id="rollQualityBtn" type="button">ROLL QUALITY</button>
+        </div>
 
-            <div style="display:flex;gap:8px;margin-top:9px;">
-              <button class="menu-btn silver" id="backToVS" type="button" style="flex:1;">
-                ← BACK
-              </button>
-            </div>
-          </div>
-        `;
-    }else{
-        controls.innerHTML=`
-          <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
-            <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">
-              ${angleButton("FLAT","Flat","launchFlat")}
-              ${angleButton("SLIGHT TILT","Slight Tilt","launchSlight")}
-              ${angleButton("HARD TILT","Hard Tilt","launchHard")}
-            </div>
-
-            <div style="font-size:12px;opacity:.72;margin:10px 0 7px;">LAUNCH TECHNIQUE</div>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;">
-              ${techButton("CENTER","Center","launchCenter")}
-              ${techButton("X-RAIL","X-Rail","launchRail")}
-              ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
-              ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
-            </div>
-
-            <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.82;text-align:center;">
-              ${Game.player.launch.angle} · ${Game.player.launch.technique}
-              <br>
-              <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
-              · ${Game.player.launch.qualityMode==="Roll" ? "ROLLED" : "FIXED"}
-              · START RPM: ${qualityRPM}%
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:9px;">
-              <button class="menu-btn gold" id="startBattleNow" type="button" style="flex:1;">
-                LET IT RIP
-              </button>
-              <button class="menu-btn silver" id="backToQuality" type="button" style="flex:1;">
-                ← QUALITY
-              </button>
-            </div>
-          </div>
-        `;
-    }
+        <div style="display:flex;gap:8px;margin-top:9px;">
+          <button class="menu-btn gold" id="startBattleNow" type="button" style="flex:1;">
+            LET IT RIP
+          </button>
+          <button class="menu-btn silver" id="backToVS" type="button" style="flex:1;">
+            ← BACK
+          </button>
+        </div>
+      </div>
+    `;
 
     card.appendChild(controls);
 
-    const rebuildAngleTechnique=(angle,technique)=>{
+    const setLaunch=(angle,technique)=>{
         Game.player.launch.angle=angle;
         Game.player.launch.technique=technique;
-        // Quality is already selected and MUST NOT reroll here.
-        Game.player.launch.setupStage="launch";
+        ensureLaunchQuality("player");
+        // Rebuild the preview and controls without starting physics.
         showLetItRip();
     };
 
-    if(stage==="quality"){
-        document.getElementById("fixedQualityBtn").onclick=()=>{
-            setFixedLaunchQuality("player");
-            Game.player.launch.setupStage="launch";
-            showLetItRip();
-        };
+    document.getElementById("launchFlat").onclick=()=>setLaunch("Flat",Game.player.launch.technique);
+    document.getElementById("launchSlight").onclick=()=>setLaunch("Slight Tilt",Game.player.launch.technique);
+    document.getElementById("launchHard").onclick=()=>setLaunch("Hard Tilt",Game.player.launch.technique);
 
-        document.getElementById("rollQualityBtn").onclick=()=>{
-            rollLaunchQuality("player");
-            Game.player.launch.setupStage="launch";
-            showLetItRip();
-        };
+    document.getElementById("launchCenter").onclick=()=>setLaunch(Game.player.launch.angle,"Center");
+    document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
+    document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
+    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"Drop Launch");
 
-        document.getElementById("backToVS").onclick=showVS;
-        return;
-    }
-
-    document.getElementById("launchFlat").onclick=()=>
-        rebuildAngleTechnique("Flat",Game.player.launch.technique);
-
-    document.getElementById("launchSlight").onclick=()=>
-        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique);
-
-    document.getElementById("launchHard").onclick=()=>
-        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique);
-
-    document.getElementById("launchCenter").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Center");
-
-    document.getElementById("launchRail").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail");
-
-    document.getElementById("launchClash").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash");
-
-    document.getElementById("launchDrop").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch");
+    document.getElementById("fixedQualityBtn").onclick=()=>{
+        setFixedLaunchQuality("player");
+        showLetItRip();
+    };
+    document.getElementById("rollQualityBtn").onclick=()=>{
+        rollLaunchQuality("player");
+        showLetItRip();
+    };
 
     document.getElementById("startBattleNow").onclick=startNewBattle;
-
-    document.getElementById("backToQuality").onclick=()=>{
-        Game.player.launch.setupStage="quality";
-        showLetItRip();
-    };
+    document.getElementById("backToVS").onclick=showVS;
 }
 
 /*========================================================
@@ -4048,6 +3986,7 @@ function newBattleLaunchState(side){
         railSpeed:0,railRideTime:0,railTravelDistance:0,
         railLoops:0,
         railGrip:0,
+        railDirection:0,
         railContactPoint:null,
         railExitCooldown:0,
         railExited:false,
@@ -4636,85 +4575,33 @@ function newXRailCrossedExit(previousDistance,nextDistance,direction){
 }
 
 function newXRailEngagementChance(s,approachSpeed,alignment,approachRatio){
-    const bp=bitPhysics(s);
-    const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const stability=newBattleClamp(s.stability||0,0,1);
+    const bitPhysics=BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
+    const affinity=(bitPhysics.xRailAffinity||0)/100;
+    const movement=(bitPhysics.movement||60)/100;
+    const isAttack=movement>=0.80;
 
-    const affinity=(bp.xRailAffinity||0)/100;
-    const movement=(bp.movement||60)/100;
-    const control=(bp.control||60)/100;
+    const speedFactor=newBattleClamp((approachSpeed-0.012)/0.038,0,1);
+    const alignmentFactor=newBattleClamp((alignment-0.22)/0.55,0,1);
+    const impactAngleFactor=newBattleClamp((approachRatio-0.28)/0.55,0,1);
 
-    /*
-      This is not a "chance to randomly grab the rail."
-      It represents how well the current physical state can satisfy the
-      rail's capture requirements.
-    */
-    const speedSupport=newBattleClamp(
-        (approachSpeed-0.010)/0.040,0,1
-    );
-
-    const alignmentSupport=newBattleClamp(
-        (alignment-0.20)/0.62,0,1
-    );
-
-    const approachSupport=newBattleClamp(
-        1-Math.abs(approachRatio-0.40)/0.40,0,1
-    );
-
-    const rpmSupport=newBattleClamp(
-        (rpm-0.22)/0.55,0,1
-    );
-
-    const tiltSupport=
-        1-newBattleClamp((tilt-0.08)/0.30,0,1);
-
-    const stabilitySupport=
-        0.45+stability*0.55;
-
-    const physicalScore=
-        speedSupport*0.24+
-        alignmentSupport*0.22+
-        approachSupport*0.17+
-        rpmSupport*0.14+
-        tiltSupport*0.13+
-        stabilitySupport*0.05+
-        control*0.03+
-        affinity*0.02;
-
-    return newBattleClamp(physicalScore,0,1);
-}
-
-function railCaptureSupport(s){
-    const bp=bitPhysics(s);
-    const speed=speedOf(s);
-    const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const stability=newBattleClamp(s.stability||0,0,1);
-
-    const movement=(bp.movement||60)/100;
-    const control=(bp.control||60)/100;
-    const affinity=(bp.xRailAffinity||50)/100;
-
-    // Attack bits have a natural rail advantage, but the actual state still
-    // has to support the capture.
-    const movementBias=0.78+movement*0.22;
-    const speedSupport=newBattleClamp((speed-0.014)/0.050,0,1);
-    const rpmSupport=newBattleClamp((rpm-0.18)/0.62,0,1);
-    const tiltSupport=1-newBattleClamp((tilt-0.10)/0.28,0,1);
-    const stabilitySupport=0.55+stability*0.45;
+    // Realistic X-Rail access is selective:
+    // Attack/Rush bits get the strongest chance, while stamina/defense bits
+    // can still catch it occasionally but should not repeatedly farm it.
+    const attackBonus=isAttack ? 0.12 : 0;
+    const base=isAttack ? 0.003 : 0.0005;
 
     return newBattleClamp(
-        speedSupport*0.27+
-        rpmSupport*0.20+
-        tiltSupport*0.25+
-        stabilitySupport*0.10+
-        control*0.07+
-        affinity*0.06+
-        movementBias*0.05,
-        0,1
+        base +
+        affinity*0.10 +
+        movement*0.035 +
+        speedFactor*0.28 +
+        alignmentFactor*0.15 +
+        impactAngleFactor*0.16 +
+        attackBonus,
+        0.0005,0.52
     );
 }
+
 function speedOf(s){
     return Math.hypot(s.vx,s.vy);
 }
@@ -4724,7 +4611,21 @@ function bitPhysics(s){
 }
 
 function railDirection(s){
+    if(s.railDirection===1 || s.railDirection===-1){
+        return s.railDirection;
+    }
     return s.spinDirection || -1;
+}
+
+function railDirectionAtPoint(s,point){
+    const spin=s.spinDirection || -1;
+
+    // Screen coordinates: right-spin (-1) follows the CCW tangent (y,-x).
+    const desiredX=spin===-1 ? point.y : -point.y;
+    const desiredY=spin===-1 ? -point.x : point.x;
+
+    const dot=point.tx*desiredX+point.ty*desiredY;
+    return dot>=0 ? 1 : -1;
 }
 
 function bounceOffRail(s,nearest){
@@ -4803,15 +4704,17 @@ function tryNewXRailEngagement(s){
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
-    const distance=Math.sqrt(nearest.dist2);
     const bp=bitPhysics(s);
     const speed=speedOf(s);
     const rpm=newBattleClamp(s.rpm,0,1);
     const tilt=newBattleClamp(s.tiltLevel||0,0,1);
     const stability=newBattleClamp(s.stability||0,0,1);
+    const control=(bp.control||60)/100;
+    const movement=(bp.movement||60)/100;
+    const affinity=(bp.xRailAffinity||50)/100;
 
-    const contactRadius=0.028+s.radius*0.22;
-    if(distance>contactRadius) return false;
+    const contactRadius=0.026+s.radius*0.18;
+    if(Math.sqrt(nearest.dist2)>contactRadius) return false;
 
     const dx=s.x-nearest.x;
     const dy=s.y-nearest.y;
@@ -4822,89 +4725,87 @@ function tryNewXRailEngagement(s){
     const normalVelocity=s.vx*nx+s.vy*ny;
     const approachSpeed=Math.max(0,-normalVelocity);
 
-    // Touching the rail while moving away from it is a bounce, never a grab.
-    if(approachSpeed<0.009+tilt*0.010) return false;
+    // Touching/rolling away from the rail is a bounce, never a capture.
+    const minimumApproach=
+        0.012+tilt*0.010+(1-stability)*0.004;
+    if(approachSpeed<minimumApproach) return false;
 
-    const direction=railDirection(s);
-    const railTx=nearest.tx*direction;
-    const railTy=nearest.ty*direction;
-    const tangentVelocity=s.vx*railTx+s.vy*railTy;
+    // Choose the direction that matches the Bey's actual spin on this
+    // particular section of the curved rail.
+    const direction=railDirectionAtPoint(s,nearest);
+    const tangentX=nearest.tx*direction;
+    const tangentY=nearest.ty*direction;
+    const tangentVelocity=s.vx*tangentX+s.vy*tangentY;
 
-    if(tangentVelocity<=0.008) return false;
+    const tangentRatio=tangentVelocity/Math.max(speed,0.0001);
+    const approachRatio=approachSpeed/Math.max(speed,0.0001);
 
-    const tangentRatio=
-        tangentVelocity/Math.max(speed,0.001);
-    const approachRatio=
-        approachSpeed/Math.max(speed,0.001);
+    // A catch requires substantial forward/tangential momentum.
+    const effectiveMomentum=
+        tangentVelocity*(0.70+0.30*rpm)*(1-0.62*tilt);
+    const minimumMomentum=
+        0.024+tilt*0.016+(1-stability)*0.006;
 
-    /*
-      The rail wants a fast, shallow, forward-moving contact.
-      A steep/direct impact bounces off instead.
-    */
-    const minimumTangent=
-        0.46-(bp.control||60)/100*0.05;
+    if(effectiveMomentum<minimumMomentum) return false;
 
-    const maximumApproach=
-        0.70+(bp.control||60)/100*0.06;
+    // Square/direct hits bounce. Shallow glancing contacts can hook.
+    const minimumTangent=0.56-control*0.06-affinity*0.035;
+    const maximumApproach=0.54+control*0.08+movement*0.03;
 
     if(tangentRatio<minimumTangent) return false;
     if(approachRatio>maximumApproach) return false;
 
-    // High tilt means the Bey is wobbling too much to hook the rail.
-    if(tilt>0.36) return false;
+    // A significantly tilted/wobbling Bey cannot reliably hook the rail.
+    const tiltLimit=0.255+stability*0.045+control*0.025;
+    if(tilt>tiltLimit) return false;
 
-    const alignment=
-        Math.abs(
-            s.vx*railTx+s.vy*railTy
-        )/Math.max(speed,0.001);
-
-    const physicalScore=newXRailEngagementChance(
-        s,approachSpeed,alignment,approachRatio
+    const speedQuality=newBattleClamp(
+        (effectiveMomentum-minimumMomentum)/0.045,0,1
     );
+    const angleQuality=newBattleClamp(
+        (tangentRatio-minimumTangent)/
+        Math.max(0.01,1-minimumTangent),0,1
+    );
+    const approachQuality=newBattleClamp(
+        1-Math.abs(approachRatio-0.34)/0.34,0,1
+    );
+    const tiltQuality=
+        1-newBattleClamp(tilt/Math.max(0.01,tiltLimit),0,1);
+    const statusQuality=stability*0.70+rpm*0.30;
 
-    const stateSupport=railCaptureSupport(s);
+    const physicalScore=
+        speedQuality*0.30+
+        angleQuality*0.25+
+        approachQuality*0.17+
+        tiltQuality*0.18+
+        statusQuality*0.08+
+        control*0.015+
+        affinity*0.005;
 
-    /*
-      Capture is deterministic from the current state with only a small
-      physical variance. There is no arbitrary cooldown or rail-use counter.
-    */
-    const captureScore=
-        physicalScore*0.62+
-        stateSupport*0.38+
-        (Math.random()-0.5)*0.025;
+    // Attack/movement/affinity improve the chance, but never bypass the
+    // physical contact requirements above.
+    const captureThreshold=
+        0.70-movement*0.055-affinity*0.025;
 
-    if(captureScore<0.60) return false;
+    if(physicalScore+(Math.random()-0.5)*0.018<captureThreshold){
+        return false;
+    }
 
     const g=getNewXRailGeometry();
 
-    /*
-      Preserve the actual tangential momentum. The old engine replaced it
-      with a fixed 0.020–0.072 speed, which is why rides felt slow.
-    */
-    const tangentialMomentum=Math.max(
-        0.018,
-        tangentVelocity
-    );
+    // Preserve the actual momentum that caused the catch. The old engine
+    // forced successful rides down into a slow fixed speed range.
+    const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
+    const railBoost=
+        1.06+movement*0.10+rpm*0.08+affinity*0.04;
 
     const railSpeed=newBattleClamp(
-        tangentialMomentum*
-        (
-            1.03+
-            stateSupport*0.12+
-            (bp.movement||60)/100*0.06
-        ),
-        0.024,
-        0.105
+        tangentialCarry*railBoost,
+        0.032,0.125
     );
 
-    s.railGrip=newBattleClamp(
-        0.72+
-        stateSupport*0.20+
-        rpm*0.08-
-        tilt*0.18,
-        0.48,1
-    );
-
+    s.railDirection=direction;
+    s.railGrip=newBattleClamp(physicalScore,0.62,1);
     s.railEngaged=true;
     s.railUses=(s.railUses||0)+1;
     s.railContactPoint={x:nearest.x,y:nearest.y};
@@ -4915,16 +4816,12 @@ function tryNewXRailEngagement(s){
     s.railTravelDistance=0;
     s.railLoops=0;
 
-    /*
-      Attach to the rail with the same tangential velocity that caused the
-      capture. Do not zero the Bey's energy.
-    */
-    const normalRelease=Math.max(0.002,normalVelocity*0.18);
-
-    s.x=nearest.x;
-    s.y=nearest.y;
-    s.vx=railTx*railSpeed+nx*normalRelease;
-    s.vy=railTy*railSpeed+ny*normalRelease;
+    // Remove the inward component while retaining tangential momentum.
+    const normalRelease=Math.max(0.002,approachSpeed*0.12);
+    s.x=nearest.x+nx*0.006;
+    s.y=nearest.y+ny*0.006;
+    s.vx=tangentX*railSpeed+nx*normalRelease;
+    s.vy=tangentY*railSpeed+ny*normalRelease;
 
     return true;
 }
@@ -4933,145 +4830,116 @@ function newXRailExit(s){
     const exit=newXRailPointAtDistance(
         getNewXRailGeometry().exitDistance
     );
-
     const bp=bitPhysics(s);
     const rpm=newBattleClamp(s.rpm,0,1);
+    const control=(bp.control||60)/100;
+
+    // Preserve actual rail momentum instead of replacing it with a fixed
+    // slow exit speed.
     const speed=newBattleClamp(
-        s.railSpeed*(0.94+rpm*0.10),
-        0.026,
-        0.115
+        Math.max(s.railSpeed||0,speedOf(s)*0.82)*
+        (0.98+rpm*0.08),
+        0.030,0.135
     );
 
-    const direction=railDirection(s);
+    const direction=s.railDirection||railDirectionAtPoint(s,exit);
     const tangentX=exit.tx*direction;
     const tangentY=exit.ty*direction;
+    const tangentCarry=0.10+control*0.08;
 
-    const tangentCarry=newBattleClamp(
-        0.07+(bp.control||60)/100*0.06,
-        0.07,0.13
-    );
-
-    /*
-      The X Exit is a continuation of the rail's actual momentum.
-      It does not teleport the Bey or manufacture a giant launch.
-    */
     s.railEngaged=false;
     s.railExited=true;
-
     s.railRideTime=0;
     s.railProgress=0;
     s.railDistance=0;
     s.railTravelDistance=0;
     s.railLoops=0;
+    s.railGrip=0;
     s.railContactPoint=null;
+    s.railDirection=0;
 
-    // Record the exit point for diagnostics/finish logic. It is not a
-    // timed anti-rail cooldown.
     s.railExitRefractory=0;
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
+    // The exit is a continuation of the rail's momentum into the stadium.
+    const exitForward=0.88+rpm*0.12+Math.min(0.12,speed*0.80);
+
     s.x=exit.x;
-    s.y=exit.y+0.055;
+    s.y=exit.y+0.058;
+    s.vx=tangentX*speed*(0.86+tangentCarry);
+    s.vy=speed*exitForward+
+         tangentY*speed*(0.22+control*0.10);
 
-    s.vx=tangentX*speed*(0.72+tangentCarry);
-    s.vy=speed*0.92+tangentY*speed*(0.72+tangentCarry);
-
+    // Small transition cost; the rail itself no longer drains RPM heavily
+    // every frame.
     s.rpm=newBattleClamp(
-        s.rpm-
-        (0.014+s.railSpeed*0.12),
+        s.rpm-(0.008+(s.railSpeed||speed)*0.025),
         0,1
     );
-
-    s.stability=newBattleClamp(
-        s.stability-0.010,
-        0,1
-    );
-
-    s.tiltLevel=newBattleClamp(
-        (s.tiltLevel||0)+0.025,
-        0,1
-    );
-
+    s.stability=newBattleClamp(s.stability-0.008,0,1);
+    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
     s.surfaceRecovery=0.12;
 }
-
 function updateNewXRailRide(s,dt){
 
     if(!s.railEngaged) return false;
 
     const g=getNewXRailGeometry();
-    const direction=railDirection(s);
+    const direction=s.railDirection||railDirection(s);
     const bp=bitPhysics(s);
 
     const rpm=newBattleClamp(s.rpm,0,1);
     const tilt=newBattleClamp(s.tiltLevel||0,0,1);
     const stability=newBattleClamp(s.stability||0,0,1);
     const movement=(bp.movement||60)/100;
-    const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
+    const control=(bp.control||60)/100;
 
     const previousDistance=s.railDistance;
-    const previousPoint=newXRailPointAtDistance(previousDistance);
-    const previousSpeed=Math.max(0,s.railSpeed||speedOf(s));
 
     /*
-      The rail does not create a fake velocity. It accelerates the Bey along
-      the rail using the Bey's existing momentum/RPM and then loses energy to
-      rail friction.
+      The rail is a surface constraint. It does NOT replace the Bey's
+      movement with a canned orbital velocity.
     */
-    const drive=
-        (
-            0.0014+
-            movement*0.0028+
-            affinity*0.0018
-        )*
-        (0.25+rpm*0.75);
+    const currentSpeed=Math.max(0.020,s.railSpeed||speedOf(s));
 
-    const drag=
-        0.00075+
-        (1-rpm)*0.0012+
-        tilt*0.0010;
+    const railDrive=
+        (0.0010+movement*0.0020+affinity*0.0010)*
+        (0.30+rpm*0.70);
+    const railFriction=
+        0.00045+(1-rpm)*0.00055+tilt*0.00045;
 
     s.railSpeed=newBattleClamp(
-        previousSpeed+(drive-drag)*dt*60,
-        0.014,
-        0.115
+        currentSpeed+(railDrive-railFriction)*dt*60,
+        0.026,0.135
     );
 
-    /*
-      A real rail rider still needs the current state to support the rail.
-      This is recalculated continuously rather than draining an arbitrary
-      timer/grip meter.
-    */
-    const speedSupport=newBattleClamp(
-        (s.railSpeed-0.016)/0.060,0,1
-    );
-    const rpmSupport=newBattleClamp(
-        (rpm-0.16)/0.64,0,1
-    );
+    // Continuous physical support: speed + RPM + tilt + stability.
+    const speedSupport=
+        newBattleClamp((s.railSpeed-0.026)/0.075,0,1);
+    const rpmSupport=
+        newBattleClamp((rpm-0.18)/0.68,0,1);
     const tiltSupport=
-        1-newBattleClamp((tilt-0.08)/0.34,0,1);
-    const stabilitySupport=0.48+stability*0.52;
+        1-newBattleClamp((tilt-0.08)/0.30,0,1);
+    const stabilitySupport=0.45+stability*0.55;
 
-    const railSupport=
+    const support=
         speedSupport*0.28+
         rpmSupport*0.22+
-        tiltSupport*0.28+
+        tiltSupport*0.30+
         stabilitySupport*0.12+
         control*0.05+
-        affinity*0.05;
+        affinity*0.03;
 
-    s.railGrip=newBattleClamp(railSupport,0,1);
+    s.railGrip=newBattleClamp(support,0,1);
 
-    /*
-      Do not eject a healthy rider just because RPM is falling. Release only
-      when the physical support for rail contact actually becomes poor.
-    */
+    // No arbitrary ride timer. Release only when the current physical state
+    // can no longer support the curved rail.
     if(
-        railSupport<0.31 ||
-        (s.railSpeed<0.017 && rpm<0.18) ||
-        tilt>0.43 ||
-        stability<0.16
+        support<0.34 ||
+        tilt>0.42 ||
+        stability<0.14 ||
+        (s.railSpeed<0.028 && rpm<0.15)
     ){
         newXRailRailRelease(s,direction);
         return true;
@@ -5081,68 +4949,49 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
-    s.railProgress=(
-        ((s.railDistance%g.total)+g.total)%g.total
-    )/g.total;
+    // Detect the X Exit BEFORE writing a position beyond it.
+    const crossed=newXRailCrossedExit(
+        previousDistance,s.railDistance,direction
+    );
+
+    if(crossed && s.railTravelDistance>0.055){
+        newXRailExit(s);
+        return true;
+    }
+
+    s.railProgress=
+        ((s.railDistance%g.total)+g.total)%g.total/g.total;
 
     const point=newXRailPointAtDistance(s.railDistance);
     const tangentX=point.tx*direction;
     const tangentY=point.ty*direction;
-
-    /*
-      Small physical offset prevents exact centerline pinning. The rail
-      remains a constraint on direction, not a magnetic attractor.
-    */
     const normalX=-tangentY;
     const normalY=tangentX;
-    const offset=0.006+0.006*railSupport;
+    const offset=0.005+0.004*support;
 
     s.x=point.x+normalX*offset;
     s.y=point.y+normalY*offset;
-
     s.vx=tangentX*s.railSpeed;
     s.vy=tangentY*s.railSpeed;
 
-    // Rail work consumes RPM and stability, but at a physically reasonable
-    // rate instead of killing the battle immediately.
-    const railEnergyDrain=
-        (
-            0.00075+
-            s.railSpeed*0.010+
-            (1-rpm)*0.0018+
-            tilt*0.0014
-        )*dt*60;
+    // Low continuous friction cost. A normal rail ride should not decide the
+    // whole battle by itself.
+    const rpmDrainPerSecond=
+        0.0045+
+        s.railSpeed*0.045+
+        (1-rpm)*0.004+
+        tilt*0.002;
 
     s.rpm=newBattleClamp(
-        rpm-railEnergyDrain,
+        rpm-rpmDrainPerSecond*dt,
         0,1
     );
 
     s.stability=newBattleClamp(
         stability-
-        (
-            0.00055+
-            s.railSpeed*0.004+
-            tilt*0.0015
-        )*dt*60,
+        (0.00035+s.railSpeed*0.002)*dt,
         0,1
     );
-
-    const crossed=newXRailCrossedExit(
-        previousDistance,
-        s.railDistance,
-        direction
-    );
-
-    if(crossed && s.railTravelDistance>0.08){
-        newXRailExit(s);
-        return true;
-    }
-
-    if(s.rpm<=0.001){
-        newXRailRailRelease(s,direction);
-        return true;
-    }
 
     return true;
 }
@@ -5153,42 +5002,43 @@ function newXRailRailRelease(s,direction){
     const tangentY=point.ty*direction;
     const normalX=-tangentY;
     const normalY=tangentX;
-    const speed=Math.max(0.012,s.railSpeed||speedOf(s)*0.65);
+
+    const speed=Math.max(
+        0.020,
+        s.railSpeed||speedOf(s)*0.75
+    );
 
     s.railEngaged=false;
     s.railExited=false;
     s.railContactPoint=null;
     s.railGrip=0;
+    s.railDirection=0;
 
-    // Release outward from the rail while retaining some tangential momentum.
-    s.x=point.x+normalX*0.030;
-    s.y=point.y+normalY*0.030;
+    // Slip/bounce retains most tangential momentum and adds a small outward
+    // impulse. It does not throw the Bey into a canned direction.
+    const tangential=speed*0.82;
+    const normal=Math.max(0.005,speed*0.18);
 
-    const tangential=speed*0.70;
-    const normal=speed*0.34;
-
+    s.x=point.x+normalX*0.026;
+    s.y=point.y+normalY*0.026;
     s.vx=tangentX*tangential+normalX*normal;
     s.vy=tangentY*tangential+normalY*normal;
 
-    s.rpm=newBattleClamp(s.rpm-0.004,0,1);
-    s.stability=newBattleClamp(s.stability-0.008,0,1);
+    s.rpm=newBattleClamp(s.rpm-0.0025,0,1);
+    s.stability=newBattleClamp(s.stability-0.006,0,1);
     s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
+
     s.surfaceBounce=0.16;
     s.surfaceRecovery=0.12;
-    s.motionPhase+=0.85+Math.random()*0.60;
-    s.motionPhase2+=0.35+Math.random()*0.55;
+    s.motionPhase+=0.70+Math.random()*0.55;
+    s.motionPhase2+=0.30+Math.random()*0.45;
 
-    // Spatial separation only; not a timed rail cooldown.
-    s.railExitRefractory=0.18;
+    s.railExitRefractory=0;
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 }
-
-// X EXIT BARRIER
-// Normal stadium movement may never pass through the X Exit notch. Only
-// newXRailExit() is allowed to place a Bey on the other side of this boundary.
 function enforceXRailExitBarrier(s){
 
-        if(s.railEngaged) return;
+        if(s.railEngaged || s.railExited) return;
 
         // A strong recent collision is allowed to carry the Bey through the
         // exit boundary. Weak normal movement still treats it as a wall.
@@ -5374,6 +5224,19 @@ function newPhysicsStep(s,dt){
         s.y += s.vy*dt*60;
 
         enforceXRailExitBarrier(s);
+
+        if(s.railExited){
+            const exitPointForClear=
+                newXRailPointAtDistance(
+                    getNewXRailGeometry().exitDistance
+                );
+            if(Math.hypot(
+                s.x-exitPointForClear.x,
+                s.y-exitPointForClear.y
+            )>0.18){
+                s.railExited=false;
+            }
+        }
 
         /*
           The X Exit is a physical opening only for a Bey that is actually
