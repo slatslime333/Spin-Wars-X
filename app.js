@@ -3682,12 +3682,37 @@ function assignStadiumSides(){
 
 function generateCPUCombo(){
     const playerTier=Game.player.blade?.tier;
-    const blades=Object.values(BLADE_ENGINE).filter(b=>!playerTier || b.tier===playerTier);
-    const pool=blades.length?blades:Object.values(BLADE_ENGINE);
+    const playerBladeName=Game.player.blade?.name;
+    const playerRatchetName=Game.player.ratchet?.name;
+    const playerBitName=Game.player.bit?.name;
+
+    const blades=Object.values(BLADE_ENGINE).filter(
+        b=>!playerTier || b.tier===playerTier
+    );
+
+    // Never intentionally mirror the player's blade.
+    let pool=blades.filter(b=>b.name!==playerBladeName);
+    if(!pool.length){
+        pool=Object.values(BLADE_ENGINE).filter(
+            b=>b.name!==playerBladeName
+        );
+    }
+    if(!pool.length) pool=Object.values(BLADE_ENGINE);
+
     Game.cpu.blade=pool[Math.floor(Math.random()*pool.length)];
-    Game.cpu.ratchet=RATCHETS[Math.floor(Math.random()*RATCHETS.length)];
+
+    // Also avoid an exact part-for-part copy when alternatives exist.
+    let ratchetPool=RATCHETS.filter(r=>r.name!==playerRatchetName);
+    if(!ratchetPool.length) ratchetPool=RATCHETS;
+    Game.cpu.ratchet=ratchetPool[
+        Math.floor(Math.random()*ratchetPool.length)
+    ];
+
     const bits=Object.values(BIT_ENGINE);
-    Game.cpu.bit=bits[Math.floor(Math.random()*bits.length)];
+    let bitPool=bits.filter(b=>b.name!==playerBitName);
+    if(!bitPool.length) bitPool=bits;
+    Game.cpu.bit=bitPool[Math.floor(Math.random()*bitPool.length)];
+
     Game.cpu.spin=Game.cpu.blade.spin||"Right";
     Game.cpu.launch={angle:null,technique:null,quality:null};
     syncComboStats("player");
@@ -3954,7 +3979,7 @@ function newBattlePreviewState(side){
         stability:newBattleClamp((stats.balance||70)/100,.45,1),
         tilt:0,
         momentum:0,
-        radius:.055,
+        radius:.065,
         hitFlash:0,
         stats,
         blade:combo.blade,
@@ -4059,7 +4084,7 @@ function makeLaunchState(side){
         ),
         tilt:initialTilt,
         momentum:0,
-        radius:.055,
+        radius:.065,
         hitFlash:0,
         stats,
         blade:combo.blade,
@@ -4127,6 +4152,7 @@ function startNewBattle(){
     NEW_BATTLE.cpu=newBattlePreviewState("cpu");
     NEW_BATTLE.elapsed=0;
     NEW_BATTLE.active=false;
+    NEW_BATTLE.finished=false;
 
     renderNewBattle("launch");
     wireNewLaunchControls();
@@ -4379,6 +4405,55 @@ function wireNewLaunchControls(){
 }
 
 
+function finishNewBattle(winnerSide){
+    if(!NEW_BATTLE.active || NEW_BATTLE.finished) return;
+
+    NEW_BATTLE.finished=true;
+    NEW_BATTLE.active=false;
+    cancelAnimationFrame(NEW_BATTLE.raf);
+
+    Game.battle.finished=true;
+    Game.battle.matchFinished=true;
+    Game.battle.phase="Finished";
+
+    const winnerName=
+        winnerSide==="player"
+            ? Game.player.blade.name
+            : Game.cpu.blade.name;
+
+    const winnerLabel=
+        winnerSide==="player"
+            ? "YOU WIN"
+            : "CPU WINS";
+
+    const app=document.getElementById("app");
+    if(app){
+        app.innerHTML=`
+          <div class="background"></div>
+          <main class="menu">
+            <section class="menu-card" style="text-align:center;">
+              <div style="font-size:13px;opacity:.7;letter-spacing:1px;">
+                BATTLE FINISHED
+              </div>
+              <h1 style="margin:10px 0;">${winnerLabel}</h1>
+              <div style="font-size:18px;font-weight:800;">
+                ${winnerName}
+              </div>
+              <div style="margin-top:10px;opacity:.7;font-size:12px;">
+                Spin Finish
+              </div>
+            </section>
+          </main>`;
+
+        // Return to the game's existing home screen after the result is
+        // readable. Reloading restores the original index/home state and
+        // avoids carrying battle state into the next match.
+        setTimeout(()=>location.reload(),1800);
+    }else{
+        location.reload();
+    }
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -4392,6 +4467,25 @@ function newBattleFrame(now){
 
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
+
+    // Spin Finish: the first Bey whose RPM reaches zero loses immediately.
+    if(p.rpm<=0 || c.rpm<=0){
+        p.rpm=Math.max(0,p.rpm);
+        c.rpm=Math.max(0,c.rpm);
+
+        if(p.rpm<=0 && c.rpm<=0){
+            // Extremely rare simultaneous stop: award the finish to the Bey
+            // with the greater remaining stability.
+            finishNewBattle(
+                p.stability>=c.stability ? "player" : "cpu"
+            );
+        }else if(p.rpm<=0){
+            finishNewBattle("cpu");
+        }else{
+            finishNewBattle("player");
+        }
+        return;
+    }
 
     const pe=document.getElementById("newPlayerBey");
     const ce=document.getElementById("newCpuBey");
