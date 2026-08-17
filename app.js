@@ -4000,11 +4000,19 @@ function newBattleLaunchState(side){
 
     const isDropLaunch=plan.technique==="Drop Launch";
 
-    // Player launches from the left side; CPU launches from the right.
-    // Keep spawn side separate from travel direction so rail/exit launches
-    // cannot accidentally mirror onto the opponent's side.
-    const sideXSign=side==="player"?-1:1;
-    const launchDirection=side==="player"?1:-1;
+    /*
+      Stadium orientation alternates every two completed battle sequences.
+      0-1: player left / CPU right.
+      2-3: player right / CPU left.
+      Then the orientation repeats.
+    */
+    const orientationCycle=
+        Math.floor((Game.battle?.round||0)/2)%2;
+    const playerOnLeft=orientationCycle===0;
+    const playerSideSign=playerOnLeft?-1:1;
+    const sideXSign=
+        side==="player" ? playerSideSign : -playerSideSign;
+    const launchDirection=-sideXSign;
 
     const isXRailLaunch=plan.technique==="X-Rail";
 
@@ -4014,15 +4022,15 @@ function newBattleLaunchState(side){
       physical rail-capture test decide whether the Bey actually latches.
     */
     const startX=isDropLaunch
-        ? sideXSign*(0.12 + placementJitter*0.18)
+        ? sideXSign*(0.105 + placementJitter*0.14)
         : isXRailLaunch
             ? sideXSign*(0.78 + placementJitter*0.10)
             : sideXSign*(0.70 + placementJitter*0.18);
 
-    // X Exit is at the top of the stadium. Drop Launch begins below it,
-    // offset toward the launching player's side.
+    // Start immediately below the X Exit, still biased toward the player's
+    // side rather than dropping from the center.
     const startY=isDropLaunch
-        ? -0.44 + placementJitter*0.20
+        ? -0.555 + placementJitter*0.12
         : isXRailLaunch
             ? 0.49 + placementJitter*0.10
             : placementJitter;
@@ -4166,6 +4174,9 @@ function startNewBattle(){
     Game.battle.matchStarted=true;
     Game.battle.matchFinished=false;
     Game.battle.exchange=0;
+    Game.battle.round=Game.battle.round||0;
+    Game.battle.orientation=
+        Math.floor(Game.battle.round/2)%2;
     NEW_BATTLE.finishPending=false;
 
     // Rebuild once from the selected launch choices. This is the ONLY place
@@ -5065,14 +5076,14 @@ function tryNewXRailEngagement(s){
     const movement=(bp.movement||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
 
-    if(Math.sqrt(nearest.dist2)>0.026+s.radius*0.18) return false;
+    if(Math.sqrt(nearest.dist2)>0.040+s.radius*0.30) return false;
 
     const dx=s.x-nearest.x, dy=s.y-nearest.y;
     const len=Math.hypot(dx,dy)||1;
     const nx=dx/len, ny=dy/len;
     const approachSpeed=Math.max(0,-(s.vx*nx+s.vy*ny));
 
-    if(approachSpeed<0.012+tilt*0.010+(1-stability)*0.004) return false;
+    if(approachSpeed<0.0085+tilt*0.006+(1-stability)*0.0025) return false;
 
     const direction=railDirectionAtPoint(s,nearest);
     const tangentX=nearest.tx*direction, tangentY=nearest.ty*direction;
@@ -5081,22 +5092,22 @@ function tryNewXRailEngagement(s){
     const approachRatio=approachSpeed/Math.max(speed,0.0001);
 
     const effectiveMomentum=
-        tangentVelocity*(0.74+0.26*rpm)*(1-0.30*tilt);
+        tangentVelocity*(0.80+0.20*rpm)*(1-0.22*tilt);
 
     const minimumMomentum=
-        0.010+tilt*0.005+(1-stability)*0.0035;
+        0.0068+tilt*0.0035+(1-stability)*0.0025;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
-        0.40-control*0.06-affinity*0.04-rpm*0.06;
+        0.28-control*0.06-affinity*0.04-rpm*0.07;
 
     const maximumApproach=
-        0.68+control*0.08+movement*0.04;
+        0.78+control*0.08+movement*0.05;
     if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
 
     const tiltLimit=
-        0.36+stability*0.06+control*0.03+rpm*0.04;
+        0.46+stability*0.07+control*0.04+rpm*0.05;
     if(tilt>tiltLimit) return false;
 
     const speedQuality=newBattleClamp((effectiveMomentum-minimumMomentum)/0.045,0,1);
@@ -5110,14 +5121,14 @@ function tryNewXRailEngagement(s){
         tiltQuality*0.18+statusQuality*0.08+control*0.015+affinity*0.005;
 
     const threshold=
-        0.50-movement*0.05-affinity*0.03-rpm*0.05-stability*0.025;
-    if(physicalScore+(Math.random()-0.5)*0.018<threshold) return false;
+        0.36-movement*0.06-affinity*0.04-rpm*0.06-stability*0.025;
+    if(physicalScore+(Math.random()-0.5)*0.012<threshold) return false;
 
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.36+movement*0.16+rpm*0.16+affinity*0.06),
-        0.075,0.240
+        tangentialCarry*(1.48+movement*0.18+rpm*0.18+affinity*0.08),
+        0.085,0.275
     );
 
     s.railDirection=direction;
@@ -5219,6 +5230,12 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
+    if(s.railTravelDistance>g.total*0.88 &&
+       !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
+        newXRailRailRelease(s,direction);
+        return true;
+    }
+
     if(newXRailCrossedExit(previousDistance,s.railDistance,direction)&&
        s.railTravelDistance>0.050){
         s.railSpeed=tangentVelocity;
@@ -5241,7 +5258,7 @@ function updateNewXRailRide(s,dt){
     s.vy=ty*tangentVelocity;
 
     const rpmDrainPerSecond=
-        0.0030+tangentVelocity*0.024+(1-rpm)*0.0025+tilt*0.0015;
+        0.0020+tangentVelocity*0.014+(1-rpm)*0.0015+tilt*0.0010;
     s.rpm=newBattleClamp(rpm-rpmDrainPerSecond*dt,0,1);
     s.stability=newBattleClamp(
         stability-(0.00025+tangentVelocity*0.0014)*dt,0,1
@@ -5270,7 +5287,7 @@ function newXRailRailRelease(s,direction){
     s.surfaceBounce=0.20; s.surfaceRecovery=0.12;
     s.motionPhase+=0.70+Math.random()*0.55;
     s.motionPhase2+=0.30+Math.random()*0.45;
-    s.railExitRefractory=0;
+    s.railExitRefractory=0.38;
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 }
 function enforceXRailExitBarrier(s){
@@ -5398,7 +5415,7 @@ function newPhysicsStep(s,dt){
                 (0.012+0.003*dropQualityFactor);
 
             s.vy=
-                (0.0155+0.0025*dropQualityFactor)*
+                (0.0095+0.0020*dropQualityFactor)*
                 (s.launchTilt==="Hard Tilt" ? 0.92 : 1.0);
 
             s.launchDropReleased=true;
@@ -5695,14 +5712,19 @@ function newPhysicsStep(s,dt){
 
                             const gravity=
                                 strength*
-                                (0.38+0.48*closeGravity)*
-                                (bothNonAttack ? 1.18 : 1.0);
+                                (0.58+0.68*closeGravity)*
+                                (bothNonAttack ? 1.24 : 1.0);
 
                             const inward=
-                                strength*(0.46+0.22*wave);
+                                strength*(0.58+0.24*wave);
 
+                            /*
+                              The attraction no longer uses a strong tangent
+                              force. That tangent force could turn a Bey into
+                              a false clockwise orbit after a deflection.
+                            */
                             const crossing=
-                                strength*(0.82-0.16*wave);
+                                strength*(0.22-0.08*wave);
 
                             s.vx+=
                                 (ax*(inward+gravity)+tx*crossing)*
@@ -6456,7 +6478,7 @@ function newPhysicsCollision(dt){
     // rider's grip and send it back into normal stadium physics.
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
-    const railBreakThreshold=0.0090;
+    const railBreakThreshold=0.0065;
     const railCollisionBreakThreshold=0.0012;
 
     // IMPORTANT: each Bey's own force is applied to the opponent.
@@ -6528,6 +6550,30 @@ function newPhysicsCollision(dt){
         c.surfaceRecovery=0.16;
     }
 
+    /*
+      Hard-impact rail ejector. Once a rider loses grip, give it a real
+      outward impulse from its last rail contact so the next frame cannot
+      simply snap it back onto the rail.
+    */
+    for(const rider of [p,c]){
+        if(!rider.railEngaged &&
+           rider.lastImpactForce>=0.0065 &&
+           rider.railContactPoint){
+            const rx=rider.x-rider.railContactPoint.x;
+            const ry=rider.y-rider.railContactPoint.y;
+            const rl=Math.hypot(rx,ry)||1;
+            const eject=
+                0.010+
+                newBattleClamp(rider.lastImpactForce/0.025,0,2)*0.014;
+
+            rider.vx+=(rx/rl)*eject;
+            rider.vy+=(ry/rl)*eject;
+            rider.surfaceBounce=0.34;
+            rider.surfaceRecovery=0.20;
+            rider.railContactPoint=null;
+        }
+    }
+
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
     const separation=minDist-dist;
@@ -6549,7 +6595,7 @@ function newPhysicsCollision(dt){
         Math.pow(momentumFactor,1.42)*0.0018;
 
     const nonAttackRPMMultiplier=
-        (pNonAttackType && cNonAttackType) ? 1.28 : 1.0;
+        (pNonAttackType && cNonAttackType) ? 1.62 : 1.0;
 
     const pToCDamage=
         baseRPMDamage*
