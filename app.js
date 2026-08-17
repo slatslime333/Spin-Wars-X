@@ -3901,7 +3901,7 @@ function newBattleLaunchState(side){
         spinDirection:(combo.blade?.spin==="Left" ? 1 : -1),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
-        railLoops:0,railContactPoint:null,railExitCooldown:0
+        railLoops:0,railContactPoint:null,railExitCooldown:0,railExited:false
     };
 }
 function startNewBattle(){
@@ -4424,7 +4424,8 @@ function newXRailExit(s){
     );
 
     s.railEngaged=false;
-    s.railExitCooldown=1.80;
+    s.railExitCooldown=3.00;
+    s.railExited=true;
     s.railRideTime=0;
     s.railProgress=0;
     s.railDistance=0;
@@ -4522,22 +4523,28 @@ function updateNewXRailRide(s,dt){
         0,1
     );
 
-    // Exit at the first meaningful X Exit crossing. A tiny minimum ride
-    // prevents a rail touch directly beside the exit from becoming a free
-    // instant dash. A hard travel limit guarantees no infinite loop.
+    // Exit at the first meaningful X Exit crossing.
+    // Also check physical proximity to the actual exit vertex. The old
+    // progress-only test could occasionally step over the exit between
+    // animation frames and let the Bey continue around the loop.
     const crossed=newXRailCrossedExit(
         previousDistance,
         s.railDistance,
         direction
     );
+    const exitPoint=newXRailPointAtDistance(g.exitDistance);
+    const exitGap=Math.hypot(point.x-exitPoint.x,point.y-exitPoint.y);
 
     const minimumRide=0.24;
-    const maximumRide=Math.min(g.total*0.72,isAttack?g.total*0.72:g.total*0.40);
+    const maximumRide=isAttack ? g.total*0.58 : g.total*0.36;
+    const reachedExitVertex=
+        s.railTravelDistance>=minimumRide && exitGap<=0.045;
 
     if(
         (crossed && s.railTravelDistance>=minimumRide) ||
+        reachedExitVertex ||
         s.railTravelDistance>=maximumRide ||
-        s.railRideTime>=2.15
+        s.railRideTime>=1.85
     ){
         newXRailExit(s);
         return true;
@@ -4546,6 +4553,37 @@ function updateNewXRailRide(s,dt){
     return true;
 }
 
+
+// X EXIT BARRIER
+// Normal stadium movement may never pass through the X Exit notch. Only
+// newXRailExit() is allowed to place a Bey on the other side of this boundary.
+function enforceXRailExitBarrier(s){
+    if(s.railEngaged || s.railExitCooldown>0) return;
+
+    const exit=newXRailPointAtDistance(getNewXRailGeometry().exitDistance);
+    const halfWidth=0.133;
+    const edgeY=-0.790;
+    const apexY=exit.y; // -0.603
+    const ax=Math.abs(s.x);
+
+    // The two sides of the physical X Exit form a V-shaped forbidden notch.
+    // Inside the bowl is below this line (larger Y in our coordinate system).
+    if(ax>=halfWidth) return;
+
+    const boundaryY=
+        apexY-(Math.abs(edgeY-apexY)*(1-ax/halfWidth));
+    const clearance=s.radius*0.72;
+
+    if(s.y < boundaryY+clearance){
+        s.y=boundaryY+clearance;
+
+        // Kill only velocity that is trying to cross the exit. Tangential
+        // movement remains intact so this behaves like a real wall contact.
+        if(s.vy<0){
+            s.vy=-s.vy*0.30;
+        }
+    }
+}
 
 function newPhysicsStep(s,dt){
     const stats=s.stats||{};
@@ -4590,15 +4628,17 @@ function newPhysicsStep(s,dt){
     let tx=r>0.0001 ? (s.y*invR)*spinSign : 0;
     let ty=r>0.0001 ? (-s.x*invR)*spinSign : 0;
 
-    // Low RPM suppresses aggressive travel. Attack Bits retain some path,
-    // while center-oriented Bits become increasingly settled.
+    // Low RPM suppresses aggressive travel. Attack Bits must tighten their
+    // movement as spin falls instead of retaining a huge outer orbit.
     const lowRpm=newBattleClamp((0.50-rpm)/0.50,0,1);
     const attackMovement=Math.max(0,(movement-0.72)/0.28);
+    const lowRpmAttackTighten=
+        attackMovement*Math.pow(lowRpm,1.25);
     const travelFactor=
         0.42+
         movement*0.58+
-        attackMovement*(1-lowRpm)*0.32-
-        lowRpm*(0.34-centerAffinity*0.18);
+        attackMovement*(1-lowRpm)*0.20-
+        lowRpm*(0.34+lowRpmAttackTighten*0.18-centerAffinity*0.18);
 
     // Precession is acceleration, not a fixed circular path.
     const precession=
@@ -4621,6 +4661,26 @@ function newPhysicsStep(s,dt){
 
         s.vx-=s.x*centerForce*dt*60;
         s.vy-=s.y*centerForce*dt*60;
+    }
+
+    // Attack-type bits lose their wide roaming line when spin gets low.
+    // This damps tangential velocity rather than snapping the Bey to center.
+    if(r>0.08 && lowRpmAttackTighten>0.01){
+        const radialX=s.x*invR;
+        const radialY=s.y*invR;
+        const radialVelocity=s.vx*radialX+s.vy*radialY;
+        const tangentVX=s.vx-radialX*radialVelocity;
+        const tangentVY=s.vy-radialY*radialVelocity;
+        const tangentDamp=Math.pow(0.994,lowRpmAttackTighten*dt*60);
+
+        // Stronger inward bias as the attack bit runs out of spin.
+        const tightenForce=
+            (0.00075+0.00115*lowRpmAttackTighten)*dt*60;
+        s.vx-=s.x*tightenForce;
+        s.vy-=s.y*tightenForce;
+
+        s.vx=radialX*radialVelocity+tangentVX*tangentDamp;
+        s.vy=radialY*radialVelocity+tangentVY*tangentDamp;
     }
 
     // Tilt continues to influence the movement after launch.
@@ -4664,28 +4724,9 @@ function newPhysicsStep(s,dt){
     tryNewXRailEngagement(s);
     if(s.railEngaged) return;
 
-    // X EXIT is a one-way rail transition. A Bey that is NOT currently
-    // riding the rail cannot pass through the exit mouth. If ordinary stadium
-    // motion approaches it, push the Bey back into the bowl instead of letting
-    // it phase through the opening/marker.
-    if(!s.railEngaged && s.railExitCooldown<=0){
-        const exit=getNewXRailGeometry().exitDistance;
-        const exitPoint=newXRailPointAtDistance(exit);
-        const ex=s.x-exitPoint.x;
-        const ey=s.y-exitPoint.y;
-        const exitDist=Math.hypot(ex,ey);
-        if(exitDist<0.075 && s.y<exitPoint.y+0.045){
-            const len=exitDist||1;
-            const nx=ex/len, ny=ey/len;
-            s.x=exitPoint.x+nx*0.075;
-            s.y=exitPoint.y+ny*0.075;
-            const towardExit=s.vx*nx+s.vy*ny;
-            if(towardExit<0){
-                s.vx-=towardExit*1.8*nx;
-                s.vy-=towardExit*1.8*ny;
-            }
-        }
-    }
+    // X EXIT is a one-way rail transition. Normal movement cannot enter
+    // or phase through the physical exit notch.
+    enforceXRailExitBarrier(s);
 
     // Stadium outer wall.
     const radius=Math.hypot(s.x,s.y);
