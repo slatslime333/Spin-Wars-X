@@ -3856,8 +3856,8 @@ function newBattleLaunchState(side){
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
     const plan=getAutomaticLaunchPlan(side);
 
-    const startX=side==="player"?-0.74:0.74;
-    const startY=side==="player"?0.10:-0.10;
+    const startX=side==="player"?-0.70:0.70;
+    const startY=side==="player"?0.08:-0.08;
     const direction=side==="player"?1:-1;
 
     const qualityFactor={
@@ -3877,7 +3877,7 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.017 + (stats.mobility||70)*0.000040) *
+        (0.019 + (stats.mobility||70)*0.000045) *
         qualityFactor * techniqueSpeed;
 
     return {
@@ -3899,12 +3899,17 @@ function newBattleLaunchState(side){
         bit:combo.bit,
         launchPlan:plan,
         launchComplete:false,
-        spinDirection: combo.blade?.spinDirection === "Left" || combo.blade?.spinDirection === "Left-Spin" ? -1 : 1,
+        // Right-spin travels counter-clockwise around the stadium.
+        // The rail geometry is stored in the opposite (clockwise) distance
+        // direction, so right-spin uses -1.
+        spinDirection: combo.blade?.spinDirection === "Left" || combo.blade?.spinDirection === "Left-Spin" ? 1 : -1,
         railEngaged:false,
         railProgress:0,
         railDistance:0,
         railSpeed:0,
         railRideTime:0,
+        railTravelDistance:0,
+        railLoops:0,
         railContactPoint:null,
         railExitCooldown:0
     };
@@ -4234,17 +4239,22 @@ function newXRailCrossedExit(previousDistance,nextDistance,direction){
     return previousDistance>=e-eps && nextDistance<=e+eps;
 }
 
-function newXRailEngagementChance(s,approachSpeed){
-    const affinity=(s.bit?.xRailAffinity||0)/100;
-    const mobility=(s.stats?.mobility||70)/100;
-    const stability=s.stability;
-    const speedFactor=newBattleClamp(approachSpeed/0.045,0,1);
+function newXRailEngagementChance(s,approachSpeed,alignment){
+    const bitPhysics=BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
+    const affinity=(bitPhysics.xRailAffinity||0)/100;
+    const control=(bitPhysics.control||50)/100;
+    const speedFactor=newBattleClamp((approachSpeed-0.006)/0.045,0,1);
+    const alignmentFactor=newBattleClamp((alignment-0.006)/0.035,0,1);
 
-    // Provisional first-pass formula. The blueprint intentionally leaves the
-    // exact engagement equation open for the later Bit/physics pass.
+    // Lock-on is intentionally difficult. Touching the rail is not enough.
+    // The Bey needs useful momentum AND a compatible approach angle.
     return newBattleClamp(
-        0.20 + affinity*0.38 + mobility*0.12 + stability*0.10 + speedFactor*0.12,
-        0.08,0.88
+        0.03 +
+        affinity*0.34 +
+        control*0.10 +
+        speedFactor*0.34 +
+        alignmentFactor*0.27,
+        0.03,0.90
     );
 }
 
@@ -4254,77 +4264,146 @@ function tryNewXRailEngagement(s){
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
-    const contactRadius=0.070 + s.radius*0.45;
     const distance=Math.sqrt(nearest.dist2);
+    const contactRadius=0.045 + s.radius*0.35;
     if(distance>contactRadius) return false;
 
     const nx=s.x-nearest.x, ny=s.y-nearest.y;
     const normalLength=Math.hypot(nx,ny) || 1;
     const normalX=nx/normalLength, normalY=ny/normalLength;
-    const approachSpeed=Math.max(0,-(s.vx*normalX+s.vy*normalY));
-    if(approachSpeed<0.003) return false;
 
-    const spin=s.spinDirection||1;
-    const tangentAlignment=s.vx*(nearest.tx*spin)+s.vy*(nearest.ty*spin);
-    const alignment=newBattleClamp((tangentAlignment+0.010)/0.035,0,1);
-    const chance=newXRailEngagementChance(s,approachSpeed)*(0.55+alignment*0.45);
+    // The Bey must actually be moving into the rail, not merely sliding beside
+    // it or sitting on top of it.
+    const approachSpeed=Math.max(
+        0,
+        -(s.vx*normalX+s.vy*normalY)
+    );
+    if(approachSpeed<0.006) return false;
+
+    const railDirection=s.spinDirection||-1;
+    const desiredTx=nearest.tx*railDirection;
+    const desiredTy=nearest.ty*railDirection;
+
+    const tangentVelocity=s.vx*desiredTx+s.vy*desiredTy;
+    const velocityMag=Math.hypot(s.vx,s.vy)||0.001;
+    const alignment=tangentVelocity/velocityMag;
+
+    // A Bey coming toward the rail with a compatible forward/tangential
+    // component has a real chance to lock. A bad angle normally bounces away.
+    if(alignment<0.12) return false;
+
+    const chance=newXRailEngagementChance(
+        s,
+        approachSpeed,
+        tangentVelocity
+    );
 
     if(Math.random()>chance) return false;
+
+    const incomingSpeed=velocityMag;
 
     s.railEngaged=true;
     s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
-    s.railProgress=((nearest.distance%getNewXRailGeometry().total)+getNewXRailGeometry().total)%getNewXRailGeometry().total/getNewXRailGeometry().total;
-    s.railSpeed=Math.max(0.018,Math.hypot(s.vx,s.vy)*1.05);
+    s.railProgress=nearest.distance/getNewXRailGeometry().total;
+    s.railSpeed=Math.max(
+        0.022,
+        incomingSpeed*1.18
+    );
     s.railRideTime=0;
+    s.railTravelDistance=0;
+    s.railLoops=0;
 
-    // Snap only to the physical contact point; from here movement is continuous
-    // along the rail instead of jumping through named zones.
+    // Only snap the Bey onto the exact physical rail contact point.
     s.x=nearest.x;
     s.y=nearest.y;
+
+    // Remove only the inward normal component. Preserve tangential momentum.
+    const normalVelocity=s.vx*normalX+s.vy*normalY;
+    if(normalVelocity<0){
+        s.vx-=normalVelocity*normalX;
+        s.vy-=normalVelocity*normalY;
+    }
+
     return true;
 }
 
+
 function newXRailExit(s){
     const exit=newXRailPointAtDistance(getNewXRailGeometry().exitDistance);
-    const speed=Math.max(0.022,s.railSpeed*1.18);
+
+    // Preserve the speed accumulated on the rail and add the X-Launch boost.
+    // High momentum therefore produces a genuinely powerful exit.
+    const exitSpeed=newBattleClamp(
+        Math.max(0.030,s.railSpeed*1.22),
+        0.030,
+        0.105
+    );
 
     s.railEngaged=false;
-    s.railExitCooldown=0.45;
+    s.railExitCooldown=0.70;
     s.railRideTime=0;
     s.railProgress=0;
     s.railDistance=0;
+    s.railTravelDistance=0;
+    s.railLoops=0;
     s.railContactPoint=null;
 
-    // The X Exit is a physical inward transition, not a teleport to Center.
     s.x=exit.x;
     s.y=exit.y+0.035;
-    s.vx=0;
-    s.vy=s.side==="player" ? speed : speed;
-    s.vy=Math.abs(s.vy);
-    s.vx+=(Math.random()-0.5)*0.006;
-    s.vy*=1.12;
-    s.rpm=newBattleClamp(s.rpm-0.025,0,1);
+
+    // Exit vector is determined by the physical X Exit: inward/downward
+    // toward the battle zone. Add a small amount of preserved rail tangent
+    // so the launch isn't a perfectly vertical scripted shot.
+    const inwardX=0;
+    const inwardY=1;
+    const tangentX=exit.tx*(s.spinDirection||-1);
+    const tangentY=exit.ty*(s.spinDirection||-1);
+    const tangentCarry=0.18;
+
+    s.vx=inwardX*exitSpeed+tangentX*exitSpeed*tangentCarry;
+    s.vy=inwardY*exitSpeed+tangentY*exitSpeed*tangentCarry;
+
+    // X Rail costs RPM but converts part of that energy into speed.
+    s.rpm=newBattleClamp(
+        s.rpm-(0.018+Math.min(0.035,s.railSpeed*0.30)),
+        0,
+        1
+    );
 }
 
 function updateNewXRailRide(s,dt){
     if(!s.railEngaged) return false;
 
     const g=getNewXRailGeometry();
-    const direction=s.spinDirection||1;
+    const direction=s.spinDirection||-1;
     const previousDistance=s.railDistance;
-    const speed=Math.hypot(s.vx,s.vy);
+    const speedBefore=s.railSpeed;
     const movement=(s.stats?.mobility||70)/100;
-    const affinity=(s.bit?.xRailAffinity||0)/100;
+    const bitPhysics=BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
+    const affinity=(bitPhysics.xRailAffinity||0)/100;
 
     s.railRideTime+=dt;
+
+    // The rail accelerates the Bey. Higher existing momentum enters with more
+    // speed, and suitable Bits convert the rail contact into more speed.
+    const railBoost=
+        0.012 +
+        movement*0.010 +
+        affinity*0.012;
+
     s.railSpeed=newBattleClamp(
-        s.railSpeed + (0.010+movement*0.006+affinity*0.006)*dt*60 - 0.002*dt*60,
-        0.016,0.080
+        s.railSpeed + railBoost*dt*60 - 0.0015*dt*60,
+        0.022,
+        0.105
     );
 
-    s.railDistance+=direction*s.railSpeed*dt*60;
-    s.railProgress=((s.railDistance%g.total)+g.total)%g.total/g.total;
+    const travel=s.railSpeed*dt*60;
+    s.railDistance+=direction*travel;
+    s.railTravelDistance+=travel;
+    s.railProgress=(
+        ((s.railDistance%g.total)+g.total)%g.total
+    )/g.total;
 
     const point=newXRailPointAtDistance(s.railDistance);
     const tangentX=point.tx*direction;
@@ -4334,18 +4413,41 @@ function updateNewXRailRide(s,dt){
     s.y=point.y;
     s.vx=tangentX*s.railSpeed;
     s.vy=tangentY*s.railSpeed;
-    s.rpm=newBattleClamp(s.rpm-(0.0010+speed*0.0015)*dt*60,0,1);
-    s.stability=newBattleClamp(s.stability-0.00025*dt*60,0,1);
 
-    // Give the Bey a short physical ride before allowing the first pass through
-    // the X Exit, preventing an engagement directly beside the exit from
-    // becoming an instant dash.
-    if(s.railRideTime>0.22 && newXRailCrossedExit(previousDistance,s.railDistance,direction)){
+    // Rail drains RPM while actively accelerating the Bey.
+    s.rpm=newBattleClamp(
+        s.rpm-(0.0012+speedBefore*0.0018+affinity*0.0005)*dt*60,
+        0,
+        1
+    );
+    s.stability=newBattleClamp(
+        s.stability-0.00020*dt*60,
+        0,
+        1
+    );
+
+    // Prevent infinite rail loops. A normal ride exits at the first valid
+    // X Exit crossing. If the Bey catches the rail immediately beside the
+    // exit, allow one full loop before forcing the next exit.
+    const crossed=newXRailCrossedExit(
+        previousDistance,
+        s.railDistance,
+        direction
+    );
+
+    if(crossed && s.railTravelDistance>0.28){
         newXRailExit(s);
         return true;
     }
+
+    if(s.railTravelDistance>=g.total*1.05){
+        newXRailExit(s);
+        return true;
+    }
+
     return true;
 }
+
 
 function newPhysicsStep(s,dt){
     const stats=s.stats||{};
@@ -4380,7 +4482,7 @@ function newPhysicsStep(s,dt){
     // The rail sits just outside the main bowl. Do not use the old circular
     // wall to stop a Bey before it can actually reach the rail.
     const r=Math.hypot(s.x,s.y);
-    if(r>0.96 && railDistance>0.08){
+    if(r>0.96 && railDistance>0.045){
         const nx=s.x/r, ny=s.y/r;
         s.x=nx*0.96; s.y=ny*0.96;
         const outward=s.vx*nx+s.vy*ny;
