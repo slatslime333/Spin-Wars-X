@@ -98,7 +98,6 @@ battle:{
 
      attackBonus:0,
 defenseBonus:0,
-evasionBonus:0,
 railSpeed:0,
 momentum:0
     },
@@ -116,7 +115,6 @@ momentum:0
 
      attackBonus:0,
 defenseBonus:0,
-evasionBonus:0,
 railSpeed:0,
 momentum:0
     }
@@ -1432,21 +1430,21 @@ orb:{
 // the Bey uses that movement, while launch angle modifies the bit's natural
 // behavior rather than replacing it.
 const BIT_PHYSICS = {
-    Flat:{movement:96,control:48,spinDrain:1.55,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10},
-    "Low Flat":{movement:100,control:43,spinDrain:1.70,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13},
-    Rush:{movement:91,control:64,spinDrain:1.28,xRailAffinity:88,centerAffinity:38,recovery:48,attackBias:8},
-    "Low Rush":{movement:96,control:52,spinDrain:1.62,xRailAffinity:94,centerAffinity:28,recovery:40,attackBias:11},
-    Level:{movement:66,control:84,spinDrain:0.86,xRailAffinity:58,centerAffinity:62,recovery:70,attackBias:2},
-    Elevate:{movement:55,control:91,spinDrain:0.66,xRailAffinity:42,centerAffinity:76,recovery:82,attackBias:-1},
-    Kick:{movement:82,control:62,spinDrain:1.16,xRailAffinity:78,centerAffinity:36,recovery:52,attackBias:7},
-    Wedge:{movement:32,control:96,spinDrain:0.58,xRailAffinity:24,centerAffinity:94,recovery:90,attackBias:-4},
-    Hexa:{movement:38,control:99,spinDrain:0.52,xRailAffinity:20,centerAffinity:98,recovery:95,attackBias:-5},
-    Needle:{movement:16,control:98,spinDrain:0.38,xRailAffinity:12,centerAffinity:100,recovery:96,attackBias:-8},
-    Ball:{movement:25,control:95,spinDrain:0.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7},
-    Orb:{movement:34,control:94,spinDrain:0.40,xRailAffinity:25,centerAffinity:92,recovery:91,attackBias:-5},
-    Point:{movement:58,control:82,spinDrain:0.74,xRailAffinity:48,centerAffinity:70,recovery:72,attackBias:1},
-    "High Needle":{movement:19,control:93,spinDrain:0.34,xRailAffinity:10,centerAffinity:100,recovery:94,attackBias:-7},
-    Quake:{movement:88,control:42,spinDrain:1.72,xRailAffinity:72,centerAffinity:22,recovery:30,attackBias:8}
+    Flat:{movement:96,control:48,spinDrain:1.55,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
+    "Low Flat":{movement:100,control:43,spinDrain:1.70,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
+    Rush:{movement:91,control:64,spinDrain:1.28,xRailAffinity:88,centerAffinity:38,recovery:48,attackBias:8,acceleration:88,friction:48,precession:62,stability:44},
+    "Low Rush":{movement:96,control:52,spinDrain:1.62,xRailAffinity:94,centerAffinity:28,recovery:40,attackBias:11,acceleration:95,friction:40,precession:74,stability:35},
+    Level:{movement:66,control:84,spinDrain:0.86,xRailAffinity:58,centerAffinity:62,recovery:70,attackBias:2,acceleration:62,friction:72,precession:42,stability:70},
+    Elevate:{movement:55,control:91,spinDrain:0.66,xRailAffinity:42,centerAffinity:76,recovery:82,attackBias:-1,acceleration:54,friction:80,precession:34,stability:82},
+    Kick:{movement:82,control:62,spinDrain:1.16,xRailAffinity:78,centerAffinity:36,recovery:52,attackBias:7,acceleration:82,friction:52,precession:58,stability:48},
+    Wedge:{movement:32,control:96,spinDrain:0.58,xRailAffinity:24,centerAffinity:94,recovery:90,attackBias:-4,acceleration:34,friction:90,precession:24,stability:94},
+    Hexa:{movement:38,control:99,spinDrain:0.52,xRailAffinity:20,centerAffinity:98,recovery:95,attackBias:-5,acceleration:38,friction:92,precession:22,stability:97},
+    Needle:{movement:16,control:98,spinDrain:0.38,xRailAffinity:12,centerAffinity:100,recovery:96,attackBias:-8,acceleration:18,friction:96,precession:16,stability:99},
+    Ball:{movement:25,control:95,spinDrain:0.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:28,friction:94,precession:18,stability:96},
+    Orb:{movement:34,control:94,spinDrain:0.40,xRailAffinity:25,centerAffinity:92,recovery:91,attackBias:-5,acceleration:36,friction:91,precession:22,stability:94},
+    Point:{movement:58,control:82,spinDrain:0.74,xRailAffinity:48,centerAffinity:70,recovery:72,attackBias:1,acceleration:56,friction:76,precession:38,stability:76},
+    "High Needle":{movement:19,control:93,spinDrain:0.34,xRailAffinity:10,centerAffinity:100,recovery:94,attackBias:-7,acceleration:20,friction:96,precession:16,stability:99},
+    Quake:{movement:88,control:42,spinDrain:1.72,xRailAffinity:72,centerAffinity:22,recovery:30,attackBias:8,acceleration:90,friction:44,precession:70,stability:34}
 };
 
 function getBitPhysics(blader){
@@ -4105,6 +4103,12 @@ function newBattleLaunchState(side){
         movementNoiseX:(Math.random()-0.5)*0.0002,
         movementNoiseY:(Math.random()-0.5)*0.0002,
         movementNoiseTimer:0.25+Math.random()*0.35,
+        movementEnergy:1.0,
+        axisStability:newBattleClamp(
+            ((stats.balance||70)/99)*
+            ((bitPhysics({bit:combo.bit}).stability||70)/100),
+            0.25,1
+        ),
         tiltLevel:0.08,
         railUses:0,
 
@@ -5307,29 +5311,80 @@ function newPhysicsStep(s,dt){
         const currentSpeed=Math.hypot(s.vx,s.vy);
         const speedStability=newBattleClamp(currentSpeed/0.055,0,1);
 
-        // Attack Bits retain their characteristic high-RPM aggression.
-        // This boost fades rapidly with RPM so it cannot create the old
-        // "100% movement at 20% RPM" problem.
-        if(attackBit && rpm>0.34){
-            const targetAttackSpeed=
-                (0.0295 + 0.0045*attackStat) *
-                attackSpeedBoost *
-                Math.pow(rpm,0.66);
-            const speedNow=Math.hypot(s.vx,s.vy);
-            if(speedNow>0.001 && speedNow<targetAttackSpeed){
-                const gain=newBattleClamp(
-                    (targetAttackSpeed-speedNow)*0.10,
-                    0,0.0015
-                );
-                s.vx += (s.vx/speedNow)*gain;
-                s.vy += (s.vy/speedNow)*gain;
-            }
+        const bitAcceleration=(bp.acceleration||60)/100;
+        const bitFriction=(bp.friction||60)/100;
+        const bitPrecession=(bp.precession||50)/100;
+        const bitStability=(bp.stability||60)/100;
+
+        /*
+          Core movement model:
+          RPM supplies available spin energy, while the launch supplies
+          translational momentum. They are related, but not identical.
+          This prevents a Bey from retaining "100% RPM movement" at low RPM.
+        */
+        const launchMobility=
+            0.020+
+            (stats.mobility||70)*0.000050;
+
+        const rpmSpeedFactor=
+            0.34+
+            0.66*Math.pow(rpm,0.58);
+
+        const physicalSpeedTarget=
+            launchMobility*
+            (0.72+0.28*bitAcceleration)*
+            rpmSpeedFactor*
+            (0.78+0.22*bitStability)*
+            (attackBit
+                ? 1.08+0.12*attackStat+0.07*Math.pow(rpm,0.70)
+                : 0.94+0.05*attackStat);
+
+        const speedNow=Math.hypot(s.vx,s.vy);
+
+        if(speedNow>physicalSpeedTarget*1.08){
+            const excessRatio=newBattleClamp(
+                (speedNow-physicalSpeedTarget)/
+                Math.max(speedNow,0.0001),0,0.24
+            );
+            const decay=
+                (0.0012+bitFriction*0.0018+excessRatio*0.0035)*
+                dt*60;
+            const scale=newBattleClamp(1-decay,0.90,1);
+            s.vx*=scale;
+            s.vy*=scale;
+        }else if(speedNow>0.001 && speedNow<physicalSpeedTarget){
+            const acceleration=
+                (0.00035+bitAcceleration*0.0010)*
+                (0.45+0.55*rpm)*dt*60;
+            s.vx+=(s.vx/speedNow)*acceleration;
+            s.vy+=(s.vy/speedNow)*acceleration;
+        }
+
+        const workRate=
+            speedNow*(0.22+bitFriction*0.40)*(0.65+0.35*rpm);
+
+        s.movementEnergy=newBattleClamp(
+            (s.movementEnergy||1)-
+            workRate*0.00070*dt*60+
+            rpm*bitStability*0.00010*dt*60,
+            0.18,1
+        );
+
+        if(attackBit && rpm>0.38 && speedNow>0.001){
+            const attackDrive=
+                (0.00020+attackStat*0.00022)*
+                Math.pow(rpm,0.82)*
+                (0.72+0.28*s.movementEnergy)*
+                bitAcceleration;
+            s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
+            s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
         }
 
         const targetTilt=newBattleClamp(
-            (1-s.stability)*0.62+
-            (1-rpm)*0.28+
-            (1-speedStability)*0.10,
+            (1-s.stability)*0.48+
+            (1-(s.axisStability||0.70))*0.20+
+            (1-rpm)*0.24+
+            (1-speedStability)*0.08,
             0.02,0.94
         );
 
@@ -5643,13 +5698,15 @@ function newPhysicsStep(s,dt){
                     : 1;
 
             const lateralStrength=
-                (0.00018+movement*0.00046)*
-                Math.pow(rpm,1.08)*
-                (0.55+control*0.45)*
-                (0.82+0.28*attackStat)*
+                (0.00014+movement*0.00042)*
+                Math.pow(rpm,1.02)*
+                (0.52+control*0.48)*
+                (0.76+0.24*attackStat)*
+                (0.72+0.38*bitPrecession)*
+                (0.72+0.28*s.movementEnergy)*
                 (attackBit
-                    ? (0.62+0.92*lowRpmAttackSuppression)
-                    : 1.0);
+                    ? (0.68+0.82*lowRpmAttackSuppression)
+                    : 0.96);
 
             const radialX=s.x*invR;
             const radialY=s.y*invR;
@@ -5659,9 +5716,13 @@ function newPhysicsStep(s,dt){
               remaining perfectly tangent to the bowl.
             */
             const radialWander=
-                Math.sin(s.motionPhase*0.73+s.motionPhase2)*
+                Math.sin(
+                    s.motionPhase*0.73+
+                    s.motionPhase2+
+                    wobbleB*0.35
+                )*
                 lateralStrength*
-                (0.28+(1-centerAffinity)*0.48);
+                (0.30+(1-centerAffinity)*0.42+bitPrecession*0.18);
 
             const tangentScale=
                 0.72+0.28*Math.cos(
@@ -5796,7 +5857,9 @@ function newPhysicsStep(s,dt){
 
             const lateralDamp =
                 Math.pow(
-                    attackBit ? 0.966 : 0.978,
+                    attackBit
+                        ? 0.955+0.012*bitStability
+                        : 0.968+0.014*bitStability,
                     lowRpm*dt*60
                 );
 
@@ -5889,13 +5952,17 @@ function newPhysicsStep(s,dt){
                   - preserve only some tangent
                   - create a recovery state
                 */
-                const restitution =
+                const wallImpactQuality=
+                    newBattleClamp(outward/0.045,0,2.2);
+
+                const restitution=
                     newBattleClamp(
                         0.16+
-                        balance*0.16+
-                        control*0.08,
-                        0.16,
-                        0.40
+                        balance*0.14+
+                        control*0.07+
+                        wallImpactQuality*0.045+
+                        ((s.mass||1)-1)*0.04,
+                        0.16,0.46
                     );
 
                 const tangentRetention =
@@ -5936,6 +6003,16 @@ function newPhysicsStep(s,dt){
                     (0.004+
                      outward*0.040),
                     0,1
+                );
+                s.axisStability=newBattleClamp(
+                    (s.axisStability||0.70)-
+                    (0.015+outward*0.08),
+                    0.15,1
+                );
+                s.movementEnergy=newBattleClamp(
+                    (s.movementEnergy||1)-
+                    (0.018+outward*0.18),
+                    0.18,1
                 );
             }
         }
@@ -5993,6 +6070,18 @@ function newPhysicsStep(s,dt){
                 )*
                 dt*60,
                 0,1
+            );
+
+        s.axisStability=
+            newBattleClamp(
+                (s.axisStability||0.70)+
+                (
+                    bitStability*0.00020*rpm*recovery -
+                    (1-bitStability)*0.00010 -
+                    (1-rpm)*0.00016
+                )*
+                dt*60,
+                0.15,1
             );
     };
 function breakXRailFromImpact(s,nx,ny,force){
@@ -6095,6 +6184,23 @@ function newPhysicsCollision(dt){
     const pMass=p.mass||1;
     const cMass=c.mass||1;
 
+    const contactEfficiency=(blade)=>{
+        const shape=blade?.physics?.contactShape||"Round";
+        const recoil=blade?.physics?.recoil||"Medium";
+        const shapeFactor={
+            "Smash":1.12,"Upper":1.08,"Round":0.96,
+            "Pointed":1.02,"Wide":1.00
+        }[shape]||0.98;
+        const recoilFactor={
+            "Very Low":1.06,"Low":1.03,"Medium":1.00,
+            "High":0.94,"Very High":0.88
+        }[recoil]||1.00;
+        return shapeFactor*recoilFactor;
+    };
+
+    const pContactEfficiency=contactEfficiency(p.blade);
+    const cContactEfficiency=contactEfficiency(c.blade);
+
     const pMomentum=
         pMass*pSpeed*Math.max(0.35,Math.pow(pRPM,0.72));
     const cMomentum=
@@ -6129,14 +6235,17 @@ function newPhysicsCollision(dt){
 
     // Momentum is the physical input; Attack/Knockback determine how well
     // the Bey converts that input into an offensive collision.
-    const pEnergy=
+    const pEnergy=(
         pKinetic+
         pClosing*pMomentum*0.55+
-        grazingEnergy*0.32;
-    const cEnergy=
+        grazingEnergy*0.32
+    )*pContactEfficiency;
+
+    const cEnergy=(
         cKinetic+
         cClosing*cMomentum*0.55+
-        grazingEnergy*0.32;
+        grazingEnergy*0.32
+    )*cContactEfficiency;
 
     const statDrivenContact=
         (0.0014+Math.min(pCombatRating,cCombatRating)*0.0014)*
@@ -6354,6 +6463,26 @@ function newPhysicsCollision(dt){
     c.stability=newBattleClamp(
         c.stability-stabilityHit*(1-cDef*0.36),
         0,1
+    );
+
+    p.axisStability=newBattleClamp(
+        (p.axisStability||0.70)-
+        stabilityHit*(0.42-pDef*0.18),
+        0.15,1
+    );
+    c.axisStability=newBattleClamp(
+        (c.axisStability||0.70)-
+        stabilityHit*(0.42-cDef*0.18),
+        0.15,1
+    );
+
+    p.movementEnergy=newBattleClamp(
+        (p.movementEnergy||1)-effectiveImpact*0.28,
+        0.18,1
+    );
+    c.movementEnergy=newBattleClamp(
+        (c.movementEnergy||1)-effectiveImpact*0.28,
+        0.18,1
     );
 
     const tiltHit=
