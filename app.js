@@ -4153,6 +4153,8 @@ function startNewBattle(){
     NEW_BATTLE.elapsed=0;
     NEW_BATTLE.active=false;
     NEW_BATTLE.finished=false;
+    NEW_BATTLE.contactCooldown=0;
+    NEW_BATTLE.impact=null;
 
     renderNewBattle("launch");
     wireNewLaunchControls();
@@ -4487,15 +4489,73 @@ function newBattleFrame(now){
         return;
     }
 
+    // Low RPM should visibly kill aggressive travel. Attack bits can still
+    // wander at medium RPM, but at 20% they should be close to settling.
+    [p,c].forEach(s=>{
+        const lowRpm=Math.max(0,0.35-s.rpm)/0.35;
+        if(lowRpm>0){
+            const damp=1-lowRpm*0.035;
+            s.vx*=damp;
+            s.vy*=damp;
+        }
+        s.hitFlash=Math.max(0,(s.hitFlash||0)-dt);
+    });
+
     const pe=document.getElementById("newPlayerBey");
     const ce=document.getElementById("newCpuBey");
-    if(pe){
-        pe.setAttribute("cx",50+p.x*39);
-        pe.setAttribute("cy",46+p.y*39);
-    }
-    if(ce){
-        ce.setAttribute("cx",50+c.x*39);
-        ce.setAttribute("cy",46+c.y*39);
+
+    const drawBey=(el,s)=>{
+        if(!el) return;
+        let shakeX=0,shakeY=0;
+        if(s.hitFlash>0){
+            const mag=(s.hitFlash/0.22)*0.85;
+            shakeX=(Math.random()-0.5)*mag;
+            shakeY=(Math.random()-0.5)*mag;
+        }
+        el.setAttribute("cx",50+(s.x+shakeX)*39);
+        el.setAttribute("cy",46+(s.y+shakeY)*39);
+        el.setAttribute("stroke",s.hitFlash>0 ? "#ffffff" : "none");
+        el.setAttribute("stroke-width",s.hitFlash>0 ? "1.4" : "0");
+    };
+
+    drawBey(pe,p);
+    drawBey(ce,c);
+
+    // Impact flash/ring.
+    let impactFx=document.getElementById("newImpactFx");
+    if(NEW_BATTLE.impact){
+        NEW_BATTLE.impact.age+=dt;
+        if(!impactFx){
+            const svg=document.querySelector("#newStadium svg");
+            if(svg){
+                impactFx=document.createElementNS(
+                    "http://www.w3.org/2000/svg","circle"
+                );
+                impactFx.id="newImpactFx";
+                impactFx.setAttribute("fill","none");
+                impactFx.setAttribute("pointer-events","none");
+                svg.appendChild(impactFx);
+            }
+        }
+        if(impactFx){
+            const i=NEW_BATTLE.impact;
+            const progress=Math.min(1,i.age/i.duration);
+            impactFx.setAttribute("cx",50+i.x*39);
+            impactFx.setAttribute("cy",46+i.y*39);
+            impactFx.setAttribute(
+                "r",String(2.5+progress*7*i.level)
+            );
+            impactFx.setAttribute(
+                "stroke-width",String(1.8*(1-progress)+0.4)
+            );
+            impactFx.setAttribute(
+                "stroke",`rgba(255,255,255,${1-progress})`
+            );
+        }
+        if(NEW_BATTLE.impact.age>=NEW_BATTLE.impact.duration){
+            NEW_BATTLE.impact=null;
+            if(impactFx) impactFx.remove();
+        }
     }
 
     const ids=[
@@ -4918,6 +4978,13 @@ function newPhysicsStep(s,dt){
 function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
+
+    // Brief collision cooldown prevents one physical contact from being
+    // counted as 10+ hits while the Beys are separating.
+    NEW_BATTLE.contactCooldown=Math.max(
+        0,(NEW_BATTLE.contactCooldown||0)-dt
+    );
+
     const dx=c.x-p.x, dy=c.y-p.y;
     const dist=Math.hypot(dx,dy);
     const minDist=p.radius+c.radius;
@@ -4927,33 +4994,107 @@ function newPhysicsCollision(dt){
         const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
         const closing=rvx*nx+rvy*ny;
 
-        if(closing<0){
-            const impulse=-closing*0.72;
-            p.vx-=nx*impulse;
-            p.vy-=ny*impulse;
-            c.vx+=nx*impulse;
-            c.vy+=ny*impulse;
+        if(closing<0 && NEW_BATTLE.contactCooldown<=0){
+            const impactSpeed=Math.max(0,-closing);
 
-            const separation=minDist-dist;
-            p.x-=nx*separation*.5;
-            p.y-=ny*separation*.5;
-            c.x+=nx*separation*.5;
-            c.y+=ny*separation*.5;
+            // Attack, knockback and the actual closing speed all matter.
+            // Knockback is deliberately much stronger than the old 0.72
+            // impulse so hits visibly separate the Beys.
+            const pAttack=(p.stats?.attack||70)/100;
+            const cAttack=(c.stats?.attack||70)/100;
+            const pKB=(p.stats?.knockback||70)/100;
+            const cKB=(c.stats?.knockback||70)/100;
+            const pDef=(p.stats?.defense||70)/100;
+            const cDef=(c.stats?.defense||70)/100;
 
-            const impact=Math.max(0,-closing);
-            const pImpact=(c.stats?.attack||70)/100 * impact;
-            const cImpact=(p.stats?.attack||70)/100 * impact;
+            const pForce=
+                impactSpeed*(0.75+pKB*0.95)*(0.70+pAttack*0.30);
+            const cForce=
+                impactSpeed*(0.75+cKB*0.95)*(0.70+cAttack*0.30);
 
-            p.tilt=newBattleClamp((p.tilt||0)+cImpact*3.2,0,12);
-            c.tilt=newBattleClamp((c.tilt||0)+pImpact*3.2,0,12);
+            // Defender resistance reduces incoming knockback.
+            const pResistance=0.62+pDef*0.38;
+            const cResistance=0.62+cDef*0.38;
 
-            p.stability=newBattleClamp(p.stability-0.012-impact*0.012,0,1);
-            c.stability=newBattleClamp(c.stability-0.012-impact*0.012,0,1);
+            const pImpulse=cForce/pResistance;
+            const cImpulse=pForce/cResistance;
 
-            // Impact drains spin; the exact collision/knockback equation comes
-            // later, but the launch engine already hands it real state.
-            p.rpm=newBattleClamp(p.rpm-0.004-impact*0.006,0,1);
-            c.rpm=newBattleClamp(c.rpm-0.004-impact*0.006,0,1);
+            p.vx-=nx*pImpulse;
+            p.vy-=ny*pImpulse;
+            c.vx+=nx*cImpulse;
+            c.vy+=ny*cImpulse;
+
+            // Separate them decisively so they don't overlap and repeatedly
+            // exchange tiny impulses.
+            const separation=Math.max(0,minDist-dist);
+            const separationPush=separation+0.018+impactSpeed*0.10;
+
+            p.x-=nx*separationPush*0.55;
+            p.y-=ny*separationPush*0.55;
+            c.x+=nx*separationPush*0.55;
+            c.y+=ny*separationPush*0.55;
+
+            // Impact has a visible game-state consequence.
+            const pDamage=
+                (0.0035+
+                 impactSpeed*0.018+
+                 cForce*0.006)*
+                (0.75+cAttack*0.25);
+
+            const cDamage=
+                (0.0035+
+                 impactSpeed*0.018+
+                 pForce*0.006)*
+                (0.75+pAttack*0.25);
+
+            p.rpm=newBattleClamp(p.rpm-pDamage,0,1);
+            c.rpm=newBattleClamp(c.rpm-cDamage,0,1);
+
+            p.stability=newBattleClamp(
+                p.stability-
+                (0.008+impactSpeed*0.020+
+                 (1-pDef)*0.008),
+                0,1
+            );
+            c.stability=newBattleClamp(
+                c.stability-
+                (0.008+impactSpeed*0.020+
+                 (1-cDef)*0.008),
+                0,1
+            );
+
+            p.tilt=newBattleClamp(
+                p.tilt+(cForce*2.8+impactSpeed*2.0),0,12
+            );
+            c.tilt=newBattleClamp(
+                c.tilt+(pForce*2.8+impactSpeed*2.0),0,12
+            );
+
+            // Impact animation state. Renderer turns this into a bright
+            // contact flash/ring and a brief Bey shake.
+            const hitX=(p.x+c.x)*0.5;
+            const hitY=(p.y+c.y)*0.5;
+            const impactLevel=newBattleClamp(
+                impactSpeed*7+
+                Math.abs(pForce-cForce)*2,
+                0.15,1
+            );
+
+            NEW_BATTLE.impact={
+                x:hitX,
+                y:hitY,
+                level:impactLevel,
+                age:0,
+                duration:0.28
+            };
+
+            p.hitFlash=0.22;
+            c.hitFlash=0.22;
+            p.impactRecovery=1;
+            c.impactRecovery=1;
+
+            NEW_BATTLE.contactCooldown=
+                0.18+Math.min(0.18,impactSpeed*1.5);
         }
     }
 }
