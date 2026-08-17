@@ -3855,16 +3855,6 @@ function newBattleLaunchState(side){
               }
             : getAutomaticLaunchPlan(side);
 
-    const isDropLaunch=plan.technique==="Drop Launch";
-    const sideSign=side==="player"?1:-1;
-    const startX=isDropLaunch
-        ? 0
-        : sideSign*(-0.70 + placementJitter*0.18);
-    const startY=isDropLaunch
-        ? -0.47 + placementJitter*0.30
-        : placementJitter;
-    const direction=isDropLaunch ? 0 : sideSign;
-
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
     }[plan.quality]||1;
@@ -3888,6 +3878,16 @@ function newBattleLaunchState(side){
     }[plan.quality]||0.030;
 
     const placementJitter=(Math.random()-0.5)*qualityPlacement;
+
+    const isDropLaunch=plan.technique==="Drop Launch";
+    const sideSign=side==="player"?1:-1;
+    const startX=isDropLaunch
+        ? 0
+        : sideSign*(-0.70 + placementJitter*0.18);
+    const startY=isDropLaunch
+        ? -0.47 + placementJitter*0.30
+        : placementJitter;
+    const direction=isDropLaunch ? 0 : sideSign;
 
     // Launch angle is a real release vector:
     // Flat = forward/stable
@@ -3936,6 +3936,9 @@ function newBattleLaunchState(side){
             0.40,1
         ),
         radius:0.096,
+        // Physical mass is based on the actual blade weight. It is used for
+        // collision energy; it does not replace Attack/Knockback stats.
+        mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
@@ -5512,14 +5515,38 @@ function newPhysicsCollision(dt){
     const tangentRelative=rvx*tx+rvy*ty;
     const totalRelative=Math.max(relativeSpeed,0.0001);
 
-    // Tangential clashes still have real energy. This is deliberately higher
-    // than V9 so stamina/defense mirrors cannot devolve into tiny taps.
-    const grazingEnergy=totalRelative*0.30;
+    // Directional momentum:
+    // each Bey brings its own mass + velocity + RPM into the collision.
+    // A high-Attack Bey on a controlled bit can hit hard, but a heavier/faster
+    // Bey arriving with much more momentum can still transfer more energy.
+    const pSpeed=Math.hypot(p.vx,p.vy);
+    const cSpeed=Math.hypot(c.vx,c.vy);
+    const pMass=p.mass||1;
+    const cMass=c.mass||1;
+
+    const pMomentum=
+        pMass*pSpeed*Math.max(0.35,Math.pow(pRPM,0.72));
+    const cMomentum=
+        cMass*cSpeed*Math.max(0.35,Math.pow(cRPM,0.72));
+
+    // Closing speed identifies who is actually driving into the contact.
+    const pClosing=Math.max(0,-closing);
+    const cClosing=Math.max(0,closing);
+
+    // Kinetic-energy-style term. Squared velocity makes a fast crash
+    // substantially more energetic than a slow bump.
+    const pKinetic=
+        0.5*pMass*pSpeed*pSpeed*
+        (0.48+0.52*pRPM);
+    const cKinetic=
+        0.5*cMass*cSpeed*cSpeed*
+        (0.48+0.52*cRPM);
+
+    // Tangential clashes still have real energy, but they are weaker than a
+    // direct collision.
+    const grazingEnergy=totalRelative*0.22;
 
     // Blade Attack + Knockback are combat stats, not Bit-type permissions.
-    // A Phoenix Wing + Hexa can therefore hit hard even though Hexa does
-    // not move like Rush. The bit controls how it gets there; the blade and
-    // combo stats control what happens when contact occurs.
     const pCombatRating=
         0.58+
         pAttack*0.78+
@@ -5529,14 +5556,26 @@ function newPhysicsCollision(dt){
         cAttack*0.78+
         cKB*0.52;
 
+    // Momentum is the physical input; Attack/Knockback determine how well
+    // the Bey converts that input into an offensive collision.
+    const pEnergy=
+        pKinetic+
+        pClosing*pMomentum*0.55+
+        grazingEnergy*0.32;
+    const cEnergy=
+        cKinetic+
+        cClosing*cMomentum*0.55+
+        grazingEnergy*0.32;
+
     const statDrivenContact=
-        (0.0018+Math.min(pCombatRating,cCombatRating)*0.0018)*
+        (0.0014+Math.min(pCombatRating,cCombatRating)*0.0014)*
         Math.pow((pRPM+cRPM)*0.5,0.70);
 
     const effectiveImpact=Math.max(
         impactSpeed,
         grazingEnergy,
-        statDrivenContact
+        statDrivenContact,
+        Math.sqrt(Math.max(pEnergy,cEnergy))*0.62
     );
 
     const directness=newBattleClamp(
@@ -5545,20 +5584,30 @@ function newPhysicsCollision(dt){
     );
     const avgRPM=(pRPM+cRPM)*0.5;
 
-    // High RPM makes impacts energetic; Attack/Knockback amplify the
-    // offensive side without making a slow Stamina tip move like Attack.
     const contactEnergy=
         effectiveImpact*
         (0.88+avgRPM*0.72);
 
+    const pEnergyScale=
+        0.72+
+        newBattleClamp(pEnergy/0.0018,0,2.4)*0.22+
+        newBattleClamp(pMomentum/0.040,0,2.2)*0.16;
+
+    const cEnergyScale=
+        0.72+
+        newBattleClamp(cEnergy/0.0018,0,2.4)*0.22+
+        newBattleClamp(cMomentum/0.040,0,2.2)*0.16;
+
     const pHit =
         contactEnergy *
+        pEnergyScale *
         (0.62+pKB*1.28) *
         (0.64+pAttack*0.70) *
         (0.68+pRPM*0.50);
 
     const cHit =
         contactEnergy *
+        cEnergyScale *
         (0.62+cKB*1.28) *
         (0.64+cAttack*0.70) *
         (0.68+cRPM*0.50);
@@ -5652,12 +5701,14 @@ function newPhysicsCollision(dt){
         baseRPMDamage*
         (0.82+pAttack*0.58)*
         (0.72+pRPM*0.42)*
+        (0.82+newBattleClamp(pMomentum/0.035,0,2.2)*0.22)*
         (1-cDef*0.30);
 
     const cToPDamage=
         baseRPMDamage*
         (0.82+cAttack*0.58)*
         (0.72+cRPM*0.42)*
+        (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
         (1-pDef*0.30);
 
     c.rpm=newBattleClamp(c.rpm-pToCDamage,0,1);
