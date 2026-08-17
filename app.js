@@ -3979,7 +3979,7 @@ function newBattlePreviewState(side){
         stability:newBattleClamp((stats.balance||70)/100,.45,1),
         tilt:0,
         momentum:0,
-        radius:.065,
+        radius:.073,
         hitFlash:0,
         stats,
         blade:combo.blade,
@@ -4084,7 +4084,7 @@ function makeLaunchState(side){
         ),
         tilt:initialTilt,
         momentum:0,
-        radius:.065,
+        radius:.073,
         hitFlash:0,
         stats,
         blade:combo.blade,
@@ -4286,9 +4286,9 @@ function renderNewBattle(mode="battle"){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.35"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="3.15"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="2.35"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="3.15"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4489,12 +4489,12 @@ function newBattleFrame(now){
         return;
     }
 
-    // Low RPM should visibly kill aggressive travel. Attack bits can still
-    // wander at medium RPM, but at 20% they should be close to settling.
+    // Low RPM should visibly kill aggressive travel. Begin suppressing
+    // lateral movement at 50%, with a strong effect by 20%.
     [p,c].forEach(s=>{
-        const lowRpm=Math.max(0,0.35-s.rpm)/0.35;
+        const lowRpm=Math.max(0,0.50-s.rpm)/0.50;
         if(lowRpm>0){
-            const damp=1-lowRpm*0.035;
+            const damp=1-lowRpm*0.075;
             s.vx*=damp;
             s.vy*=damp;
         }
@@ -4508,7 +4508,7 @@ function newBattleFrame(now){
         if(!el) return;
         let shakeX=0,shakeY=0;
         if(s.hitFlash>0){
-            const mag=(s.hitFlash/0.22)*0.85;
+            const mag=(s.hitFlash/0.22)*0.45;
             shakeX=(Math.random()-0.5)*mag;
             shakeY=(Math.random()-0.5)*mag;
         }
@@ -4543,10 +4543,10 @@ function newBattleFrame(now){
             impactFx.setAttribute("cx",50+i.x*39);
             impactFx.setAttribute("cy",46+i.y*39);
             impactFx.setAttribute(
-                "r",String(2.5+progress*7*i.level)
+                "r",String(1.8+progress*4.5*i.level)
             );
             impactFx.setAttribute(
-                "stroke-width",String(1.8*(1-progress)+0.4)
+                "stroke-width",String(1.15*(1-progress)+0.3)
             );
             impactFx.setAttribute(
                 "stroke",`rgba(255,255,255,${1-progress})`
@@ -5007,10 +5007,23 @@ function newPhysicsCollision(dt){
             const pDef=(p.stats?.defense||70)/100;
             const cDef=(c.stats?.defense||70)/100;
 
+            // Closing speed is the momentum/impact driver. Slow contact
+            // produces a small shove; a fast collision can become a heavy
+            // hit and launch the defender a large distance.
+            const momentumFactor=
+                newBattleClamp(impactSpeed/0.060,0,2.25);
+
             const pForce=
-                impactSpeed*(0.75+pKB*0.95)*(0.70+pAttack*0.30);
+                impactSpeed*
+                (0.55+pKB*1.20)*
+                (0.65+pAttack*0.35)*
+                (0.65+momentumFactor*0.70);
+
             const cForce=
-                impactSpeed*(0.75+cKB*0.95)*(0.70+cAttack*0.30);
+                impactSpeed*
+                (0.55+cKB*1.20)*
+                (0.65+cAttack*0.35)*
+                (0.65+momentumFactor*0.70);
 
             // Defender resistance reduces incoming knockback.
             const pResistance=0.62+pDef*0.38;
@@ -5027,7 +5040,23 @@ function newPhysicsCollision(dt){
             // Separate them decisively so they don't overlap and repeatedly
             // exchange tiny impulses.
             const separation=Math.max(0,minDist-dist);
-            const separationPush=separation+0.018+impactSpeed*0.10;
+
+            const hitTier=
+                impactSpeed<0.018 ? "LIGHT" :
+                impactSpeed<0.034 ? "SOLID" :
+                impactSpeed<0.052 ? "HEAVY" :
+                "SMASH";
+
+            const hitMultiplier=
+                hitTier==="LIGHT" ? 0.75 :
+                hitTier==="SOLID" ? 1.00 :
+                hitTier==="HEAVY" ? 1.45 :
+                1.95;
+
+            const separationPush=
+                separation+
+                0.018+
+                impactSpeed*0.10*hitMultiplier;
 
             p.x-=nx*separationPush*0.55;
             p.y-=ny*separationPush*0.55;
@@ -5076,8 +5105,10 @@ function newPhysicsCollision(dt){
             const hitY=(p.y+c.y)*0.5;
             const impactLevel=newBattleClamp(
                 impactSpeed*7+
-                Math.abs(pForce-cForce)*2,
-                0.15,1
+                Math.abs(pForce-cForce)*2+
+                (hitTier==="SMASH" ? 0.35 :
+                 hitTier==="HEAVY" ? 0.15 : 0),
+                0.10,1
             );
 
             NEW_BATTLE.impact={
@@ -5085,7 +5116,8 @@ function newPhysicsCollision(dt){
                 y:hitY,
                 level:impactLevel,
                 age:0,
-                duration:0.28
+                duration:0.22,
+                tier:hitTier
             };
 
             p.hitFlash=0.22;
