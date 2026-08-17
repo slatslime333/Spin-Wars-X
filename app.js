@@ -4024,13 +4024,13 @@ function newBattleLaunchState(side){
     const startX=isDropLaunch
         ? sideXSign*(0.105 + placementJitter*0.14)
         : isXRailLaunch
-            ? sideXSign*(0.78 + placementJitter*0.10)
+            ? sideXSign*(0.82 + placementJitter*0.06)
             : sideXSign*(0.70 + placementJitter*0.18);
 
     // Start immediately below the X Exit, still biased toward the player's
     // side rather than dropping from the center.
     const startY=isDropLaunch
-        ? -0.555 + placementJitter*0.12
+        ? -0.705 + placementJitter*0.06
         : isXRailLaunch
             ? 0.49 + placementJitter*0.10
             : placementJitter;
@@ -4070,12 +4070,13 @@ function newBattleLaunchState(side){
 
         const inwardX=dx/d;
         const inwardY=dy/d;
-        const spinDirection=combo.blade?.spin==="Left" ? 1 : -1;
+        // Right-spin is ALWAYS counter-clockwise on this geometry.
+        const spinDirection=-1;
         const railTangentX=railTarget.tx*spinDirection;
         const railTangentY=railTarget.ty*spinDirection;
 
-        const tangentWeight=0.72;
-        const approachWeight=0.28;
+        const tangentWeight=0.42;
+        const approachWeight=0.58;
         const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
 
         vx=(railTangentX*tangentWeight+inwardX*approachWeight)*railLaunchSpeed;
@@ -4603,11 +4604,11 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            const ps=3.65*(p.hitFlash>0?(p.impactScale||1):1);
+            const ps=5.35*(p.hitFlash>0?(p.impactScale||1):1);
             pe.setAttribute("r",ps);
         }
         if(ce){
-            const cs=3.65*(c.hitFlash>0?(c.impactScale||1):1);
+            const cs=5.35*(c.hitFlash>0?(c.impactScale||1):1);
             ce.setAttribute("r",cs);
         }
 
@@ -5076,14 +5077,24 @@ function tryNewXRailEngagement(s){
     const movement=(bp.movement||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
 
-    if(Math.sqrt(nearest.dist2)>0.040+s.radius*0.30) return false;
+    const railContactDistance=
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.065+s.radius*0.42
+            : 0.045+s.radius*0.32;
+
+    if(Math.sqrt(nearest.dist2)>railContactDistance) return false;
 
     const dx=s.x-nearest.x, dy=s.y-nearest.y;
     const len=Math.hypot(dx,dy)||1;
     const nx=dx/len, ny=dy/len;
     const approachSpeed=Math.max(0,-(s.vx*nx+s.vy*ny));
 
-    if(approachSpeed<0.0085+tilt*0.006+(1-stability)*0.0025) return false;
+    const minimumApproach=
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.0055+tilt*0.004+(1-stability)*0.0015
+            : 0.0085+tilt*0.006+(1-stability)*0.0025;
+
+    if(approachSpeed<minimumApproach) return false;
 
     const direction=railDirectionAtPoint(s,nearest);
     const tangentX=nearest.tx*direction, tangentY=nearest.ty*direction;
@@ -5095,12 +5106,16 @@ function tryNewXRailEngagement(s){
         tangentVelocity*(0.80+0.20*rpm)*(1-0.22*tilt);
 
     const minimumMomentum=
-        0.0068+tilt*0.0035+(1-stability)*0.0025;
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.0048+tilt*0.0025+(1-stability)*0.0018
+            : 0.0068+tilt*0.0035+(1-stability)*0.0025;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
-        0.28-control*0.06-affinity*0.04-rpm*0.07;
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.16-control*0.04-affinity*0.03-rpm*0.06
+            : 0.28-control*0.06-affinity*0.04-rpm*0.07;
 
     const maximumApproach=
         0.78+control*0.08+movement*0.05;
@@ -5121,7 +5136,9 @@ function tryNewXRailEngagement(s){
         tiltQuality*0.18+statusQuality*0.08+control*0.015+affinity*0.005;
 
     const threshold=
-        0.36-movement*0.06-affinity*0.04-rpm*0.06-stability*0.025;
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.24-movement*0.05-affinity*0.03-rpm*0.07-stability*0.02
+            : 0.36-movement*0.06-affinity*0.04-rpm*0.06-stability*0.025;
     if(physicalScore+(Math.random()-0.5)*0.012<threshold) return false;
 
     const g=getNewXRailGeometry();
@@ -5182,6 +5199,8 @@ function updateNewXRailRide(s,dt){
     if(!s.railEngaged) return false;
 
     const g=getNewXRailGeometry();
+    s.railRideTime=(s.railRideTime||0)+dt;
+
     const direction=s.railDirection||railDirection(s);
     const bp=bitPhysics(s);
     const rpm=newBattleClamp(s.rpm,0,1);
@@ -5191,6 +5210,24 @@ function updateNewXRailRide(s,dt){
     const affinity=(bp.xRailAffinity||50)/100;
     const control=(bp.control||60)/100;
     const previousDistance=s.railDistance;
+
+    // Hard impact always overrides rail grip.
+    const impactAge=performance.now()-(s.lastImpactAt||0);
+    if(impactAge<320 && (s.lastImpactForce||0)>=0.0055){
+        const ejectForce=newBattleClamp(
+            (s.lastImpactForce||0)*0.72,0.006,0.024
+        );
+        newXRailRailRelease(s,direction);
+        s.vx+=(-tx0)*ejectForce;
+        s.vy+=(-ty0)*ejectForce;
+        s.railExitRefractory=0.52;
+        return true;
+    }
+
+    if((s.railRideTime||0)>1.85){
+        newXRailRailRelease(s,direction);
+        return true;
+    }
 
     // The Bey remains the source of truth. The rail redirects its velocity;
     // it does not create a slow canned orbit.
@@ -5203,8 +5240,8 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    const railDrive=(0.0012+movement*0.0022+affinity*0.0011)*(0.32+rpm*0.68);
-    const railFriction=0.00035+(1-rpm)*0.00040+tilt*0.00030;
+    const railDrive=(0.0017+movement*0.0027+affinity*0.0014)*(0.36+rpm*0.64);
+    const railFriction=0.00028+(1-rpm)*0.00034+tilt*0.00024;
 
     tangentVelocity=Math.max(
         0.050,
@@ -5230,7 +5267,7 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
-    if(s.railTravelDistance>g.total*0.88 &&
+    if(s.railTravelDistance>g.total*0.82 &&
        !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
         newXRailRailRelease(s,direction);
         return true;
@@ -5275,7 +5312,7 @@ function newXRailRailRelease(s,direction){
     s.railGrip=0; s.railDirection=0;
 
     const tangential=speed*0.92, normal=Math.max(0.008,speed*0.24);
-    const separation=0.060+s.radius*0.04;
+    const separation=0.078+s.radius*0.10;
     s.x=point.x+normalX*separation;
     s.y=point.y+normalY*separation;
     s.vx=tangentX*tangential+normalX*normal;
@@ -6694,11 +6731,17 @@ function newPhysicsCollision(dt){
     p.motionPhase2+=0.34+Math.random()*0.65;
     c.motionPhase2+=0.34+Math.random()*0.65;
 
+    const impactVisualEnergy=
+        newBattleClamp(
+            effectiveImpact/0.028+
+            heavyFactor*0.08,
+            0,1
+        );
+
     const visualStrength=newBattleClamp(
-        0.82+
-        effectiveImpact/0.020*0.42+
-        heavyFactor*0.12,
-        0.82,1.95
+        0.78+
+        impactVisualEnergy*0.62,
+        0.78,1.52
     );
 
     p.hitFlash=0.16*visualStrength;
