@@ -2587,8 +2587,7 @@ function calculateLaunchQuality(side,angle,technique){
         "Center":3,
         "X-Rail":0,
         "Direct Clash":-2,
-        "Drop Launch":1,
-        "Wide Circle":0
+        "X-Drop":1
     }[technique] ?? 0;
 
     const score=clampBattleValue(
@@ -3607,8 +3606,8 @@ function getLaunchTechniqueText(blader){
         "X-Rail Dash":"attempts an X Rail line",
         "Reverse X-Dash":"attempts a reverse X Rail line",
         "Direct Clash":"aims to meet the opponent early",
-        "Drop Launch":"takes a low opening line",
-        "Wide Circle":"takes a wide opening line"
+        "X-Drop":"takes a low opening line",
+        "Center":"takes a wide opening line"
     };
     return text[technique]||"takes a neutral opening line";
 }
@@ -3685,8 +3684,8 @@ function showLetItRip(){
           ${techButton("CENTER","Center","launchCenter")}
           ${techButton("X-RAIL","X-Rail","launchRail")}
           ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
-          ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
-          ${techButton("WIDE CIRCLE","Wide Circle","launchCircle")}
+          ${techButton("DROP LAUNCH","X-Drop","launchDrop")}
+          ${techButton("X-DROP","X-Drop","launchDrop")}
         </div>
 
         <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.78;text-align:center;">
@@ -3723,8 +3722,7 @@ function showLetItRip(){
     document.getElementById("launchCenter").onclick=()=>setLaunch(Game.player.launch.angle,"Center");
     document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
     document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
-    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"Drop Launch");
-    document.getElementById("launchCircle").onclick=()=>setLaunch(Game.player.launch.angle,"Wide Circle");
+    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"X-Drop");
 
     document.getElementById("startBattleNow").onclick=startNewBattle;
     document.getElementById("backToVS").onclick=showVS;
@@ -3802,11 +3800,11 @@ function getAutomaticLaunchPlan(side){
     let technique="Center";
     if(type==="Attack"){
         technique=(personality.risk>=70 || ["Flat","Low Flat","Low Rush","Rush","Kick","Quake"].includes(bitName))
-            ?"Direct Clash":"Wide Circle";
+            ?"Direct Clash":"Center";
     }else if(type==="Defense" || type==="Stamina"){
         technique="Center";
     }else{
-        technique=personality.control>=85 ? "Center" : "Wide Circle";
+        technique="Center";
     }
 
     let angle="Flat";
@@ -3845,9 +3843,10 @@ function newBattleLaunchState(side){
               }
             : getAutomaticLaunchPlan(side);
 
-    const startX=side==="player"?-0.70:0.70;
-    const startY=0;
-    const direction=side==="player"?1:-1;
+    const isXDrop=plan.technique==="X-Drop";
+    const startX=isXDrop ? 0 : (side==="player"?-0.70:0.70);
+    const startY=isXDrop ? -0.56 : 0;
+    const direction=isXDrop ? 0 : (side==="player"?1:-1);
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
@@ -3866,9 +3865,8 @@ function newBattleLaunchState(side){
     const techniqueSpeed={
         Center:1.00,
         "Direct Clash":1.10,
-        "Wide Circle":0.84,
         "X-Rail":1.00,
-        "Drop Launch":0.90
+        "X-Drop":0.88
     }[plan.technique]||1;
 
     const launchSpeed=
@@ -3879,9 +3877,16 @@ function newBattleLaunchState(side){
     let vx=direction*launchSpeed;
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
-    if(plan.technique==="Wide Circle") vy+=tiltSign*0.012;
-    if(plan.technique==="Drop Launch") vy+=tiltSign*0.016;
-    if(plan.technique==="X-Rail") vy+=tiltSign*0.008;
+    if(plan.technique==="X-Drop"){
+        vx=0;
+        vy=0.022*(0.90+qualityFactor*0.10);
+    }else if(plan.technique==="X-Rail"){
+        vy+=tiltSign*0.008;
+    }
+
+    const tiltStall=
+        plan.angle==="Slight Tilt" ? 0.18 :
+        plan.angle==="Hard Tilt" ? 0.30 : 0;
 
     return {
         side,x:startX,y:startY,vx,vy,rpm:1,
@@ -3896,7 +3901,10 @@ function newBattleLaunchState(side){
         launchPlan:plan,
         launchRpmLossMultiplier:tilt.rpm,
         launchTilt:plan.angle,
+        launchStall:tiltStall,
+        launchStallElapsed:0,
         launchComplete:false,
+        railUses:0,
         // Right spin = counter-clockwise; left spin = clockwise.
         spinDirection:(combo.blade?.spin==="Left" ? 1 : -1),
         railEngaged:false,railProgress:0,railDistance:0,
@@ -4308,23 +4316,24 @@ function newXRailEngagementChance(s,approachSpeed,alignment,approachRatio){
     // Realistic X-Rail access is selective:
     // Attack/Rush bits get the strongest chance, while stamina/defense bits
     // can still catch it occasionally but should not repeatedly farm it.
-    const attackBonus=isAttack ? 0.20 : 0;
-    const base=isAttack ? 0.008 : 0.002;
+    const attackBonus=isAttack ? 0.12 : 0;
+    const base=isAttack ? 0.003 : 0.0005;
 
     return newBattleClamp(
         base +
-        affinity*0.18 +
-        movement*0.08 +
-        speedFactor*0.34 +
-        alignmentFactor*0.20 +
-        impactAngleFactor*0.24 +
+        affinity*0.10 +
+        movement*0.035 +
+        speedFactor*0.28 +
+        alignmentFactor*0.15 +
+        impactAngleFactor*0.16 +
         attackBonus,
-        0.002,0.78
+        0.0005,0.52
     );
 }
 
 function tryNewXRailEngagement(s){
     if(s.railEngaged || s.railExitCooldown>0) return false;
+    if((s.railUses||0)>=1) return false;
 
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
@@ -4371,6 +4380,7 @@ function tryNewXRailEngagement(s){
     const isAttack=(bitPhysics.movement||60)>=80;
 
     s.railEngaged=true;
+    s.railUses=(s.railUses||0)+1;
     s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
     s.railProgress=nearest.distance/getNewXRailGeometry().total;
@@ -4396,11 +4406,11 @@ function tryNewXRailEngagement(s){
 
     // The impact itself costs energy immediately.
     s.rpm=newBattleClamp(
-        s.rpm-(isAttack?0.035:0.045),
+        s.rpm-(isAttack?0.018:0.025),
         0,1
     );
     s.stability=newBattleClamp(
-        s.stability-(isAttack?0.015:0.022),
+        s.stability-(isAttack?0.010:0.014),
         0,1
     );
 
@@ -4446,17 +4456,17 @@ function newXRailExit(s){
     // pays for it with energy; non-attack types pay more relative to their
     // lower rail efficiency.
     s.rpm=newBattleClamp(
-        s.rpm-(isAttack?0.16:0.22),
+        s.rpm-(isAttack?0.055:0.075),
         0,1
     );
     s.stability=newBattleClamp(
-        s.stability-(isAttack?0.055:0.075),
+        s.stability-(isAttack?0.025:0.035),
         0,1
     );
 
     // Kill most of the rail's accumulated momentum at the exit so the Bey
     // has to re-enter normal stadium physics instead of chaining rails.
-    s.railSpeed*=0.38;
+    s.railSpeed*=0.52;
 }
 
 
@@ -4505,9 +4515,9 @@ function updateNewXRailRide(s,dt){
     // Rail is expensive. This is the major fix for the previous infinite
     // X-Rail behavior.
     const drainPerSecond=
-        0.22+
-        s.railSpeed*1.55+
-        affinity*0.04;
+        0.070+
+        s.railSpeed*0.42+
+        affinity*0.018;
 
     s.rpm=newBattleClamp(
         s.rpm-drainPerSecond*dt,
@@ -4516,7 +4526,7 @@ function updateNewXRailRide(s,dt){
 
     s.stability=newBattleClamp(
         s.stability-
-        (0.018+s.railSpeed*0.08)*dt,
+        (0.008+s.railSpeed*0.035)*dt,
         0,1
     );
 
@@ -4530,7 +4540,7 @@ function updateNewXRailRide(s,dt){
     );
 
     const minimumRide=0.34;
-    const maximumRide=Math.min(g.total*0.98,isAttack?g.total*0.98:g.total*0.72);
+    const maximumRide=Math.min(g.total*0.86,isAttack?g.total*0.86:g.total*0.48);
 
     if(
         (crossed && s.railTravelDistance>=minimumRide) ||
@@ -4561,6 +4571,18 @@ function newPhysicsStep(s,dt){
     // Active X-Rail state completely owns movement while engaged.
     if(s.railEngaged){
         updateNewXRailRide(s,dt);
+        return;
+    }
+
+    if((s.launchStall||0)>0 && (s.launchStallElapsed||0)<s.launchStall){
+        s.launchStallElapsed+=dt;
+        const wobble=0.00010*(1+s.launchStallElapsed*2);
+        s.vx*=0.72;
+        s.vy*=0.72;
+        s.vx+=(Math.random()-0.5)*wobble*dt*60;
+        s.vy+=(Math.random()-0.5)*wobble*dt*60;
+        const stallRpmDrain=s.launchTilt==="Hard Tilt"?0.00038:0.00025;
+        s.rpm=newBattleClamp(s.rpm-stallRpmDrain*dt*60,0,1);
         return;
     }
 
