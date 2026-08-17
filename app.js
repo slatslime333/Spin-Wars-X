@@ -4091,82 +4091,125 @@ function renderNewBattle(){
       </main>`;
 }
 
+function finishNewBattle(winnerSide){
+    if(!NEW_BATTLE.active) return;
+
+    NEW_BATTLE.active=false;
+    Game.battle.finished=true;
+    Game.battle.matchFinished=true;
+    Game.battle.winner=winnerSide;
+
+    const winner=winnerSide==="player"
+        ? NEW_BATTLE.player
+        : NEW_BATTLE.cpu;
+
+    const commentary=document.getElementById("newCommentary");
+    if(commentary){
+        commentary.textContent=
+            `${winner.blade.name} wins by Spin Finish.`;
+    }
+
+    // Leave the result visible. The existing menu/navigation remains intact;
+    // no automatic page reload is used.
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
-    const dt=Math.min(0.04,Math.max(0.001,(now-NEW_BATTLE.last)/1000));
+    const dt=Math.min(0.035,Math.max(0.001,(now-NEW_BATTLE.last)/1000));
     NEW_BATTLE.last=now;
     NEW_BATTLE.elapsed+=dt;
 
-    const p=NEW_BATTLE.player;
-    const c=NEW_BATTLE.cpu;
+    try{
+        const p=NEW_BATTLE.player;
+        const c=NEW_BATTLE.cpu;
+        if(!p || !c) throw new Error("Battle state missing player or CPU.");
 
-    // Launch phase lasts long enough for the player to see the opening
-    // develop, then both Beys become fully free-moving.
-    if(NEW_BATTLE.elapsed<1.05){
-        Game.battle.phase="Launch";
-    }else if(!p.launchComplete || !c.launchComplete){
-        p.launchComplete=true;
-        c.launchComplete=true;
-        Game.battle.phase="Battle";
-    }
+        if(NEW_BATTLE.elapsed<1.05){
+            Game.battle.phase="Launch";
+        }else{
+            p.launchComplete=true;
+            c.launchComplete=true;
+            Game.battle.phase="Battle";
+        }
 
-    newPhysicsStep(p,dt);
-    newPhysicsStep(NEW_BATTLE.cpu,dt);
-    newPhysicsCollision(dt);
+        newPhysicsStep(p,dt);
+        newPhysicsStep(c,dt);
+        newPhysicsCollision(dt);
 
-    const pe=document.getElementById("newPlayerBey");
-    const ce=document.getElementById("newCpuBey");
-    if(pe){
-        pe.setAttribute("cx",50+p.x*39);
-        pe.setAttribute("cy",46+p.y*39);
-    }
-    if(ce){
-        ce.setAttribute("cx",50+c.x*39);
-        ce.setAttribute("cy",46+c.y*39);
-    }
+        const pe=document.getElementById("newPlayerBey");
+        const ce=document.getElementById("newCpuBey");
 
-    const ids=[
-        ["newPlayerRPM",p.rpm],["newCpuRPM",c.rpm],
-        ["newPlayerStability",p.stability],["newCpuStability",c.stability]
-    ];
-    ids.forEach(([id,v])=>{
-        const el=document.getElementById(id);
-        if(el) el.textContent=Math.round(v*100);
-    });
+        if(pe){
+            pe.setAttribute("cx",50+p.x*39);
+            pe.setAttribute("cy",46+p.y*39);
+        }
+        if(ce){
+            ce.setAttribute("cx",50+c.x*39);
+            ce.setAttribute("cy",46+c.y*39);
+        }
 
-    if(NEW_BATTLE.elapsed>0.35){
+        if(pe){
+            pe.setAttribute("r",p.hitFlash>0?2.55:2.35);
+        }
+        if(ce){
+            ce.setAttribute("r",c.hitFlash>0?2.55:2.35);
+        }
+        p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
+        c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
+
+        for(const [id,v] of [
+            ["newPlayerRPM",p.rpm],
+            ["newCpuRPM",c.rpm],
+            ["newPlayerStability",p.stability],
+            ["newCpuStability",c.stability]
+        ]){
+            const el=document.getElementById(id);
+            if(el) el.textContent=Math.round(v*100);
+        }
+
         const commentary=document.getElementById("newCommentary");
         if(commentary){
             const distance=Math.hypot(p.x-c.x,p.y-c.y);
             if(p.railEngaged || c.railEngaged){
-                const rider=p.railEngaged ? p : c;
-                const riderName=rider.blade.name;
-                commentary.textContent=`${riderName} catches the X Rail and starts building speed around the loop.`;
-            }else if(Game.battle.phase==="Launch"){
+                const rider=p.railEngaged?p:c;
                 commentary.textContent=
-                    distance<0.38
-                        ?"The launch lines are converging — first contact is coming."
-                        :"Both Beys are accelerating into the stadium.";
+                    `${rider.blade.name} is riding the X Rail and building speed.`;
+            }else if(p.rpm<=0.001 || c.rpm<=0.001){
+                const winner=p.rpm>c.rpm?p:c;
+                commentary.textContent=
+                    `${winner.blade.name} wins by Spin Finish.`;
+            }else if(distance<0.16){
+                commentary.textContent="Heavy contact — both Beys are fighting for position.";
+            }else if(distance<0.30){
+                commentary.textContent="The Beys are circling back toward each other.";
             }else{
-                commentary.textContent=
-                    distance<0.18
-                        ?"They're closing fast — contact is imminent."
-                        :distance<0.30
-                            ?"Both Beys are hunting for the first opening."
-                            :"The battle is underway — both Beys are carving their paths.";
+                commentary.textContent="Both Beys are moving through the stadium.";
             }
         }
+
+        if(p.rpm<=0.001 || c.rpm<=0.001){
+            finishNewBattle(p.rpm>c.rpm?"player":"cpu");
+            return;
+        }
+
+    }catch(err){
+        console.error("Spin Wars battle simulation error:",err);
+        const commentary=document.getElementById("newCommentary");
+        if(commentary){
+            commentary.textContent="Simulation error — physics loop stopped.";
+        }
+        NEW_BATTLE.active=false;
+        return;
     }
 
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
-
 function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
     // Physical path matching the visible continuous green X Rail.
-    // Path direction is clockwise for right-spin Beys.
+    // Point order is clockwise; right-spin uses the reverse direction (CCW).
     const points=[
         [-0.905,-0.01],[-0.75,-0.50],[-0.44,-0.79],[-0.133,-0.79],
         [0.00,-0.603], // top-center X Exit transition point
@@ -4445,92 +4488,288 @@ function updateNewXRailRide(s,dt){
 
 function newPhysicsStep(s,dt){
     const stats=s.stats||{};
-    const speed=Math.hypot(s.vx,s.vy);
+    const bit=BIT_PHYSICS[s.bit?.name]||BIT_PHYSICS.Point;
+    const rpm=newBattleClamp(s.rpm,0,1);
+    const rpmPct=rpm*100;
     const mobility=(stats.mobility||70)/100;
-    const friction=0.985 + mobility*0.004;
+    const centerAffinity=(bit.centerAffinity||60)/100;
+    const movement=(bit.movement||60)/100;
 
-    if(s.railExitCooldown>0) s.railExitCooldown=Math.max(0,s.railExitCooldown-dt);
+    if(s.railExitCooldown>0){
+        s.railExitCooldown=Math.max(0,s.railExitCooldown-dt);
+    }
 
-    // X Rail is now part of the actual movement loop.
-    if(updateNewXRailRide(s,dt)) return;
+    // Active X-Rail state completely owns movement while engaged.
+    if(s.railEngaged){
+        updateNewXRailRide(s,dt);
+        return;
+    }
+
+    const speed=Math.hypot(s.vx,s.vy);
+    const r=Math.hypot(s.x,s.y);
+    const invR=r>0.0001?1/r:0;
+
+    // Right spin = counter-clockwise.
+    // At the right side of the stadium this points upward; at the left side
+    // it points downward. This gives a natural circular tendency without
+    // forcing the Bey onto a perfect orbit.
+    const spinSign=s.spinDirection===-1 ? 1 : -1;
+    let tx=r>0.0001 ? (s.y*invR)*spinSign : 0;
+    let ty=r>0.0001 ? (-s.x*invR)*spinSign : 0;
+
+    // Low RPM suppresses aggressive travel. Attack Bits retain some path,
+    // while center-oriented Bits become increasingly settled.
+    const lowRpm=newBattleClamp((0.50-rpm)/0.50,0,1);
+    const attackMovement=Math.max(0,(movement-0.72)/0.28);
+    const travelFactor=
+        0.42+
+        movement*0.58+
+        attackMovement*(1-lowRpm)*0.32-
+        lowRpm*(0.34-centerAffinity*0.18);
+
+    // Precession is acceleration, not a fixed circular path.
+    const precession=
+        (0.00075+
+         movement*0.0012)*
+        newBattleClamp(travelFactor,0.18,1.25)*
+        (0.48+rpm*0.72);
+
+    s.vx+=tx*precession*dt*60;
+    s.vy+=ty*precession*dt*60;
+
+    // Stadium slope: the lower/center region becomes increasingly favored as
+    // RPM falls. This is a gentle force, not a magnetic center snap.
+    if(r>0.015){
+        const centerForce=
+            (0.00022+
+             lowRpm*0.00070+
+             centerAffinity*0.00030)*
+            (0.60+rpm*0.40);
+
+        s.vx-=s.x*centerForce*dt*60;
+        s.vy-=s.y*centerForce*dt*60;
+    }
+
+    // Tilt continues to influence the movement after launch.
+    const tilt=s.launchTilt;
+    if(tilt==="Slight Tilt"){
+        s.vx+=tx*0.00016*dt*60;
+        s.vy+=ty*0.00016*dt*60;
+    }else if(tilt==="Hard Tilt"){
+        s.vx+=tx*0.00028*dt*60;
+        s.vy+=ty*0.00028*dt*60;
+    }
+
+    // RPM-dependent damping. High-mobility Attack Bits travel more at high
+    // RPM, but everybody settles naturally as spin falls.
+    const baseDamp=
+        0.992+
+        movement*0.003+
+        rpm*0.003;
+    const damping=Math.pow(baseDamp,dt*60);
+    s.vx*=damping;
+    s.vy*=damping;
+
+    // Mild physical noise keeps movement from becoming a perfect orbit.
+    const noise=(0.00016+movement*0.00018)*(0.35+rpm*0.65);
+    s.vx+=(Math.random()-0.5)*noise*dt*60;
+    s.vy+=(Math.random()-0.5)*noise*dt*60;
 
     s.x+=s.vx*dt*60;
     s.y+=s.vy*dt*60;
 
-    s.vx*=Math.pow(friction,dt*60);
-    s.vy*=Math.pow(friction,dt*60);
-
-    // Gentle natural curvature so movement isn't a straight-line demo.
-    const curve=(stats.balance||70)/1000;
-    const turn=s.side==="player"?curve:-curve;
-    const nvx=s.vx*Math.cos(turn)-s.vy*Math.sin(turn);
-    const nvy=s.vx*Math.sin(turn)+s.vy*Math.cos(turn);
-    s.vx=nvx; s.vy=nvy;
-
-    // Try physical rail contact before applying the outer stadium boundary.
+    // Rail engagement must happen before the outer wall clamps the Bey.
     tryNewXRailEngagement(s);
+    if(s.railEngaged) return;
 
-    const railPoint=newXRailNearest(s.x,s.y);
-    const railDistance=railPoint ? Math.sqrt(railPoint.dist2) : 999;
+    // Stadium outer wall.
+    const radius=Math.hypot(s.x,s.y);
+    const wall=0.93;
 
-    // The rail sits just outside the main bowl. Do not use the old circular
-    // wall to stop a Bey before it can actually reach the rail.
-    const r=Math.hypot(s.x,s.y);
-    if(r>0.96 && railDistance>0.045){
-        const nx=s.x/r, ny=s.y/r;
-        s.x=nx*0.96; s.y=ny*0.96;
+    if(radius>wall){
+        const nx=s.x/(radius||1);
+        const ny=s.y/(radius||1);
+
+        s.x=nx*wall;
+        s.y=ny*wall;
+
         const outward=s.vx*nx+s.vy*ny;
         if(outward>0){
-            s.vx-=2*outward*nx;
-            s.vy-=2*outward*ny;
+            // High-speed wall contact retains some tangential motion but loses
+            // energy, creating an actual impact rather than a clean slide.
+            s.vx-=outward*1.72*nx;
+            s.vy-=outward*1.72*ny;
             s.vx*=0.72;
             s.vy*=0.72;
+
+            s.rpm=newBattleClamp(
+                s.rpm-(0.0015+Math.abs(outward)*0.018),
+                0,1
+            );
+            s.stability=newBattleClamp(
+                s.stability-(0.002+Math.abs(outward)*0.025),
+                0,1
+            );
         }
     }
 
+    // Every bit has its own friction/spin drain. This is what makes Orb/Ball/
+    // Needle substantially more stationary than Flat/Rush.
+    const bitDrain=bit.spinDrain||1;
+    const movementDrain=
+        (0.00012+
+         movement*0.00028+
+         speed*0.00055)*
+        bitDrain;
+
     const tiltDrain=s.launchRpmLossMultiplier||1;
     s.rpm=newBattleClamp(
-        s.rpm-(0.00042+speed*0.0012)*tiltDrain*dt*60,
+        s.rpm-movementDrain*tiltDrain*dt*60,
         0,1
     );
+
+    // Stability recovers naturally at healthy RPM and degrades with speed,
+    // tilt, impacts and low RPM.
+    const recovery=(bit.recovery||60)/100;
+    const stabilityRecovery=
+        0.00034*recovery*rpm*dt*60;
+    const stabilityLoss=
+        (0.00010+
+         speed*0.0014+
+         lowRpm*0.00035)*
+        tiltDrain*dt*60;
+
     s.stability=newBattleClamp(
-        s.stability-
-        (((1-s.rpm)*0.0008+speed*0.002)*tiltDrain)*dt*60,
+        s.stability+stabilityRecovery-stabilityLoss,
         0,1
     );
 }
-
 function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
+    if(!p||!c||p.railEngaged||c.railEngaged) return;
+
     const dx=c.x-p.x, dy=c.y-p.y;
     const dist=Math.hypot(dx,dy);
     const minDist=p.radius+c.radius;
 
-    if(dist<=minDist && dist>0.0001){
-        const nx=dx/dist, ny=dy/dist;
-        const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
-        const closing=rvx*nx+rvy*ny;
+    if(dist>minDist || dist<0.0001) return;
 
-        if(closing<0){
-            const impulse=-closing*0.72;
-            p.vx-=nx*impulse;
-            p.vy-=ny*impulse;
-            c.vx+=nx*impulse;
-            c.vy+=ny*impulse;
+    const nx=dx/dist, ny=dy/dist;
+    const tx=-ny, ty=nx;
+    const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
+    const closing=rvx*nx+rvy*ny;
 
-            const separation=minDist-dist;
-            p.x-=nx*separation*.5;
-            p.y-=ny*separation*.5;
-            c.x+=nx*separation*.5;
-            c.y+=ny*separation*.5;
+    // Only solve impacts when the Beys are actually moving into one another.
+    if(closing>=0) return;
 
-            p.stability=newBattleClamp(p.stability-0.015,0,1);
-            c.stability=newBattleClamp(c.stability-0.015,0,1);
-            p.rpm=newBattleClamp(p.rpm-0.006,0,1);
-            c.rpm=newBattleClamp(c.rpm-0.006,0,1);
-        }
-    }
+    const pBit=BIT_PHYSICS[p.bit?.name]||BIT_PHYSICS.Point;
+    const cBit=BIT_PHYSICS[c.bit?.name]||BIT_PHYSICS.Point;
+
+    const pAttack=(p.stats.attack||70)/99;
+    const cAttack=(c.stats.attack||70)/99;
+    const pKB=(p.stats.knockback||70)/99;
+    const cKB=(c.stats.knockback||70)/99;
+    const pDef=(p.stats.defense||70)/99;
+    const cDef=(c.stats.defense||70)/99;
+
+    const impactSpeed=Math.abs(closing);
+    const tangentRelative=rvx*tx+rvy*ty;
+    const totalRelative=Math.hypot(rvx,rvy)||0.001;
+    const directness=newBattleClamp(
+        impactSpeed/totalRelative,0,1
+    );
+
+    // Momentum + stats determine force. Contact angle and a small physical
+    // variance make identical Beys capable of producing different hits.
+    const pMomentum=impactSpeed*(0.55+pKB*0.85)*(0.70+pAttack*0.30);
+    const cMomentum=impactSpeed*(0.55+cKB*0.85)*(0.70+cAttack*0.30);
+    const momentumFactor=newBattleClamp(impactSpeed/0.035,0,2.4);
+    const variance=0.92+Math.random()*0.16;
+
+    const pForce=
+        pMomentum*
+        (0.72+directness*0.28)*
+        (0.65+momentumFactor*0.42)*
+        variance;
+
+    const cForce=
+        cMomentum*
+        (0.72+directness*0.28)*
+        (0.65+momentumFactor*0.42)*
+        variance;
+
+    const pImpulse=
+        (pForce/(0.72+cDef*0.55))*
+        (1.0-0.12*pDef);
+
+    const cImpulse=
+        (cForce/(0.72+pDef*0.55))*
+        (1.0-0.12*cDef);
+
+    // Even at low RPM, contact produces a visible shove.
+    const lowRpmShove=
+        (p.rpm<0.50||c.rpm<0.50)
+            ? 0.0022+0.0025*(1-Math.min(p.rpm,c.rpm)*2)
+            : 0;
+
+    p.vx-=nx*(pImpulse+lowRpmShove);
+    p.vy-=ny*(pImpulse+lowRpmShove);
+    c.vx+=nx*(cImpulse+lowRpmShove);
+    c.vy+=ny*(cImpulse+lowRpmShove);
+
+    // Recoil / glancing contact changes the exit angle.
+    const tangentKick=
+        (0.0009+
+         impactSpeed*0.010+
+         Math.abs(tangentRelative)*0.0028)*
+        (0.60+momentumFactor*0.22);
+
+    p.vx+=tx*tangentKick;
+    p.vy+=ty*tangentKick;
+    c.vx-=tx*tangentKick;
+    c.vy-=ty*tangentKick;
+
+    // Separate the bodies so they cannot remain glued together.
+    const separation=minDist-dist;
+    p.x-=nx*(separation*0.54+0.002);
+    p.y-=ny*(separation*0.54+0.002);
+    c.x+=nx*(separation*0.54+0.002);
+    c.y+=ny*(separation*0.54+0.002);
+
+    const pDamage=
+        0.0022+
+        impactSpeed*0.020+
+        pForce*0.010+
+        Math.pow(momentumFactor,2)*0.0009;
+
+    const cDamage=
+        0.0022+
+        impactSpeed*0.020+
+        cForce*0.010+
+        Math.pow(momentumFactor,2)*0.0009;
+
+    // Higher attack transfers more RPM loss; defense reduces incoming damage.
+    p.rpm=newBattleClamp(
+        p.rpm-pDamage*(0.82+cAttack*0.22)*(1-pDef*0.24),
+        0,1
+    );
+    c.rpm=newBattleClamp(
+        c.rpm-cDamage*(0.82+pAttack*0.22)*(1-cDef*0.24),
+        0,1
+    );
+
+    p.stability=newBattleClamp(
+        p.stability-(0.004+impactSpeed*0.055)*(1-pDef*0.30),
+        0,1
+    );
+    c.stability=newBattleClamp(
+        c.stability-(0.004+impactSpeed*0.055)*(1-cDef*0.30),
+        0,1
+    );
+
+    p.hitFlash=0.08;
+    c.hitFlash=0.08;
 }
 
 // Launch angle and technique are selected on the stadium setup view.
