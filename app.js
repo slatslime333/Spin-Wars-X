@@ -3723,7 +3723,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRevealStarted=0;
                     showLetItRip();
                 }
-            },2000);
+            },1000);
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
@@ -3996,7 +3996,13 @@ function newBattleLaunchState(side){
     }
 
     const isDropLaunch=plan.technique==="Drop Launch";
-    const sideSign=side==="player"?1:-1;
+
+    // Player launches from the left side; CPU launches from the right.
+    // Keep spawn side separate from travel direction so rail/exit launches
+    // cannot accidentally mirror onto the opponent's side.
+    const sideXSign=side==="player"?-1:1;
+    const launchDirection=side==="player"?1:-1;
+
     const isXRailLaunch=plan.technique==="X-Rail";
 
     /*
@@ -4005,16 +4011,20 @@ function newBattleLaunchState(side){
       physical rail-capture test decide whether the Bey actually latches.
     */
     const startX=isDropLaunch
-        ? 0
+        ? sideXSign*(0.12 + placementJitter*0.18)
         : isXRailLaunch
-            ? sideSign*(0.78 + placementJitter*0.10)
-            : sideSign*(-0.70 + placementJitter*0.18);
+            ? sideXSign*(0.78 + placementJitter*0.10)
+            : sideXSign*(0.70 + placementJitter*0.18);
+
+    // X Exit is at the top of the stadium. Drop Launch begins below it,
+    // offset toward the launching player's side.
     const startY=isDropLaunch
-        ? -0.47 + placementJitter*0.30
+        ? -0.44 + placementJitter*0.20
         : isXRailLaunch
             ? 0.49 + placementJitter*0.10
             : placementJitter;
-    const direction=isDropLaunch ? 0 : sideSign;
+
+    const direction=isDropLaunch ? 0 : launchDirection;
 
     // Launch angle is a real release vector:
     // Flat = forward/stable
@@ -4034,7 +4044,7 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.019+(stats.mobility||70)*0.000045)*
+        (0.0225+(stats.mobility||70)*0.000055)*
         qualityFactor*techniqueSpeed*tilt.speed;
 
     const tiltSign=side==="player"?-1:1;
@@ -4042,7 +4052,7 @@ function newBattleLaunchState(side){
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
     if(isXRailLaunch){
-        const railTarget=newXRailNearest(sideSign*0.82,0.48);
+        const railTarget=newXRailNearest(sideXSign*0.82,0.48);
         const dx=railTarget.x-startX;
         const dy=railTarget.y-startY;
         const d=Math.hypot(dx,dy)||1;
@@ -4062,14 +4072,21 @@ function newBattleLaunchState(side){
     }
 
     if(plan.technique==="Drop Launch"){
+        // Start suspended near the player's side of the X Exit. The actual
+        // downward release is handled by the physics step after the stall.
         vx=0;
-        // Drop launch releases just below the X Exit and falls into the bowl.
-        vy=0.0145*qualityFactor;
+        vy=0;
     }
 
     const tiltStall=
-        plan.angle==="Slight Tilt" ? 0.18 :
-        plan.angle==="Hard Tilt" ? 0.30 : 0;
+        plan.angle==="Slight Tilt" ? 0.22 :
+        plan.angle==="Hard Tilt" ? 0.28 : 0;
+
+    const dropStallDuration=
+        plan.technique==="Drop Launch"
+            ? (plan.angle==="Hard Tilt" ? 0.34 :
+               plan.angle==="Slight Tilt" ? 0.28 : 0.24)
+            : 0;
 
     return {
         side,x:startX,y:startY,vx,vy,rpm:qualityRPM,
@@ -4078,7 +4095,7 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.108,
+        radius:0.124,
         // Physical mass is based on the actual blade weight. It is used for
         // collision energy; it does not replace Attack/Knockback stats.
         mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
@@ -4090,9 +4107,10 @@ function newBattleLaunchState(side){
         launchPlacementError:qualityPlacement,
         launchRpmLossMultiplier:tilt.rpm,
         launchTilt:plan.angle,
-        launchStall:tiltStall,
+        launchStall:dropStallDuration,
         launchStallElapsed:0,
         launchDropActive:plan.technique==="Drop Launch",
+        launchDropReleased:false,
         launchDropElapsed:0,
         launchComplete:false,
 
@@ -4291,9 +4309,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.15"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.15"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -5317,6 +5335,43 @@ function newPhysicsStep(s,dt){
         const bitStability=(bp.stability||60)/100;
 
         /*
+          DROP LAUNCH:
+          Hold the Bey near the player's side of the X Exit, then release it
+          after a short stall. This prevents the old "spawn and immediately
+          fly straight to the bottom" behavior.
+        */
+        if(s.launchDropActive && !s.launchDropReleased){
+            s.launchStallElapsed=(s.launchStallElapsed||0)+dt;
+
+            if(s.launchStallElapsed < (s.launchStall||0.24)){
+                s.vx=0;
+                s.vy=0;
+                s.tiltLevel=newBattleClamp(
+                    (s.launchTilt==="Hard Tilt" ? 0.22 :
+                     s.launchTilt==="Slight Tilt" ? 0.15 : 0.08),
+                    0.02,0.94
+                );
+                return;
+            }
+
+            const dropSide=s.side==="player" ? -1 : 1;
+            const dropTilt=
+                s.launchTilt==="Hard Tilt" ? 0.24 :
+                s.launchTilt==="Slight Tilt" ? 0.14 : 0.08;
+
+            s.vx=
+                dropSide*
+                dropTilt*
+                (0.012+0.003*qualityFactor);
+
+            s.vy=
+                (0.0155+0.0025*qualityFactor)*
+                (s.launchTilt==="Hard Tilt" ? 0.92 : 1.0);
+
+            s.launchDropReleased=true;
+        }
+
+        /*
           Core movement model:
           RPM supplies available spin energy, while the launch supplies
           translational momentum. They are related, but not identical.
@@ -5332,12 +5387,12 @@ function newPhysicsStep(s,dt){
 
         const physicalSpeedTarget=
             launchMobility*
-            (0.72+0.28*bitAcceleration)*
+            (0.84+0.28*bitAcceleration)*
             rpmSpeedFactor*
-            (0.78+0.22*bitStability)*
+            (0.82+0.22*bitStability)*
             (attackBit
-                ? 1.08+0.12*attackStat+0.07*Math.pow(rpm,0.70)
-                : 0.94+0.05*attackStat);
+                ? 1.12+0.14*attackStat+0.08*Math.pow(rpm,0.70)
+                : 0.99+0.06*attackStat);
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
@@ -5508,7 +5563,7 @@ function newPhysicsStep(s,dt){
 
                     if(
                         d>0.14 &&
-                        d<0.43 &&
+                        d<(bothNonAttack ? 0.58 : 0.43) &&
                         s.rpm>0.20 &&
                         opponent.rpm>0.05
                     ){
@@ -5571,7 +5626,7 @@ function newPhysicsStep(s,dt){
                             );
 
                         const threshold=
-                            bothNonAttack ? 0.59 : 0.47;
+                            bothNonAttack ? 0.53 : 0.47;
 
                         if(readiness>threshold){
 
@@ -5588,7 +5643,7 @@ function newPhysicsStep(s,dt){
                                 base*
                                 distanceFactor*
                                 (0.72+0.28*s.rpm)*
-                                (bothNonAttack?1.30:1.0);
+                                (bothNonAttack?1.58:1.0);
 
                             /*
                               Mostly crossing force, with a smaller inward
@@ -5697,6 +5752,11 @@ function newPhysicsStep(s,dt){
                     ? newBattleClamp((rpm-0.22)/0.38,0,1)
                     : 1;
 
+            const nonAttackMovementScale=
+                attackBit
+                    ? 1.0
+                    : (0.56+0.44*(1-centerAffinity));
+
             const lateralStrength=
                 (0.00014+movement*0.00042)*
                 Math.pow(rpm,1.02)*
@@ -5704,6 +5764,7 @@ function newPhysicsStep(s,dt){
                 (0.76+0.24*attackStat)*
                 (0.72+0.38*bitPrecession)*
                 (0.72+0.28*s.movementEnergy)*
+                nonAttackMovementScale*
                 (attackBit
                     ? (0.68+0.82*lowRpmAttackSuppression)
                     : 0.96);
@@ -5758,6 +5819,22 @@ function newPhysicsStep(s,dt){
                 crossY*
                 Math.sin(s.motionPhase2*1.17)*
                 driftForce*dt*60;
+        }
+
+        /*
+          NON-ATTACK CENTER EQUALIZATION:
+          Stamina/Defense/Balance Bits should naturally settle toward the
+          central battle area. This is a continuous force, not a hard target
+          and not a teleport, so they can still drift and collide naturally.
+        */
+        if(!attackBit && r>0.08 && rpm>0.12){
+            const centerStrength=
+                (0.00034+centerAffinity*0.00062)*
+                (0.62+0.38*rpm)*
+                (0.78+0.22*s.movementEnergy);
+
+            s.vx-=s.x*centerStrength*dt*60;
+            s.vy-=s.y*centerStrength*dt*60;
         }
 
         /*
@@ -6310,6 +6387,20 @@ function newPhysicsCollision(dt){
         (0.86+heavyFactor*0.44)*
         hitRoll;
 
+    const pNonAttackType=
+        !["Flat","Rush","Low Flat","Low Rush","Kick","Quake"]
+            .includes(p.bit?.name);
+
+    const cNonAttackType=
+        !["Flat","Rush","Low Flat","Low Rush","Kick","Quake"]
+            .includes(c.bit?.name);
+
+    const bothNonAttackCollision=
+        pNonAttackType && cNonAttackType;
+
+    const nonAttackImpactMultiplier=
+        bothNonAttackCollision ? 1.14 : 1.0;
+
     // Rail riding is not immunity. A genuinely heavy collision can break the
     // rider's grip and send it back into normal stadium physics.
     const pRailBreakForce=cForce;
@@ -6322,13 +6413,13 @@ function newPhysicsCollision(dt){
     const pKnockback=
         Math.max(
             0.0040+contactEnergy*0.095,
-            pForce*(1.08-cDef*0.26)
+            pForce*nonAttackImpactMultiplier*(1.08-cDef*0.26)
         );
 
     const cKnockback=
         Math.max(
             0.0040+contactEnergy*0.095,
-            cForce*(1.08-pDef*0.26)
+            cForce*nonAttackImpactMultiplier*(1.08-pDef*0.26)
         );
 
     // Opponent displacement.
@@ -6404,8 +6495,12 @@ function newPhysicsCollision(dt){
         effectiveImpact*0.041+
         Math.pow(momentumFactor,1.42)*0.0018;
 
+    const nonAttackRPMMultiplier=
+        (pNonAttackType && cNonAttackType) ? 1.28 : 1.0;
+
     const pToCDamage=
         baseRPMDamage*
+        nonAttackRPMMultiplier*
         (0.82+pAttack*0.58)*
         (0.72+pRPM*0.42)*
         (0.82+newBattleClamp(pMomentum/0.035,0,2.2)*0.22)*
@@ -6413,6 +6508,7 @@ function newPhysicsCollision(dt){
 
     const cToPDamage=
         baseRPMDamage*
+        nonAttackRPMMultiplier*
         (0.82+cAttack*0.58)*
         (0.72+cRPM*0.42)*
         (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
@@ -6430,8 +6526,8 @@ function newPhysicsCollision(dt){
 
     const centerCombatQuality=
         bothNonAttackBits
-            ? 1.28+
-              ((pAttack+pKB+cAttack+cKB)/396)*0.68
+            ? 1.38+
+              ((pAttack+pKB+cAttack+cKB)/396)*0.74
             : 1.0;
 
     if(bothNonAttackBits){
