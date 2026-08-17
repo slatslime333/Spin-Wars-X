@@ -4492,16 +4492,43 @@ function newBattleFrame(now){
         return;
     }
 
-    // Low RPM begins reducing aggressive travel at 50%. It should settle,
-    // but never become a frozen object while another Bey is still making
-    // contact with it.
+    // Low RPM reduces aggressive travel beginning at 50%, but the Bey must
+    // still behave like a spinning top. We damp speed, not movement itself.
+    // A small residual spin/precession force keeps late-battle center fights
+    // alive instead of freezing both Beys in place.
     [p,c].forEach(s=>{
         const lowRpm=Math.max(0,0.50-s.rpm)/0.50;
         if(lowRpm>0){
-            const damp=1-lowRpm*0.045;
+            const damp=1-lowRpm*0.030;
             s.vx*=damp;
             s.vy*=damp;
+
+            const dist=Math.hypot(s.x,s.y);
+            const len=Math.max(dist,0.001);
+            const rx=s.x/len, ry=s.y/len;
+            const right=(s.launchSpinDirection||"Right").toLowerCase()!=="left";
+
+            // Never reverse spin direction. This is a weak late-RPM
+            // precession force, not a circular rail/orbit.
+            let tx=right ? ry : -ry;
+            let ty=right ? -rx : rx;
+
+            if(dist<0.08){
+                const v=Math.hypot(s.vx,s.vy);
+                if(v>0.001){
+                    tx=s.vx/v;
+                    ty=s.vy/v;
+                }
+            }
+
+            const lateSpin=
+                (0.00010+lowRpm*0.00018)*
+                (s.bit?.movement<30 ? 0.45 : 1);
+
+            s.vx+=tx*lateSpin*dt*60;
+            s.vy+=ty*lateSpin*dt*60;
         }
+
         s.hitFlash=Math.max(0,(s.hitFlash||0)-dt);
     });
 
@@ -4512,7 +4539,7 @@ function newBattleFrame(now){
         if(!el) return;
         let shakeX=0,shakeY=0;
         if(s.hitFlash>0){
-            const mag=(s.hitFlash/0.16)*0.24;
+            const mag=(s.hitFlash/0.12)*0.12;
             shakeX=(Math.random()-0.5)*mag;
             shakeY=(Math.random()-0.5)*mag;
         }
@@ -4547,10 +4574,10 @@ function newBattleFrame(now){
             impactFx.setAttribute("cx",50+i.x*39);
             impactFx.setAttribute("cy",46+i.y*39);
             impactFx.setAttribute(
-                "r",String(1.4+progress*3.2*i.level)
+                "r",String(1.15+progress*2.4*i.level)
             );
             impactFx.setAttribute(
-                "stroke-width",String(0.85*(1-progress)+0.25)
+                "stroke-width",String(0.60*(1-progress)+0.20)
             );
             impactFx.setAttribute(
                 "stroke",`rgba(255,255,255,${1-progress})`
@@ -5017,17 +5044,36 @@ function newPhysicsCollision(dt){
             const momentumFactor=
                 newBattleClamp(impactSpeed/0.060,0,2.25);
 
+            // Contact angle matters. A straight, centered collision
+            // transfers much more energy than a glancing scrape.
+            const tangentX=-ny;
+            const tangentY=nx;
+            const tangentRelative=Math.abs(rvx*tangentX+rvy*tangentY);
+            const totalRelative=Math.max(0.0001,Math.hypot(rvx,rvy));
+            const directness=newBattleClamp(
+                impactSpeed/totalRelative,0,1
+            );
+
+            // Small physical variation prevents every collision from feeling
+            // identical while the momentum calculation remains deterministic
+            // enough to be explainable.
+            const contactVariance=0.92+Math.random()*0.16;
+
             const pForce=
                 impactSpeed*
-                (0.55+pKB*1.20)*
-                (0.65+pAttack*0.35)*
-                (0.65+momentumFactor*0.70);
+                (0.50+pKB*1.28)*
+                (0.62+pAttack*0.38)*
+                (0.58+momentumFactor*0.78)*
+                (0.72+directness*0.28)*
+                contactVariance;
 
             const cForce=
                 impactSpeed*
-                (0.55+cKB*1.20)*
-                (0.65+cAttack*0.35)*
-                (0.65+momentumFactor*0.70);
+                (0.50+cKB*1.28)*
+                (0.62+cAttack*0.38)*
+                (0.58+momentumFactor*0.78)*
+                (0.72+directness*0.28)*
+                contactVariance;
 
             // Defender resistance reduces incoming knockback.
             const pResistance=0.62+pDef*0.38;
@@ -5049,6 +5095,22 @@ function newPhysicsCollision(dt){
             c.vx+=nx*(cImpulse+lowRpmContact);
             c.vy+=ny*(cImpulse+lowRpmContact);
 
+            // Recoil / glancing-contact component. The harder the hit, the
+            // more the Bey can leave the collision at a different angle.
+            const angleKick=
+                (0.0010+
+                 impactSpeed*0.010+
+                 tangentRelative*0.0025)*
+                (0.55+momentumFactor*0.30);
+
+            const recoilBias=
+                ((p.balance||70)-70)/100*0.002;
+
+            p.vx+=tangentX*(angleKick+recoilBias);
+            p.vy+=tangentY*(angleKick+recoilBias);
+            c.vx-=tangentX*(angleKick-recoilBias);
+            c.vy-=tangentY*(angleKick-recoilBias);
+
             // Separate them decisively so they don't overlap and repeatedly
             // exchange tiny impulses.
             const separation=Math.max(0,minDist-dist);
@@ -5068,7 +5130,8 @@ function newPhysicsCollision(dt){
             const separationPush=
                 separation+
                 0.018+
-                impactSpeed*0.10*hitMultiplier;
+                impactSpeed*0.10*hitMultiplier+
+                Math.pow(impactSpeed/0.060,2)*0.018;
 
             p.x-=nx*separationPush*0.55;
             p.y-=ny*separationPush*0.55;
@@ -5077,16 +5140,18 @@ function newPhysicsCollision(dt){
 
             // Impact has a visible game-state consequence.
             const pDamage=
-                (0.0035+
-                 impactSpeed*0.018+
-                 cForce*0.006)*
-                (0.75+cAttack*0.25);
+                (0.0028+
+                 impactSpeed*0.016+
+                 cForce*0.007+
+                 Math.pow(momentumFactor,2)*0.0018)*
+                (0.72+cAttack*0.28);
 
             const cDamage=
-                (0.0035+
-                 impactSpeed*0.018+
-                 pForce*0.006)*
-                (0.75+pAttack*0.25);
+                (0.0028+
+                 impactSpeed*0.016+
+                 pForce*0.007+
+                 Math.pow(momentumFactor,2)*0.0018)*
+                (0.72+pAttack*0.28);
 
             p.rpm=newBattleClamp(p.rpm-pDamage,0,1);
             c.rpm=newBattleClamp(c.rpm-cDamage,0,1);
@@ -5128,7 +5193,7 @@ function newPhysicsCollision(dt){
                 y:hitY,
                 level:impactLevel,
                 age:0,
-                duration:0.22,
+                duration:0.16,
                 tier:hitTier
             };
 
