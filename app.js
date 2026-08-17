@@ -4361,7 +4361,7 @@ function bounceOffRail(s,nearest){
 
         // Low-friction attack tips lose more speed on a bad rail hit.
         const restitution =
-            clamp(
+            newBattleClamp(
                 0.20 +
                 balance*0.16 +
                 control*0.10,
@@ -4375,7 +4375,7 @@ function bounceOffRail(s,nearest){
 
         // Tangential friction at the rail contact.
         const tangentDamp =
-            clamp(
+            newBattleClamp(
                 0.78 +
                 control*0.10,
                 0.74,
@@ -4402,13 +4402,13 @@ function bounceOffRail(s,nearest){
 
         const impactSpeed = Math.abs(outward);
 
-        s.rpm = clamp(
+        s.rpm = newBattleClamp(
             s.rpm -
             (0.0015 + impactSpeed*0.020),
             0,1
         );
 
-        s.stability = clamp(
+        s.stability = newBattleClamp(
             s.stability -
             (0.003 + impactSpeed*0.035),
             0,1
@@ -4490,12 +4490,12 @@ function tryNewXRailEngagement(s){
           Speed matters, but more speed does NOT guarantee capture.
           Extremely fast square impacts are more likely to bounce.
         */
-        const speedFactor = clamp(
+        const speedFactor = newBattleClamp(
             (speed-0.010)/0.040,
             0,1
         );
 
-        const angleFactor = clamp(
+        const angleFactor = newBattleClamp(
             (tangentRatio-minTangentRatio) /
             Math.max(0.01,1-minTangentRatio),
             0,1
@@ -4520,7 +4520,7 @@ function tryNewXRailEngagement(s){
             (0.035 + (1-control)*0.025);
 
         const captureThreshold =
-            clamp(captureScore + variance,0,1);
+            newBattleClamp(captureScore + variance,0,1);
 
         if(captureThreshold < 0.50){
             return false;
@@ -4546,7 +4546,7 @@ function tryNewXRailEngagement(s){
           The Bey enters with its existing physical speed. The rail can
           accelerate it after capture.
         */
-        s.railSpeed = clamp(
+        s.railSpeed = newBattleClamp(
             speed * (
                 1.00 +
                 movement*0.10 +
@@ -4583,9 +4583,9 @@ function newXRailExit(s){
             );
 
         const bp = bitPhysics(s);
-        const rpm = clamp(s.rpm,0,1);
+        const rpm = newBattleClamp(s.rpm,0,1);
 
-        const exitSpeed = clamp(
+        const exitSpeed = newBattleClamp(
             s.railSpeed *
             (
                 0.92 +
@@ -4605,7 +4605,7 @@ function newXRailExit(s){
           a modest tangent component from the rail.
         */
         const tangentCarry =
-            clamp(
+            newBattleClamp(
                 0.08 +
                 (bp.control||60)/100*0.06,
                 0.08,
@@ -4645,7 +4645,7 @@ function newXRailExit(s){
             tangentY*exitSpeed*tangentCarry;
 
         // Exit costs spin because the rail ride transferred energy into speed.
-        s.rpm = clamp(
+        s.rpm = newBattleClamp(
             s.rpm -
             (
                 0.018 +
@@ -4654,7 +4654,7 @@ function newXRailExit(s){
             0,1
         );
 
-        s.stability = clamp(
+        s.stability = newBattleClamp(
             s.stability -
             0.012,
             0,1
@@ -4676,7 +4676,7 @@ function updateNewXRailRide(s,dt){
         const movement = (bp.movement || 60)/100;
         const affinity = (bp.xRailAffinity || 50)/100;
 
-        const rpm = clamp(s.rpm,0,1);
+        const rpm = newBattleClamp(s.rpm,0,1);
         const previousDistance = s.railDistance;
 
         s.railRideTime += dt;
@@ -4697,7 +4697,7 @@ function updateNewXRailRide(s,dt){
             0.0014 +
             (1-rpm)*0.0018;
 
-        s.railSpeed = clamp(
+        s.railSpeed = newBattleClamp(
             s.railSpeed +
             (acceleration-railDrag)*dt*60,
             0.012,
@@ -4737,9 +4737,9 @@ function updateNewXRailRide(s,dt){
             ) *
             dt;
 
-        s.rpm = clamp(s.rpm-drain,0,1);
+        s.rpm = newBattleClamp(s.rpm-drain,0,1);
 
-        s.stability = clamp(
+        s.stability = newBattleClamp(
             s.stability -
             (
                 0.0015 +
@@ -4829,7 +4829,7 @@ function newPhysicsStep(s,dt){
         const stats = s.stats || {};
         const bp = bitPhysics(s);
 
-        const rpm = clamp(s.rpm,0,1);
+        const rpm = newBattleClamp(s.rpm,0,1);
         const mobility = (stats.mobility||70)/100;
         const balance = (stats.balance||70)/99;
         const control = (bp.control||60)/100;
@@ -4924,7 +4924,7 @@ function newPhysicsStep(s,dt){
                 s.y = exitPoint.y+0.040;
                 s.vy = -s.vy*0.22;
                 s.surfaceRecovery = 0.14;
-                s.rpm = clamp(s.rpm-0.0015,0,1);
+                s.rpm = newBattleClamp(s.rpm-0.0015,0,1);
             }
         }
 
@@ -5001,7 +5001,7 @@ function newPhysicsStep(s,dt){
             0.004*rpm;
 
         const friction =
-            clamp(
+            newBattleClamp(
                 baseFriction+rpmFrictionBonus,
                 0.972,
                 0.992
@@ -5021,7 +5021,7 @@ function newPhysicsStep(s,dt){
           direction. No reverse-spin behavior is possible.
         */
         const lowRpm =
-            clamp((0.48-rpm)/0.48,0,1);
+            newBattleClamp((0.48-rpm)/0.48,0,1);
 
         if(lowRpm>0){
 
@@ -5121,7 +5121,7 @@ function newPhysicsStep(s,dt){
                   - create a recovery state
                 */
                 const restitution =
-                    clamp(
+                    newBattleClamp(
                         0.16+
                         balance*0.16+
                         control*0.08,
@@ -5130,7 +5130,7 @@ function newPhysicsStep(s,dt){
                     );
 
                 const tangentRetention =
-                    clamp(
+                    newBattleClamp(
                         0.52+
                         control*0.16,
                         0.52,
@@ -5150,14 +5150,14 @@ function newPhysicsStep(s,dt){
 
                 s.surfaceRecovery=0.20;
 
-                s.rpm=clamp(
+                s.rpm=newBattleClamp(
                     s.rpm-
                     (0.002+
                      outward*0.025),
                     0,1
                 );
 
-                s.stability=clamp(
+                s.stability=newBattleClamp(
                     s.stability-
                     (0.004+
                      outward*0.040),
@@ -5189,7 +5189,7 @@ function newPhysicsStep(s,dt){
             s.launchRpmLossMultiplier||1;
 
         s.rpm =
-            clamp(
+            newBattleClamp(
                 s.rpm-
                 movementDrain*
                 tiltDrain*
@@ -5206,7 +5206,7 @@ function newPhysicsStep(s,dt){
             (bp.recovery||60)/100;
 
         s.stability =
-            clamp(
+            newBattleClamp(
                 s.stability+
                 0.00024*
                 recovery*
