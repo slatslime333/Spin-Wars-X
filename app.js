@@ -2561,6 +2561,57 @@ function clamp(value){
 }
 
 //=========================
+// BATTLE VALUE / LAUNCH QUALITY HELPERS
+//=========================
+
+function clampBattleValue(value,min=0,max=100){
+    return Math.max(min,Math.min(max,value));
+}
+
+function calculateLaunchQuality(side,angle,technique){
+    const s=Game[side];
+    if(!s?.blade || !s?.ratchet || !s?.bit) return "Okay";
+
+    const combo=calculateComboStats(s.blade,s.ratchet,s.bit);
+    const personality=s.blade.personality||{
+        aggression:50,control:50,consistency:50,risk:50
+    };
+
+    const angleBonus={
+        "Flat":0,
+        "Slight Tilt":4,
+        "Hard Tilt":-3
+    }[angle] ?? 0;
+
+    const techniqueBonus={
+        "Center":3,
+        "X-Rail":0,
+        "Direct Clash":-2,
+        "Drop Launch":1,
+        "Wide Circle":0
+    }[technique] ?? 0;
+
+    const score=clampBattleValue(
+        (combo.stats.balance||70)*0.28 +
+        (combo.stats.mobility||70)*0.16 +
+        (combo.stats.stamina||70)*0.12 +
+        (personality.consistency||50)*0.34 +
+        (personality.control||50)*0.10 +
+        angleBonus +
+        techniqueBonus +
+        (Math.random()*12-6),
+        0,100
+    );
+
+    if(score>=92) return "Perfect";
+    if(score>=82) return "Good";
+    if(score>=68) return "Okay";
+    if(score>=55) return "Bad";
+    return "Horrible";
+}
+
+
+//=========================
 // REAL COMBO SYNERGY
 //=========================
 
