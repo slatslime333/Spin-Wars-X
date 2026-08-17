@@ -3667,6 +3667,10 @@ function showLetItRip(){
     // Quality is selected once, then the user moves to angle/technique.
     const stage=Game.player.launch.setupStage || "quality";
 
+    if(stage==="quality" && !Game.player.launch.fixedQualityPreview){
+        Game.player.launch.fixedQualityPreview=rollRandomLaunchQuality();
+    }
+
     Game.cpu.launch=getAutomaticLaunchPlan("cpu");
     rollLaunchQuality("cpu");
 
@@ -3735,7 +3739,7 @@ function showLetItRip(){
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <button class="menu-btn silver" id="fixedQualityBtn" type="button">
-                FIXED QUALITY
+                ${Game.player.launch.fixedQualityPreview || "Okay"}
               </button>
               <button class="menu-btn gold" id="rollQualityBtn" type="button">
                 ROLL QUALITY
@@ -3743,7 +3747,7 @@ function showLetItRip(){
             </div>
 
             <div style="font-size:11px;opacity:.60;text-align:center;margin-top:8px;">
-              Fixed = random quality locked in · Roll = random quality revealed now
+              Left = shown quality · Roll = random quality
             </div>
 
             <div style="display:flex;gap:8px;margin-top:9px;">
@@ -3803,7 +3807,10 @@ function showLetItRip(){
 
     if(stage==="quality"){
         document.getElementById("fixedQualityBtn").onclick=()=>{
-            setFixedLaunchQuality("player");
+            Game.player.launch.quality=
+                Game.player.launch.fixedQualityPreview ||
+                rollRandomLaunchQuality();
+            Game.player.launch.qualityMode="Fixed";
             Game.player.launch.setupStage="qualityReveal";
             showLetItRip();
         };
@@ -4002,12 +4009,12 @@ function newBattleLaunchState(side){
     const startX=isDropLaunch
         ? 0
         : isXRailLaunch
-            ? sideSign*0.66 + placementJitter*0.10
+            ? sideSign*(0.78 + placementJitter*0.10)
             : sideSign*(-0.70 + placementJitter*0.18);
     const startY=isDropLaunch
         ? -0.47 + placementJitter*0.30
         : isXRailLaunch
-            ? -0.36 + placementJitter*0.16
+            ? 0.49 + placementJitter*0.10
             : placementJitter;
     const direction=isDropLaunch ? 0 : sideSign;
 
@@ -4037,17 +4044,23 @@ function newBattleLaunchState(side){
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
     if(isXRailLaunch){
-        const railAimX=-sideSign*0.085;
-        const railAimY=-0.014;
-        const aimLen=Math.hypot(railAimX,railAimY)||1;
+        const railTarget=newXRailNearest(sideSign*0.82,0.48);
+        const dx=railTarget.x-startX;
+        const dy=railTarget.y-startY;
+        const d=Math.hypot(dx,dy)||1;
 
-        vx=railAimX/aimLen*launchSpeed*1.04;
-        vy=railAimY/aimLen*launchSpeed*1.04;
+        const inwardX=dx/d;
+        const inwardY=dy/d;
+        const spinDirection=combo.blade?.spin==="Left" ? 1 : -1;
+        const railTangentX=railTarget.tx*spinDirection;
+        const railTangentY=railTarget.ty*spinDirection;
 
-        // The launch technique adds a little lateral commitment; the rail
-        // still has to be physically captured rather than being guaranteed.
-        vx+=sideSign*0.0020;
-        vy-=0.0015;
+        const tangentWeight=0.72;
+        const approachWeight=0.28;
+        const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
+
+        vx=(railTangentX*tangentWeight+inwardX*approachWeight)*railLaunchSpeed;
+        vy=(railTangentY*tangentWeight+inwardY*approachWeight)*railLaunchSpeed;
     }
 
     if(plan.technique==="Drop Launch"){
@@ -4067,7 +4080,7 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.096,
+        radius:0.108,
         // Physical mass is based on the actual blade weight. It is used for
         // collision energy; it does not replace Attack/Knockback stats.
         mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
@@ -4274,9 +4287,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="3.65"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.15"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="3.65"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.15"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4403,6 +4416,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.setupStage="quality";
         Game.player.launch.quality=null;
         Game.player.launch.qualityMode=null;
+        Game.player.launch.fixedQualityPreview=null;
         Game.player.launch.qualityRevealStarted=0;
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
@@ -5019,15 +5033,23 @@ function tryNewXRailEngagement(s){
     const tangentRatio=tangentVelocity/Math.max(speed,0.0001);
     const approachRatio=approachSpeed/Math.max(speed,0.0001);
 
-    const effectiveMomentum=tangentVelocity*(0.70+0.30*rpm)*(1-0.62*tilt);
-    const minimumMomentum=0.024+tilt*0.016+(1-stability)*0.006;
+    const effectiveMomentum=
+        tangentVelocity*(0.74+0.26*rpm)*(1-0.30*tilt);
+
+    const minimumMomentum=
+        0.010+tilt*0.005+(1-stability)*0.0035;
+
     if(effectiveMomentum<minimumMomentum) return false;
 
-    const minimumTangent=0.48-control*0.07-affinity*0.045;
-    const maximumApproach=0.62+control*0.08+movement*0.04;
+    const minimumTangent=
+        0.40-control*0.06-affinity*0.04-rpm*0.06;
+
+    const maximumApproach=
+        0.68+control*0.08+movement*0.04;
     if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
 
-    const tiltLimit=0.31+stability*0.055+control*0.03;
+    const tiltLimit=
+        0.36+stability*0.06+control*0.03+rpm*0.04;
     if(tilt>tiltLimit) return false;
 
     const speedQuality=newBattleClamp((effectiveMomentum-minimumMomentum)/0.045,0,1);
@@ -5040,14 +5062,15 @@ function tryNewXRailEngagement(s){
         speedQuality*0.30+angleQuality*0.25+approachQuality*0.17+
         tiltQuality*0.18+statusQuality*0.08+control*0.015+affinity*0.005;
 
-    const threshold=0.61-movement*0.065-affinity*0.035;
+    const threshold=
+        0.50-movement*0.05-affinity*0.03-rpm*0.05-stability*0.025;
     if(physicalScore+(Math.random()-0.5)*0.018<threshold) return false;
 
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.30+movement*0.15+rpm*0.13+affinity*0.06),
-        0.070,0.235
+        tangentialCarry*(1.36+movement*0.16+rpm*0.16+affinity*0.06),
+        0.075,0.240
     );
 
     s.railDirection=direction;
@@ -6231,6 +6254,26 @@ function newPhysicsCollision(dt){
     p.vy+=ty*pFollow;
     c.vx-=tx*cFollow;
     c.vy-=ty*cFollow;
+
+    if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
+        p.railEngaged=false;
+        p.railGrip=0;
+        p.railSpeed=0;
+        p.railExited=false;
+        p.railExitRefractory=0.20;
+        p.surfaceBounce=0.24;
+        p.surfaceRecovery=0.16;
+    }
+
+    if(c.railEngaged && pRailBreakForce>=railBreakThreshold){
+        c.railEngaged=false;
+        c.railGrip=0;
+        c.railSpeed=0;
+        c.railExited=false;
+        c.railExitRefractory=0.20;
+        c.surfaceBounce=0.24;
+        c.surfaceRecovery=0.16;
+    }
 
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
