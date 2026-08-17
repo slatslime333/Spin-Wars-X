@@ -3686,9 +3686,12 @@ function generateCPUCombo(){
     const playerRatchetName=Game.player.ratchet?.name;
     const playerBitName=Game.player.bit?.name;
 
-    const blades=Object.values(BLADE_ENGINE).filter(
-        b=>!playerTier || b.tier===playerTier
-    );
+    const blades=
+        Game.mode==="custom"
+            ? Object.values(BLADE_ENGINE)
+            : Object.values(BLADE_ENGINE).filter(
+                b=>!playerTier || b.tier===playerTier
+            );
 
     // Never intentionally mirror the player's blade.
     let pool=blades.filter(b=>b.name!==playerBladeName);
@@ -4489,12 +4492,13 @@ function newBattleFrame(now){
         return;
     }
 
-    // Low RPM should visibly kill aggressive travel. Begin suppressing
-    // lateral movement at 50%, with a strong effect by 20%.
+    // Low RPM begins reducing aggressive travel at 50%. It should settle,
+    // but never become a frozen object while another Bey is still making
+    // contact with it.
     [p,c].forEach(s=>{
         const lowRpm=Math.max(0,0.50-s.rpm)/0.50;
         if(lowRpm>0){
-            const damp=1-lowRpm*0.075;
+            const damp=1-lowRpm*0.045;
             s.vx*=damp;
             s.vy*=damp;
         }
@@ -4508,7 +4512,7 @@ function newBattleFrame(now){
         if(!el) return;
         let shakeX=0,shakeY=0;
         if(s.hitFlash>0){
-            const mag=(s.hitFlash/0.22)*0.45;
+            const mag=(s.hitFlash/0.16)*0.24;
             shakeX=(Math.random()-0.5)*mag;
             shakeY=(Math.random()-0.5)*mag;
         }
@@ -4543,10 +4547,10 @@ function newBattleFrame(now){
             impactFx.setAttribute("cx",50+i.x*39);
             impactFx.setAttribute("cy",46+i.y*39);
             impactFx.setAttribute(
-                "r",String(1.8+progress*4.5*i.level)
+                "r",String(1.4+progress*3.2*i.level)
             );
             impactFx.setAttribute(
-                "stroke-width",String(1.15*(1-progress)+0.3)
+                "stroke-width",String(0.85*(1-progress)+0.25)
             );
             impactFx.setAttribute(
                 "stroke",`rgba(255,255,255,${1-progress})`
@@ -5032,10 +5036,18 @@ function newPhysicsCollision(dt){
             const pImpulse=cForce/pResistance;
             const cImpulse=pForce/cResistance;
 
-            p.vx-=nx*pImpulse;
-            p.vy-=ny*pImpulse;
-            c.vx+=nx*cImpulse;
-            c.vy+=ny*cImpulse;
+            // Even late in the battle, a real contact produces a visible
+            // shove. Keep it small; high-speed momentum still dominates.
+            const lowRpmContact=
+                (p.rpm<0.50 || c.rpm<0.50) &&
+                impactSpeed>0.004
+                    ? 0.0045
+                    : 0;
+
+            p.vx-=nx*(pImpulse+lowRpmContact);
+            p.vy-=ny*(pImpulse+lowRpmContact);
+            c.vx+=nx*(cImpulse+lowRpmContact);
+            c.vy+=ny*(cImpulse+lowRpmContact);
 
             // Separate them decisively so they don't overlap and repeatedly
             // exchange tiny impulses.
