@@ -2571,46 +2571,52 @@ function clampBattleValue(value,min=0,max=100){
     return Math.max(min,Math.min(max,value));
 }
 
-function calculateLaunchQuality(side,angle,technique){
-    const s=Game[side];
-    if(!s?.blade || !s?.ratchet || !s?.bit) return "Okay";
+/*
+  LAUNCH QUALITY SYSTEM
+  Quality is independent from launch angle/technique.
+  FIXED QUALITY chooses one weighted-random result and keeps it.
+  ROLL QUALITY chooses a fresh weighted-random result each press.
+*/
+const LAUNCH_QUALITY_WEIGHTS=[
+    ["Horrible",8],["Bad",17],["Okay",40],["Good",25],["Perfect",10]
+];
 
-    const combo=calculateComboStats(s.blade,s.ratchet,s.bit);
-    const personality=s.blade.personality||{
-        aggression:50,control:50,consistency:50,risk:50
-    };
+function rollRandomLaunchQuality(){
+    let total=0;
+    for(const [,weight] of LAUNCH_QUALITY_WEIGHTS) total+=weight;
+    let roll=Math.random()*total;
+    for(const [quality,weight] of LAUNCH_QUALITY_WEIGHTS){
+        roll-=weight;
+        if(roll<=0) return quality;
+    }
+    return "Okay";
+}
 
-    const angleBonus={
-        "Flat":0,
-        "Slight Tilt":4,
-        "Hard Tilt":-3
-    }[angle] ?? 0;
+function setFixedLaunchQuality(side){
+    if(!Game[side]) return "Okay";
+    Game[side].launch=Game[side].launch||{};
+    if(!Game[side].launch.quality){
+        Game[side].launch.quality=rollRandomLaunchQuality();
+    }
+    Game[side].launch.qualityMode="Fixed";
+    return Game[side].launch.quality;
+}
 
-    const techniqueBonus={
-        "Center":3,
-        "X-Rail":0,
-        "Direct Clash":-2,
-        "Drop Launch":1,
-        "Center":1
-    }[technique] ?? 0;
+function rollLaunchQuality(side){
+    if(!Game[side]) return "Okay";
+    Game[side].launch=Game[side].launch||{};
+    Game[side].launch.quality=rollRandomLaunchQuality();
+    Game[side].launch.qualityMode="Roll";
+    return Game[side].launch.quality;
+}
 
-    const score=clampBattleValue(
-        (combo.stats.balance||70)*0.28 +
-        (combo.stats.mobility||70)*0.16 +
-        (combo.stats.stamina||70)*0.12 +
-        (personality.consistency||50)*0.34 +
-        (personality.control||50)*0.10 +
-        angleBonus +
-        techniqueBonus +
-        (Math.random()*12-6),
-        0,100
-    );
-
-    if(score>=92) return "Perfect";
-    if(score>=82) return "Good";
-    if(score>=68) return "Okay";
-    if(score>=55) return "Bad";
-    return "Horrible";
+function ensureLaunchQuality(side){
+    if(!Game[side]) return "Okay";
+    Game[side].launch=Game[side].launch||{};
+    if(!Game[side].launch.quality){
+        Game[side].launch.quality=rollRandomLaunchQuality();
+    }
+    return Game[side].launch.quality;
 }
 
 
@@ -3647,11 +3653,10 @@ function showLetItRip(){
     Game.player.launch=Game.player.launch||{};
     Game.player.launch.angle=Game.player.launch.angle||"Flat";
     Game.player.launch.technique=Game.player.launch.technique||"Center";
-    Game.player.launch.quality=calculateLaunchQuality(
-        "player",Game.player.launch.angle,Game.player.launch.technique
-    );
+    ensureLaunchQuality("player");
 
     Game.cpu.launch=getAutomaticLaunchPlan("cpu");
+    rollLaunchQuality("cpu");
 
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
@@ -3695,9 +3700,14 @@ function showLetItRip(){
           ${Game.player.launch.angle} · ${Game.player.launch.technique}
           <br>
           <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
+          · ${Game.player.launch.qualityMode==="Roll" ? "ROLL MODE" : "FIXED MODE"}
           · START RPM: ${({
               Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
           }[Game.player.launch.quality]||97)}%
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px;">
+          <button class="menu-btn silver" id="fixedQualityBtn" type="button">FIXED QUALITY</button>
+          <button class="menu-btn gold" id="rollQualityBtn" type="button">ROLL QUALITY</button>
         </div>
 
         <div style="display:flex;gap:8px;margin-top:9px;">
@@ -3716,9 +3726,7 @@ function showLetItRip(){
     const setLaunch=(angle,technique)=>{
         Game.player.launch.angle=angle;
         Game.player.launch.technique=technique;
-        Game.player.launch.quality=calculateLaunchQuality(
-            "player",angle,technique
-        );
+        ensureLaunchQuality("player");
         // Rebuild the preview and controls without starting physics.
         showLetItRip();
     };
@@ -3731,6 +3739,15 @@ function showLetItRip(){
     document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
     document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
     document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"Drop Launch");
+
+    document.getElementById("fixedQualityBtn").onclick=()=>{
+        setFixedLaunchQuality("player");
+        showLetItRip();
+    };
+    document.getElementById("rollQualityBtn").onclick=()=>{
+        rollLaunchQuality("player");
+        showLetItRip();
+    };
 
     document.getElementById("startBattleNow").onclick=startNewBattle;
     document.getElementById("backToVS").onclick=showVS;
@@ -3847,11 +3864,7 @@ function newBattleLaunchState(side){
                 technique:Game.player.launch.technique,
                 angle:Game.player.launch.angle||"Flat",
                 quality:Game.player.launch.quality ||
-                    calculateLaunchQuality(
-                        "player",
-                        Game.player.launch.angle||"Flat",
-                        Game.player.launch.technique
-                    )
+                    ensureLaunchQuality("player")
               }
             : getAutomaticLaunchPlan(side);
 
@@ -3878,6 +3891,10 @@ function newBattleLaunchState(side){
     }[plan.quality]||0.030;
 
     const placementJitter=(Math.random()-0.5)*qualityPlacement;
+
+    if(!plan.quality){
+        plan.quality=ensureLaunchQuality(side);
+    }
 
     const isDropLaunch=plan.technique==="Drop Launch";
     const sideSign=side==="player"?1:-1;
@@ -3968,6 +3985,7 @@ function newBattleLaunchState(side){
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
         railLoops:0,
+        railGrip:0,
         railContactPoint:null,
         railExitCooldown:0,
         railExited:false,
@@ -4686,6 +4704,7 @@ function tryNewXRailEngagement(s){
 
     const g=getNewXRailGeometry();
 
+    s.railGrip=newBattleClamp(0.58+physicalScore*0.42,0.58,1);
     s.railEngaged=true;
     s.railUses=(s.railUses||0)+1;
     s.railContactPoint={x:nearest.x,y:nearest.y};
@@ -4754,10 +4773,10 @@ function newXRailExit(s){
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
     s.x=exit.x;
-    s.y=exit.y+0.045;
+    s.y=exit.y+0.055;
 
-    s.vx=tangentX*speed*tangentCarry;
-    s.vy=speed+tangentY*speed*tangentCarry;
+    s.vx=tangentX*speed*(0.72+tangentCarry);
+    s.vy=speed*0.92+tangentY*speed*(0.72+tangentCarry);
 
     s.rpm=newBattleClamp(
         s.rpm-
@@ -4780,114 +4799,141 @@ function newXRailExit(s){
 
 function updateNewXRailRide(s,dt){
 
-        if(!s.railEngaged) return false;
+    if(!s.railEngaged) return false;
 
-        const g = getNewXRailGeometry();
-        const direction = railDirection(s);
-        const bp = bitPhysics(s);
+    const g=getNewXRailGeometry();
+    const direction=railDirection(s);
+    const bp=bitPhysics(s);
+    const movement=(bp.movement||60)/100;
+    const affinity=(bp.xRailAffinity||50)/100;
+    const rpm=newBattleClamp(s.rpm,0,1);
 
-        const movement = (bp.movement || 60)/100;
-        const affinity = (bp.xRailAffinity || 50)/100;
+    const previousDistance=s.railDistance;
+    const previousPoint=newXRailPointAtDistance(previousDistance);
+    s.railRideTime+=dt;
 
-        const rpm = newBattleClamp(s.rpm,0,1);
-        const previousDistance = s.railDistance;
+    const acceleration=(
+        0.0020+movement*0.0030+affinity*0.0020
+    )*(0.30+rpm*0.70);
+    const railDrag=0.0014+(1-rpm)*0.0018;
 
-        s.railRideTime += dt;
+    s.railSpeed=newBattleClamp(
+        s.railSpeed+(acceleration-railDrag)*dt*60,
+        0.012,0.082
+    );
 
-        /*
-          Acceleration is strongest when RPM is high and gradually disappears.
-          The rail never creates infinite speed.
-        */
-        const acceleration =
-            (
-                0.0020 +
-                movement*0.0030 +
-                affinity*0.0020
-            ) *
-            (0.30 + rpm*0.70);
+    const travel=s.railSpeed*dt*60;
+    s.railDistance+=direction*travel;
+    s.railTravelDistance+=Math.abs(travel);
 
-        const railDrag =
-            0.0014 +
-            (1-rpm)*0.0018;
+    // Rail grip is consumed by speed, tilt, low RPM and curvature.
+    const nextPoint=newXRailPointAtDistance(
+        s.railDistance+direction*0.025
+    );
+    const prevTx=previousPoint.tx*direction;
+    const prevTy=previousPoint.ty*direction;
+    const nextTx=nextPoint.tx*direction;
+    const nextTy=nextPoint.ty*direction;
+    const tangentDot=newBattleClamp(prevTx*nextTx+prevTy*nextTy,-1,1);
+    const curveStress=(1-tangentDot)*0.5;
+    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
 
-        s.railSpeed = newBattleClamp(
-            s.railSpeed +
-            (acceleration-railDrag)*dt*60,
-            0.012,
-            0.082
-        );
+    const gripDrain=(
+        0.0014+
+        s.railSpeed*0.006+
+        (1-rpm)*0.0035+
+        tilt*0.0045+
+        curveStress*0.018
+    )*dt*60;
 
-        const travel = s.railSpeed*dt*60;
+    s.railGrip=newBattleClamp((s.railGrip||0.65)-gripDrain,0,1);
 
-        s.railDistance += direction*travel;
-        s.railTravelDistance += Math.abs(travel);
+    const requiredGrip=0.11+(1-rpm)*0.08+tilt*0.10;
 
-        s.railProgress =
-            (
-                ((s.railDistance%g.total)+g.total)%g.total
-            )/g.total;
-
-        const point =
-            newXRailPointAtDistance(s.railDistance);
-
-        const tangentX = point.tx*direction;
-        const tangentY = point.ty*direction;
-
-        s.x = point.x;
-        s.y = point.y;
-
-        s.vx = tangentX*s.railSpeed;
-        s.vy = tangentY*s.railSpeed;
-
-        /*
-          Rail drains spin according to actual speed and bit behavior.
-        */
-        const drain =
-            (
-                0.010 +
-                s.railSpeed*0.040 +
-                affinity*0.004
-            ) *
-            dt;
-
-        s.rpm = newBattleClamp(s.rpm-drain,0,1);
-
-        s.stability = newBattleClamp(
-            s.stability -
-            (
-                0.0015 +
-                s.railSpeed*0.018
-            )*dt,
-            0,1
-        );
-
-        /*
-          Physical X Exit crossing.
-
-          No maximum ride timer.
-          No "one rail per battle" rule.
-        */
-        const crossed =
-            newXRailCrossedExit(
-                previousDistance,
-                s.railDistance,
-                direction
-            );
-
-        if(crossed && s.railTravelDistance>0.16){
-            newXRailExit(s);
-            return true;
-        }
-
-        // If spin is effectively gone, the Bey cannot keep riding.
-        if(s.rpm<=0.001 || s.railSpeed<=0.012){
-            newXRailExit(s);
-            return true;
-        }
-
+    if(s.railGrip<requiredGrip){
+        newXRailRailRelease(s,direction);
         return true;
-    };
+    }
 
+    s.railProgress=(
+        ((s.railDistance%g.total)+g.total)%g.total
+    )/g.total;
+
+    const point=newXRailPointAtDistance(s.railDistance);
+    const tangentX=point.tx*direction;
+    const tangentY=point.ty*direction;
+
+    // Keep the Bey slightly offset from the mathematical rail centerline.
+    const normalX=-tangentY;
+    const normalY=tangentX;
+    const offset=0.004+Math.min(0.006,s.railGrip*0.006);
+
+    s.x=point.x+normalX*offset;
+    s.y=point.y+normalY*offset;
+    s.vx=tangentX*s.railSpeed;
+    s.vy=tangentY*s.railSpeed;
+
+    const drain=(
+        0.010+s.railSpeed*0.040+affinity*0.004
+    )*dt;
+    s.rpm=newBattleClamp(s.rpm-drain,0,1);
+    s.stability=newBattleClamp(
+        s.stability-(0.0015+s.railSpeed*0.018)*dt,0,1
+    );
+
+    const crossed=newXRailCrossedExit(
+        previousDistance,s.railDistance,direction
+    );
+
+    if(crossed && s.railTravelDistance>0.10){
+        newXRailExit(s);
+        return true;
+    }
+
+    if(s.rpm<=0.001 || s.railSpeed<=0.012){
+        newXRailRailRelease(s,direction);
+        return true;
+    }
+
+    return true;
+}
+
+function newXRailRailRelease(s,direction){
+
+    const point=newXRailPointAtDistance(s.railDistance);
+    const tangentX=point.tx*direction;
+    const tangentY=point.ty*direction;
+    const normalX=-tangentY;
+    const normalY=tangentX;
+    const speed=Math.max(0.012,s.railSpeed||speedOf(s)*0.65);
+
+    s.railEngaged=false;
+    s.railExited=false;
+    s.railContactPoint=null;
+    s.railGrip=0;
+
+    // Release outward from the rail while retaining some tangential momentum.
+    s.x=point.x+normalX*0.030;
+    s.y=point.y+normalY*0.030;
+
+    const tangential=speed*0.70;
+    const normal=speed*0.34;
+
+    s.vx=tangentX*tangential+normalX*normal;
+    s.vy=tangentY*tangential+normalY*normal;
+
+    s.rpm=newBattleClamp(s.rpm-0.004,0,1);
+    s.stability=newBattleClamp(s.stability-0.008,0,1);
+    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
+    s.surfaceBounce=0.16;
+    s.surfaceRecovery=0.12;
+    s.motionPhase+=0.85+Math.random()*0.60;
+    s.motionPhase2+=0.35+Math.random()*0.55;
+
+    // Spatial separation only; not a timed rail cooldown.
+    s.railExitRefractory=0.18;
+    s.railExitRefractoryPoint={x:s.x,y:s.y};
+}
 
 // X EXIT BARRIER
 // Normal stadium movement may never pass through the X Exit notch. Only
@@ -5029,7 +5075,13 @@ function newPhysicsStep(s,dt){
         }
 
         if(s.railEngaged){
-            updateNewXRailRide(s,dt);
+            if(!Number.isFinite(s.railDistance) ||
+               !Number.isFinite(s.railSpeed) ||
+               s.railGrip<=0){
+                newXRailRailRelease(s,railDirection(s));
+            }else{
+                updateNewXRailRide(s,dt);
+            }
             return;
         }
 
