@@ -2587,6 +2587,7 @@ function calculateLaunchQuality(side,angle,technique){
         "Center":3,
         "X-Rail":0,
         "Direct Clash":-2,
+        "Drop Launch":1,
         "Center":1
     }[technique] ?? 0;
 
@@ -3683,6 +3684,7 @@ function showLetItRip(){
           ${techButton("CENTER","Center","launchCenter")}
           ${techButton("X-RAIL","X-Rail","launchRail")}
           ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
+          ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
 
         </div>
 
@@ -3720,6 +3722,7 @@ function showLetItRip(){
     document.getElementById("launchCenter").onclick=()=>setLaunch(Game.player.launch.angle,"Center");
     document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
     document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
+    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"Drop Launch");
 
     document.getElementById("startBattleNow").onclick=startNewBattle;
     document.getElementById("backToVS").onclick=showVS;
@@ -3796,8 +3799,12 @@ function getAutomaticLaunchPlan(side){
     // control later; this step establishes the physical opening both sides use.
     let technique="Center";
     if(type==="Attack"){
-        technique=(personality.risk>=70 || ["Flat","Low Flat","Low Rush","Rush","Kick","Quake"].includes(bitName))
-            ?"Direct Clash":"Center";
+        if(["Flat","Low Flat","Low Rush","Rush","Kick","Quake"].includes(bitName) && personality.risk>=62){
+            const roll=Math.random();
+            technique=roll<0.16 ? "Drop Launch" : (roll<0.58 ? "Direct Clash" : "Center");
+        }else{
+            technique=personality.risk>=70 ? "Direct Clash":"Center";
+        }
     }else if(type==="Defense" || type==="Stamina"){
         technique="Center";
     }else{
@@ -3840,9 +3847,10 @@ function newBattleLaunchState(side){
               }
             : getAutomaticLaunchPlan(side);
 
-    const startX=side==="player"?-0.70:0.70;
-    const startY=0;
-    const direction=side==="player"?1:-1;
+    const isDropLaunch=plan.technique==="Drop Launch";
+    const startX=isDropLaunch ? 0 : (side==="player"?-0.70:0.70);
+    const startY=isDropLaunch ? -0.47 : 0;
+    const direction=isDropLaunch ? 0 : (side==="player"?1:-1);
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
@@ -3861,7 +3869,8 @@ function newBattleLaunchState(side){
     const techniqueSpeed={
         Center:1.00,
         "Direct Clash":1.10,
-        "X-Rail":1.00
+        "X-Rail":1.00,
+        "Drop Launch":0.92
     }[plan.technique]||1;
 
     const launchSpeed=
@@ -3876,6 +3885,12 @@ function newBattleLaunchState(side){
         vy+=tiltSign*0.008;
     }
 
+    if(plan.technique==="Drop Launch"){
+        vx=0;
+        // Drop launch releases just below the X Exit and falls into the bowl.
+        vy=0.0145*qualityFactor;
+    }
+
     const tiltStall=
         plan.angle==="Slight Tilt" ? 0.18 :
         plan.angle==="Hard Tilt" ? 0.30 : 0;
@@ -3887,20 +3902,25 @@ function newBattleLaunchState(side){
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        radius:0.075,
-        hitFlash:0,
+        radius:0.082,
+        hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
         launchRpmLossMultiplier:tilt.rpm,
         launchTilt:plan.angle,
         launchStall:tiltStall,
         launchStallElapsed:0,
+        launchDropActive:plan.technique==="Drop Launch",
+        launchDropElapsed:0,
         launchComplete:false,
 
         // Natural movement state: these alter forces over time rather than
         // drawing a fixed orbit.
         motionPhase:Math.random()*Math.PI*2,
         motionPhase2:Math.random()*Math.PI*2,
+        movementNoiseX:(Math.random()-0.5)*0.0002,
+        movementNoiseY:(Math.random()-0.5)*0.0002,
+        movementNoiseTimer:0.25+Math.random()*0.35,
         tiltLevel:0.08,
         railUses:0,
 
@@ -4079,9 +4099,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="2.80"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="3.05"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="2.80"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="3.05"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4100,7 +4120,11 @@ function renderNewBattle(){
           </div>
 
           <div id="newCommentary" style="margin-top:8px;padding:10px;background:rgba(0,0,0,.22);border-radius:8px;font-size:13px;">
-            ${p.blade.name} ${p.launchPlan.technique==="Direct Clash"?"comes out aggressively.":"settles into its opening line."}
+            ${p.blade.name} ${
+    p.launchPlan.technique==="Direct Clash" ? "comes out aggressively." :
+    p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
+    "settles into its opening line."
+}
             ${c.blade.name} ${c.launchPlan.technique==="Direct Clash"?"answers with an aggressive launch.":"takes its opening position."}
           </div>
         </section>
@@ -4183,13 +4207,17 @@ function newBattleFrame(now){
         }
 
         if(pe){
-            pe.setAttribute("r",p.hitFlash>0?3.05:2.80);
+            const ps=3.05*(p.hitFlash>0?(p.impactScale||1):1);
+            pe.setAttribute("r",ps);
         }
         if(ce){
-            ce.setAttribute("r",c.hitFlash>0?3.05:2.80);
+            const cs=3.05*(c.hitFlash>0?(c.impactScale||1):1);
+            ce.setAttribute("r",cs);
         }
         p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
+        p.impactScale=Math.max(1,(p.impactScale||1)-dt*1.8);
+        c.impactScale=Math.max(1,(c.impactScale||1)-dt*1.8);
 
         for(const [id,v] of [
             ["newPlayerRPM",p.rpm],
@@ -4781,6 +4809,11 @@ function newPhysicsStep(s,dt){
         const control = (bp.control||60)/100;
         const centerAffinity = (bp.centerAffinity||60)/100;
         const movement = (bp.movement||60)/100;
+        const attackBit = movement>=0.80;
+        const attackSpeedBoost =
+            attackBit
+                ? (1.18 + 0.18*Math.pow(rpm,0.75))
+                : (0.98 + 0.05*rpm);
 
         /*
           Dynamic tilt/precession:
@@ -4789,6 +4822,22 @@ function newPhysicsStep(s,dt){
         */
         const currentSpeed=Math.hypot(s.vx,s.vy);
         const speedStability=newBattleClamp(currentSpeed/0.055,0,1);
+
+        // Attack Bits retain their characteristic high-RPM aggression.
+        // This boost fades rapidly with RPM so it cannot create the old
+        // "100% movement at 20% RPM" problem.
+        if(attackBit && rpm>0.34){
+            const targetAttackSpeed=0.0245*attackSpeedBoost*Math.pow(rpm,0.72);
+            const speedNow=Math.hypot(s.vx,s.vy);
+            if(speedNow>0.001 && speedNow<targetAttackSpeed){
+                const gain=newBattleClamp(
+                    (targetAttackSpeed-speedNow)*0.10,
+                    0,0.0015
+                );
+                s.vx += (s.vx/speedNow)*gain;
+                s.vy += (s.vy/speedNow)*gain;
+            }
+        }
 
         const targetTilt=newBattleClamp(
             (1-s.stability)*0.62+
@@ -4930,10 +4979,18 @@ function newPhysicsStep(s,dt){
             const wobbleA=Math.sin(s.motionPhase);
             const wobbleB=Math.sin(s.motionPhase2+1.7);
 
+            const lowRpmAttackSuppression =
+                attackBit
+                    ? newBattleClamp((rpm-0.22)/0.38,0,1)
+                    : 1;
+
             const lateralStrength=
-                (0.00012+movement*0.00028)*
-                Math.pow(rpm,1.28)*
-                (0.55+control*0.45);
+                (0.00013+movement*0.00034)*
+                Math.pow(rpm,1.12)*
+                (0.55+control*0.45)*
+                (attackBit
+                    ? (0.48+0.78*lowRpmAttackSuppression)
+                    : 1.0);
 
             const radialX=s.x*invR;
             const radialY=s.y*invR;
@@ -4984,6 +5041,40 @@ function newPhysicsStep(s,dt){
         }
 
         /*
+          Surface irregularity / precession variation.
+
+          A real Bey does not follow a fixed mathematical orbit. Tiny changes
+          in contact pressure and precession alter the direction of travel.
+          This is strongest for controlled non-attack Bits in center fights,
+          but remains small enough not to become random teleporting.
+        */
+        s.movementNoiseTimer-=dt;
+        if(s.movementNoiseTimer<=0){
+            const variation =
+                (0.00020+
+                 (1-movement)*0.00034+
+                 (1-centerAffinity)*0.00020) *
+                (0.42+0.58*rpm);
+
+            const noiseAngle=
+                s.motionPhase2+
+                Math.random()*Math.PI*2;
+
+            s.movementNoiseX=Math.cos(noiseAngle)*variation;
+            s.movementNoiseY=Math.sin(noiseAngle)*variation;
+            s.movementNoiseTimer=0.28+Math.random()*0.55;
+        }
+
+        const noiseScale =
+            (attackBit
+                ? 0.72
+                : 1.0) *
+            (0.55+0.45*rpm);
+
+        s.vx+=s.movementNoiseX*noiseScale*dt*60;
+        s.vy+=s.movementNoiseY*noiseScale*dt*60;
+
+        /*
           Stadium slope gently favors the center.
           It becomes more relevant as spin falls because the Bey has less
           self-generated lateral movement.
@@ -5013,7 +5104,8 @@ function newPhysicsStep(s,dt){
         const baseFriction =
             0.982 +
             control*0.008 -
-            movement*0.004;
+            movement*0.004 -
+            (attackBit ? 0.0022*rpm : 0);
 
         const rpmFrictionBonus =
             0.004*rpm;
@@ -5045,7 +5137,7 @@ function newPhysicsStep(s,dt){
 
             const lateralDamp =
                 Math.pow(
-                    0.982,
+                    attackBit ? 0.966 : 0.978,
                     lowRpm*dt*60
                 );
 
@@ -5260,11 +5352,7 @@ function newPhysicsCollision(dt){
     const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
     const closing=rvx*nx+rvy*ny;
 
-    // Only solve impacts when the Beys are actually moving into one another.
     if(closing>=0) return;
-
-    const pBit=BIT_PHYSICS[p.bit?.name]||BIT_PHYSICS.Point;
-    const cBit=BIT_PHYSICS[c.bit?.name]||BIT_PHYSICS.Point;
 
     const pAttack=(p.stats.attack||70)/99;
     const cAttack=(c.stats.attack||70)/99;
@@ -5276,110 +5364,153 @@ function newPhysicsCollision(dt){
     const impactSpeed=Math.abs(closing);
     const tangentRelative=rvx*tx+rvy*ty;
     const totalRelative=Math.hypot(rvx,rvy)||0.001;
-    const directness=newBattleClamp(
-        impactSpeed/totalRelative,0,1
-    );
+    const directness=newBattleClamp(impactSpeed/totalRelative,0,1);
 
-    // Momentum + stats determine force. Contact angle and a small physical
-    // variance make identical Beys capable of producing different hits.
-    const pMomentum=impactSpeed*(0.55+pKB*0.85)*(0.70+pAttack*0.30);
-    const cMomentum=impactSpeed*(0.55+cKB*0.85)*(0.70+cAttack*0.30);
-    const momentumFactor=newBattleClamp(impactSpeed/0.035,0,2.4);
-    const variance=0.92+Math.random()*0.16;
+    /*
+      Knockback is momentum-driven.
+
+      Attack + Knockback + actual closing speed determine how much force is
+      transferred. Defense absorbs some of it, but does not erase it.
+      This restores the old game's intended "light hit / solid hit / heavy hit"
+      spread instead of every collision feeling identical.
+    */
+    const pMomentum =
+        impactSpeed *
+        (0.68+pKB*1.05) *
+        (0.68+pAttack*0.42) *
+        (0.72+newBattleClamp(p.rpm,0,1)*0.38);
+
+    const cMomentum =
+        impactSpeed *
+        (0.68+cKB*1.05) *
+        (0.68+cAttack*0.42) *
+        (0.72+newBattleClamp(c.rpm,0,1)*0.38);
+
+    const momentumFactor=
+        newBattleClamp(impactSpeed/0.028,0,3.0);
+
+    const hitRoll=0.88+Math.random()*0.24;
+
+    // Heavy hit probability rises with directness and momentum.
+    const heavyFactor=
+        Math.pow(momentumFactor,1.35)*
+        (0.70+directness*0.45);
 
     const pForce=
         pMomentum*
-        (0.72+directness*0.28)*
-        (0.65+momentumFactor*0.42)*
-        variance;
+        (0.74+directness*0.36)*
+        (0.78+heavyFactor*0.34)*
+        hitRoll;
 
     const cForce=
         cMomentum*
-        (0.72+directness*0.28)*
-        (0.65+momentumFactor*0.42)*
-        variance;
+        (0.74+directness*0.36)*
+        (0.78+heavyFactor*0.34)*
+        hitRoll;
 
-    const pImpulse=
-        (pForce/(0.72+cDef*0.55))*
-        (1.0-0.12*pDef);
+    // Defense reduces displacement, but a strong impact still moves the Bey.
+    const pKnockback=
+        pForce*
+        (0.92-pDef*0.26);
 
-    const cImpulse=
-        (cForce/(0.72+pDef*0.55))*
-        (1.0-0.12*cDef);
+    const cKnockback=
+        cForce*
+        (0.92-cDef*0.26);
 
-    // Even at low RPM, contact produces a visible shove.
+    // Small hits remain small; high momentum can produce the big launch.
     const lowRpmShove=
         (p.rpm<0.50||c.rpm<0.50)
-            ? 0.0022+0.0025*(1-Math.min(p.rpm,c.rpm)*2)
+            ? 0.0028+0.0028*(1-Math.min(p.rpm,c.rpm)*2)
             : 0;
 
-    p.vx-=nx*(pImpulse+lowRpmShove);
-    p.vy-=ny*(pImpulse+lowRpmShove);
-    c.vx+=nx*(cImpulse+lowRpmShove);
-    c.vy+=ny*(cImpulse+lowRpmShove);
+    p.vx-=nx*(pKnockback+lowRpmShove);
+    p.vy-=ny*(pKnockback+lowRpmShove);
+    c.vx+=nx*(cKnockback+lowRpmShove);
+    c.vy+=ny*(cKnockback+lowRpmShove);
 
-    // Recoil / glancing contact changes the exit angle.
+    // Recoil and glancing contact change the exit path.
     const tangentKick=
-        (0.0009+
-         impactSpeed*0.010+
-         Math.abs(tangentRelative)*0.0028)*
-        (0.60+momentumFactor*0.22);
+        (0.0010+
+         impactSpeed*0.014+
+         Math.abs(tangentRelative)*0.0035)*
+        (0.64+newBattleClamp(heavyFactor,0,2)*0.24);
 
     p.vx+=tx*tangentKick;
     p.vy+=ty*tangentKick;
     c.vx-=tx*tangentKick;
     c.vy-=ty*tangentKick;
 
-    // Separate the bodies so they cannot remain glued together.
     const separation=minDist-dist;
-    p.x-=nx*(separation*0.54+0.002);
-    p.y-=ny*(separation*0.54+0.002);
-    c.x+=nx*(separation*0.54+0.002);
-    c.y+=ny*(separation*0.54+0.002);
+    p.x-=nx*(separation*0.58+0.0025);
+    p.y-=ny*(separation*0.58+0.0025);
+    c.x+=nx*(separation*0.58+0.0025);
+    c.y+=ny*(separation*0.58+0.0025);
 
+    /*
+      RPM damage remains separate from knockback. A big shove doesn't
+      automatically mean instant stamina deletion.
+    */
     const pDamage=
-        0.0022+
-        impactSpeed*0.020+
-        pForce*0.010+
-        Math.pow(momentumFactor,2)*0.0009;
+        0.0024+
+        impactSpeed*0.022+
+        pForce*0.008+
+        Math.pow(momentumFactor,1.7)*0.0010;
 
     const cDamage=
-        0.0022+
-        impactSpeed*0.020+
-        cForce*0.010+
-        Math.pow(momentumFactor,2)*0.0009;
+        0.0024+
+        impactSpeed*0.022+
+        cForce*0.008+
+        Math.pow(momentumFactor,1.7)*0.0010;
 
-    // Higher attack transfers more RPM loss; defense reduces incoming damage.
     p.rpm=newBattleClamp(
-        p.rpm-pDamage*(0.82+cAttack*0.22)*(1-pDef*0.24),
+        p.rpm-pDamage*(0.82+cAttack*0.24)*(1-pDef*0.25),
         0,1
     );
     c.rpm=newBattleClamp(
-        c.rpm-cDamage*(0.82+pAttack*0.22)*(1-cDef*0.24),
+        c.rpm-cDamage*(0.82+pAttack*0.24)*(1-cDef*0.25),
         0,1
     );
 
     p.stability=newBattleClamp(
-        p.stability-(0.004+impactSpeed*0.055)*(1-pDef*0.30),
+        p.stability-(0.0045+impactSpeed*0.060)*(1-pDef*0.32),
         0,1
     );
     c.stability=newBattleClamp(
-        c.stability-(0.004+impactSpeed*0.055)*(1-cDef*0.30),
+        c.stability-(0.0045+impactSpeed*0.060)*(1-cDef*0.32),
         0,1
     );
 
-    p.tiltLevel=newBattleClamp(
-        (p.tiltLevel||0)+0.045+impactSpeed*0.35,0,1
-    );
-    c.tiltLevel=newBattleClamp(
-        (c.tiltLevel||0)+0.045+impactSpeed*0.35,0,1
-    );
+    // Impact increases tilt and changes the motion phase so the Bey doesn't
+    // immediately resume its previous orbit.
+    const tiltHit=
+        0.050+
+        impactSpeed*0.40+
+        newBattleClamp(heavyFactor,0,2)*0.018;
 
-    p.motionPhase+=0.35+Math.random()*0.35;
-    c.motionPhase+=0.35+Math.random()*0.35;
+    p.tiltLevel=newBattleClamp((p.tiltLevel||0)+tiltHit,0,1);
+    c.tiltLevel=newBattleClamp((c.tiltLevel||0)+tiltHit,0,1);
 
-    p.hitFlash=0.08;
-    c.hitFlash=0.08;
+    p.motionPhase+=0.45+Math.random()*0.50;
+    c.motionPhase+=0.45+Math.random()*0.50;
+    p.motionPhase2+=0.25+Math.random()*0.45;
+    c.motionPhase2+=0.25+Math.random()*0.45;
+
+    // Slightly stronger impact animation, still restrained.
+    const visualStrength=
+        newBattleClamp(
+            0.65+
+            impactSpeed/0.025*0.30+
+            heavyFactor*0.08,
+            0.65,1.45
+        );
+
+    p.hitFlash=0.105*visualStrength;
+    c.hitFlash=0.105*visualStrength;
+    p.impactScale=1.0+0.10*visualStrength;
+    c.impactScale=1.0+0.10*visualStrength;
+
+    p.lastKnockback=Math.abs(pKnockback);
+    c.lastKnockback=Math.abs(cKnockback);
 }
 
 // Launch angle and technique are selected on the stadium setup view.
