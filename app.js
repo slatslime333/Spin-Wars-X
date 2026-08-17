@@ -3512,155 +3512,7 @@ menuCard.appendChild(
 //=========================
 
 
-function createStatBar(label,value){
 
-    return `
-
-    <div class="stat-row">
-
-        <div class="stat-label">
-
-            <span>${label}</span>
-
-            <span>${value}</span>
-
-        </div>
-
-        <div class="stat-bar">
-
-            <div
-                class="stat-fill"
-                style="width:${value}%">
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
-
-}
-
-//=========================
-// COMBO CARD
-//=========================
-
-
-function showComboCard(){
-
-    const combo = calculateComboStats(
-    Game.player.blade,
-    Game.player.ratchet,
-    Game.player.bit
-);
-
-    const blade = Game.player.blade;
-
-    const app = document.getElementById("app");
-
-    app.innerHTML = `
-    
-    <div class="background"></div>
-
-    <main class="menu">
-
-        <div class="logo">
-
-            <div class="logo-icon">⚔</div>
-
-            <h1>YOUR COMBO</h1>
-
-        </div>
-
-        <section class="menu-card">
-
-            <div class="blade-name">
-
-                ${blade.name}
-
-            </div>
-
-            <div class="blade-type">
-
-                ${blade.type}
-
-            </div>
-
-            <br>
-
-            <h2>META ${combo.meta}</h2>
-
-          <h3>OVR ${combo.ovr}</h3>
-
-            <hr>
-
-            <p>⚔ Attack: ${combo.stats.attack}</p>
-
-            <p>💥 Knockback: ${combo.stats.knockback}</p>
-
-            <p>🛡 Defense: ${combo.stats.defense}</p>
-
-            <p>🌀 Mobility: ${combo.stats.mobility}</p>
-            
-            <p>⚖ Balance: ${combo.stats.balance}</p>
-
-            <p>🔋 Stamina: ${combo.stats.stamina}</p>
-
-            <hr>
-
-            <p><strong>Ratchet:</strong> ${Game.player.ratchet.name}</p>
-
-            <p><strong>Bit:</strong> ${Game.player.bit.name}</p>
-
-            <br>
-
-            <button
-                class="menu-btn gold"
-                id="battleButton">
-
-                START BATTLE
-
-            </button>
-
-        </section>
-
-    </main>
-
-    `;
-
-    document
-    .getElementById("battleButton")
-    .onclick = () => {
-
-        showVS();
-
-    };
-const menuCard=document.querySelector(".menu-card");
-
-menuCard.appendChild(
-
-    createBackButton(()=>{
-
-        showBitDraft();
-
-    })
-
-);
-
-} 
-
-//=========================
-// CPU DRAFT
-//=========================
-
-
-
-
-// ================================================================
-// CLEAN BATTLE-ENGINE RESET
-// Everything above this point is menu/data/selection infrastructure.
-// Everything below is ONLY the pre-battle launch UI.
-// ================================================================
 
 function syncComboStats(side){
     const s=Game[side];
@@ -3682,9 +3534,7 @@ function assignStadiumSides(){
 
 function generateCPUCombo(){
     const playerTier=Game.player.blade?.tier;
-    const blades = Game.mode==="custom"
-        ? Object.values(BLADE_ENGINE)
-        : Object.values(BLADE_ENGINE).filter(b=>!playerTier || b.tier===playerTier);
+    const blades=Object.values(BLADE_ENGINE).filter(b=>!playerTier || b.tier===playerTier);
     const pool=blades.length?blades:Object.values(BLADE_ENGINE);
     Game.cpu.blade=pool[Math.floor(Math.random()*pool.length)];
     Game.cpu.ratchet=RATCHETS[Math.floor(Math.random()*RATCHETS.length)];
@@ -3733,112 +3583,98 @@ function showVS(){
 }
 
 function showLetItRip(){
-    // ONE launch screen: the stadium and launch controls live together.
-    // Do not create separate angle/technique screens.
-    Game.player.launch = Game.player.launch || {};
-    if(!Game.player.launch.angle) Game.player.launch.angle="Flat";
-    if(!Game.player.launch.technique) Game.player.launch.technique="Center";
+    if(!Game.player.blade || !Game.player.ratchet || !Game.player.bit ||
+       !Game.cpu.blade || !Game.cpu.ratchet || !Game.cpu.bit){
+        console.error("Launch setup blocked: combo data is missing.");
+        return;
+    }
+
+    Game.player.launch=Game.player.launch||{};
+    Game.player.launch.angle=Game.player.launch.angle||"Flat";
+    Game.player.launch.technique=Game.player.launch.technique||"Center";
     Game.player.launch.quality=calculateLaunchQuality(
-        "player",
-        Game.player.launch.angle,
-        Game.player.launch.technique
+        "player",Game.player.launch.angle,Game.player.launch.technique
     );
 
     Game.cpu.launch=getAutomaticLaunchPlan("cpu");
 
-    // Build preview states without starting the battle loop.
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
     NEW_BATTLE.active=false;
 
     renderNewBattle();
 
-    const card=document.querySelector("#newStadium")?.closest(".menu-card");
+    const card=document.querySelector("#newStadium")?.parentElement;
     if(!card) return;
 
     const controls=document.createElement("div");
     controls.id="launchControls";
     controls.style.cssText="margin-top:10px;";
 
+    const angleButton=(label,value,id)=>`
+      <button id="${id}" class="menu-btn ${Game.player.launch.angle===value?"gold":"silver"}"
+        type="button">${label}</button>`;
+    const techButton=(label,value,id)=>`
+      <button id="${id}" class="menu-btn ${Game.player.launch.technique===value?"gold":"silver"}"
+        type="button">${label}</button>`;
+
     controls.innerHTML=`
       <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
-        <div style="font-size:12px;opacity:.72;margin-bottom:7px;">
-          LAUNCH ANGLE
-        </div>
+        <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">
-          <button class="menu-btn ${Game.player.launch.angle==="Flat"?"gold":"silver"}" id="angleFlat">FLAT</button>
-          <button class="menu-btn ${Game.player.launch.angle==="Slight Tilt"?"gold":"silver"}" id="angleSlight">SLIGHT TILT</button>
-          <button class="menu-btn ${Game.player.launch.angle==="Hard Tilt"?"gold":"silver"}" id="angleHard">HARD TILT</button>
+          ${angleButton("FLAT","Flat","launchFlat")}
+          ${angleButton("SLIGHT TILT","Slight Tilt","launchSlight")}
+          ${angleButton("HARD TILT","Hard Tilt","launchHard")}
         </div>
 
-        <div style="font-size:12px;opacity:.72;margin:10px 0 7px;">
-          LAUNCH TECHNIQUE
-        </div>
+        <div style="font-size:12px;opacity:.72;margin:10px 0 7px;">LAUNCH TECHNIQUE</div>
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;">
-          <button class="menu-btn ${Game.player.launch.technique==="Center"?"gold":"silver"}" id="techCenter">CENTER</button>
-          <button class="menu-btn ${Game.player.launch.technique==="X-Rail"?"gold":"silver"}" id="techRail">X-RAIL</button>
-          <button class="menu-btn ${Game.player.launch.technique==="Direct Clash"?"gold":"silver"}" id="techClash">DIRECT CLASH</button>
-          <button class="menu-btn ${Game.player.launch.technique==="Drop Launch"?"gold":"silver"}" id="techDrop">DROP LAUNCH</button>
-          <button class="menu-btn ${Game.player.launch.technique==="Wide Circle"?"gold":"silver"}" id="techCircle">WIDE CIRCLE</button>
+          ${techButton("CENTER","Center","launchCenter")}
+          ${techButton("X-RAIL","X-Rail","launchRail")}
+          ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
+          ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
+          ${techButton("WIDE CIRCLE","Wide Circle","launchCircle")}
         </div>
 
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="menu-btn gold" id="letItRip" style="flex:1;">LET IT RIP</button>
-          <button class="menu-btn silver" id="backToCombo" style="flex:1;">← BACK</button>
+        <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.78;text-align:center;">
+          ${Game.player.launch.angle} · ${Game.player.launch.technique}
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:9px;">
+          <button class="menu-btn gold" id="startBattleNow" type="button" style="flex:1;">
+            LET IT RIP
+          </button>
+          <button class="menu-btn silver" id="backToVS" type="button" style="flex:1;">
+            ← BACK
+          </button>
         </div>
       </div>
     `;
 
     card.appendChild(controls);
 
-    const refresh=()=>{
+    const setLaunch=(angle,technique)=>{
+        Game.player.launch.angle=angle;
+        Game.player.launch.technique=technique;
         Game.player.launch.quality=calculateLaunchQuality(
-            "player",
-            Game.player.launch.angle,
-            Game.player.launch.technique
+            "player",angle,technique
         );
-        NEW_BATTLE.player=newBattleLaunchState("player");
-        NEW_BATTLE.cpu=newBattleLaunchState("cpu");
-        NEW_BATTLE.active=false;
-        renderNewBattle();
-
-        const freshCard=document.querySelector("#newStadium")?.closest(".menu-card");
-        if(!freshCard) return;
-        const old=document.getElementById("launchControls");
-        if(old) old.remove();
-
-        // Re-run setup renderer without changing the user's selections.
+        // Rebuild the preview and controls without starting physics.
         showLetItRip();
     };
 
-    document.getElementById("angleFlat").onclick=()=>{
-        Game.player.launch.angle="Flat"; refresh();
-    };
-    document.getElementById("angleSlight").onclick=()=>{
-        Game.player.launch.angle="Slight Tilt"; refresh();
-    };
-    document.getElementById("angleHard").onclick=()=>{
-        Game.player.launch.angle="Hard Tilt"; refresh();
-    };
+    document.getElementById("launchFlat").onclick=()=>setLaunch("Flat",Game.player.launch.technique);
+    document.getElementById("launchSlight").onclick=()=>setLaunch("Slight Tilt",Game.player.launch.technique);
+    document.getElementById("launchHard").onclick=()=>setLaunch("Hard Tilt",Game.player.launch.technique);
 
-    document.getElementById("techCenter").onclick=()=>{
-        Game.player.launch.technique="Center"; refresh();
-    };
-    document.getElementById("techRail").onclick=()=>{
-        Game.player.launch.technique="X-Rail"; refresh();
-    };
-    document.getElementById("techClash").onclick=()=>{
-        Game.player.launch.technique="Direct Clash"; refresh();
-    };
-    document.getElementById("techDrop").onclick=()=>{
-        Game.player.launch.technique="Drop Launch"; refresh();
-    };
-    document.getElementById("techCircle").onclick=()=>{
-        Game.player.launch.technique="Wide Circle"; refresh();
-    };
+    document.getElementById("launchCenter").onclick=()=>setLaunch(Game.player.launch.angle,"Center");
+    document.getElementById("launchRail").onclick=()=>setLaunch(Game.player.launch.angle,"X-Rail");
+    document.getElementById("launchClash").onclick=()=>setLaunch(Game.player.launch.angle,"Direct Clash");
+    document.getElementById("launchDrop").onclick=()=>setLaunch(Game.player.launch.angle,"Drop Launch");
+    document.getElementById("launchCircle").onclick=()=>setLaunch(Game.player.launch.angle,"Wide Circle");
 
-    document.getElementById("letItRip").onclick=startNewBattle;
-    document.getElementById("backToCombo").onclick=showComboCard;
+    document.getElementById("startBattleNow").onclick=startNewBattle;
+    document.getElementById("backToVS").onclick=showVS;
 }
 
 /*========================================================
@@ -3941,6 +3777,7 @@ function getAutomaticLaunchPlan(side){
 function newBattleLaunchState(side){
     const combo=Game[side];
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+
     const plan =
         side==="player" && Game.player.launch?.technique
             ? {
@@ -3956,22 +3793,22 @@ function newBattleLaunchState(side){
             : getAutomaticLaunchPlan(side);
 
     const startX=side==="player"?-0.70:0.70;
-    const startY=side==="player"?0.08:-0.08;
+    const startY=0;
     const direction=side==="player"?1:-1;
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
-    }[plan.quality];
+    }[plan.quality]||1;
 
-    // Tilt is a real release vector, not a label.
-    // Flat = mostly forward; Slight Tilt = controlled lateral line;
-    // Hard Tilt = strong lateral line with more instability/risk.
-    const tiltSign=side==="player" ? -1 : 1;
-    const tiltVector={
-        "Flat":       {lateral:0.000, speed:1.00, stability:0.000, rpmLoss:1.00},
-        "Slight Tilt":{lateral:0.055, speed:0.985, stability:0.018, rpmLoss:1.06},
-        "Hard Tilt":  {lateral:0.105, speed:0.965, stability:0.042, rpmLoss:1.14}
-    }[plan.angle] || {lateral:0,speed:1,stability:0,rpmLoss:1};
+    // Launch angle is a real release vector:
+    // Flat = forward/stable
+    // Slight Tilt = controlled lateral release
+    // Hard Tilt = stronger lateral release + more instability/RPM cost
+    const tilt={
+        "Flat":       {lateral:0.000, speed:1.00, stability:0.000, rpm:1.00},
+        "Slight Tilt":{lateral:0.055, speed:0.985, stability:0.018, rpm:1.06},
+        "Hard Tilt":  {lateral:0.105, speed:0.965, stability:0.042, rpm:1.14}
+    }[plan.angle] || {lateral:0,speed:1,stability:0,rpm:1};
 
     const techniqueSpeed={
         Center:1.00,
@@ -3982,65 +3819,48 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.019 + (stats.mobility||70)*0.000045) *
-        qualityFactor *
-        techniqueSpeed *
-        tiltVector.speed;
+        (0.019+(stats.mobility||70)*0.000045)*
+        qualityFactor*techniqueSpeed*tilt.speed;
 
-    let launchVX=direction*launchSpeed;
-    let launchVY=tiltSign*tiltVector.lateral*launchSpeed;
+    const tiltSign=side==="player"?-1:1;
+    let vx=direction*launchSpeed;
+    let vy=tiltSign*tilt.lateral*launchSpeed;
 
-    if(plan.technique==="Wide Circle"){
-        launchVY += tiltSign*0.012;
-    }else if(plan.technique==="Drop Launch"){
-        launchVY += tiltSign*0.016;
-    }else if(plan.technique==="X-Rail"){
-        // Aim toward the rail; do not place the Bey on it.
-        launchVY += tiltSign*0.008;
-    }else if(plan.technique==="Direct Clash"){
-        launchVY += 0;
-    }
+    if(plan.technique==="Wide Circle") vy+=tiltSign*0.012;
+    if(plan.technique==="Drop Launch") vy+=tiltSign*0.016;
+    if(plan.technique==="X-Rail") vy+=tiltSign*0.008;
 
     return {
-        side,
-        x:startX,
-        y:startY,
-        vx:launchVX,
-        vy:launchVY,
-        rpm:1,
+        side,x:startX,y:startY,vx,vy,rpm:1,
         stability:newBattleClamp(
-            ((stats.balance||70)/100) -
-            tiltVector.stability +
+            ((stats.balance||70)/100)-tilt.stability+
             (plan.quality==="Perfect"?0.035:plan.quality==="Good"?0.018:0),
             0.40,1
         ),
-        launchRpmLossMultiplier:tiltVector.rpmLoss,
-        launchTilt:plan.angle,
-        radius:0.055,
+        radius:0.065,
         hitFlash:0,
-        stats,
-        blade:combo.blade,
-        bit:combo.bit,
+        stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
+        launchRpmLossMultiplier:tilt.rpm,
+        launchTilt:plan.angle,
         launchComplete:false,
-        // Right-spin travels counter-clockwise around the stadium.
-        // The rail geometry is stored in the opposite (clockwise) distance
-        // direction, so right-spin uses -1.
-        spinDirection: combo.blade?.spinDirection === "Left" || combo.blade?.spinDirection === "Left-Spin" ? 1 : -1,
-        railEngaged:false,
-        railProgress:0,
-        railDistance:0,
-        railSpeed:0,
-        railRideTime:0,
-        railTravelDistance:0,
-        railLoops:0,
-        railContactPoint:null,
-        railExitCooldown:0
+        // Right spin = counter-clockwise; left spin = clockwise.
+        spinDirection:(combo.blade?.spin==="Left" ? 1 : -1),
+        railEngaged:false,railProgress:0,railDistance:0,
+        railSpeed:0,railRideTime:0,railTravelDistance:0,
+        railLoops:0,railContactPoint:null,railExitCooldown:0
     };
 }
-
 function startNewBattle(){
+    // Hard guard: never enter battle without valid launch state.
+    if(!NEW_BATTLE.player || !NEW_BATTLE.cpu){
+        console.error("Start battle blocked: launch state was not initialized.");
+        showLetItRip();
+        return;
+    }
+
     cancelAnimationFrame(NEW_BATTLE.raf);
+
     Game.screen="battle";
     Game.battle.engineMode="new_physics";
     Game.battle.phase="Launch";
@@ -4049,11 +3869,11 @@ function startNewBattle(){
     Game.battle.matchFinished=false;
     Game.battle.exchange=0;
 
+    // Rebuild once from the selected launch choices. This is the ONLY place
+    // that starts physical battle state.
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
 
-    // Keep the automatic launch result in Game state so the next battle
-    // systems (CPU reactions and player decisions) can read it.
     Game.player.launch=Game.player.launch||{};
     Game.player.launch.angle=NEW_BATTLE.player.launchPlan.angle;
     Game.player.launch.technique=NEW_BATTLE.player.launchPlan.technique;
@@ -4071,7 +3891,6 @@ function startNewBattle(){
     renderNewBattle();
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
-
 function renderNewBattle(){
     const app=document.getElementById("app");
     if(!app) return;
@@ -4663,8 +4482,7 @@ function newPhysicsCollision(dt){
     }
 }
 
-// Launch angle + technique are selected on the stadium setup view.
-// No separate launch screens are used. The battle engine consumes the
-// selected launch state directly.
+// Launch angle and technique are selected on the stadium setup view.
+// The selected launch state is passed directly into the physical engine.
 
 window.addEventListener("DOMContentLoaded",()=>hookMenuButtons());
