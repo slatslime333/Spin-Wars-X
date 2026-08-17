@@ -3749,7 +3749,7 @@ function showLetItRip(){
         <button class="menu-btn gold" id="continueToLaunch">CONTINUE</button>
         <button class="menu-btn silver" id="backToCombo">← BACK TO COMBO</button>
       </section></main>`;
-    document.getElementById("continueToLaunch").onclick=startNewBattle;
+    document.getElementById("continueToLaunch").onclick=showLaunchAngle;
     document.getElementById("backToCombo").onclick=showComboCard;
 }
 
@@ -3851,10 +3851,178 @@ function getAutomaticLaunchPlan(side){
     return {technique,angle,quality};
 }
 
+
+function calculateLaunchQuality(side,angle,technique){
+    const combo=Game[side];
+    const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+    const personality=combo.blade.personality||{
+        aggression:50,control:50,risk:50,consistency:50
+    };
+
+    const qualityBase=
+        (stats.balance||70)*0.25+
+        (stats.mobility||70)*0.20+
+        (stats.stamina||70)*0.15+
+        (personality.consistency||50)*0.40;
+
+    // Technique/angle influence execution quality without deciding the
+    // battle. The physics engine still determines what the launch actually
+    // does.
+    let modifier=0;
+    if(angle==="Flat") modifier+=2;
+    if(angle==="Slight Tilt") modifier+=1;
+    if(angle==="Hard Tilt") modifier-=1;
+
+    if(technique==="X-Rail"){
+        modifier+=(stats.mobility||70)>=78 ? 2 : -2;
+    }
+    if(technique==="Direct Clash"){
+        modifier+=(stats.attack||70)>=80 ? 2 : 0;
+    }
+    if(technique==="Drop Launch"){
+        modifier+=(stats.mobility||70)>=70 ? 1 : 0;
+    }
+
+    const roll=qualityBase+modifier+(Math.random()*14-7);
+
+    return roll>=92?"Perfect":
+        roll>=82?"Good":
+        roll>=68?"Okay":
+        roll>=55?"Bad":"Horrible";
+}
+
+function showLaunchAngle(){
+    const app=document.getElementById("app");
+    if(!app) return;
+
+    app.innerHTML=`
+      <div class="background"></div>
+      <main class="menu">
+        <section class="menu-card">
+          <h1>LAUNCH ANGLE</h1>
+          <p style="opacity:.7;">Choose how you release the Bey.</p>
+          <hr>
+
+          <button class="menu-btn gold" id="flatLaunch">Flat</button>
+          <button class="menu-btn silver" id="slightLaunch">Slight Tilt</button>
+          <button class="menu-btn bronze" id="hardLaunch">Hard Tilt</button>
+
+          <button class="menu-btn" id="backToVS">← Back</button>
+        </section>
+      </main>`;
+
+    document.getElementById("flatLaunch").onclick=()=>{
+        Game.player.launch=Game.player.launch||{};
+        Game.player.launch.angle="Flat";
+        showLaunchTechnique();
+    };
+    document.getElementById("slightLaunch").onclick=()=>{
+        Game.player.launch=Game.player.launch||{};
+        Game.player.launch.angle="Slight Tilt";
+        showLaunchTechnique();
+    };
+    document.getElementById("hardLaunch").onclick=()=>{
+        Game.player.launch=Game.player.launch||{};
+        Game.player.launch.angle="Hard Tilt";
+        showLaunchTechnique();
+    };
+    document.getElementById("backToVS").onclick=showLetItRip;
+}
+
+function showLaunchTechnique(){
+    const app=document.getElementById("app");
+    if(!app) return;
+
+    const angle=Game.player.launch?.angle||"Flat";
+
+    app.innerHTML=`
+      <div class="background"></div>
+      <main class="menu">
+        <section class="menu-card">
+          <h1>LAUNCH TECHNIQUE</h1>
+          <p style="opacity:.7;">Angle: <strong>${angle}</strong></p>
+          <hr>
+
+          <button class="menu-btn gold" id="centerLaunch">Center</button>
+          <button class="menu-btn silver" id="xrailLaunch">X-Rail</button>
+          <button class="menu-btn gold" id="clashLaunch">Direct Clash</button>
+          <button class="menu-btn bronze" id="dropLaunch">Drop Launch</button>
+          <button class="menu-btn silver" id="circleLaunch">Wide Circle</button>
+
+          <button class="menu-btn" id="backToAngle">← Back</button>
+        </section>
+      </main>`;
+
+    const choose=(technique)=>{
+        Game.player.launch=Game.player.launch||{};
+        Game.player.launch.technique=technique;
+        Game.player.launch.quality=
+            calculateLaunchQuality("player",angle,technique);
+
+        Game.cpu.launch=getAutomaticLaunchPlan("cpu");
+        showLaunchPreview();
+    };
+
+    document.getElementById("centerLaunch").onclick=()=>choose("Center");
+    document.getElementById("xrailLaunch").onclick=()=>choose("X-Rail");
+    document.getElementById("clashLaunch").onclick=()=>choose("Direct Clash");
+    document.getElementById("dropLaunch").onclick=()=>choose("Drop Launch");
+    document.getElementById("circleLaunch").onclick=()=>choose("Wide Circle");
+    document.getElementById("backToAngle").onclick=showLaunchAngle;
+}
+
+function showLaunchPreview(){
+    const app=document.getElementById("app");
+    const p=Game.player.launch;
+    const c=Game.cpu.launch;
+
+    app.innerHTML=`
+      <div class="background"></div>
+      <main class="menu">
+        <section class="menu-card">
+          <h1>LET IT RIP</h1>
+          <hr>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;text-align:center;">
+            <div>
+              <strong>YOU</strong><br>
+              ${p.angle}<br>
+              ${p.technique}<br>
+              <span style="opacity:.7;">${p.quality}</span>
+            </div>
+            <div>
+              <strong>CPU</strong><br>
+              ${c.angle}<br>
+              ${c.technique}<br>
+              <span style="opacity:.7;">${c.quality}</span>
+            </div>
+          </div>
+
+          <hr>
+          <button class="menu-btn gold" id="startBattleNow">LET IT RIP</button>
+          <button class="menu-btn" id="backToTechnique">← Change Launch</button>
+        </section>
+      </main>`;
+
+    document.getElementById("startBattleNow").onclick=startNewBattle;
+    document.getElementById("backToTechnique").onclick=showLaunchTechnique;
+}
+
 function newBattleLaunchState(side){
     const combo=Game[side];
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
-    const plan=getAutomaticLaunchPlan(side);
+    const plan=side==="player" && Game.player.launch?.technique
+        ? {
+            technique:Game.player.launch.technique,
+            angle:Game.player.launch.angle||"Flat",
+            quality:Game.player.launch.quality||
+                calculateLaunchQuality(
+                    "player",
+                    Game.player.launch.angle||"Flat",
+                    Game.player.launch.technique
+                )
+          }
+        : getAutomaticLaunchPlan(side);
 
     const startX=side==="player"?-0.70:0.70;
     const startY=side==="player"?0.08:-0.08;
@@ -3873,19 +4041,32 @@ function newBattleLaunchState(side){
         Center:1.00,
         "Direct Clash":1.10,
         "Wide Circle":0.84,
-        "X-Rail":0.98
+        "X-Rail":1.00,
+        "Drop Launch":0.90
     }[plan.technique]||1;
 
     const launchSpeed=
         (0.019 + (stats.mobility||70)*0.000045) *
         qualityFactor * techniqueSpeed;
 
+    let launchVX=direction*launchSpeed;
+    let launchVY=angleOffset;
+
+    if(plan.technique==="Wide Circle"){
+        launchVY+=side==="player"?-0.012:0.012;
+    }else if(plan.technique==="Drop Launch"){
+        launchVY+=side==="player"?0.015:-0.015;
+    }else if(plan.technique==="X-Rail"){
+        // Aim toward the rail rather than placing the Bey on it.
+        launchVY+=side==="player"?-0.006:0.006;
+    }
+
     return {
         side,
         x:startX,
         y:startY,
-        vx:direction*launchSpeed,
-        vy:angleOffset,
+        vx:launchVX,
+        vy:launchVY,
         rpm:1,
         stability:newBattleClamp(
             ((stats.balance||70)/100) +
@@ -3927,6 +4108,14 @@ function startNewBattle(){
 
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
+
+    // Guarantee both Beys receive a real initial velocity. The CPU uses the
+    // same physics engine as the player; this only prevents a zero/near-zero
+    // opening state from looking stationary.
+    if(Math.hypot(NEW_BATTLE.cpu.vx,NEW_BATTLE.cpu.vy)<0.004){
+        NEW_BATTLE.cpu.vx=-0.018;
+        NEW_BATTLE.cpu.vy=0.004;
+    }
 
     // Keep the automatic launch result in Game state so the next battle
     // systems (CPU reactions and player decisions) can read it.
