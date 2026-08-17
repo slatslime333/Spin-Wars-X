@@ -4398,7 +4398,26 @@ function newBattleFrame(now){
 
         newPhysicsStep(p,dt);
         newPhysicsStep(c,dt);
+
+        if(
+            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+        ){
+            throw new Error("Non-finite Bey physics state.");
+        }
+
         newPhysicsCollision(dt);
+
+        if(
+            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+        ){
+            throw new Error("Non-finite collision result.");
+        }
 
         const pe=document.getElementById("newPlayerBey");
         const ce=document.getElementById("newCpuBey");
@@ -5250,18 +5269,11 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          ENGAGEMENT / FIGHTING BEHAVIOR
-          --------------------------------
-          Movement should create collisions, not just pretty orbits.
-
-          This is deliberately a soft trajectory bias:
-          - Attack Bits get the strongest convergence/crossing behavior.
-          - Non-attack Bits get a weaker version so stamina/defense battles
-            still interact instead of endlessly orbiting.
-          - It only activates in a useful engagement range.
-          - The phase gate creates attack windows rather than permanent
-            homing.
-          - It never directly moves a Bey or guarantees a collision.
+          SOFT COMBAT ENGAGEMENT
+          ----------------------
+          This is trajectory bias only. It does not guarantee a hit and it
+          does not create a timer. Attack Bits get stronger convergence;
+          non-attack Bits get a gentler version so they actually engage.
         */
         {
             const opponent =
@@ -5269,187 +5281,121 @@ function newPhysicsStep(s,dt){
                     ? NEW_BATTLE.cpu
                     : NEW_BATTLE.player;
 
-            if(opponent && opponent.rpm>0.01){
-
-                const dx=opponent.x-s.x;
-                const dy=opponent.y-s.y;
-                const distance=Math.hypot(dx,dy);
-
-                const attackStat=(stats.attack||70)/99;
-                const knockbackStat=(stats.knockback||70)/99;
-                const opponentAttack=(opponent.stats?.attack||70)/99;
-                const opponentMovement=
-                    (bitPhysics(opponent).movement||60)/100;
-
-                const opponentBitAttack=
-                    opponentMovement>=0.80;
-
-                /*
-                  Engagement range is intentionally broad enough to let
-                  trajectories meet, but not so broad that both Beys
-                  constantly chase each other.
-                */
-                const engageMin=0.135;
-                const engageMax=
-                    attackBit ? 0.46 : 0.40;
+            if(opponent){
+                const ox=Number(opponent.x);
+                const oy=Number(opponent.y);
+                const sx=Number(s.x);
+                const sy=Number(s.y);
 
                 if(
-                    distance>engageMin &&
-                    distance<engageMax &&
-                    rpm>0.18
+                    Number.isFinite(ox) &&
+                    Number.isFinite(oy) &&
+                    Number.isFinite(sx) &&
+                    Number.isFinite(sy)
                 ){
+                    const dx=ox-sx;
+                    const dy=oy-sy;
+                    const d=Math.hypot(dx,dy);
 
-                    const invD=1/Math.max(distance,0.001);
-                    const towardX=dx*invD;
-                    const towardY=dy*invD;
+                    if(
+                        d>0.14 &&
+                        d<0.43 &&
+                        s.rpm>0.20 &&
+                        opponent.rpm>0.05
+                    ){
+                        const invD=1/Math.max(d,0.001);
+                        const tx=-dy*invD;
+                        const ty=dx*invD;
+                        const ax=dx*invD;
+                        const ay=dy*invD;
 
-                    /*
-                      The tangential component is important. Pure homing
-                      would make the Beys drive directly into each other
-                      every time. We bias the trajectory toward a crossing
-                      line instead.
-                    */
-                    const tangentSign =
-                        s.spinDirection===-1 ? 1 : -1;
+                        const attackStat=
+                            newBattleClamp(
+                                Number(s.stats && s.stats.attack || 70)/99,
+                                0,1
+                            );
 
-                    const tangentX=-towardY*tangentSign;
-                    const tangentY=towardX*tangentSign;
+                        const kbStat=
+                            newBattleClamp(
+                                Number(s.stats && s.stats.knockback || 70)/99,
+                                0,1
+                            );
 
-                    const relativeVX=
-                        opponent.vx-s.vx;
-                    const relativeVY=
-                        opponent.vy-s.vy;
+                        const attackBit=
+                            Number(bp.movement||60)>=80;
 
-                    const closingSpeed=
-                        relativeVX*towardX+
-                        relativeVY*towardY;
+                        const opponentAttackBit=
+                            opponent.bitPhysicsType==="attack" ||
+                            Number(
+                                opponent.stats &&
+                                opponent.stats.movement ||
+                                60
+                            )>=80;
 
-                    /*
-                      Don't keep steering if they're already rapidly closing.
-                      Let the existing physics create the impact.
-                    */
-                    const needToEngage=
-                        closingSpeed<0.010;
-
-                    /*
-                      Attack windows breathe in and out. This is a physical
-                      movement rhythm, not a "hit every N seconds" timer.
-                    */
-                    const engagementWave=
-                        0.5+
-                        0.5*Math.sin(
-                            s.motionPhase*0.61+
-                            s.motionPhase2*0.37
-                        );
-
-                    const attackEngagement=
-                        0.035+
-                        attackStat*0.060+
-                        knockbackStat*0.025;
-
-                    const nonAttackEngagement=
-                        0.020+
-                        attackStat*0.032+
-                        knockbackStat*0.018;
-
-                    const rawStrength=
-                        attackBit
-                            ? attackEngagement
-                            : nonAttackEngagement;
-
-                    /*
-                      Non-attack vs non-attack gets a little extra initiative.
-                      This is specifically to stop two passive Beys from
-                      spending the entire battle circling independently.
-                    */
-                    const bothNonAttack=
-                        !attackBit && !opponentBitAttack;
-
-                    const centerFightBoost=
-                        bothNonAttack
-                            ? 1.28
-                            : 1.0;
-
-                    const opponentSpacing=
-                        newBattleClamp(
-                            (0.42-distance)/0.27,
-                            0,1
-                        );
-
-                    /*
-                      More likely to engage when both are stable and spinning
-                      well, but never guaranteed.
-                    */
-                    const readiness=
-                        newBattleClamp(
-                            0.35+
-                            rpm*0.42+
-                            (1-tilt)*0.18+
-                            engagementWave*0.22,
-                            0,1
-                        );
-
-                    const trigger=
-                        needToEngage &&
-                        readiness>
-                            (attackBit ? 0.47 : 0.58);
-
-                    if(trigger){
-
-                        const strength=
-                            rawStrength*
-                            centerFightBoost*
-                            opponentSpacing*
-                            (0.72+0.28*rpm);
+                        const bothNonAttack=
+                            !attackBit && !opponentAttackBit;
 
                         /*
-                          Blend a small amount of direct convergence with a
-                          crossing component. The crossing component prevents
-                          "two Beys chase each other nose-first" behavior.
+                          The wave creates windows of engagement. It is not a
+                          countdown, so it cannot guarantee a collision.
                         */
-                        const convergence=
-                            strength*
-                            (0.46+0.20*engagementWave);
+                        const wave=
+                            0.5+
+                            0.5*Math.sin(
+                                (s.motionPhase||0)*0.61+
+                                (s.motionPhase2||0)*0.37
+                            );
 
-                        const crossing=
-                            strength*
-                            (0.32+0.28*(1-engagementWave));
+                        const distanceFactor=
+                            newBattleClamp(
+                                (0.43-d)/0.25,
+                                0,1
+                            );
 
-                        s.vx +=
-                            (
-                                towardX*convergence+
-                                tangentX*crossing
-                            )*
-                            dt*60;
+                        const readiness=
+                            newBattleClamp(
+                                0.48+
+                                s.rpm*0.28+
+                                (1-(s.tiltLevel||0))*0.16+
+                                wave*0.16,
+                                0,1
+                            );
 
-                        s.vy +=
-                            (
-                                towardY*convergence+
-                                tangentY*crossing
-                            )*
-                            dt*60;
+                        const threshold=
+                            bothNonAttack ? 0.59 : 0.47;
 
-                        /*
-                          Attack Beys get a little more commitment when they
-                          have a strong attack/momentum profile. This affects
-                          trajectory, not guaranteed collision damage.
-                        */
-                        if(attackBit){
-                            const commitment=
-                                1.0+
-                                attackStat*0.22+
-                                knockbackStat*0.10;
+                        if(readiness>threshold){
 
-                            s.vx +=
-                                towardX*
-                                strength*0.22*
-                                commitment*
+                            const base=
+                                attackBit
+                                    ? 0.00052+
+                                      attackStat*0.00055+
+                                      kbStat*0.00020
+                                    : 0.00030+
+                                      attackStat*0.00026+
+                                      kbStat*0.00018;
+
+                            const strength=
+                                base*
+                                distanceFactor*
+                                (0.72+0.28*s.rpm)*
+                                (bothNonAttack?1.30:1.0);
+
+                            /*
+                              Mostly crossing force, with a smaller inward
+                              component. This prevents permanent homing.
+                            */
+                            const inward=
+                                strength*(0.35+0.18*wave);
+
+                            const crossing=
+                                strength*(0.70-0.18*wave);
+
+                            s.vx+=
+                                (ax*inward+tx*crossing)*
                                 dt*60;
-
-                            s.vy +=
-                                towardY*
-                                strength*0.22*
-                                commitment*
+                            s.vy+=
+                                (ay*inward+ty*crossing)*
                                 dt*60;
                         }
                     }
