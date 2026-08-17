@@ -1792,6 +1792,9 @@ viewBox="0 0 1000 900">
     <circle id="impactRing" cx="500" cy="420" r="8" fill="none" stroke="#ffd43b" stroke-width="2.5"/>
     <circle id="impactRing2" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="2"/>
     <circle id="impactRing3" cx="500" cy="420" r="3" fill="none" stroke="#ffd43b" stroke-width="1.5"/>
+     <circle id="impactExplosion" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+     <circle id="impactBurst1" cx="500" cy="420" r="2" fill="#ffffff" opacity="0.95"/>
+     <circle id="impactBurst2" cx="500" cy="420" r="2" fill="#ffd43b" opacity="0.9"/>
     <text id="impactText" x="500" y="380" text-anchor="middle" font-size="20" font-weight="900" fill="#ffffff">HIT!</text>
 </g>
 
@@ -4044,7 +4047,7 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.0225+(stats.mobility||70)*0.000055)*
+        (0.0255+(stats.mobility||70)*0.000062)*
         qualityFactor*techniqueSpeed*tilt.speed;
 
     const tiltSign=side==="player"?-1:1;
@@ -4131,7 +4134,7 @@ function newBattleLaunchState(side){
         railUses:0,
 
         // Right spin = counter-clockwise; left spin = clockwise.
-        spinDirection:(combo.blade?.spin==="Left" ? 1 : -1),
+        spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
         railLoops:0,
@@ -4309,9 +4312,9 @@ function renderNewBattle(){
                     stroke-linejoin="round"/>
 
               <!-- Beys -->
-              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
+              <circle id="newPlayerBey" cx="${px}" cy="${py}" r="5.35"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
-              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
+              <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="5.35"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
           </div>
@@ -4615,6 +4618,9 @@ function newBattleFrame(now){
                 const ring=document.getElementById("impactRing");
                 const ring2=document.getElementById("impactRing2");
                 const ring3=document.getElementById("impactRing3");
+                const explosion=document.getElementById("impactExplosion");
+                const burst1=document.getElementById("impactBurst1");
+                const burst2=document.getElementById("impactBurst2");
                 const txt=document.getElementById("impactText");
 
                 if(flash){
@@ -4637,6 +4643,25 @@ function newBattleFrame(now){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
                     ring3.setAttribute("r",String(4+u*17*strength));
+                }
+                if(explosion){
+                    explosion.setAttribute("cx",x);
+                    explosion.setAttribute("cy",y);
+                    explosion.setAttribute("r",String(5+u*30*strength));
+                    explosion.setAttribute("stroke-width",String(Math.max(1.2,4.5-u*3.2)));
+                    explosion.setAttribute("opacity",String(Math.max(0,0.92-u*1.15)));
+                }
+                if(burst1){
+                    burst1.setAttribute("cx",String(x-u*20*strength));
+                    burst1.setAttribute("cy",String(y-u*12*strength));
+                    burst1.setAttribute("r",String(Math.max(0.8,3.2-u*2.2)));
+                    burst1.setAttribute("opacity",String(Math.max(0,1-u*1.4)));
+                }
+                if(burst2){
+                    burst2.setAttribute("cx",String(x+u*22*strength));
+                    burst2.setAttribute("cy",String(y+u*10*strength));
+                    burst2.setAttribute("r",String(Math.max(0.8,2.8-u*1.8)));
+                    burst2.setAttribute("opacity",String(Math.max(0,0.95-u*1.3)));
                 }
                 if(txt){
                     txt.setAttribute("x",x);
@@ -5395,12 +5420,12 @@ function newPhysicsStep(s,dt){
 
         const physicalSpeedTarget=
             launchMobility*
-            (0.84+0.28*bitAcceleration)*
+            (0.94+0.32*bitAcceleration)*
             rpmSpeedFactor*
-            (0.82+0.22*bitStability)*
+            (0.84+0.22*bitStability)*
             (attackBit
-                ? 1.12+0.14*attackStat+0.08*Math.pow(rpm,0.70)
-                : 0.99+0.06*attackStat);
+                ? 1.24+0.18*attackStat+0.10*Math.pow(rpm,0.70)
+                : 1.04+0.07*attackStat);
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
@@ -5435,9 +5460,9 @@ function newPhysicsStep(s,dt){
 
         if(attackBit && rpm>0.38 && speedNow>0.001){
             const attackDrive=
-                (0.00020+attackStat*0.00022)*
+                (0.00030+attackStat*0.00030)*
                 Math.pow(rpm,0.82)*
-                (0.72+0.28*s.movementEnergy)*
+                (0.74+0.26*s.movementEnergy)*
                 bitAcceleration;
             s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
             s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
@@ -5571,9 +5596,6 @@ function newPhysicsStep(s,dt){
                 !!opponent &&
                 !currentAttackBit &&
                 !opponentAttackBit;
-                s===NEW_BATTLE.player
-                    ? NEW_BATTLE.cpu
-                    : NEW_BATTLE.player;
 
             if(opponent){
                 const ox=Number(opponent.x);
@@ -5648,34 +5670,45 @@ function newPhysicsStep(s,dt){
 
                             const base=
                                 attackBit
-                                    ? 0.00052+
-                                      attackStat*0.00055+
-                                      kbStat*0.00020
-                                    : 0.00030+
-                                      attackStat*0.00026+
-                                      kbStat*0.00018;
+                                    ? 0.00068+
+                                      attackStat*0.00070+
+                                      kbStat*0.00026
+                                    : 0.00040+
+                                      attackStat*0.00034+
+                                      kbStat*0.00022;
 
                             const strength=
                                 base*
                                 distanceFactor*
                                 (0.72+0.28*s.rpm)*
-                                (bothNonAttack?1.58:1.0);
+                                (bothNonAttack?1.68:1.12);
 
                             /*
                               Mostly crossing force, with a smaller inward
                               component. This prevents permanent homing.
                             */
+                            const closeGravity=
+                                newBattleClamp(
+                                    (0.62-d)/0.42,
+                                    0,1
+                                );
+
+                            const gravity=
+                                strength*
+                                (0.38+0.48*closeGravity)*
+                                (bothNonAttack ? 1.18 : 1.0);
+
                             const inward=
-                                strength*(0.35+0.18*wave);
+                                strength*(0.46+0.22*wave);
 
                             const crossing=
-                                strength*(0.70-0.18*wave);
+                                strength*(0.82-0.16*wave);
 
                             s.vx+=
-                                (ax*inward+tx*crossing)*
+                                (ax*(inward+gravity)+tx*crossing)*
                                 dt*60;
                             s.vy+=
-                                (ay*inward+ty*crossing)*
+                                (ay*(inward+gravity)+ty*crossing)*
                                 dt*60;
                         }
                     }
@@ -6295,9 +6328,9 @@ function newPhysicsCollision(dt){
     const cContactEfficiency=contactEfficiency(c.blade);
 
     const pMomentum=
-        pMass*pSpeed*Math.max(0.35,Math.pow(pRPM,0.72));
+        pMass*pSpeed*Math.max(0.42,Math.pow(pRPM,0.68));
     const cMomentum=
-        cMass*cSpeed*Math.max(0.35,Math.pow(cRPM,0.72));
+        cMass*cSpeed*Math.max(0.42,Math.pow(cRPM,0.68));
 
     // Closing speed identifies who is actually driving into the contact.
     const pClosing=Math.max(0,-closing);
@@ -6307,10 +6340,12 @@ function newPhysicsCollision(dt){
     // substantially more energetic than a slow bump.
     const pKinetic=
         0.5*pMass*pSpeed*pSpeed*
-        (0.48+0.52*pRPM);
+        (0.40+0.60*pRPM)*
+        (1.08+0.18*pRPM);
     const cKinetic=
         0.5*cMass*cSpeed*cSpeed*
-        (0.48+0.52*cRPM);
+        (0.40+0.60*cRPM)*
+        (1.08+0.18*cRPM);
 
     // Tangential clashes still have real energy, but they are weaker than a
     // direct collision.
@@ -6341,8 +6376,8 @@ function newPhysicsCollision(dt){
     )*cContactEfficiency;
 
     const statDrivenContact=
-        (0.0014+Math.min(pCombatRating,cCombatRating)*0.0014)*
-        Math.pow((pRPM+cRPM)*0.5,0.70);
+        (0.0016+Math.min(pCombatRating,cCombatRating)*0.00155)*
+        Math.pow((pRPM+cRPM)*0.5,0.68);
 
     const effectiveImpact=Math.max(
         impactSpeed,
@@ -6421,21 +6456,21 @@ function newPhysicsCollision(dt){
     // rider's grip and send it back into normal stadium physics.
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
-    const railBreakThreshold=0.0135;
+    const railBreakThreshold=0.0090;
     const railCollisionBreakThreshold=0.0012;
 
     // IMPORTANT: each Bey's own force is applied to the opponent.
     // This restores the directional Knockback model.
     const pKnockback=
         Math.max(
-            0.0040+contactEnergy*0.095,
-            pForce*nonAttackImpactMultiplier*(1.08-cDef*0.26)
+            0.0048+contactEnergy*0.112,
+            pForce*nonAttackImpactMultiplier*(1.18-cDef*0.24)
         );
 
     const cKnockback=
         Math.max(
-            0.0040+contactEnergy*0.095,
-            cForce*nonAttackImpactMultiplier*(1.08-pDef*0.26)
+            0.0048+contactEnergy*0.112,
+            cForce*nonAttackImpactMultiplier*(1.18-pDef*0.24)
         );
 
     // Opponent displacement.
@@ -6476,8 +6511,9 @@ function newPhysicsCollision(dt){
         p.railGrip=0;
         p.railSpeed=0;
         p.railExited=false;
-        p.railExitRefractory=0.20;
-        p.surfaceBounce=0.24;
+        p.railExitRefractory=0.34;
+        p.railExitRefractoryPoint={x:p.x,y:p.y};
+        p.surfaceBounce=0.30;
         p.surfaceRecovery=0.16;
     }
 
@@ -6486,8 +6522,9 @@ function newPhysicsCollision(dt){
         c.railGrip=0;
         c.railSpeed=0;
         c.railExited=false;
-        c.railExitRefractory=0.20;
-        c.surfaceBounce=0.24;
+        c.railExitRefractory=0.34;
+        c.railExitRefractoryPoint={x:c.x,y:c.y};
+        c.surfaceBounce=0.30;
         c.surfaceRecovery=0.16;
     }
 
@@ -6620,8 +6657,8 @@ function newPhysicsCollision(dt){
 
     p.hitFlash=0.16*visualStrength;
     c.hitFlash=0.16*visualStrength;
-    p.impactScale=1.08+0.20*visualStrength;
-    c.impactScale=1.08+0.20*visualStrength;
+    p.impactScale=1.10+0.25*visualStrength;
+    c.impactScale=1.10+0.25*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={
