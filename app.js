@@ -4024,15 +4024,15 @@ function newBattleLaunchState(side){
     const startX=isDropLaunch
         ? sideXSign*(0.105 + placementJitter*0.14)
         : isXRailLaunch
-            ? sideXSign*(0.82 + placementJitter*0.06)
+            ? sideXSign*(0.68 + placementJitter*0.05)
             : sideXSign*(0.70 + placementJitter*0.18);
 
-    // Start immediately below the X Exit, still biased toward the player's
-    // side rather than dropping from the center.
+    // Drop Launch stays high near the player's side of the X Exit.
+    // X-Rail Launch starts slightly off the rail so it must approach it.
     const startY=isDropLaunch
         ? -0.705 + placementJitter*0.06
         : isXRailLaunch
-            ? 0.49 + placementJitter*0.10
+            ? 0.60 + placementJitter*0.04
             : placementJitter;
 
     const direction=isDropLaunch ? 0 : launchDirection;
@@ -5095,7 +5095,7 @@ function tryNewXRailEngagement(s){
 
     const minimumApproach=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0055+tilt*0.004+(1-stability)*0.0015
+            ? 0.0038+tilt*0.003+(1-stability)*0.0012
             : 0.0085+tilt*0.006+(1-stability)*0.0025;
 
     if(approachSpeed<minimumApproach) return false;
@@ -5111,14 +5111,14 @@ function tryNewXRailEngagement(s){
 
     const minimumMomentum=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0048+tilt*0.0025+(1-stability)*0.0018
+            ? 0.0038+tilt*0.0022+(1-stability)*0.0015
             : 0.0068+tilt*0.0035+(1-stability)*0.0025;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.16-control*0.04-affinity*0.03-rpm*0.06
+            ? 0.10-control*0.035-affinity*0.025-rpm*0.05
             : 0.28-control*0.06-affinity*0.04-rpm*0.07;
 
     const maximumApproach=
@@ -5229,7 +5229,7 @@ function updateNewXRailRide(s,dt){
         newXRailRailRelease(s,direction);
         s.vx+=(-tx0)*ejectForce;
         s.vy+=(-ty0)*ejectForce;
-        s.railExitRefractory=0.52;
+        s.railExitRefractory=0.68;
         return true;
     }
 
@@ -5242,7 +5242,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.050){
+    if(tangentVelocity<0.028){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5318,7 +5318,7 @@ function newXRailRailRelease(s,direction){
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
     s.railGrip=0; s.railDirection=0;
 
-    const tangential=speed*0.92, normal=Math.max(0.008,speed*0.24);
+    const tangential=speed*0.88, normal=Math.max(0.014,speed*0.36);
     const separation=0.078+s.radius*0.10;
     s.x=point.x+normalX*separation;
     s.y=point.y+normalY*separation;
@@ -5745,37 +5745,23 @@ function newPhysicsStep(s,dt){
                                 (bothNonAttack?1.68:1.12);
 
                             /*
-                              Mostly crossing force, with a smaller inward
-                              component. This prevents permanent homing.
+                              The old gravity/crossing system is removed.
+                              This assist is strictly radial: it only points
+                              at the opponent and never adds an orbital force.
                             */
-                            const closeGravity=
+                            const closeAssist=
                                 newBattleClamp(
-                                    (0.62-d)/0.42,
+                                    (0.50-d)/0.28,
                                     0,1
                                 );
 
-                            const gravity=
+                            const assist=
                                 strength*
-                                (0.58+0.68*closeGravity)*
-                                (bothNonAttack ? 1.24 : 1.0);
+                                (0.34+0.48*closeAssist)*
+                                (bothNonAttack ? 1.08 : 0.92);
 
-                            const inward=
-                                strength*(0.58+0.24*wave);
-
-                            /*
-                              The attraction no longer uses a strong tangent
-                              force. That tangent force could turn a Bey into
-                              a false clockwise orbit after a deflection.
-                            */
-                            const crossing=
-                                strength*(0.22-0.08*wave);
-
-                            s.vx+=
-                                (ax*(inward+gravity)+tx*crossing)*
-                                dt*60;
-                            s.vy+=
-                                (ay*(inward+gravity)+ty*crossing)*
-                                dt*60;
+                            s.vx+=ax*assist*dt*60;
+                            s.vy+=ay*assist*dt*60;
                         }
                     }
                 }
@@ -5886,6 +5872,23 @@ function newPhysicsStep(s,dt){
 
             const radialX=s.x*invR;
             const radialY=s.y*invR;
+
+            // Right-spin is CCW. Remove only a reversed tangent component
+            // if a collision temporarily makes the trajectory clockwise.
+            if(s.spinDirection===1){
+                const angularCross=s.x*s.vy-s.y*s.vx;
+                if(angularCross>0){
+                    const tangentVelocity=s.vx*tangentX+s.vy*tangentY;
+                    if(tangentVelocity<0){
+                        const correction=Math.min(
+                            Math.abs(tangentVelocity)*0.42,
+                            angularCross/(r*r+0.001)*0.030
+                        );
+                        s.vx+=tangentX*correction;
+                        s.vy+=tangentY*correction;
+                    }
+                }
+            }
 
             /*
               The direction of the travel force breathes in/out instead of
