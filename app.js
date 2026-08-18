@@ -4561,6 +4561,8 @@ function checkForcedStadiumFinish(s){
     const age=performance.now()-(s.lastImpactAt||0);
     if(age>700) return null;
 
+    const now=performance.now();
+
     const force=s.lastImpactForce||0;
     const speed=speedOf(s);
 
@@ -4591,7 +4593,10 @@ function checkForcedStadiumFinish(s){
         speed>=0.060 &&
         xtremeAlignment>=0.74
     ){
-        return "Xtreme";
+        if(!s.finishCandidateSince) s.finishCandidateSince=now;
+        if(now-s.finishCandidateSince>=110) return "Xtreme";
+    }else if(!inXtreme){
+        s.finishCandidateSince=0;
     }
 
     // Pockets are wider and require slightly less force than Xtreme, but
@@ -4622,7 +4627,10 @@ function checkForcedStadiumFinish(s){
         s.y>0.84 &&
         pocketAlignment>=0.73
     ){
-        return "Over";
+        if(!s.finishCandidateSince) s.finishCandidateSince=now;
+        if(now-s.finishCandidateSince>=130) return "Over";
+    }else if(!leftPocket && !rightPocket){
+        s.finishCandidateSince=0;
     }
 
     return null;
@@ -4732,7 +4740,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.38;
+            const life=0.48;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -4754,39 +4762,39 @@ function newBattleFrame(now){
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
-                    flash.setAttribute("r",String(14+u*24*strength));
+                    flash.setAttribute("r",String(15+u*28*strength));
                     flash.setAttribute("stroke-width",String(4.0-u*1.5));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
-                    ring.setAttribute("r",String(8+u*32*strength));
+                    ring.setAttribute("r",String(8+u*40*strength));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
                     ring2.setAttribute("cy",y);
-                    ring2.setAttribute("r",String(6+u*24*strength));
+                    ring2.setAttribute("r",String(6+u*31*strength));
                 }
                 if(ring3){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
-                    ring3.setAttribute("r",String(4+u*17*strength));
+                    ring3.setAttribute("r",String(4+u*23*strength));
                 }
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(4+u*17*strength));
-                    explosion.setAttribute("stroke-width",String(Math.max(0.9,3.0-u*2.0)));
-                    explosion.setAttribute("opacity",String(Math.max(0,0.92-u*1.15)));
+                    explosion.setAttribute("r",String(5+u*24*strength));
+                    explosion.setAttribute("stroke-width",String(Math.max(1.0,3.4-u*2.1)));
+                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.05)));
                 }
                 if(burst1){
-                    burst1.setAttribute("cx",String(x-u*20*strength));
+                    burst1.setAttribute("cx",String(x-u*25*strength));
                     burst1.setAttribute("cy",String(y-u*12*strength));
                     burst1.setAttribute("r",String(Math.max(0.8,3.2-u*2.2)));
                     burst1.setAttribute("opacity",String(Math.max(0,1-u*1.4)));
                 }
                 if(burst2){
-                    burst2.setAttribute("cx",String(x+u*22*strength));
+                    burst2.setAttribute("cx",String(x+u*27*strength));
                     burst2.setAttribute("cy",String(y+u*10*strength));
                     burst2.setAttribute("r",String(Math.max(0.8,2.8-u*1.8)));
                     burst2.setAttribute("opacity",String(Math.max(0,0.95-u*1.3)));
@@ -5203,8 +5211,8 @@ function tryNewXRailEngagement(s){
 
     const railContactDistance=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.075+s.radius*0.48
-            : 0.050+s.radius*0.36;
+            ? 0.078+s.radius*0.50
+            : 0.056+s.radius*0.40;
 
     if(Math.sqrt(nearest.dist2)>railContactDistance) return false;
 
@@ -5215,8 +5223,8 @@ function tryNewXRailEngagement(s){
 
     const minimumApproach=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0030+tilt*0.0025+(1-stability)*0.0010
-            : 0.0080+tilt*0.0055+(1-stability)*0.0022;
+            ? 0.0028+tilt*0.0022+(1-stability)*0.0009
+            : 0.0068+tilt*0.0048+(1-stability)*0.0019;
 
     if(approachSpeed<minimumApproach) return false;
 
@@ -5231,22 +5239,22 @@ function tryNewXRailEngagement(s){
 
     const minimumMomentum=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0030+tilt*0.0020+(1-stability)*0.0012
-            : 0.0065+tilt*0.0032+(1-stability)*0.0023;
+            ? 0.0028+tilt*0.0018+(1-stability)*0.0011
+            : 0.0058+tilt*0.0028+(1-stability)*0.0020;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.055-control*0.025-affinity*0.020-rpm*0.045
-            : 0.25-control*0.055-affinity*0.035-rpm*0.065;
+            ? 0.050-control*0.026-affinity*0.021-rpm*0.046
+            : 0.22-control*0.058-affinity*0.038-rpm*0.070;
 
     const maximumApproach=
         0.78+control*0.08+movement*0.05;
     if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
 
     const tiltLimit=
-        0.46+stability*0.07+control*0.04+rpm*0.05;
+        0.50+stability*0.075+control*0.045+rpm*0.055;
     if(tilt>tiltLimit) return false;
 
     const speedQuality=newBattleClamp((effectiveMomentum-minimumMomentum)/0.045,0,1);
@@ -5261,8 +5269,8 @@ function tryNewXRailEngagement(s){
 
     const threshold=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.15-movement*0.035-affinity*0.025-rpm*0.05-stability*0.015
-            : 0.36-movement*0.06-affinity*0.04-rpm*0.06-stability*0.025;
+            ? 0.135-movement*0.038-affinity*0.027-rpm*0.052-stability*0.017
+            : 0.325-movement*0.065-affinity*0.043-rpm*0.055-stability*0.023;
 
     // Deliberate X-Rail launches are player-selected. Once the Bey actually
     // reaches the rail with the required momentum/alignment, do not roll a
@@ -5472,13 +5480,6 @@ function enforceXRailExitBarrier(s){
 
         // A strong recent collision is allowed to carry the Bey through the
         // exit boundary. Weak normal movement still treats it as a wall.
-        if(
-            s.knockbackOverrideUntil>performance.now() &&
-            (s.knockbackOverrideForce||0)>=0.0135
-        ){
-            return;
-        }
-
         const exit =
             newXRailPointAtDistance(
                 getNewXRailGeometry().exitDistance
@@ -5557,14 +5558,14 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
     // Never allow a non-engaged Bey to remain buried in the rail.
     const penetration=contactRadius-railDistance;
     if(penetration>0){
-        s.x+=nx*(penetration+0.004);
-        s.y+=ny*(penetration+0.004);
+        s.x+=nx*(penetration+0.007);
+        s.y+=ny*(penetration+0.007);
     }
 
     // If it is moving into the rail, reflect only the normal component.
     const normalVelocity=s.vx*nx+s.vy*ny;
     if(normalVelocity<0){
-        const bounce=0.72;
+        const bounce=0.82;
         s.vx-=nx*normalVelocity*(1+bounce);
         s.vy-=ny*normalVelocity*(1+bounce);
     }
@@ -5572,9 +5573,9 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
     // A stalled/contacting Bey gets a small outward separation impulse so
     // it cannot self-lock against the rail.
     const speed=Math.hypot(s.vx,s.vy);
-    if(speed<0.006){
-        s.vx+=nx*0.0045;
-        s.vy+=ny*0.0045;
+    if(speed<0.009){
+        s.vx+=nx*0.0065;
+        s.vy+=ny*0.0065;
     }
 
     s.railEngaged=false;
@@ -5673,8 +5674,8 @@ function newPhysicsStep(s,dt){
             (stats.mobility||70)*0.000058;
 
         const rpmSpeedFactor=
-            0.34+
-            0.66*Math.pow(rpm,0.58);
+            0.20+
+            0.80*Math.pow(rpm,0.78);
 
         const physicalSpeedTarget=
             launchMobility*
@@ -5683,9 +5684,17 @@ function newPhysicsStep(s,dt){
             (0.86+0.24*bitStability)*
             (attackBit
                 ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
-                : 1.08+0.08*attackStat);
+                : 1.08+0.08*attackStat) *
+            (rpm<0.60 ? 0.76+0.40*(rpm/0.60) : 1.0);
 
         const speedNow=Math.hypot(s.vx,s.vy);
+
+        if(rpm<0.60 && speedNow>physicalSpeedTarget){
+            const lowRpmBrake=(0.0014+(0.60-rpm)*0.0038)*dt*60;
+            const brakeScale=newBattleClamp(1-lowRpmBrake,0.90,1);
+            s.vx*=brakeScale;
+            s.vy*=brakeScale;
+        }
 
         if(speedNow>physicalSpeedTarget*1.08){
             const excessRatio=newBattleClamp(
@@ -6147,11 +6156,18 @@ function newPhysicsStep(s,dt){
           central battle area. This is a continuous force, not a hard target
           and not a teleport, so they can still drift and collide naturally.
         */
-        if(!attackBit && r>0.08 && rpm>0.12){
+        if(r>0.08 && rpm>0.12){
+            const lowRpmCenterBoost=
+                rpm<0.60 ? 1.0+((0.60-rpm)/0.60)*2.20 : 1.0;
+            const typeCenterBoost=
+                !attackBit ? 1.0 : (rpm<0.42 ? 0.72 : 0.34);
+
             const centerStrength=
                 (0.00034+centerAffinity*0.00062)*
                 (0.62+0.38*rpm)*
-                (0.78+0.22*s.movementEnergy);
+                (0.78+0.22*s.movementEnergy)*
+                lowRpmCenterBoost*
+                typeCenterBoost;
 
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
