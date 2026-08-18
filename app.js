@@ -4598,12 +4598,12 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0265 &&
-        speed>=0.056 &&
-        xtremeAlignment>=0.70
+        effectiveForce>=0.0240 &&
+        speed>=0.053 &&
+        xtremeAlignment>=0.67
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=90) return "Xtreme";
+        if(now-s.finishCandidateSince>=75) return "Xtreme";
     }else if(!inXtreme){
         s.finishCandidateSince=0;
     }
@@ -4631,13 +4631,13 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0225 &&
-        speed>=0.054 &&
-        s.y>0.82 &&
-        pocketAlignment>=0.69
+        effectiveForce>=0.0200 &&
+        speed>=0.051 &&
+        s.y>0.80 &&
+        pocketAlignment>=0.66
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=105) return "Over";
+        if(now-s.finishCandidateSince>=85) return "Over";
     }else if(!leftPocket && !rightPocket){
         s.finishCandidateSince=0;
     }
@@ -4749,7 +4749,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.48;
+            const life=0.56;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -4773,35 +4773,35 @@ function newBattleFrame(now){
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
-                    flash.setAttribute("r",String(15+u*28*strength));
+                    flash.setAttribute("r",String(17+u*34*strength));
                     flash.setAttribute("stroke-width",String(4.0-u*1.5));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
-                    ring.setAttribute("r",String(8+u*40*strength));
+                    ring.setAttribute("r",String(9+u*47*strength));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
                     ring2.setAttribute("cy",y);
-                    ring2.setAttribute("r",String(6+u*31*strength));
+                    ring2.setAttribute("r",String(7+u*37*strength));
                 }
                 if(ring3){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
-                    ring3.setAttribute("r",String(4+u*23*strength));
+                    ring3.setAttribute("r",String(5+u*28*strength));
                 }
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(6+u*26*strength));
+                    explosion.setAttribute("r",String(7+u*30*strength));
                     explosion.setAttribute("stroke-width",String(Math.max(1.0,3.6-u*2.2)));
                     explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.10)));
                 }
                 if(core){
                     core.setAttribute("cx",x);
                     core.setAttribute("cy",y);
-                    core.setAttribute("r",String(Math.max(1.2,6.5-u*5.0)));
+                    core.setAttribute("r",String(Math.max(1.4,7.2-u*5.4)));
                     core.setAttribute("opacity",String(Math.max(0,1.0-u*1.25)));
                 }
                 if(spokes){
@@ -7075,10 +7075,10 @@ function newPhysicsCollision(dt){
         0.78,1.52
     );
 
-    p.hitFlash=0.22*visualStrength;
-    c.hitFlash=0.22*visualStrength;
-    p.impactScale=1.12+0.30*visualStrength;
-    c.impactScale=1.12+0.30*visualStrength;
+    p.hitFlash=0.25*visualStrength;
+    c.hitFlash=0.25*visualStrength;
+    p.impactScale=1.12+0.34*visualStrength;
+    c.impactScale=1.12+0.34*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={
