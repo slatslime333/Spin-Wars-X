@@ -3672,12 +3672,37 @@ function showLetItRip(){
         Game.player.launch.fixedQualityPreview=rollRandomLaunchQuality();
     }
 
-    Game.cpu.launch=getAutomaticLaunchPlan("cpu");
-    rollLaunchQuality("cpu");
-
+    // Do not reveal or physically commence the CPU launch while the player
+    // is still choosing. The CPU plan is generated again when LET IT RIP is
+    // pressed, after the player's final technique is locked.
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
+
+    // CPU preview: visible Bey only, no launch plan/quality revealed.
+    // Place it slightly inside its own side of center and keep it stationary.
+    const previewCycle=
+        Math.floor((Game.battle?.round||0)/2)%2;
+    const previewPlayerSign=previewCycle===0 ? -1 : 1;
+    const previewCpuSign=-previewPlayerSign;
+
+    NEW_BATTLE.cpu.x=previewCpuSign*0.22;
+    NEW_BATTLE.cpu.y=0;
+    NEW_BATTLE.cpu.vx=0;
+    NEW_BATTLE.cpu.vy=0;
+    NEW_BATTLE.cpu.railEngaged=false;
+    NEW_BATTLE.cpu.railExited=false;
+    NEW_BATTLE.cpu.launchComplete=false;
+    NEW_BATTLE.cpu.launchQuality=null;
+    NEW_BATTLE.cpu.launchPlan=null;
+
     NEW_BATTLE.active=false;
+
+    // The CPU's real launch remains undisclosed until the player commits.
+    if(Game.cpu.launch){
+        Game.cpu.launch.technique=null;
+        Game.cpu.launch.angle=null;
+        Game.cpu.launch.quality=null;
+    }
 
     renderNewBattle();
 
@@ -4549,9 +4574,9 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0225 &&
-        speed>=0.052 &&
-        xtremeAlignment>=0.66
+        effectiveForce>=0.0290 &&
+        speed>=0.060 &&
+        xtremeAlignment>=0.74
     ){
         return "Xtreme";
     }
@@ -4579,10 +4604,10 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0185 &&
-        speed>=0.050 &&
-        s.y>0.82 &&
-        pocketAlignment>=0.65
+        effectiveForce>=0.0245 &&
+        speed>=0.058 &&
+        s.y>0.84 &&
+        pocketAlignment>=0.73
     ){
         return "Over";
     }
@@ -4782,7 +4807,11 @@ function newBattleFrame(now){
         const commentary=document.getElementById("newCommentary");
         if(commentary){
             const distance=Math.hypot(p.x-c.x,p.y-c.y);
-            if(NEW_BATTLE.elapsed<0.55){
+            if(!NEW_BATTLE.active){
+                commentary.textContent=
+                    `${p.blade.name}: READY · ${p.launchQuality || "QUALITY LOCKED"} | `+
+                    `${c.blade.name}: READY — CPU launch hidden`;
+            }else if(NEW_BATTLE.elapsed<0.55){
                 commentary.textContent=
                     `${p.blade.name}: ${p.launchQuality} launch · ${Math.round(p.rpm*100)}% RPM | `+
                     `${c.blade.name}: ${c.launchQuality} launch · ${Math.round(c.rpm*100)}% RPM`;
@@ -4850,11 +4879,11 @@ function newBattleFrame(now){
                 Math.max(speed*targetDistance,0.0001);
 
             return (
-                impactForce>=0.0185 &&
-                speed>=0.050 &&
-                outward>=0.015 &&
-                radial>=0.86 &&
-                targetAlignment>=0.65
+                impactForce>=0.0245 &&
+                speed>=0.058 &&
+                outward>=0.018 &&
+                radial>=0.88 &&
+                targetAlignment>=0.73
             );
         };
 
@@ -5274,9 +5303,14 @@ function newXRailExit(s){
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
     const exitForward=0.88+rpm*0.12+Math.min(0.12,speed*0.80);
-    s.x=exit.x; s.y=exit.y+0.058;
+    s.x=exit.x;
+    s.y=exit.y+0.085;
     s.vx=tangentX*speed*(0.96+control*0.08);
-    s.vy=speed*exitForward+tangentY*speed*(0.22+control*0.10);
+    s.vy=Math.max(
+        0.012,
+        speed*exitForward+tangentY*speed*(0.22+control*0.10)
+    );
+    s.railSafetyUntil=performance.now()+320;
 
     s.rpm=newBattleClamp(s.rpm-(0.008+(s.railSpeed||speed)*0.025),0,1);
     s.stability=newBattleClamp(s.stability-0.008,0,1);
@@ -5534,7 +5568,7 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
     s.railGrip=0;
     s.railSpeed=0;
     s.railContactPoint={x:s.x,y:s.y};
-    s.railSafetyUntil=performance.now()+180;
+    s.railSafetyUntil=performance.now()+360;
     return true;
 }
 
@@ -5772,7 +5806,11 @@ function newPhysicsStep(s,dt){
                     isBottomFinishCorridor(s) &&
                     s.vy>0.006;
 
-                if(!finishCorridor && !tryNewXRailEngagement(s)){
+                if(
+                    !finishCorridor &&
+                    !s.railSafetyUntil &&
+                    !tryNewXRailEngagement(s)
+                ){
                     applyXRailContactSafety(
                         s,nearest,incomingNormal
                     );
@@ -5962,14 +6000,20 @@ function newPhysicsStep(s,dt){
             const exitDist = Math.hypot(exitDx,exitDy);
 
             if(
-                exitDist < 0.105 &&
-                s.y < exitPoint.y+0.040 &&
+                !s.railExited &&
+                exitDist < 0.125 &&
+                s.y < exitPoint.y+0.050 &&
                 s.vy < 0
             ){
-                s.y = exitPoint.y+0.040;
-                s.vy = -s.vy*0.22;
+                // The X Exit is not a general hole in the wall. Only a Bey
+                // that has just completed a real rail exit can pass through.
+                // Free movement hitting the mouth is redirected downward.
+                s.y = exitPoint.y+0.052;
+                s.vy = Math.max(0.006,Math.abs(s.vy)*0.34);
+                s.vx *= 0.82;
                 s.surfaceRecovery = 0.14;
-                s.rpm = newBattleClamp(s.rpm-0.0015,0,1);
+                s.rpm = newBattleClamp(s.rpm-0.0010,0,1);
+                s.railSafetyUntil=performance.now()+260;
             }
         }
 
