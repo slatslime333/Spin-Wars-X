@@ -4570,9 +4570,9 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(commentary){
         commentary.textContent=
             finishType==="Xtreme"
-                ? `${loser.blade.name} falls into the XTREME ZONE! +3`
+                ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +3`
                 : finishType==="Over"
-                    ? `${loser.blade.name} is knocked into the OVER ZONE! +2`
+                    ? `${loser.blade.name} is knocked into the OVER ZONE! ${winner.blade.name} +2`
                     : `${winner.blade.name} wins by SPIN FINISH. +1`;
     }
 
@@ -4636,14 +4636,16 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 }
 function checkForcedStadiumFinish(s){
     /*
-      V43 STADIUM FINISH RESOLVER
-      One authoritative decision:
-        - Bey must actually cross into the finish area.
-        - Entry must have meaningful outward velocity.
-        - A recent collision OR sufficient momentum must explain the entry.
-      There is intentionally NO recovery/candidate timer. Weak entries simply
-      remain under normal physics and can bounce back out; strong entries score
-      immediately when they cross the finish boundary.
+      V45 STADIUM FINISH RESOLVER
+
+      Important: being inside a pocket/Xtreme region is NOT itself a finish.
+      The Bey must CROSS the finish boundary during this frame with meaningful
+      directed momentum. This prevents a Bey that merely happens to be near a
+      zone from being scored.
+
+      The resolver also returns the finish for THE BEY THAT ENTERED THE ZONE.
+      The physics loop is responsible for awarding the point to the opposite
+      side because that opponent caused the finish.
     */
     if(!s) return null;
 
@@ -4652,28 +4654,40 @@ function checkForcedStadiumFinish(s){
     const speed=Math.hypot(s.vx,s.vy);
     const force=s.lastImpactForce||0;
 
-    // The finish check is only valid while the Bey is moving fast enough to
-    // physically cross a boundary. This prevents slow drifting from scoring.
-    if(speed<0.028) return null;
+    // Track the previous physics position locally. This gives us a genuine
+    // boundary crossing instead of "currently inside = finish".
+    if(!Number.isFinite(s.finishPrevX) || !Number.isFinite(s.finishPrevY)){
+        s.finishPrevX=s.x;
+        s.finishPrevY=s.y;
+        return null;
+    }
 
-    // Recent collision is the preferred source of finish energy. A high-speed
-    // Bey can also finish from its own momentum, especially after X-Rail exit.
-    const recentImpact=age<=700;
-    const momentumEntry=speed>=0.075;
-    const railEntry=!!s.railExited && age<=1000;
-    const entryEnergy=recentImpact || momentumEntry || railEntry;
+    const prevX=s.finishPrevX;
+    const prevY=s.finishPrevY;
+    s.finishPrevX=s.x;
+    s.finishPrevY=s.y;
 
-    if(!entryEnergy) return null;
+    if(speed<0.032) return null;
 
-    // ---------- XTREME ZONE ----------
-    // This is the lower-center opening. Treat crossing the boundary as the
-    // event, rather than requiring the Bey to remain inside it.
+    const recentImpact=age<=520;
+    const momentumEntry=speed>=0.090;
+    const railEntry=!!s.railExited && age<=850;
+
+    // ---------- XTREME ----------
+    const wasXtreme=
+        prevY>=0.71 &&
+        prevY<=1.01 &&
+        Math.abs(prevX)<=0.255;
+
     const inXtreme=
         s.y>=0.71 &&
-        s.y<=0.995 &&
+        s.y<=1.01 &&
         Math.abs(s.x)<=0.255;
 
-    if(inXtreme){
+    // A real crossing must enter the Xtreme region from outside it.
+    const enteredXtreme=!wasXtreme && inXtreme;
+
+    if(enteredXtreme){
         const dx=-s.x;
         const dy=0.91-s.y;
         const d=Math.hypot(dx,dy)||1;
@@ -4682,20 +4696,18 @@ function checkForcedStadiumFinish(s){
             (s.vx*dx+s.vy*dy)/
             Math.max(speed*d,0.0001);
 
-        // A modest threshold: strong directed entries score, shallow contact
-        // and slow wandering do not.
         const impactQualified=
             recentImpact &&
-            force>=0.0045 &&
-            speed>=0.032 &&
-            alignment>=0.18;
+            force>=0.0080 &&
+            speed>=0.042 &&
+            alignment>=0.30;
 
         const momentumQualified=
-            (momentumEntry || railEntry) &&
-            speed>=0.060 &&
-            alignment>=0.24;
+            (momentumEntry||railEntry) &&
+            speed>=0.075 &&
+            alignment>=0.34;
 
-        if(impactQualified || momentumQualified){
+        if(impactQualified||momentumQualified){
             s.finishDebug=
                 `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -4704,10 +4716,16 @@ function checkForcedStadiumFinish(s){
     }
 
     // ---------- OVER / POCKET ----------
+    const wasLeftPocket=prevX<=-0.575 && prevY>=0.72;
+    const wasRightPocket=prevX>=0.575 && prevY>=0.72;
     const leftPocket=s.x<=-0.575 && s.y>=0.72;
     const rightPocket=s.x>=0.575 && s.y>=0.72;
 
-    if(leftPocket||rightPocket){
+    const enteredPocket=
+        (!wasLeftPocket && leftPocket) ||
+        (!wasRightPocket && rightPocket);
+
+    if(enteredPocket){
         const targetX=leftPocket ? -0.84 : 0.84;
         const targetY=0.90;
         const dx=targetX-s.x;
@@ -4724,18 +4742,18 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             recentImpact &&
-            force>=0.0038 &&
-            speed>=0.030 &&
-            outward>=0.001 &&
-            alignment>=0.14;
+            force>=0.0065 &&
+            speed>=0.040 &&
+            outward>=0.003 &&
+            alignment>=0.28;
 
         const momentumQualified=
-            (momentumEntry || railEntry) &&
-            speed>=0.055 &&
-            outward>=0.001 &&
-            alignment>=0.20;
+            (momentumEntry||railEntry) &&
+            speed>=0.070 &&
+            outward>=0.003 &&
+            alignment>=0.30;
 
-        if(impactQualified || momentumQualified){
+        if(impactQualified||momentumQualified){
             s.finishDebug=
                 `OVER CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -4993,25 +5011,29 @@ function newBattleFrame(now){
         const playerFinish=checkForcedStadiumFinish(p);
         const cpuFinish=checkForcedStadiumFinish(c);
 
+        // checkForcedStadiumFinish identifies the Bey that ENTERED the zone.
+        // The opponent is therefore the finisher/winner for scoring purposes.
         if(playerFinish){
             finishCandidates.push({
-                side:"player",
+                enteredSide:"player",
+                winnerSide:"cpu",
                 type:playerFinish,
-                score:(p.lastImpactForce||0)+Math.hypot(p.vx,p.vy)*0.35
+                strength:(p.lastImpactForce||0)+Math.hypot(p.vx,p.vy)*0.35
             });
         }
         if(cpuFinish){
             finishCandidates.push({
-                side:"cpu",
+                enteredSide:"cpu",
+                winnerSide:"player",
                 type:cpuFinish,
-                score:(c.lastImpactForce||0)+Math.hypot(c.vx,c.vy)*0.35
+                strength:(c.lastImpactForce||0)+Math.hypot(c.vx,c.vy)*0.35
             });
         }
 
         if(finishCandidates.length){
-            finishCandidates.sort((a,b)=>b.score-a.score);
-            const winner=finishCandidates[0];
-            finishNewBattle(winner.side,winner.type);
+            finishCandidates.sort((a,b)=>b.strength-a.strength);
+            const finish=finishCandidates[0];
+            finishNewBattle(finish.winnerSide,finish.type);
             return;
         }
 
