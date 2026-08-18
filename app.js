@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 0.6.2
+ Version 0.6.3
 ==================================*/
 
 //=========================
@@ -9,7 +9,7 @@
 
 const Game = {
 
-    version:"0.6.2",
+    version:"0.6.3",
 
     screen:"menu",
 
@@ -2001,6 +2001,182 @@ function applyHeightSynergy(profile,height){
     return profile;
 }
 
+
+function getMetaRoleFit(bladeData,bit){
+    const matrix={
+        Attack:{Attack:100,Balance:78,Stamina:42,Defense:32},
+        Defense:{Attack:34,Balance:82,Stamina:92,Defense:96},
+        Stamina:{Attack:36,Balance:84,Stamina:98,Defense:92},
+        Balance:{Attack:82,Balance:96,Stamina:86,Defense:82}
+    };
+
+    let score=matrix[bladeData.type]?.[bit.type]??60;
+    const name=bit.name;
+
+    // Specific competitive roles. These are synergy adjustments, not
+    // blanket stat buffs.
+    if(bladeData.type==="Attack"){
+        if(name==="Rush") score+=7;
+        if(name==="Low Rush") score+=8;
+        if(name==="Flat") score+=4;
+        if(name==="Low Flat") score+=5;
+        if(name==="Kick") score+=3;
+    }
+
+    if(bladeData.type==="Stamina"){
+        if(name==="Ball") score+=7;
+        if(name==="Hexa") score+=6;
+        if(name==="Wedge") score+=4;
+        if(name==="Orb") score+=5;
+        if(name==="Elevate") score+=2;
+    }
+
+    if(bladeData.type==="Defense"){
+        if(name==="Hexa") score+=5;
+        if(name==="Wedge") score+=5;
+        if(name==="Needle"||name==="High Needle") score+=4;
+        if(name==="Ball"||name==="Orb") score+=3;
+    }
+
+    if(bladeData.type==="Balance"){
+        if(name==="Hexa") score+=4;
+        if(name==="Point") score+=4;
+        if(name==="Rush") score+=4;
+        if(name==="Level") score+=5;
+    }
+
+    // Explicit blade compatibility is the final authority for the
+    // individual blade/bit pairing. Never let a generic matrix override it.
+    const explicit=getBitCompatibility(bladeData,bit);
+    return Math.max(0,Math.min(100,(score*0.35)+(explicit*0.65)));
+}
+
+function getRatchetMetaFit(bladeData,ratchet,ratchetSynergy){
+    const s=ratchetSynergy||{};
+    let raw=0;
+
+    if(bladeData.type==="Attack"){
+        raw=
+            s.attack*1.45+
+            s.knockback*1.20+
+            s.mobility*0.65-
+            Math.max(0,-s.stamina)*0.30;
+    }else if(bladeData.type==="Stamina"){
+        raw=
+            s.stamina*1.45+
+            s.balance*1.10+
+            s.defense*0.90+
+            s.burst*0.55;
+    }else if(bladeData.type==="Defense"){
+        raw=
+            s.defense*1.35+
+            s.balance*1.15+
+            s.stamina*0.80+
+            s.burst*0.55;
+    }else{
+        raw=
+            s.attack*0.55+
+            s.knockback*0.55+
+            s.defense*0.85+
+            s.balance*1.05+
+            s.stamina*0.75;
+    }
+
+    // 50 = neutral. Positive blade/side alignment can push toward 100,
+    // while a bad geometry match can meaningfully lower the meta rating.
+    return Math.max(40,Math.min(100,50+raw*2.45));
+}
+
+function getBladeCompetitiveIndex(bladeData){
+    const c=bladeData.card||{};
+    const b=bladeData.behavior||{};
+    const p=bladeData.personality||{};
+
+    // Existing card OVR is deliberately only one input.
+    // Consistency, spin retention/LAD and the blade's real win condition
+    // determine the competitive ceiling separately.
+    const cardQuality=Number(c.ovr)||70;
+    const consistency=Number(p.consistency)||70;
+    const retention=Number(b.spinRetention)||70;
+    const lad=Number(b.lad)||70;
+
+    const wins=b.winConditions||{};
+    let roleWin=70;
+
+    if(bladeData.type==="Attack"){
+        roleWin=
+            (Number(wins.knockout)||50)*0.55+
+            (Number(wins.burst)||50)*0.15+
+            (Number(wins.spin)||50)*0.10+
+            (Number(wins.counter)||50)*0.20;
+    }else if(bladeData.type==="Stamina"){
+        roleWin=
+            (Number(wins.spin)||50)*0.60+
+            (Number(wins.burst)||50)*0.15+
+            (Number(wins.counter)||50)*0.15+
+            (Number(wins.knockout)||50)*0.10;
+    }else if(bladeData.type==="Defense"){
+        roleWin=
+            (Number(wins.counter)||50)*0.45+
+            (Number(wins.spin)||50)*0.30+
+            (Number(wins.burst)||50)*0.15+
+            (Number(wins.knockout)||50)*0.10;
+    }else{
+        roleWin=
+            (Number(wins.spin)||50)*0.30+
+            (Number(wins.knockout)||50)*0.25+
+            (Number(wins.counter)||50)*0.25+
+            (Number(wins.burst)||50)*0.20;
+    }
+
+    return Math.max(60,Math.min(99,
+        cardQuality*0.75+
+        consistency*0.10+
+        retention*0.05+
+        lad*0.05+
+        roleWin*0.05
+    ));
+}
+
+function calculateMetaScore(bladeData,ratchet,bit,compatibility,ratchetSynergy){
+    const bladeQuality=getBladeCompetitiveIndex(bladeData);
+    const bitFit=getMetaRoleFit(bladeData,bit);
+    const heightFit=getHeightCompatibility(bladeData,ratchet.height);
+
+    // Geometry/height is weighted heavily because the same blade can be
+    // excellent on one ratchet and mediocre on another.
+    const comboFit=bitFit*0.55+heightFit*0.45;
+    const ratchetFit=getRatchetMetaFit(bladeData,ratchet,ratchetSynergy);
+    const consistency=Number(bladeData.personality?.consistency)||70;
+
+    // Height is a real competitive tradeoff. 70 can remain useful, but it
+    // should not score like the same geometry at 60. 80 is a specialization,
+    // not a free upgrade.
+    const heightMetaPenalty=
+        ratchet.height===70 ? 2 :
+        ratchet.height===80 ? 8 : 0;
+
+    /*
+      META is NOT OVR.
+      OVR asks: "How strong are these six/seven raw stats?"
+      META asks: "How good is this exact combination in a real competitive
+      role, given blade quality, part fit, geometry and consistency?"
+
+      This is why Phoenix Wing 1-60 Rush can be meta 95+ while another
+      Phoenix Wing combo can have a similar raw OVR but a lower meta.
+    */
+    const raw=
+        55+
+        (bladeQuality-60)*0.35+
+        comboFit*0.12+
+        consistency*0.06+
+        ratchetFit*0.10+
+        compatibility*0.03-
+        heightMetaPenalty;
+
+    return Math.max(60,Math.min(99,Math.round(raw)));
+}
+
 function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
     if(!bladeData) return null;
@@ -2069,12 +2245,26 @@ function calculateComboStats(blade,ratchet,bit){
         mobility:clamp(mobility),balance:clamp(balance),stamina:clamp(stamina),burst:clamp(burst)
     };
 
-    const weights={attack:.18,knockback:.15,defense:.14,mobility:.13,balance:.12,stamina:.17,burst:.11};
+    // OVR remains the simple overall rating: all displayed stats averaged.
+    // Meta is deliberately independent and evaluates the exact competitive
+    // combo instead of recycling OVR.
+    const weights={
+        attack:.18,knockback:.15,defense:.14,mobility:.13,
+        balance:.12,stamina:.17,burst:.11
+    };
     let weighted=0;
     Object.keys(weights).forEach(k=>weighted+=stats[k]*weights[k]);
+
     const synergyDelta=Math.max(-5.0,Math.min(5.0,(compatibility-70)*0.20));
     const ovr=clamp(weighted+synergyDelta);
-    const meta=clamp(ovr*.74+compatibility*.12+stats.stamina*.05+stats.attack*.05+stats.defense*.04);
+
+    const meta=calculateMetaScore(
+        bladeData,
+        ratchet,
+        bit,
+        compatibility,
+        ratchetSynergy
+    );
 
     return {stats,compatibility,ovr,meta,ratchetSynergy};
 }
@@ -3351,8 +3541,13 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0060;
+    const impactEntry=recentImpact && force>=0.0072;
     const railEntry=recentRailExit && speed>=0.075 && force>=0.0025;
+
+    // V55 FINISH QUALIFICATION
+    // A Bey must actually enter the finish zone with meaningful momentum
+    // and a directional path toward the opening. Position alone is not enough.
+    // This keeps self-KOs and light taps from producing automatic finishes.
 
     // ---------- XTREME ----------
     const wasXtreme=
@@ -3378,12 +3573,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.045 &&
-            alignment>=0.34;
+            speed>=0.052 &&
+            alignment>=0.40;
 
         const railQualified=
             railEntry &&
-            alignment>=0.38;
+            speed>=0.078 &&
+            alignment>=0.40;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3420,15 +3616,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.043 &&
-            outward>=0.004 &&
-            alignment>=0.32;
+            speed>=0.050 &&
+            outward>=0.0055 &&
+            alignment>=0.39;
 
         const railQualified=
             railEntry &&
-            speed>=0.070 &&
-            outward>=0.004 &&
-            alignment>=0.34;
+            speed>=0.074 &&
+            outward>=0.005 &&
+            alignment>=0.38;
 
         if(impactQualified||railQualified){
             s.finishDebug=
