@@ -1794,6 +1794,15 @@ viewBox="0 0 1000 900">
     <circle id="impactRing3" cx="500" cy="420" r="3" fill="none" stroke="#ffd43b" stroke-width="1.5"/>
      <circle id="impactExplosion" cx="500" cy="420" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
      <circle id="impactCore" cx="500" cy="420" r="4" fill="#ffd43b" opacity="0.95"/>
+     <g id="impactShock" opacity="0">
+       <circle id="impactShockOuter" cx="500" cy="420" r="10" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+       <line id="impactShock1" x1="500" y1="420" x2="500" y2="388" stroke="#ffffff" stroke-width="3"/>
+       <line id="impactShock2" x1="500" y1="420" x2="532" y2="420" stroke="#ffffff" stroke-width="3"/>
+       <line id="impactShock3" x1="500" y1="420" x2="500" y2="452" stroke="#ffd43b" stroke-width="3"/>
+       <line id="impactShock4" x1="500" y1="420" x2="468" y2="420" stroke="#ffd43b" stroke-width="3"/>
+       <line id="impactShock5" x1="500" y1="420" x2="523" y2="397" stroke="#ffffff" stroke-width="2.5"/>
+       <line id="impactShock6" x1="500" y1="420" x2="477" y2="443" stroke="#ffffff" stroke-width="2.5"/>
+     </g>
      <g id="impactSpokes" opacity="0">
        <line id="impactSpoke1" x1="500" y1="420" x2="500" y2="398" stroke="#ffffff" stroke-width="2.6"/>
        <line id="impactSpoke2" x1="500" y1="420" x2="522" y2="420" stroke="#ffffff" stroke-width="2.6"/>
@@ -4598,12 +4607,12 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0225 &&
-        speed>=0.051 &&
-        xtremeAlignment>=0.64
+        effectiveForce>=0.0190 &&
+        speed>=0.047 &&
+        xtremeAlignment>=0.58
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=55) return "Xtreme";
+        if(now-s.finishCandidateSince>=30) return "Xtreme";
     }else if(!inXtreme){
         s.finishCandidateSince=0;
     }
@@ -4631,13 +4640,13 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0190 &&
-        speed>=0.049 &&
-        s.y>0.79 &&
-        pocketAlignment>=0.63
+        effectiveForce>=0.0165 &&
+        speed>=0.045 &&
+        s.y>0.78 &&
+        pocketAlignment>=0.58
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=70) return "Over";
+        if(now-s.finishCandidateSince>=40) return "Over";
     }else if(!leftPocket && !rightPocket){
         s.finishCandidateSince=0;
     }
@@ -4749,7 +4758,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.58;
+            const life=0.62;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -4766,6 +4775,8 @@ function newBattleFrame(now){
                 const explosion=document.getElementById("impactExplosion");
                 const core=document.getElementById("impactCore");
                 const spokes=document.getElementById("impactSpokes");
+                const shock=document.getElementById("impactShock");
+                const shockOuter=document.getElementById("impactShockOuter");
                 const burst1=document.getElementById("impactBurst1");
                 const burst2=document.getElementById("impactBurst2");
                 const txt=document.getElementById("impactText");
@@ -4773,8 +4784,10 @@ function newBattleFrame(now){
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
-                    flash.setAttribute("r",String(18+u*36*strength));
-                    flash.setAttribute("stroke-width",String(4.0-u*1.5));
+                    const flashPhase=Math.min(1,u*7);
+                    flash.setAttribute("r",String(21+u*40*strength));
+                    flash.setAttribute("stroke-width",String(5.0-u*2.2));
+                    flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
@@ -4794,20 +4807,33 @@ function newBattleFrame(now){
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(8+u*32*strength));
-                    explosion.setAttribute("stroke-width",String(Math.max(1.0,3.6-u*2.2)));
-                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.10)));
+                    explosion.setAttribute("r",String(9+u*38*strength));
+                    explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
+                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.12)));
                 }
                 if(core){
                     core.setAttribute("cx",x);
                     core.setAttribute("cy",y);
-                    core.setAttribute("r",String(Math.max(1.4,8.0-u*5.8)));
-                    core.setAttribute("opacity",String(Math.max(0,1.0-u*1.25)));
+                    core.setAttribute("r",String(Math.max(1.6,9.0-u*6.4)));
+                    core.setAttribute("opacity",String(Math.max(0,1.0-u*1.30)));
                 }
                 if(spokes){
                     const spokeScale=1+u*(2.8+strength*0.9);
                     spokes.setAttribute("opacity",String(Math.max(0,0.95-u*1.15)));
                     spokes.setAttribute("transform",`translate(${x-500} ${y-420}) scale(${spokeScale}) translate(${500-x} ${420-y}) rotate(${u*18} ${x} ${y})`);
+                }
+                if(shock){
+                    const shockPhase=Math.min(1,u*4.8);
+                    const shockScale=1+shockPhase*(2.5+strength*0.9);
+                    shock.setAttribute("opacity",String(Math.max(0,0.95-shockPhase*1.05)));
+                    shock.setAttribute("transform",
+                        `translate(${x-500} ${y-420}) scale(${shockScale}) translate(${500-x} ${420-y}) rotate(${u*22} ${x} ${y})`);
+                }
+                if(shockOuter){
+                    shockOuter.setAttribute("cx",x);
+                    shockOuter.setAttribute("cy",y);
+                    shockOuter.setAttribute("r",String(8+u*30*strength));
+                    shockOuter.setAttribute("opacity",String(Math.max(0,0.95-u*1.25)));
                 }
                 if(burst1){
                     burst1.setAttribute("cx",String(x-u*25*strength));
@@ -4922,11 +4948,11 @@ function newBattleFrame(now){
                 Math.max(speed*targetDistance,0.0001);
 
             return (
-                impactForce>=0.0245 &&
-                speed>=0.058 &&
-                outward>=0.018 &&
-                radial>=0.88 &&
-                targetAlignment>=0.73
+                impactForce>=0.0165 &&
+                speed>=0.045 &&
+                outward>=0.012 &&
+                radial>=0.82 &&
+                targetAlignment>=0.58
             );
         };
 
