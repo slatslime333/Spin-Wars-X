@@ -4636,16 +4636,16 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 }
 function checkForcedStadiumFinish(s){
     /*
-      V45 STADIUM FINISH RESOLVER
+      V46 FINISH BALANCE
 
-      Important: being inside a pocket/Xtreme region is NOT itself a finish.
-      The Bey must CROSS the finish boundary during this frame with meaningful
-      directed momentum. This prevents a Bey that merely happens to be near a
-      zone from being scored.
+      A finish should primarily be caused by an actual collision/knockback.
+      High RPM by itself should NOT make a Bey self-KO.
 
-      The resolver also returns the finish for THE BEY THAT ENTERED THE ZONE.
-      The physics loop is responsible for awarding the point to the opposite
-      side because that opponent caused the finish.
+      X-Rail exit is the one special case where stored rail momentum can
+      legitimately carry a Bey into a finish zone without another collision
+      on that exact frame.
+
+      The Bey must also CROSS the finish boundary this frame.
     */
     if(!s) return null;
 
@@ -4654,8 +4654,6 @@ function checkForcedStadiumFinish(s){
     const speed=Math.hypot(s.vx,s.vy);
     const force=s.lastImpactForce||0;
 
-    // Track the previous physics position locally. This gives us a genuine
-    // boundary crossing instead of "currently inside = finish".
     if(!Number.isFinite(s.finishPrevX) || !Number.isFinite(s.finishPrevY)){
         s.finishPrevX=s.x;
         s.finishPrevY=s.y;
@@ -4667,11 +4665,15 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.032) return null;
+    if(speed<0.034) return null;
 
-    const recentImpact=age<=520;
-    const momentumEntry=speed>=0.090;
-    const railEntry=!!s.railExited && age<=850;
+    const recentImpact=age<=450;
+    const recentRailExit=!!s.railExited && age<=650;
+
+    // Normal finishes are collision-driven. High speed alone is NOT enough.
+    // This specifically reduces accidental/self-KOs.
+    const impactEntry=recentImpact && force>=0.0060;
+    const railEntry=recentRailExit && speed>=0.075 && force>=0.0025;
 
     // ---------- XTREME ----------
     const wasXtreme=
@@ -4684,7 +4686,6 @@ function checkForcedStadiumFinish(s){
         s.y<=1.01 &&
         Math.abs(s.x)<=0.255;
 
-    // A real crossing must enter the Xtreme region from outside it.
     const enteredXtreme=!wasXtreme && inXtreme;
 
     if(enteredXtreme){
@@ -4697,17 +4698,15 @@ function checkForcedStadiumFinish(s){
             Math.max(speed*d,0.0001);
 
         const impactQualified=
-            recentImpact &&
-            force>=0.0080 &&
-            speed>=0.042 &&
-            alignment>=0.30;
-
-        const momentumQualified=
-            (momentumEntry||railEntry) &&
-            speed>=0.075 &&
+            impactEntry &&
+            speed>=0.045 &&
             alignment>=0.34;
 
-        if(impactQualified||momentumQualified){
+        const railQualified=
+            railEntry &&
+            alignment>=0.38;
+
+        if(impactQualified||railQualified){
             s.finishDebug=
                 `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -4741,19 +4740,18 @@ function checkForcedStadiumFinish(s){
             Math.max(Math.hypot(s.x,s.y),0.0001);
 
         const impactQualified=
-            recentImpact &&
-            force>=0.0065 &&
-            speed>=0.040 &&
-            outward>=0.003 &&
-            alignment>=0.28;
+            impactEntry &&
+            speed>=0.043 &&
+            outward>=0.004 &&
+            alignment>=0.32;
 
-        const momentumQualified=
-            (momentumEntry||railEntry) &&
+        const railQualified=
+            railEntry &&
             speed>=0.070 &&
-            outward>=0.003 &&
-            alignment>=0.30;
+            outward>=0.004 &&
+            alignment>=0.34;
 
-        if(impactQualified||momentumQualified){
+        if(impactQualified||railQualified){
             s.finishDebug=
                 `OVER CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
