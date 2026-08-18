@@ -192,3 +192,25 @@ button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
  .menu{padding-top:24px!important}
  main.menu:has(#replaySequence) .menu-card{min-height:calc(100vh - 48px)}
 }
+
+
+/* =========================================================
+   V38 IMPACT PRESENTATION
+   Moderate increase: visible and punchy without becoming a screen-filling FX.
+========================================================= */
+.impact-effect,
+#impactEffect{
+    transform-origin:center;
+    filter:drop-shadow(0 0 7px rgba(255,255,255,.22));
+    pointer-events:none;
+}
+#impactExplosion{
+    filter:drop-shadow(0 0 9px rgba(255,220,80,.28));
+}
+#impactCore{
+    filter:drop-shadow(0 0 6px rgba(255,220,80,.38));
+}
+#impactSpokes line{
+    stroke-linecap:round;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.22));
+}
