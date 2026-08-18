@@ -1954,37 +1954,34 @@ RATCHET_BASES.forEach(base=>{
     HEIGHTS.forEach(height=>{
 
         const modifier={
-
             attack:0,
             knockback:0,
             defense:0,
             mobility:0,
             balance:0,
             stamina:0
-
         };
 
-        if(height===60){
-
-            modifier.attack+=2;
-            modifier.mobility+=2;
-            modifier.stamina-=2;
-
-        }
-
+        // Height is never a free stamina bonus.
+        // 60 = low baseline; 70 = intermediate; 80 = tall/exposed.
         if(height===70){
-
-            modifier.balance+=1;
-
+            modifier.knockback+=0.2;
+            modifier.defense-=1;
+            modifier.mobility-=1;
+            modifier.balance-=1;
+            modifier.stamina-=1;
         }
 
         if(height===80){
+            // Small attack/knockback niche from the higher contact point.
+            modifier.attack+=1;
+            modifier.knockback+=1;
 
+            // Tall height is a real cost to tanking, balance and stamina.
             modifier.defense-=4;
-            modifier.balance-=3;
-            modifier.stamina+=2;
             modifier.mobility-=2;
-
+            modifier.balance-=4;
+            modifier.stamina-=4;
         }
 
         RATCHETS.push({
@@ -2016,6 +2013,30 @@ RATCHET_BASES.forEach(base=>{
     });
 
 });
+// V52 HEIGHT INVARIANT:
+// Same ratchet side: 60 > 70 > 80 for stamina, defense and balance.
+// This is a safety check against future generic modifiers accidentally
+// making a taller variant stronger in these categories.
+function enforceHeightInvariants(){
+    for(const base of RATCHET_BASES){
+        const variants=RATCHETS.filter(r=>r.number===base.number);
+        const r60=variants.find(r=>r.height===60);
+        const r70=variants.find(r=>r.height===70);
+        const r80=variants.find(r=>r.height===80);
+        if(!r60||!r70||!r80) continue;
+
+        r70.stats.stamina=Math.min(r70.stats.stamina,r60.stats.stamina-1);
+        r80.stats.stamina=Math.min(r80.stats.stamina,r70.stats.stamina-1);
+
+        r70.stats.defense=Math.min(r70.stats.defense,r60.stats.defense-1);
+        r80.stats.defense=Math.min(r80.stats.defense,r70.stats.defense-1);
+
+        r70.stats.balance=Math.min(r70.stats.balance,r60.stats.balance-1);
+        r80.stats.balance=Math.min(r80.stats.balance,r70.stats.balance-1);
+    }
+}
+enforceHeightInvariants();
+
 //=========================
 // SHOW RATCHETS
 //=========================
@@ -2357,32 +2378,39 @@ function getBladeRatchetSynergy(bladeName,ratchetNumber){
 
 function applyHeightSynergy(profile,height){
     const h=Number(height);
-    // This is the combo-level height penalty. It intentionally does NOT turn
-    // 70/80 into free stamina/defense upgrades. Taller setups can create niche
-    // attack/deflection angles, but their higher center of gravity and exposed
-    // ratchet make stability, balance, stamina efficiency and burst resistance worse.
+
+    // 60 = physical baseline. Height itself contributes no stamina.
     if(h===60){
-        profile.attack+=0.2; profile.defense+=1.0; profile.balance+=1.0; profile.stamina+=0.5; profile.burst+=1.0;
-    } else if(h===70){
-        profile.attack+=0.0; profile.knockback+=0.2; profile.defense-=0.8; profile.balance-=1.0; profile.stamina-=0.8; profile.burst-=1.2;
-    } else if(h===80){
-        profile.attack+=0.2; profile.knockback+=0.8; profile.mobility-=1.0;
-        profile.defense-=4.0; profile.balance-=4.5; profile.stamina-=4.0; profile.burst-=4.5;
+        return profile;
     }
+
+    // 70 = intermediate: slightly more exposed, slightly less stable.
+    if(h===70){
+        profile.knockback+=0.2;
+        profile.mobility-=0.8;
+        profile.defense-=1.2;
+        profile.balance-=1.2;
+        profile.stamina-=1.2;
+        profile.burst-=1.5;
+        return profile;
+    }
+
+    // 80 = tall/exposed: a small attack/knockback niche, but always worse
+    // for defense, balance, stamina efficiency and burst resistance.
+    if(h===80){
+        profile.attack+=0.5;
+        profile.knockback+=0.8;
+        profile.mobility-=1.5;
+        profile.defense-=4.5;
+        profile.balance-=4.5;
+        profile.stamina-=4.5;
+        profile.burst-=4.5;
+        return profile;
+    }
+
     return profile;
 }
 
-/*
-  V49 BIT TRADEOFF RULES
-  - Rush/Low Rush are attack Bits: useful stamina, but never stamina/defense-tier.
-  - Needle/High Needle have high stamina potential and central control, but
-    lower friction and wobble make them easier to destabilize; they are not
-    automatic "tank" Bits.
-  - Ball/Orb are the stamina specialists.
-  - Defense comes primarily from Blade geometry + ratchet + stability, not from
-    simply assigning a huge Defense number to every sharp tip.
-  - 80 height is a real cost to Defense, Balance, Stamina and Burst resistance.
-*/
 function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
     if(!bladeData) return null;
