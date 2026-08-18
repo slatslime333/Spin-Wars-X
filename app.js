@@ -137,17 +137,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:37.4,
 
-        card:{
-         ovr:95,
-         
-            attack:35,
-            knockback:48,
-            defense:96,
-            mobility:56,
-            balance:95,
-            stamina:97,
-            burst:94
-        },
+        card:{ovr:92,attack:64,knockback:72,defense:92,mobility:58,balance:94,stamina:97,burst:91},
 
         physics:{
             weightClass:"Heavy",
@@ -225,17 +215,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:38.0,
 
-        card:{
-         ovr:94,
-          
-            attack:94,
-            knockback:92,
-            defense:84,
-            mobility:84,
-            balance:87,
-            stamina:75,
-            burst:87
-        },
+        card:{ovr:94,attack:94,knockback:94,defense:86,mobility:82,balance:86,stamina:82,burst:87},
 
         physics:{
             weightClass:"Very Heavy",
@@ -313,17 +293,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:37.0,
 
-        card:{
-         ovr:98,
-         
-            attack:52,
-            knockback:58,
-            defense:88,
-            mobility:44,
-            balance:97,
-            stamina:99,
-            burst:92
-        },
+        card:{ovr:98,attack:62,knockback:68,defense:91,mobility:46,balance:98,stamina:99,burst:94},
 
         physics:{
             weightClass:"Heavy",
@@ -402,17 +372,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:35.6,
 
-        card:{
-         ovr:84,
-         
-            attack:91,
-            knockback:89,
-            defense:68,
-            mobility:92,
-            balance:70,
-            stamina:63,
-            burst:73
-        },
+        card:{ovr:86,attack:96,knockback:91,defense:61,mobility:94,balance:62,stamina:60,burst:74},
 
         physics:{
             weightClass:"Medium",
@@ -579,17 +539,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:36.0,
 
-        card:{
-         ovr:85,
-         
-            attack:70,
-            knockback:86,
-            defense:91,
-            mobility:62,
-            balance:90,
-            stamina:71,
-            burst:91
-        },
+        card:{ovr:84,attack:68,knockback:82,defense:91,mobility:60,balance:90,stamina:76,burst:91},
 
         physics:{
             weightClass:"Heavy",
@@ -666,17 +616,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:32.4,
 
-        card:{
-         ovr:70,
-         
-            attack:70,
-            knockback:76,
-            defense:65,
-            mobility:84,
-            balance:82,
-            stamina:80,
-            burst:66
-        },
+        card:{ovr:72,attack:69,knockback:72,defense:70,mobility:80,balance:82,stamina:78,burst:70},
 
         physics:{
             weightClass:"Light",
@@ -753,17 +693,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:35.0,
 
-        card:{
-         ovr:74,
-         
-            attack:70,
-            knockback:68,
-            defense:72,
-            mobility:74,
-            balance:82,
-            stamina:78,
-            burst:76
-        },
+        card:{ovr:84,attack:66,knockback:62,defense:85,mobility:64,balance:88,stamina:93,burst:78},
 
         physics:{
             weightClass:"Medium",
@@ -842,17 +772,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:35.2,
 
-        card:{
-         ovr:73,
-         
-            attack:82,
-            knockback:80,
-            defense:64,
-            mobility:86,
-            balance:68,
-            stamina:62,
-            burst:70
-        },
+        card:{ovr:76,attack:84,knockback:77,defense:64,mobility:86,balance:68,stamina:64,burst:72},
 
         physics:{
             weightClass:"Medium",
@@ -922,13 +842,13 @@ const BLADE_ENGINE = {
     },
  
 
-    aero_pegasus:{name:"Aero Pegasus",type:"Attack",tier:"Gold",spin:"Right",weight:38.3,card:{ovr:94,attack:94,knockback:94,defense:77,mobility:90,balance:83,stamina:86,burst:91},physics:{weightClass:"Very Heavy",centerOfGravity:"Medium",contactShape:"Upper Smash",recoil:"Medium",lockStrength:91,weightDistribution:"Outer"},behavior:{attackStyle:"Smash",smashPower:96,upperPower:82,barragePower:72,counterPower:48,movementControl:88,spinRetention:84,lad:82,burstResistance:91,winConditions:{spin:70,burst:92,knockout:97,counter:58}},compatibility:{heights:{60:96,70:94,80:58},bits:{Rush:99,LowRush:99,Flat:92,LowFlat:94,Level:94,Kick:88,Point:86,HighNeedle:68,Quake:82,Hexa:72,Wedge:55,Ball:70,Orb:74,Elevate:80,Needle:60}},traits:["Versatile","Heavy","Smash","Attack","Stamina"],personality:{aggression:96,control:86,consistency:84,risk:72}},
-    leon_crest:{name:"Leon Crest",type:"Defense",tier:"Silver",spin:"Right",weight:35.0,card:{ovr:78,attack:66,knockback:64,defense:95,mobility:50,balance:84,stamina:72,burst:84},physics:{weightClass:"Medium",centerOfGravity:"High",contactShape:"Round",recoil:"Low",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Counter",smashPower:32,upperPower:18,barragePower:36,counterPower:82,movementControl:86,spinRetention:74,lad:76,burstResistance:84,winConditions:{spin:58,burst:64,knockout:24,counter:90}},compatibility:{heights:{60:72,70:84,80:94},bits:{Needle:92,HighNeedle:95,Point:82,Hexa:90,Wedge:88,Ball:86,Orb:84,Elevate:72,Level:68,Rush:38,LowRush:34,Flat:30,LowFlat:28,Kick:48,Quake:30}},traits:["Defense","Round","Counter","Plastic Frame","Stability"],personality:{aggression:20,control:90,consistency:78,risk:20}},
-    unicorn_sting:{name:"Unicorn Sting",type:"Balance",tier:"Silver",spin:"Right",weight:33.3,card:{ovr:82,attack:76,knockback:73,defense:82,mobility:62,balance:88,stamina:85,burst:88},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Hybrid",recoil:"Medium",lockStrength:88,weightDistribution:"Outer"},behavior:{attackStyle:"Counter Attack",smashPower:62,upperPower:36,barragePower:64,counterPower:88,movementControl:78,spinRetention:84,lad:86,burstResistance:88,winConditions:{spin:78,burst:76,knockout:48,counter:92}},compatibility:{heights:{60:96,70:82,80:48},bits:{Point:96,Level:88,Hexa:90,Elevate:82,Needle:84,HighNeedle:86,Ball:88,Orb:86,Wedge:80,Rush:68,LowRush:64,Flat:56,LowFlat:54,Kick:82,Quake:50}},traits:["Balance","Counter","Round","Stamina","Versatile"],personality:{aggression:58,control:88,consistency:86,risk:40}},
-    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:74,attack:69,knockback:76,defense:91,mobility:52,balance:90,stamina:78,burst:84},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:90,movementControl:92,spinRetention:76,lad:72,burstResistance:84,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:74,70:82,80:90},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
-    tyranno_beat:{name:"Tyranno Beat",type:"Attack",tier:"Gold",spin:"Right",weight:37.0,card:{ovr:88,attack:91,knockback:89,defense:75,mobility:84,balance:78,stamina:69,burst:84},physics:{weightClass:"Heavy",centerOfGravity:"Medium",contactShape:"Elliptical",recoil:"High",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Elliptical Smash",smashPower:90,upperPower:58,barragePower:72,counterPower:60,movementControl:84,spinRetention:70,lad:67,burstResistance:84,winConditions:{spin:38,burst:74,knockout:94,counter:68}},compatibility:{heights:{60:96,70:90,80:48},bits:{Quake:98,Flat:94,LowFlat:96,Rush:90,LowRush:88,Point:74,Level:80,Kick:84,HighNeedle:46,Needle:38,Hexa:54,Wedge:46,Ball:30,Orb:34,Elevate:52}},traits:["Attack","Elliptical","Heavy","Smash","Counter Attack","High Recoil"],personality:{aggression:92,control:76,consistency:72,risk:86}},
+    aero_pegasus:{name:"Aero Pegasus",type:"Attack",tier:"Gold",spin:"Right",weight:38.3,card:{ovr:93,attack:95,knockback:92,defense:76,mobility:91,balance:81,stamina:80,burst:89},physics:{weightClass:"Very Heavy",centerOfGravity:"Medium",contactShape:"Upper Smash",recoil:"Medium",lockStrength:91,weightDistribution:"Outer"},behavior:{attackStyle:"Smash",smashPower:96,upperPower:82,barragePower:72,counterPower:48,movementControl:88,spinRetention:84,lad:82,burstResistance:91,winConditions:{spin:70,burst:92,knockout:97,counter:58}},compatibility:{heights:{60:96,70:94,80:58},bits:{Rush:99,LowRush:99,Flat:92,LowFlat:94,Level:94,Kick:88,Point:86,HighNeedle:68,Quake:82,Hexa:72,Wedge:55,Ball:70,Orb:74,Elevate:80,Needle:60}},traits:["Versatile","Heavy","Smash","Attack","Stamina"],personality:{aggression:96,control:86,consistency:84,risk:72}},
+    leon_crest:{name:"Leon Crest",type:"Defense",tier:"Silver",spin:"Right",weight:35.0,card:{ovr:79,attack:63,knockback:69,defense:95,mobility:50,balance:90,stamina:76,burst:85},physics:{weightClass:"Medium",centerOfGravity:"High",contactShape:"Round",recoil:"Low",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Counter",smashPower:32,upperPower:18,barragePower:36,counterPower:82,movementControl:86,spinRetention:74,lad:76,burstResistance:84,winConditions:{spin:58,burst:64,knockout:24,counter:90}},compatibility:{heights:{60:72,70:84,80:94},bits:{Needle:92,HighNeedle:95,Point:82,Hexa:90,Wedge:88,Ball:86,Orb:84,Elevate:72,Level:68,Rush:38,LowRush:34,Flat:30,LowFlat:28,Kick:48,Quake:30}},traits:["Defense","Round","Counter","Plastic Frame","Stability"],personality:{aggression:20,control:90,consistency:78,risk:20}},
+    unicorn_sting:{name:"Unicorn Sting",type:"Balance",tier:"Silver",spin:"Right",weight:33.3,card:{ovr:83,attack:76,knockback:72,defense:84,mobility:64,balance:91,stamina:87,burst:88},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Hybrid",recoil:"Medium",lockStrength:88,weightDistribution:"Outer"},behavior:{attackStyle:"Counter Attack",smashPower:62,upperPower:36,barragePower:64,counterPower:88,movementControl:78,spinRetention:84,lad:86,burstResistance:88,winConditions:{spin:78,burst:76,knockout:48,counter:92}},compatibility:{heights:{60:96,70:82,80:48},bits:{Point:96,Level:88,Hexa:90,Elevate:82,Needle:84,HighNeedle:86,Ball:88,Orb:86,Wedge:80,Rush:68,LowRush:64,Flat:56,LowFlat:54,Kick:82,Quake:50}},traits:["Balance","Counter","Round","Stamina","Versatile"],personality:{aggression:58,control:88,consistency:86,risk:40}},
+    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:78,attack:67,knockback:80,defense:90,mobility:60,balance:88,stamina:83,burst:84},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:90,movementControl:92,spinRetention:76,lad:72,burstResistance:84,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:74,70:82,80:90},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
+    tyranno_beat:{name:"Tyranno Beat",type:"Attack",tier:"Gold",spin:"Right",weight:37.0,card:{ovr:88,attack:91,knockback:89,defense:72,mobility:84,balance:74,stamina:73,burst:84},physics:{weightClass:"Heavy",centerOfGravity:"Medium",contactShape:"Elliptical",recoil:"High",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Elliptical Smash",smashPower:90,upperPower:58,barragePower:72,counterPower:60,movementControl:84,spinRetention:70,lad:67,burstResistance:84,winConditions:{spin:38,burst:74,knockout:94,counter:68}},compatibility:{heights:{60:96,70:90,80:48},bits:{Quake:98,Flat:94,LowFlat:96,Rush:90,LowRush:88,Point:74,Level:80,Kick:84,HighNeedle:46,Needle:38,Hexa:54,Wedge:46,Ball:30,Orb:34,Elevate:52}},traits:["Attack","Elliptical","Heavy","Smash","Counter Attack","High Recoil"],personality:{aggression:92,control:76,consistency:72,risk:86}},
 
-    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,card:{ovr:72,attack:72,knockback:70,defense:74,mobility:76,balance:84,stamina:76,burst:74},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:86,70:96,80:72},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
+    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,card:{ovr:76,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:86,70:96,80:72},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
 
 };
 
@@ -937,116 +857,27 @@ const BLADE_ENGINE = {
 //=========================
 
 const RATCHET_ENGINE = {
-
-    "1":{
-
-        weight:1,
-
-        stability:72,
-
-        burstResistance:82,
-
-        attackBias:96,
-
-        defenseBias:45,
-
-        staminaBias:52,
-
-        mobilityBias:92
-
-    },
-
-    "3":{
-
-        weight:3,
-
-        stability:82,
-
-        burstResistance:86,
-
-        attackBias:82,
-
-        defenseBias:66,
-
-        staminaBias:68,
-
-        mobilityBias:84
-
-    },
-
-    "5":{
-
-        weight:5,
-
-        stability:90,
-
-        burstResistance:90,
-
-        attackBias:70,
-
-        defenseBias:82,
-
-        staminaBias:80,
-
-        mobilityBias:74
-
-    },
-
-    "6":{
-
-        weight:6,
-
-        stability:92,
-
-        burstResistance:92,
-
-        attackBias:64,
-
-        defenseBias:88,
-
-        staminaBias:86,
-
-        mobilityBias:70
-
-    },
-
-    "7":{
-
-        weight:7,
-
-        stability:94,
-
-        burstResistance:94,
-
-        attackBias:58,
-
-        defenseBias:94,
-
-        staminaBias:92,
-
-        mobilityBias:66
-
-    },
-
-    "9":{
-
-        weight:9,
-
-        stability:99,
-
-        burstResistance:98,
-
-        attackBias:46,
-
-        defenseBias:98,
-
-        staminaBias:95,
-
-        mobilityBias:54
-
-    }
-
+    "1":{weight:5.1,stability:72,burstResistance:78,attackBias:94,defenseBias:48,staminaBias:58,mobilityBias:92,profile:"aggressive"},
+    "3":{weight:5.3,stability:82,burstResistance:84,attackBias:82,defenseBias:68,staminaBias:72,mobilityBias:84,profile:"balanced"},
+    "5":{weight:6.0,stability:90,burstResistance:91,attackBias:72,defenseBias:84,staminaBias:84,mobilityBias:74,profile:"stable"},
+    "6":{weight:6.1,stability:91,burstResistance:91,attackBias:68,defenseBias:86,staminaBias:84,mobilityBias:70,profile:"stable"},
+    "7":{weight:6.2,stability:91,burstResistance:90,attackBias:70,defenseBias:88,staminaBias:82,mobilityBias:68,profile:"heavy"},
+    "9":{weight:6.2,stability:94,burstResistance:97,attackBias:76,defenseBias:94,staminaBias:87,mobilityBias:62,profile:"round"},
+    "0":{weight:6.0,stability:92,burstResistance:91,attackBias:58,defenseBias:91,staminaBias:88,mobilityBias:60,profile:"round"}
 };
+const RATCHET_HEIGHT_PROFILE = {
+    "55":{attack:2,knockback:0,defense:1,mobility:2,balance:1,stamina:1,burst:1,exposure:0.88},
+    "60":{attack:3,knockback:2,defense:4,mobility:2,balance:4,stamina:2,burst:4,exposure:0.90},
+    "70":{attack:0,knockback:1,defense:0,mobility:0,balance:0,stamina:1,burst:0,exposure:1.00},
+    "80":{attack:-2,knockback:-1,defense:-6,mobility:-3,balance:-6,stamina:-2,burst:-7,exposure:1.18},
+    "85":{attack:-3,knockback:-1,defense:-8,mobility:-4,balance:-8,stamina:-3,burst:-9,exposure:1.25}
+};
+function getRatchetProfile(ratchet){
+    const base=RATCHET_ENGINE[String(ratchet?.number)]||RATCHET_ENGINE["3"];
+    const height=RATCHET_HEIGHT_PROFILE[String(ratchet?.height)]||RATCHET_HEIGHT_PROFILE["70"];
+    return {base,height};
+}
+
 
 //=========================
 // ENGINE 2.0 HEIGHTS
@@ -1122,15 +953,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{
-            attack:95,
-            knockback:88,
-            defense:62,
-            mobility:94,
-            balance:68,
-            stamina:60,
-            burst:72
-        },
+        card:{attack:88,knockback:78,defense:60,mobility:94,balance:67,stamina:60,burst:80},
 
         behavior:{
             speed:96,
@@ -1147,15 +970,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{
-            attack:98,
-            knockback:92,
-            defense:58,
-            mobility:98,
-            balance:64,
-            stamina:56,
-            burst:74
-        },
+        card:{attack:92,knockback:82,defense:56,mobility:98,balance:61,stamina:56,burst:80},
 
         behavior:{
             speed:99,
@@ -1172,15 +987,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{
-            attack:96,
-            knockback:84,
-            defense:62,
-            mobility:95,
-            balance:70,
-            stamina:64,
-            burst:76
-        },
+        card:{attack:84,knockback:72,defense:61,mobility:91,balance:72,stamina:70,burst:80},
 
         behavior:{
             speed:98,
@@ -1197,15 +1004,7 @@ const BIT_ENGINE = {
 
     type:"Attack",
 
-    card:{
-        attack:99,
-        knockback:94,
-        defense:56,
-        mobility:99,
-        balance:62,
-        stamina:54,
-        burst:78
-    },
+    card:{attack:88,knockback:76,defense:57,mobility:96,balance:65,stamina:64,burst:80},
 
     behavior:{
         speed:100,
@@ -1222,15 +1021,7 @@ level:{
 
     type:"Balance",
 
-    card:{
-        attack:78,
-        knockback:76,
-        defense:80,
-        mobility:78,
-        balance:94,
-        stamina:80,
-        burst:86
-    },
+    card:{attack:70,knockback:68,defense:78,mobility:72,balance:92,stamina:83,burst:80},
 
     behavior:{
         speed:76,
@@ -1247,15 +1038,7 @@ elevate:{
 
     type:"Balance",
 
-    card:{
-        attack:70,
-        knockback:72,
-        defense:86,
-        mobility:82,
-        balance:92,
-        stamina:92,
-        burst:84
-    },
+    card:{attack:64,knockback:62,defense:86,mobility:64,balance:94,stamina:91,burst:80},
 
     behavior:{
         speed:72,
@@ -1272,15 +1055,7 @@ elevate:{
 
     type:"Attack",
 
-    card:{
-        attack:90,
-        knockback:98,
-        defense:68,
-        mobility:86,
-        balance:66,
-        stamina:64,
-        burst:82
-    },
+    card:{attack:82,knockback:90,defense:65,mobility:83,balance:67,stamina:63,burst:80},
 
     behavior:{
         speed:84,
@@ -1297,15 +1072,7 @@ wedge:{
 
     type:"Defense",
 
-    card:{
-        attack:58,
-        knockback:66,
-        defense:95,
-        mobility:52,
-        balance:96,
-        stamina:84,
-        burst:92
-    },
+    card:{attack:60,knockback:64,defense:91,mobility:44,balance:95,stamina:86,burst:80},
 
     behavior:{
         speed:48,
@@ -1322,15 +1089,7 @@ hexa:{
 
     type:"Defense",
 
-    card:{
-        attack:60,
-        knockback:68,
-        defense:98,
-        mobility:56,
-        balance:98,
-        stamina:88,
-        burst:94
-    },
+    card:{attack:66,knockback:70,defense:92,mobility:52,balance:96,stamina:89,burst:80},
 
     behavior:{
         speed:52,
@@ -1347,15 +1106,7 @@ needle:{
 
     type:"Defense",
 
-    card:{
-        attack:50,
-        knockback:58,
-        defense:94,
-        mobility:40,
-        balance:94,
-        stamina:82,
-        burst:90
-    },
+    card:{attack:60,knockback:58,defense:94,mobility:36,balance:93,stamina:85,burst:72},
 
     behavior:{
         speed:38,
@@ -1372,15 +1123,7 @@ ball:{
 
     type:"Stamina",
 
-    card:{
-        attack:46,
-        knockback:54,
-        defense:82,
-        mobility:48,
-        balance:92,
-        stamina:99,
-        burst:88
-    },
+    card:{attack:58,knockback:54,defense:84,mobility:42,balance:94,stamina:99,burst:72},
 
     behavior:{
         speed:46,
@@ -1397,15 +1140,7 @@ orb:{
 
     type:"Stamina",
 
-    card:{
-        attack:54,
-        knockback:60,
-        defense:84,
-        mobility:58,
-        balance:90,
-        stamina:95,
-        burst:86
-    },
+    card:{attack:61,knockback:58,defense:87,mobility:49,balance:92,stamina:96,burst:72},
 
     behavior:{
         speed:54,
@@ -1416,9 +1151,9 @@ orb:{
 
 },
 
-    point:{name:"Point",type:"Balance",card:{attack:72,knockback:70,defense:72,mobility:70,balance:78,stamina:74,burst:82},behavior:{speed:62,aggression:58,control:82,staminaRetention:78}},
-    high_needle:{name:"High Needle",type:"Defense",card:{attack:62,knockback:60,defense:88,mobility:48,balance:82,stamina:86,burst:66},behavior:{speed:42,aggression:24,control:88,staminaRetention:90}},
-    quake:{name:"Quake",type:"Attack",card:{attack:84,knockback:78,defense:54,mobility:90,balance:48,stamina:46,burst:88},behavior:{speed:88,aggression:92,control:42,staminaRetention:38}}
+    point:{name:"Point",type:"Balance",card:{attack:75,knockback:69,defense:73,mobility:73,balance:85,stamina:82,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:78}},
+    high_needle:{name:"High Needle",type:"Defense",card:{attack:61,knockback:58,defense:88,mobility:40,balance:90,stamina:87,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:90}},
+    quake:{name:"Quake",type:"Attack",card:{attack:80,knockback:75,defense:54,mobility:89,balance:50,stamina:48,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:38}}
 
 };
 
@@ -2500,955 +2235,113 @@ function getBitCompatibility(bladeData,bit){
     const explicit=bladeData.compatibility?.bits?.[key];
     if(explicit!==undefined) return explicit;
     const matrix={
-        Attack:{Attack:76,Balance:70,Stamina:38,Defense:28},
-        Defense:{Attack:28,Balance:76,Stamina:88,Defense:92},
-        Stamina:{Attack:34,Balance:80,Stamina:94,Defense:90},
-        Balance:{Attack:72,Balance:90,Stamina:80,Defense:78}
+        Attack:{Attack:78,Balance:68,Stamina:42,Defense:34},
+        Defense:{Attack:34,Balance:74,Stamina:86,Defense:92},
+        Stamina:{Attack:38,Balance:82,Stamina:96,Defense:91},
+        Balance:{Attack:72,Balance:92,Stamina:82,Defense:80}
     };
-    let score=matrix[bladeData.type]?.[bit.type] ?? 50;
-    if(bit.name==="Point" && (bladeData.type==="Balance" || bladeData.type==="Defense")) score+=5;
-    if(bit.name==="High Needle" && (bladeData.type==="Defense" || bladeData.type==="Stamina")) score+=5;
-    if(bit.name==="Quake" && bladeData.type==="Attack") score+=7;
+    let score=matrix[bladeData.type]?.[bit.type]??50;
+    if(bit.name==="Low Rush"&&bladeData.type==="Attack") score+=5;
+    if(bit.name==="Rush"&&(bladeData.type==="Attack"||bladeData.type==="Balance")) score+=4;
+    if(bit.name==="Ball"&&(bladeData.type==="Stamina"||bladeData.type==="Defense")) score+=5;
+    if(bit.name==="Hexa"&&(bladeData.type==="Attack"||bladeData.type==="Balance")) score+=3;
+    if(bit.name==="Wedge"&&bladeData.type==="Defense") score+=4;
     return Math.max(0,Math.min(100,score));
 }
-
 function getHeightCompatibility(bladeData,height){
-
-    return bladeData.compatibility.heights[
-        String(height)
-    ] ?? 50;
-
+    return bladeData.compatibility?.heights?.[String(height)]??50;
 }
-
 function getCompatibilityScore(blade,ratchet,bit){
-
     const bladeData=getBladeEngine(blade);
-
-    if(!bladeData){
-
-        return 50;
-
-    }
-
-    const heightScore=getHeightCompatibility(
-        bladeData,
-        ratchet.height
-    );
-
-    const bitScore=getBitCompatibility(
-        bladeData,
-        bit
-    );
-
+    if(!bladeData) return 50;
     return Math.round(
-
-        (heightScore+bitScore)/2
-
+        getHeightCompatibility(bladeData,ratchet.height)*0.55+
+        getBitCompatibility(bladeData,bit)*0.45
     );
-
 }
+function scoreHeight(bladeData,height){return getHeightCompatibility(bladeData,height);}
+function scoreBit(bladeData,bitName){return bladeData.compatibility?.bits?.[bitName.replace(/ /g,"")]??50;}
+function average(a,b){return Math.round((a+b)/2);}
+function clamp(value){return Math.max(60,Math.min(99,Math.round(value)));}
 
-//=========================
-// ENGINE 2.0 HELPERS
-//=========================
-
-function scoreHeight(bladeData,height){
-
-    return bladeData.compatibility.heights[String(height)] ?? 50;
-
-}
-
-function scoreBit(bladeData,bitName){
-
-    return bladeData.compatibility.bits[
-        bitName.replace(/ /g,"")
-    ] ?? 50;
-
-}
-
-function average(a,b){
-
-    return Math.round((a+b)/2);
-
-}
-
-//=========================
-// STAT ENGINE
-//=========================
-
-function clamp(value){
-
-    return Math.max(60,Math.min(99,value));
-
-}
-
-//=========================
-// BATTLE VALUE / LAUNCH QUALITY HELPERS
-//=========================
-
-function clampBattleValue(value,min=0,max=100){
-    return Math.max(min,Math.min(max,value));
+function getBladePhysicalProfile(bladeData){
+    const p=bladeData.physics||{},b=bladeData.behavior||{};
+    const recoilMap={"Very Low":0.18,"Low":0.32,"Medium":0.55,"High":0.78,"Very High":0.92};
+    const weight=Number(bladeData.weight)||32;
+    return {
+        weight,
+        contactAttack:(b.smashPower||50)*0.42+(b.upperPower||50)*0.18+(b.barragePower||50)*0.12+(b.counterPower||50)*0.08,
+        momentumPotential:weight*0.55+(b.smashPower||50)*0.18,
+        recoil:recoilMap[p.recoil]??0.55,
+        stability:(b.movementControl||70)*0.25+(b.spinRetention||70)*0.45+(b.lad||70)*0.30,
+        lock:Number(p.lockStrength)||70
+    };
 }
 
 /*
-  LAUNCH QUALITY SYSTEM
-  Quality is independent from launch angle/technique.
-  FIXED QUALITY chooses one weighted-random result and keeps it.
-  ROLL QUALITY chooses a fresh weighted-random result each press.
+  REALISTIC COMBO STAT ENGINE
+  Attack = ability to turn contact into RPM damage.
+  Knockback = ability to transfer momentum/displace the opponent.
+  Defense = resistance to displacement/destabilization.
+  Mobility = movement speed, distance and activity.
+  Balance = control and recovery after impacts.
+  Stamina = RPM efficiency/retention.
+  Burst = lock + ratchet + bit resistance.
 */
-const LAUNCH_QUALITY_WEIGHTS=[
-    ["Horrible",8],["Bad",17],["Okay",40],["Good",25],["Perfect",10]
-];
-
-function rollRandomLaunchQuality(){
-    let total=0;
-    for(const [,weight] of LAUNCH_QUALITY_WEIGHTS) total+=weight;
-    let roll=Math.random()*total;
-    for(const [quality,weight] of LAUNCH_QUALITY_WEIGHTS){
-        roll-=weight;
-        if(roll<=0) return quality;
-    }
-    return "Okay";
-}
-
-function setFixedLaunchQuality(side){
-    if(!Game[side]) return "Okay";
-    Game[side].launch=Game[side].launch||{};
-    if(!Game[side].launch.quality){
-        Game[side].launch.quality=rollRandomLaunchQuality();
-    }
-    Game[side].launch.qualityMode="Fixed";
-    return Game[side].launch.quality;
-}
-
-function rollLaunchQuality(side){
-    if(!Game[side]) return "Okay";
-    Game[side].launch=Game[side].launch||{};
-    Game[side].launch.quality=rollRandomLaunchQuality();
-    Game[side].launch.qualityMode="Roll";
-    return Game[side].launch.quality;
-}
-
-function ensureLaunchQuality(side){
-    if(!Game[side]) return "Okay";
-    Game[side].launch=Game[side].launch||{};
-    if(!Game[side].launch.quality){
-        Game[side].launch.quality=rollRandomLaunchQuality();
-    }
-    return Game[side].launch.quality;
-}
-
-
-//=========================
-// REAL COMBO SYNERGY
-//=========================
-
-function getComboSynergy(
-    blade,
-    ratchet,
-    bit
-){
-
-    const synergy={
-
-        attack:0,
-        knockback:0,
-        defense:0,
-        mobility:0,
-        balance:0,
-        stamina:0,
-        burst:0
-
-    };
-
-
-    const bladeType=
-        blade.type;
-
-    const bitName=
-        bit.name;
-
-
-    //=========================
-    // FLAT
-    //=========================
-
-    if(bitName==="Flat"){
-
-        synergy.attack+=6;
-        synergy.knockback+=4;
-        synergy.mobility+=8;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=4;
-            synergy.knockback+=3;
-            synergy.stamina-=4;
-            synergy.balance-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina-=12;
-            synergy.defense-=9;
-            synergy.balance-=8;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina-=14;
-            synergy.balance-=9;
-            synergy.defense-=6;
-
-        }
-
-        else{
-
-            synergy.stamina-=9;
-            synergy.balance-=5;
-
-        }
-
-    }
-
-
-    //=========================
-    // LOW FLAT
-    //=========================
-
-    else if(bitName==="Low Flat"){
-
-        synergy.attack+=7;
-        synergy.knockback+=5;
-        synergy.mobility+=9;
-        synergy.burst+=3;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=4;
-            synergy.knockback+=4;
-            synergy.balance+=2;
-            synergy.stamina-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina-=14;
-            synergy.defense-=10;
-            synergy.balance-=8;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina-=15;
-            synergy.balance-=10;
-            synergy.defense-=7;
-
-        }
-
-        else{
-
-            synergy.stamina-=10;
-            synergy.balance-=6;
-
-        }
-
-    }
-
-
-    //=========================
-    // RUSH
-    //=========================
-
-    else if(bitName==="Rush"){
-
-        synergy.attack+=5;
-        synergy.knockback+=1;
-        synergy.mobility+=8;
-        synergy.stamina+=3;
-        synergy.burst+=4;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=5;
-            synergy.knockback+=3;
-            synergy.stamina-=4;
-            synergy.balance-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina-=13;
-            synergy.defense-=9;
-            synergy.balance-=7;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina-=12;
-            synergy.balance-=8;
-            synergy.defense-=6;
-
-        }
-
-        else{
-
-            synergy.stamina-=8;
-            synergy.balance-=5;
-
-        }
-
-    }
-
-
-    //=========================
-    // LOW RUSH
-    //=========================
-
-    else if(bitName==="Low Rush"){
-
-        synergy.attack+=7;
-        synergy.knockback+=3;
-        synergy.mobility+=10;
-        synergy.stamina+=4;
-        synergy.burst+=5;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=5;
-            synergy.knockback+=4;
-            synergy.balance+=2;
-            synergy.stamina-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina-=14;
-            synergy.defense-=10;
-            synergy.balance-=8;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina-=13;
-            synergy.balance-=9;
-            synergy.defense-=7;
-
-        }
-
-        else{
-
-            synergy.stamina-=9;
-            synergy.balance-=6;
-
-        }
-
-    }
-
-
-    //=========================
-    // KICK
-    //=========================
-
-    else if(bitName==="Kick"){
-
-        synergy.attack+=5;
-        synergy.knockback+=4;
-        synergy.mobility+=5;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=3;
-            synergy.knockback+=3;
-            synergy.balance-=2;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina-=6;
-            synergy.defense-=4;
-            synergy.balance-=3;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina-=8;
-            synergy.balance-=5;
-
-        }
-
-        else{
-
-            synergy.attack+=2;
-            synergy.balance-=2;
-
-        }
-
-    }
-
-
-    //=========================
-    // LEVEL
-    //=========================
-
-    else if(bitName==="Level"){
-
-        synergy.attack+=4;
-        synergy.mobility+=4;
-        synergy.balance+=4;
-        synergy.stamina+=5;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=4;
-            synergy.stamina+=4;
-            synergy.balance+=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina+=2;
-            synergy.defense-=2;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.attack+=3;
-            synergy.stamina+=2;
-            synergy.balance+=2;
-
-        }
-
-        else{
-
-            synergy.attack+=3;
-            synergy.stamina+=3;
-            synergy.balance+=3;
-
-        }
-
-    }
-
-
-    //=========================
-    // BALL
-    //=========================
-
-    else if(bitName==="Ball"){
-
-        synergy.stamina+=10;
-        synergy.balance+=5;
-        synergy.mobility-=4;
-
-        if(bladeType==="Attack"){
-
-            synergy.stamina+=5;
-            synergy.attack-=7;
-            synergy.knockback-=6;
-            synergy.balance-=5;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina+=6;
-            synergy.defense+=2;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina+=7;
-            synergy.balance+=3;
-
-        }
-
-        else{
-
-            synergy.stamina+=5;
-            synergy.balance+=2;
-
-        }
-
-    }
-
-
-    //=========================
-    // ORB
-    //=========================
-
-    else if(bitName==="Orb"){
-
-        synergy.stamina+=10;
-        synergy.defense+=3;
-        synergy.balance+=2;
-        synergy.mobility-=3;
-
-        if(bladeType==="Attack"){
-
-            synergy.stamina+=5;
-            synergy.attack-=7;
-            synergy.knockback-=6;
-            synergy.balance-=7;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina+=5;
-            synergy.defense+=3;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina+=7;
-            synergy.balance+=2;
-
-        }
-
-        else{
-
-            synergy.stamina+=5;
-            synergy.balance-=1;
-
-        }
-
-    }
-
-
-    //=========================
-    // NEEDLE
-    //=========================
-
-    else if(bitName==="Needle"){
-
-        synergy.stamina+=8;
-        synergy.mobility-=7;
-
-        if(bladeType==="Attack"){
-
-            synergy.stamina+=5;
-            synergy.attack-=6;
-            synergy.knockback-=5;
-            synergy.defense-=8;
-            synergy.balance-=12;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.stamina+=4;
-            synergy.defense-=3;
-            synergy.balance-=5;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina+=5;
-            synergy.defense-=2;
-            synergy.balance-=4;
-
-        }
-
-        else{
-
-            synergy.stamina+=4;
-            synergy.defense-=4;
-            synergy.balance-=6;
-
-        }
-
-    }
-
-
-    //=========================
-    // HEXA
-    //=========================
-
-    else if(bitName==="Hexa"){
-
-        synergy.defense+=8;
-        synergy.balance+=8;
-        synergy.mobility-=4;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack-=4;
-            synergy.knockback-=4;
-            synergy.defense+=2;
-            synergy.balance+=3;
-            synergy.stamina-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.defense+=5;
-            synergy.balance+=4;
-            synergy.stamina+=2;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.defense+=4;
-            synergy.balance+=4;
-            synergy.stamina-=2;
-
-        }
-
-        else{
-
-            synergy.defense+=4;
-            synergy.balance+=4;
-
-        }
-
-    }
-
-
-    //=========================
-    // WEDGE
-    //=========================
-
-    else if(bitName==="Wedge"){
-
-        synergy.defense+=5;
-        synergy.balance+=7;
-        synergy.mobility-=5;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack-=5;
-            synergy.knockback-=5;
-            synergy.stamina+=2;
-            synergy.balance-=2;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.defense+=4;
-            synergy.balance+=3;
-            synergy.stamina+=2;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.stamina+=2;
-            synergy.balance+=3;
-
-        }
-
-        else{
-
-            synergy.balance+=3;
-            synergy.defense+=2;
-
-        }
-
-    }
-
-
-    //=========================
-    // ELEVATE
-    //=========================
-
-    else if(bitName==="Elevate"){
-
-        synergy.attack+=5;
-        synergy.mobility+=6;
-        synergy.stamina+=5;
-        synergy.burst-=8;
-
-        if(bladeType==="Attack"){
-
-            synergy.attack+=4;
-            synergy.knockback+=3;
-            synergy.stamina+=3;
-            synergy.balance-=3;
-
-        }
-
-        else if(bladeType==="Defense"){
-
-            synergy.attack+=2;
-            synergy.mobility+=3;
-            synergy.stamina+=3;
-            synergy.defense-=3;
-
-        }
-
-        else if(bladeType==="Stamina"){
-
-            synergy.attack+=3;
-            synergy.stamina+=5;
-            synergy.balance+=2;
-
-        }
-
-        else{
-
-            synergy.attack+=3;
-            synergy.stamina+=3;
-            synergy.balance+=2;
-
-        }
-
-    }
-
-
-    //=========================
-    // NEW BIT BEHAVIOR
-    //=========================
-
-    if(bitName==="Point") {
-        synergy.balance+=6;
-        synergy.stamina+=3;
-        synergy.mobility+=1;
-        if(bladeType==="Attack") { synergy.attack+=2; synergy.knockback+=1; }
-        if(bladeType==="Defense") { synergy.defense+=3; synergy.balance+=2; }
-        if(bladeType==="Stamina") { synergy.stamina+=3; synergy.balance+=2; }
-    }
-
-    if(bitName==="High Needle") {
-        synergy.defense+=7;
-        synergy.stamina+=7;
-        synergy.mobility-=4;
-        synergy.balance+=3;
-        if(bladeType==="Attack") { synergy.attack-=7; synergy.knockback-=6; synergy.balance-=6; }
-        if(bladeType==="Defense") { synergy.defense+=2; }
-        if(bladeType==="Stamina") { synergy.stamina+=3; synergy.balance-=2; }
-    }
-
-    if(bitName==="Quake") {
-        synergy.attack+=7;
-        synergy.knockback+=6;
-        synergy.mobility+=8;
-        synergy.stamina-=8;
-        synergy.balance-=7;
-        if(bladeType==="Attack") synergy.attack+=3;
-        if(bladeType==="Defense") { synergy.defense-=8; synergy.balance-=8; }
-        if(bladeType==="Stamina") { synergy.stamina-=10; synergy.balance-=8; }
-    }
-
-    // Tall 80 setups expose the ratchet and raise the center of mass.
-    // Needle can preserve spin, but on an 80-height defense combo it cannot
-    // erase the positional/stability penalty.
-    if(ratchet.height===80){
-        synergy.defense-=4;
-        synergy.balance-=4;
-        if(bitName==="Needle" || bitName==="High Needle") synergy.defense-=5;
-    }
-
-    //=========================
-    // HEIGHT INTERACTION
-    //=========================
-
-    if(
-        ratchet.height===60
-    ){
-
-        if(
-            bitName==="Low Flat" ||
-            bitName==="Low Rush"
-        ){
-
-            synergy.attack+=3;
-            synergy.knockback+=2;
-            synergy.balance+=2;
-
-        }
-
-        else if(
-            bitName==="Ball" ||
-            bitName==="Orb" ||
-            bitName==="Wedge"
-        ){
-
-            synergy.balance+=2;
-            synergy.stamina+=2;
-
-        }
-
-    }
-
-
-    //=========================
-    // CLAMP SYNERGY
-    //=========================
-
-    Object.keys(synergy).forEach(key=>{
-
-        synergy[key]=
-            Math.max(
-                -18,
-                Math.min(
-                    18,
-                    synergy[key]
-                )
-            );
-
-    });
-
-
-    return synergy;
-
-}
-
-function calculateComboStats(blade, ratchet, bit){
-
+function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
+    if(!bladeData) return null;
 
-    if(!bladeData){
+    const rp=getRatchetProfile(ratchet),r=rp.base,h=rp.height;
+    const bp=bit.card||{},bb=bit.behavior||{},phys=getBladePhysicalProfile(bladeData);
+    const bitMovement=Number(bb.speed)||Number(bp.mobility)||60;
+    const bitControl=Number(bb.control)||Number(bp.balance)||60;
+    const retention=Number(bb.staminaRetention)||70;
 
-        console.error("Blade not found.");
+    let attack=bladeData.card.attack*0.58+bp.attack*0.12+phys.contactAttack*0.20+r.attackBias*0.06+h.attack;
+    let knockback=bladeData.card.knockback*0.52+phys.momentumPotential*1.15+bp.knockback*0.10+r.weight*1.05+h.knockback;
+    let defense=bladeData.card.defense*0.48+r.defenseBias*0.20+r.stability*0.14+phys.stability*0.10+bp.defense*0.08+h.defense;
+    let mobility=bitMovement*0.58+bladeData.card.mobility*0.20+(bb.aggression||60)*0.08+r.mobilityBias*0.06+h.mobility;
+    let balance=bitControl*0.28+(bb.control||60)*0.18+bladeData.card.balance*0.30+r.stability*0.14+phys.stability*0.10+h.balance;
+    let stamina=bladeData.card.stamina*0.50+retention*0.26+bp.stamina*0.10+r.staminaBias*0.07+h.stamina;
+    let burst=phys.lock*0.38+r.burstResistance*0.38+bp.burst*0.12+bladeData.card.burst*0.12+h.burst;
 
-        return null;
+    const compatibility=getCompatibilityScore(blade,ratchet,bit);
+    const synergyStrength=(compatibility-70)/12;
 
+    if(blade.type==="Attack"&&["Flat","Low Flat","Rush","Low Rush","Kick","Quake"].includes(bit.name)){
+        attack+=synergyStrength*1.8;knockback+=synergyStrength*1.2;mobility+=synergyStrength*1.4;
+    }
+    if(blade.type==="Stamina"&&["Ball","Orb","Elevate","Wedge"].includes(bit.name)){
+        stamina+=synergyStrength*2.2;balance+=synergyStrength*1.4;
+    }
+    if(blade.type==="Defense"&&["Needle","High Needle","Hexa","Wedge","Ball","Orb"].includes(bit.name)){
+        defense+=synergyStrength*1.8;balance+=synergyStrength*1.4;
     }
 
-        const stats = {
+    if(bit.name==="Low Rush"){attack+=1.5;knockback+=1.0;mobility+=2.0;stamina-=4.0;balance-=1.0;}
+    if(bit.name==="Rush"){stamina+=1.5;mobility-=1.0;}
+    if(bit.name==="Low Flat"){attack+=2.0;knockback+=1.5;mobility+=2.0;stamina-=3.0;}
+    if(bit.name==="Flat"){stamina-=1.5;}
 
-    attack: bladeData.card.attack,
-    knockback: bladeData.card.knockback,
-    defense: bladeData.card.defense,
-    mobility: bladeData.card.mobility,
-    balance: bladeData.card.balance,
-    stamina: bladeData.card.stamina,
-    burst: bladeData.card.burst
+    if(ratchet.height===60){defense+=2;balance+=2;burst+=2;}
+    else if(ratchet.height===70){stamina+=1;}
+    else if(ratchet.height===80){attack+=1;stamina-=2;}
 
-};
-
-    const ratchetData=RATCHET_ENGINE[
-        String(ratchet.number)
-    ];
-
-    const heightData=getHeightModifier(
-        ratchet.height
-    );
-
-    // Ratchet influence
-
-    stats.attack+=Math.round(
-        (ratchetData.attackBias-50)/10
-    );
-
-    stats.defense+=Math.round(
-        (ratchetData.defenseBias-50)/10
-    );
-
-    stats.stamina+=Math.round(
-        (ratchetData.staminaBias-50)/10
-    );
-
-    stats.mobility+=Math.round(
-        (ratchetData.mobilityBias-50)/10
-    );
-
-    stats.balance+=Math.round(
-        (ratchetData.stability-50)/12
-    );
-
-    stats.burst+=Math.round(
-        (ratchetData.burstResistance-50)/12
-    );
-
-    // Height influence
-
-    stats.attack+=heightData.attack;
-    stats.knockback+=heightData.knockback;
-    stats.defense+=heightData.defense;
-    stats.mobility+=heightData.mobility;
-    stats.balance+=heightData.balance;
-    stats.stamina+=heightData.stamina;
-    stats.burst+=heightData.burst;
-
-    // Bit influence (Engine 2.0)
-
-stats.attack += Math.round((bit.card.attack - 70) / 10);
-stats.knockback += Math.round((bit.card.knockback - 70) / 10);
-stats.defense += Math.round((bit.card.defense - 70) / 10);
-stats.mobility += Math.round((bit.card.mobility - 70) / 10);
-stats.balance += Math.round((bit.card.balance - 70) / 10);
-stats.stamina += Math.round((bit.card.stamina - 70) / 10);
-stats.burst += Math.round((bit.card.burst - 70) / 10);
- 
-    //=========================
-// COMBO SYNERGY
-//=========================
-
-const compatibility=
-    getCompatibilityScore(
-        blade,
-        ratchet,
-        bit
-    );
-
-
-const synergy=
-    getComboSynergy(
-        blade,
-        ratchet,
-        bit
-    );
-
-
-Object.keys(synergy).forEach(key=>{
-
-    if(
-        stats[key]!==undefined
-    ){
-
-        stats[key]+=
-            synergy[key];
-
-    }
-
-});
-
-    Object.keys(stats).forEach(key=>{
-        stats[key]=clamp(stats[key]);
-    });
-
-   const baseOVR = clamp(bladeData.card.ovr);
-
-const compatibilityBonus = Math.round(
-    (compatibility - 50) / 10
-);
-
-const ovr = clamp(
-    baseOVR + compatibilityBonus
-);
-
-    return{
-
-        stats,
-
-        compatibility,
-
-        ovr,
-
-        meta:clamp(Math.round((ovr+compatibility)/2))
-
+    const stats={
+        attack:clamp(attack),knockback:clamp(knockback),defense:clamp(defense),
+        mobility:clamp(mobility),balance:clamp(balance),stamina:clamp(stamina),burst:clamp(burst)
     };
 
+    const weights={attack:.18,knockback:.15,defense:.14,mobility:.13,balance:.12,stamina:.17,burst:.11};
+    let weighted=0;
+    Object.keys(weights).forEach(k=>weighted+=stats[k]*weights[k]);
+    const ovr=clamp(weighted+Math.max(-4,Math.min(4,(compatibility-70)*0.10)));
+    const meta=clamp(ovr*.72+compatibility*.18+stats.stamina*.04+stats.attack*.03+stats.defense*.03);
+
+    return {stats,compatibility,ovr,meta};
 }
+
 
 function createStatBar(label,value){
 
@@ -3528,6 +2421,8 @@ function showComboCard(){
             <h2>META ${combo.meta}</h2>
 
           <h3>OVR ${combo.ovr}</h3>
+
+          <p class="combo-stat-note">Attack = RPM damage · Knockback = displacement · Mobility = movement · Defense = stability · Balance = recovery · Stamina = spin efficiency</p>
 
             <hr>
 
