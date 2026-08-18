@@ -1792,7 +1792,16 @@ viewBox="0 0 1000 900">
     <circle id="impactRing" cx="500" cy="420" r="8" fill="none" stroke="#ffd43b" stroke-width="2.5"/>
     <circle id="impactRing2" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="2"/>
     <circle id="impactRing3" cx="500" cy="420" r="3" fill="none" stroke="#ffd43b" stroke-width="1.5"/>
-     <circle id="impactExplosion" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+     <circle id="impactExplosion" cx="500" cy="420" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+     <circle id="impactCore" cx="500" cy="420" r="4" fill="#ffd43b" opacity="0.95"/>
+     <g id="impactSpokes" opacity="0">
+       <line id="impactSpoke1" x1="500" y1="420" x2="500" y2="398" stroke="#ffffff" stroke-width="2.6"/>
+       <line id="impactSpoke2" x1="500" y1="420" x2="522" y2="420" stroke="#ffffff" stroke-width="2.6"/>
+       <line id="impactSpoke3" x1="500" y1="420" x2="500" y2="442" stroke="#ffd43b" stroke-width="2.6"/>
+       <line id="impactSpoke4" x1="500" y1="420" x2="478" y2="420" stroke="#ffd43b" stroke-width="2.6"/>
+       <line id="impactSpoke5" x1="500" y1="420" x2="516" y2="404" stroke="#ffffff" stroke-width="2.0"/>
+       <line id="impactSpoke6" x1="500" y1="420" x2="484" y2="436" stroke="#ffffff" stroke-width="2.0"/>
+     </g>
      <circle id="impactBurst1" cx="500" cy="420" r="2" fill="#ffffff" opacity="0.95"/>
      <circle id="impactBurst2" cx="500" cy="420" r="2" fill="#ffd43b" opacity="0.9"/>
     <text id="impactText" x="500" y="380" text-anchor="middle" font-size="20" font-weight="900" fill="#ffffff">HIT!</text>
@@ -4589,12 +4598,12 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0290 &&
-        speed>=0.060 &&
-        xtremeAlignment>=0.74
+        effectiveForce>=0.0265 &&
+        speed>=0.056 &&
+        xtremeAlignment>=0.70
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=110) return "Xtreme";
+        if(now-s.finishCandidateSince>=90) return "Xtreme";
     }else if(!inXtreme){
         s.finishCandidateSince=0;
     }
@@ -4622,13 +4631,13 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0245 &&
-        speed>=0.058 &&
-        s.y>0.84 &&
-        pocketAlignment>=0.73
+        effectiveForce>=0.0225 &&
+        speed>=0.054 &&
+        s.y>0.82 &&
+        pocketAlignment>=0.69
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=130) return "Over";
+        if(now-s.finishCandidateSince>=105) return "Over";
     }else if(!leftPocket && !rightPocket){
         s.finishCandidateSince=0;
     }
@@ -4755,6 +4764,8 @@ function newBattleFrame(now){
                 const ring2=document.getElementById("impactRing2");
                 const ring3=document.getElementById("impactRing3");
                 const explosion=document.getElementById("impactExplosion");
+                const core=document.getElementById("impactCore");
+                const spokes=document.getElementById("impactSpokes");
                 const burst1=document.getElementById("impactBurst1");
                 const burst2=document.getElementById("impactBurst2");
                 const txt=document.getElementById("impactText");
@@ -4783,9 +4794,20 @@ function newBattleFrame(now){
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(5+u*24*strength));
-                    explosion.setAttribute("stroke-width",String(Math.max(1.0,3.4-u*2.1)));
-                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.05)));
+                    explosion.setAttribute("r",String(6+u*26*strength));
+                    explosion.setAttribute("stroke-width",String(Math.max(1.0,3.6-u*2.2)));
+                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.10)));
+                }
+                if(core){
+                    core.setAttribute("cx",x);
+                    core.setAttribute("cy",y);
+                    core.setAttribute("r",String(Math.max(1.2,6.5-u*5.0)));
+                    core.setAttribute("opacity",String(Math.max(0,1.0-u*1.25)));
+                }
+                if(spokes){
+                    const spokeScale=1+u*(2.8+strength*0.9);
+                    spokes.setAttribute("opacity",String(Math.max(0,0.95-u*1.15)));
+                    spokes.setAttribute("transform",`translate(${x-500} ${y-420}) scale(${spokeScale}) translate(${500-x} ${420-y}) rotate(${u*18} ${x} ${y})`);
                 }
                 if(burst1){
                     burst1.setAttribute("cx",String(x-u*25*strength));
@@ -5253,6 +5275,15 @@ function tryNewXRailEngagement(s){
         0.78+control*0.08+movement*0.05;
     if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
 
+    // Preserve how the Bey approached the rail. This becomes a small
+    // left/right bias at the X Exit instead of every exit shooting identically.
+    s.railExitBias=newBattleClamp(
+        (tangentRatio-0.48)*0.70+
+        (0.46-approachRatio)*0.22+
+        (0.50-tilt)*0.10,
+        -0.34,0.34
+    );
+
     const tiltLimit=
         0.50+stability*0.075+control*0.045+rpm*0.055;
     if(tilt>tiltLimit) return false;
@@ -5323,14 +5354,48 @@ function newXRailExit(s){
     s.railExitRefractory=0.20;
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
-    const exitForward=0.88+rpm*0.12+Math.min(0.12,speed*0.80);
+    const incomingSpeed=speedOf(s);
+    const exitBias=newBattleClamp(s.railExitBias||0,-0.34,0.34);
+
+    // Exit is not a canned straight-down launch. High-speed, well-aligned
+    // rail rides leave with more forward projection; imperfect approaches
+    // produce a small left/right departure. The center line remains the most
+    // common result.
+    const forwardFactor=
+        0.78+
+        rpm*0.18+
+        newBattleClamp(incomingSpeed/0.16,0,1)*0.18;
+
+    const lateralFactor=
+        exitBias*
+        (0.42+rpm*0.48)*
+        (0.80+newBattleClamp(incomingSpeed/0.16,0,1)*0.30);
+
+    const exitNormalX=-tangentY;
+    const exitNormalY=tangentX;
+
     s.x=exit.x;
-    s.y=exit.y+0.085;
-    s.vx=tangentX*speed*(0.96+control*0.08);
-    s.vy=Math.max(
-        0.012,
-        speed*exitForward+tangentY*speed*(0.22+control*0.10)
-    );
+    s.y=exit.y+0.070;
+
+    s.vx=
+        tangentX*speed*forwardFactor+
+        exitNormalX*speed*lateralFactor;
+    s.vy=
+        Math.max(
+            0.014,
+            speed*forwardFactor*0.92+
+            tangentY*speed*0.16+
+            exitNormalY*speed*lateralFactor
+        );
+
+    // A little more speed means a more forceful X-Exit launch, but never an
+    // uncontrolled teleport or giant velocity spike.
+    const exitVelocity=Math.hypot(s.vx,s.vy);
+    const maxExitVelocity=0.055+speed*1.18;
+    if(exitVelocity>maxExitVelocity){
+        const scale=maxExitVelocity/exitVelocity;
+        s.vx*=scale; s.vy*=scale;
+    }
     s.railSafetyUntil=performance.now()+320;
 
     s.rpm=newBattleClamp(s.rpm-(0.008+(s.railSpeed||speed)*0.025),0,1);
@@ -5386,15 +5451,15 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    const railDrive=(0.0017+movement*0.0027+affinity*0.0014)*(0.36+rpm*0.64);
+    const railDrive=(0.0019+movement*0.0030+affinity*0.0016)*(0.38+rpm*0.62);
     const railFriction=0.00028+(1-rpm)*0.00034+tilt*0.00024;
 
     tangentVelocity=Math.max(
-        0.050,
+        0.056,
         tangentVelocity+(railDrive-railFriction)*dt*60
     );
 
-    const speedSupport=newBattleClamp((tangentVelocity-0.050)/0.120,0,1);
+    const speedSupport=newBattleClamp((tangentVelocity-0.056)/0.120,0,1);
     const rpmSupport=newBattleClamp((rpm-0.16)/0.70,0,1);
     const tiltSupport=1-newBattleClamp((tilt-0.06)/0.34,0,1);
     const stabilitySupport=0.45+stability*0.55;
@@ -5404,7 +5469,7 @@ function updateNewXRailRide(s,dt){
 
     s.railGrip=newBattleClamp(support,0,1);
 
-    if(support<0.31||tilt>0.44||stability<0.12||tangentVelocity<0.034){
+    if(support<0.31||tilt>0.44||stability<0.12||tangentVelocity<0.041){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -6893,10 +6958,14 @@ function newPhysicsCollision(dt){
     const attackVsAttackRPMMultiplier=
         bothAttackCollision ? 0.84 : 1.0;
 
+    const pRailAttackMultiplier=pWasOnRail ? 1.22 : 1.0;
+    const cRailAttackMultiplier=cWasOnRail ? 1.22 : 1.0;
+
     const pToCDamage=
         baseRPMDamage*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
+        pRailAttackMultiplier*
         (0.82+pAttack*0.58)*
         (0.72+pRPM*0.42)*
         (0.82+newBattleClamp(pMomentum/0.035,0,2.2)*0.22)*
@@ -6906,6 +6975,7 @@ function newPhysicsCollision(dt){
         baseRPMDamage*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
+        cRailAttackMultiplier*
         (0.82+cAttack*0.58)*
         (0.72+cRPM*0.42)*
         (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
@@ -7005,10 +7075,10 @@ function newPhysicsCollision(dt){
         0.78,1.52
     );
 
-    p.hitFlash=0.16*visualStrength;
-    c.hitFlash=0.16*visualStrength;
-    p.impactScale=1.10+0.25*visualStrength;
-    c.impactScale=1.10+0.25*visualStrength;
+    p.hitFlash=0.22*visualStrength;
+    c.hitFlash=0.22*visualStrength;
+    p.impactScale=1.12+0.30*visualStrength;
+    c.impactScale=1.12+0.30*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={
