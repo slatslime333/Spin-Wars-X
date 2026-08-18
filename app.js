@@ -772,7 +772,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:35.2,
 
-        card:{ovr:76,attack:84,knockback:77,defense:64,mobility:86,balance:68,stamina:64,burst:72},
+        card:{ovr:73,attack:79,knockback:74,defense:63,mobility:83,balance:66,stamina:63,burst:70},
 
         physics:{
             weightClass:"Medium",
@@ -785,9 +785,9 @@ const BLADE_ENGINE = {
 
         behavior:{
             attackStyle:"Rush",
-            smashPower:84,
-            upperPower:88,
-            barragePower:76,
+            smashPower:77,
+            upperPower:80,
+            barragePower:72,
             counterPower:32,
             movementControl:82,
             spinRetention:66,
@@ -843,12 +843,12 @@ const BLADE_ENGINE = {
  
 
     aero_pegasus:{name:"Aero Pegasus",type:"Attack",tier:"Gold",spin:"Right",weight:38.3,card:{ovr:96,attack:96,knockback:94,defense:81,mobility:92,balance:87,stamina:87,burst:91},physics:{weightClass:"Very Heavy",centerOfGravity:"Medium",contactShape:"Upper Smash",recoil:"Medium",lockStrength:91,weightDistribution:"Outer"},behavior:{attackStyle:"Smash",smashPower:96,upperPower:82,barragePower:72,counterPower:48,movementControl:88,spinRetention:84,lad:82,burstResistance:91,winConditions:{spin:70,burst:92,knockout:97,counter:58}},compatibility:{heights:{60:96,70:94,80:58},bits:{Rush:99,LowRush:99,Flat:92,LowFlat:94,Level:94,Kick:88,Point:86,HighNeedle:68,Quake:82,Hexa:72,Wedge:55,Ball:70,Orb:74,Elevate:80,Needle:60}},traits:["Versatile","Heavy","Smash","Attack","Stamina"],personality:{aggression:96,control:86,consistency:84,risk:72}},
-    leon_crest:{name:"Leon Crest",type:"Defense",tier:"Silver",spin:"Right",weight:35.0,card:{ovr:79,attack:63,knockback:69,defense:95,mobility:50,balance:90,stamina:76,burst:85},physics:{weightClass:"Medium",centerOfGravity:"High",contactShape:"Round",recoil:"Low",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Counter",smashPower:32,upperPower:18,barragePower:36,counterPower:82,movementControl:86,spinRetention:74,lad:76,burstResistance:84,winConditions:{spin:58,burst:64,knockout:24,counter:90}},compatibility:{heights:{60:72,70:84,80:94},bits:{Needle:92,HighNeedle:95,Point:82,Hexa:90,Wedge:88,Ball:86,Orb:84,Elevate:72,Level:68,Rush:38,LowRush:34,Flat:30,LowFlat:28,Kick:48,Quake:30}},traits:["Defense","Round","Counter","Plastic Frame","Stability"],personality:{aggression:20,control:90,consistency:78,risk:20}},
+    leon_crest:{name:"Leon Crest",type:"Defense",tier:"Silver",spin:"Right",weight:35.0,card:{ovr:79,attack:63,knockback:69,defense:95,mobility:50,balance:90,stamina:76,burst:85},physics:{weightClass:"Medium",centerOfGravity:"High",contactShape:"Round",recoil:"Low",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Counter",smashPower:32,upperPower:18,barragePower:36,counterPower:82,movementControl:86,spinRetention:74,lad:76,burstResistance:84,winConditions:{spin:58,burst:64,knockout:24,counter:90}},compatibility:{heights:{60:92,70:84,80:64},bits:{Needle:92,HighNeedle:95,Point:82,Hexa:90,Wedge:88,Ball:86,Orb:84,Elevate:72,Level:68,Rush:38,LowRush:34,Flat:30,LowFlat:28,Kick:48,Quake:30}},traits:["Defense","Round","Counter","Plastic Frame","Stability"],personality:{aggression:20,control:90,consistency:78,risk:20}},
     unicorn_sting:{name:"Unicorn Sting",type:"Balance",tier:"Silver",spin:"Right",weight:33.3,card:{ovr:83,attack:76,knockback:72,defense:84,mobility:64,balance:91,stamina:87,burst:88},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Hybrid",recoil:"Medium",lockStrength:88,weightDistribution:"Outer"},behavior:{attackStyle:"Counter Attack",smashPower:62,upperPower:36,barragePower:64,counterPower:88,movementControl:78,spinRetention:84,lad:86,burstResistance:88,winConditions:{spin:78,burst:76,knockout:48,counter:92}},compatibility:{heights:{60:96,70:82,80:48},bits:{Point:96,Level:88,Hexa:90,Elevate:82,Needle:84,HighNeedle:86,Ball:88,Orb:86,Wedge:80,Rush:68,LowRush:64,Flat:56,LowFlat:54,Kick:82,Quake:50}},traits:["Balance","Counter","Round","Stamina","Versatile"],personality:{aggression:58,control:88,consistency:86,risk:40}},
-    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:78,attack:67,knockback:80,defense:90,mobility:60,balance:88,stamina:83,burst:84},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:90,movementControl:92,spinRetention:76,lad:72,burstResistance:84,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:74,70:82,80:90},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
+    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:73,attack:61,knockback:73,defense:84,mobility:56,balance:79,stamina:75,burst:80},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:82,movementControl:87,spinRetention:72,lad:70,burstResistance:80,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:96,70:88,80:68},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
     tyranno_beat:{name:"Tyranno Beat",type:"Attack",tier:"Gold",spin:"Right",weight:37.0,card:{ovr:88,attack:91,knockback:89,defense:72,mobility:84,balance:74,stamina:73,burst:84},physics:{weightClass:"Heavy",centerOfGravity:"Medium",contactShape:"Elliptical",recoil:"High",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Elliptical Smash",smashPower:90,upperPower:58,barragePower:72,counterPower:60,movementControl:84,spinRetention:70,lad:67,burstResistance:84,winConditions:{spin:38,burst:74,knockout:94,counter:68}},compatibility:{heights:{60:96,70:90,80:48},bits:{Quake:98,Flat:94,LowFlat:96,Rush:90,LowRush:88,Point:74,Level:80,Kick:84,HighNeedle:46,Needle:38,Hexa:54,Wedge:46,Ball:30,Orb:34,Elevate:52}},traits:["Attack","Elliptical","Heavy","Smash","Counter Attack","High Recoil"],personality:{aggression:92,control:76,consistency:72,risk:86}},
 
-    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,card:{ovr:76,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:86,70:96,80:72},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
+    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,card:{ovr:76,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:92,70:84,80:66},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
 
 };
 
@@ -859,37 +859,47 @@ const BLADE_ENGINE = {
 const RATCHET_ENGINE = {
     // Weight is approximate physical part weight; biases describe tendencies,
     // not guaranteed outcomes. Blade geometry and alignment are applied separately.
-    "1":{weight:6.0,stability:72,burstResistance:72,attackBias:96,defenseBias:48,staminaBias:54,mobilityBias:92,profile:"asymmetric attack"},
+    "1":{weight:6.0,stability:70,burstResistance:70,attackBias:99,defenseBias:45,staminaBias:50,mobilityBias:94,profile:"asymmetric attack"},
     "3":{weight:6.3,stability:84,burstResistance:84,attackBias:82,defenseBias:72,staminaBias:72,mobilityBias:82,profile:"balanced universal"},
     "5":{weight:6.6,stability:89,burstResistance:80,attackBias:72,defenseBias:82,staminaBias:78,mobilityBias:72,profile:"wide stable"},
     "6":{weight:6.6,stability:91,burstResistance:86,attackBias:70,defenseBias:86,staminaBias:82,mobilityBias:69,profile:"stable circular"},
     "7":{weight:7.1,stability:94,burstResistance:88,attackBias:78,defenseBias:94,staminaBias:88,mobilityBias:65,profile:"heavy circular"},
-    "9":{weight:6.1,stability:94,burstResistance:98,attackBias:74,defenseBias:92,staminaBias:88,mobilityBias:61,profile:"recessed round"},
+    "9":{weight:6.1,stability:90,burstResistance:94,attackBias:70,defenseBias:87,staminaBias:83,mobilityBias:60,profile:"recessed round"},
     "0":{weight:7.0,stability:92,burstResistance:82,attackBias:60,defenseBias:88,staminaBias:84,mobilityBias:58,profile:"wide smooth"}
 };
-const RATCHET_HEIGHT_PROFILE = {
-    "55":{attack:3,knockback:1,defense:5,mobility:3,balance:5,stamina:1,burst:5,exposure:0.86},
-    "60":{attack:3,knockback:2,defense:4,mobility:2,balance:4,stamina:2,burst:4,exposure:0.90},
-    "70":{attack:1,knockback:1,defense:-1,mobility:0,balance:-1,stamina:-1,burst:-2,exposure:1.00},
-    "80":{attack:1,knockback:2,defense:-7,mobility:-2,balance:-7,stamina:-5,burst:-8,exposure:1.18},
-    "85":{attack:0,knockback:2,defense:-9,mobility:-3,balance:-9,stamina:-7,burst:-10,exposure:1.25}
-};
 function getRatchetProfile(ratchet){
-    const base=RATCHET_ENGINE[String(ratchet?.number)]||RATCHET_ENGINE["3"];
-    const height=RATCHET_HEIGHT_PROFILE[String(ratchet?.height)]||RATCHET_HEIGHT_PROFILE["70"];
+    const number=String(ratchet?.number||3);
+    const base=RATCHET_ENGINE[number]||RATCHET_ENGINE["3"];
+
+    // Height is handled once, by applyHeightSynergy().
+    // This prevents the old raw-height profile from double-counting
+    // stamina/defense/balance penalties in final combo stats.
+    const height={
+        attack:0,knockback:0,defense:0,mobility:0,
+        balance:0,stamina:0,burst:0
+    };
+
     return {base,height};
 }
 
 
-//=========================
-// ENGINE 2.0 HEIGHTS
-//=========================
 
-const HEIGHT_ENGINE = {
-    "60":{attack:2,knockback:1,defense:2,mobility:2,balance:2,stamina:1,burst:3},
-    "70":{attack:0,knockback:1,defense:-1,mobility:0,balance:-1,stamina:-1,burst:-1},
-    "80":{attack:0,knockback:2,defense:-6,mobility:-2,balance:-6,stamina:-5,burst:-7}
-};
+
+// V53 HEIGHT COMPATIBILITY GUARD
+// Compatibility describes blade/height fit, not a hidden stat bonus.
+// 60 is the safe baseline; 70 can be niche; 80 can be specialized but
+// cannot receive a higher general compatibility score than the lower heights.
+function normalizeHeightCompatibility(){
+    Object.values(BLADE_ENGINE).forEach(blade=>{
+        const h=blade.compatibility?.heights;
+        if(!h) return;
+        const h60=Number(h[60]??70);
+        h[60]=h60;
+        h[70]=Math.min(Number(h[70]??h60),Math.max(50,h60-5));
+        h[80]=Math.min(Number(h[80]??h[70]),Math.max(40,h[70]-8));
+    });
+}
+normalizeHeightCompatibility();
 
 //=========================
 // ENGINE 2.0 BITS
@@ -1092,17 +1102,6 @@ function getCurrentControl(blader){
     );
 }
 
-function getBitMovementPower(blader){
-    const side=Game[blader], state=Game.battle[blader];
-    const combo=getBattleCombo(blader), bit=getBitPhysics(blader);
-    if(!side || !state || !combo) return bit.movement;
-    const rpmFactor=0.48 + state.spin/190;
-    const balanceFactor=0.58 + state.balance/238;
-    return clampBattleValue(
-        bit.movement*0.72 + (combo.stats.mobility||70)*0.18 + (side.launch?.movementBonus||0)*0.6,
-        5,99
-    ) * rpmFactor * balanceFactor;
-}
 
 function getLaunchAngleProfile(angle,bit){
     const isAttack=bit.movement>=80;
@@ -1133,35 +1132,6 @@ function getLaunchAngleProfile(angle,bit){
     };
 }
 
-function applyBitDrivenLaunchPhysics(blader){
-    const side=Game[blader];
-    const state=Game.battle[blader];
-    if(!side || !side.bit || !state) return;
-    const bit=getBitPhysics(blader);
-    const angle=getLaunchAngleProfile(side.launch.angle,bit);
-    const qualityFactor={Horrible:0.76,Bad:0.88,Okay:1,Good:1.06,Perfect:1.12}[side.launch.quality]||1;
-
-    side.launch.bitMovement=bit.movement;
-    side.launch.bitControl=bit.control;
-    side.launch.bitSpinDrain=bit.spinDrain;
-    side.launch.movementEfficiency=angle.movement*qualityFactor;
-    side.launch.staminaEfficiency=Math.max(0.45,bit.spinDrain*angle.drain/Math.max(0.55,qualityFactor));
-    side.launch.controlBonus=angle.control + (side.launch.controlBonus||0)*0.35;
-    side.launch.movementBonus=(bit.movement-70)*0.30;
-    side.launch.angleSpinBonus=angle.spin;
-    side.launch.angleBalanceBonus=angle.balance;
-
-    const technique=side.launch.technique;
-    const railSuitability=bit.xRailAffinity*angle.xrail;
-    const qualityBonus={Horrible:-22,Bad:-10,Okay:0,Good:8,Perfect:14}[side.launch.quality]||0;
-    const control=getCurrentControl(blader) || bit.control;
-    side.launch.xRailChance=clampBattleValue(railSuitability*0.65 + control*0.20 + qualityBonus,8,96);
-    side.launch.xRailRoll=Math.random()*100;
-    side.launch.xRailCommitted=side.launch.xRailRoll<side.launch.xRailChance;
-
-    side.launch.launchControl=clampBattleValue(bit.control*0.60+(side.stats?.balance||70)*0.25+angle.control+qualityBonus*0.25,5,99);
-    side.launch.openingMovement=clampBattleValue(bit.movement*angle.movement*qualityFactor,5,99);
-}
 
 
 //=========================
@@ -1245,427 +1215,116 @@ function movementPointList(movement,side){
     return getMovementPath(m.from,m.to);
 }
 
-function beginMovementCapture(){
-    const p=Game.battle.player, c=Game.battle.cpu;
-    Game.battle.movementCapture={
-        player:[p?.zone].filter(Boolean),
-        cpu:[c?.zone].filter(Boolean),
-        contactIndex:{player:null,cpu:null},
-        contactPoint:null,
-        active:true
-    };
-}
 
-function recordMovementStep(bey,zone){
-    const capture=Game.battle.movementCapture;
-    if(!capture || !capture.active || !zone) return;
-    const path=capture[bey];
-    if(!Array.isArray(path)) capture[bey]=[zone];
-    else if(path[path.length-1]!==zone) path.push(zone);
-}
 
-function markMovementContact(){
-    const capture=Game.battle.movementCapture;
-    if(!capture || !capture.active) return;
-    capture.contactIndex.player=Math.max(0,(capture.player?.length||1)-1);
-    capture.contactIndex.cpu=Math.max(0,(capture.cpu?.length||1)-1);
-    const pp=ZONE_POSITIONS[Game.battle.player.zone];
-    const cp=ZONE_POSITIONS[Game.battle.cpu.zone];
-    if(pp && cp){
-        capture.contactPoint={x:(pp.x+cp.x)/2,y:(pp.y+cp.y)/2};
-    }
-}
 
-function finalizeMovementCapture(keepActive=false){
-    const capture=Game.battle.movementCapture;
-    if(!capture || !capture.active) return;
-    const p=capture.player?.length ? capture.player : [Game.battle.player.zone];
-    const c=capture.cpu?.length ? capture.cpu : [Game.battle.cpu.zone];
-    Game.battle.lastMovement={
-        player:{
-            from:p[0], to:p[p.length-1], path:p.slice(),
-            contactIndex:capture.contactIndex?.player ?? null
-        },
-        cpu:{
-            from:c[0], to:c[c.length-1], path:c.slice(),
-            contactIndex:capture.contactIndex?.cpu ?? null
-        },
-        contactPoint:capture.contactPoint ? {...capture.contactPoint} : null,
-        recoil:{
-            player:{from:p[p.length-1],to:p[p.length-1]},
-            cpu:{from:c[c.length-1],to:c[c.length-1]}
-        }
-    };
-    const cp=capture.contactPoint;
-    if(cp){
-        const pp=ZONE_POSITIONS[Game.battle.player.zone];
-        const cpos=ZONE_POSITIONS[Game.battle.cpu.zone];
-        if(pp) Game.battle.lastMovement.recoil.player={from:cp,to:{x:pp.x,y:pp.y}};
-        if(cpos) Game.battle.lastMovement.recoil.cpu={from:cp,to:{x:cpos.x,y:cpos.y}};
-    }
-    capture.active=!!keepActive;
-}
 
-function renderTrajectoryPath(movement,side,id,color){
-    const zones=movementPointList(movement,side);
-    if(zones.length<2) return "";
-    const points=zones.map(z=>ZONE_POSITIONS[z]).filter(Boolean);
-    if(points.length<2) return "";
-    const d=points.map((p,i)=>`${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ");
-    return `<path id="${id}" d="${d}" fill="none" stroke="${color}" stroke-width="3" stroke-dasharray="7 8" opacity=".8" stroke-linecap="round" stroke-linejoin="round"/>`;
-}
 
-function getAnimationPath(animation,side){
-    const m=animation?.[side];
-    if(!m) return [];
-    const zones=Array.isArray(m.path) && m.path.length ? m.path : getMovementPath(m.from,m.to);
-    const points=zones.map(z=>ZONE_POSITIONS[z]).filter(Boolean);
-    return points.length ? points : [];
-}
 
 //=========================
 // RENDER STADIUM
 //=========================
 
-function renderStadium(){
 
-return `
-
-<div class="stadium">
-
-<svg class="stadium-svg"
-viewBox="0 0 1000 900">
-
-<defs>
-  <marker id="playerArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-    <path d="M0,0 L8,4 L0,8 z" fill="#3ba8ff"/>
-  </marker>
-  <marker id="cpuArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-    <path d="M0,0 L8,4 L0,8 z" fill="#ff4b4b"/>
-  </marker>
-</defs>
-
-    <!-- CONTINUOUS OVAL X-LINE -->
-<path class="rail-track" d="M500 92 C790 92 855 290 820 470 C790 610 650 675 500 675 C350 675 210 610 180 470 C145 290 210 92 500 92"/>
-
-<!-- SINGLE TOP X-EXIT -->
-<path class="x-exit-gate" d="M500 88 L538 136 L462 136 Z"/>
-
-<!-- XTREME -->
-
-<rect
-    class="xtremeZone"
-    x="435"
-    y="690"
-    width="130"
-    height="45"
-    rx="18"
-/>
-
-<!-- LEFT OVER / POCKET -->
-
-<circle
-    class="overZone"
-    cx="255"
-    cy="705"
-    r="38"
-/>
-
-<!-- RIGHT OVER / POCKET -->
-
-<circle
-    class="overZone"
-    cx="745"
-    cy="705"
-    r="38"
-/>
-
-<text class="stadium-zone-label" x="255" y="712" text-anchor="middle">POCKET</text>
-<text class="stadium-zone-label" x="745" y="712" text-anchor="middle">POCKET</text>
-<text class="stadium-zone-label xtreme-label" x="500" y="718" text-anchor="middle">XTREME</text>
-
-<g id="trajectoryLayer" pointer-events="none">
-    <path id="playerTrajectory" d="" fill="none" stroke="#3ba8ff" stroke-width="3" stroke-dasharray="7 8" opacity="0" marker-end="url(#playerArrow)"/>
-    <path id="cpuTrajectory" d="" fill="none" stroke="#ff4b4b" stroke-width="3" stroke-dasharray="7 8" opacity="0" marker-end="url(#cpuArrow)"/>
-    <circle id="playerTrajectoryEnd" cx="0" cy="0" r="5" fill="#3ba8ff" opacity="0"/>
-    <circle id="cpuTrajectoryEnd" cx="0" cy="0" r="5" fill="#ff4b4b" opacity="0"/>
-    <circle id="contactMarker" cx="0" cy="0" r="7" fill="none" stroke="#ffd43b" stroke-width="2" stroke-dasharray="3 3" opacity="0"/>
-</g>
-
-<circle
-    id="playerBey"
-    cx="500"
-    cy="420"
-    r="12"
-    fill="#3ba8ff"
-/>
-
-<circle
-    id="cpuBey"
-    cx="500"
-    cy="420"
-    r="12"
-    fill="#ff4b4b"
-/>
-
-<text id="playerBeyLabel" text-anchor="middle" font-size="16" font-weight="800" fill="#3ba8ff"></text>
-<text id="cpuBeyLabel" text-anchor="middle" font-size="16" font-weight="800" fill="#ff4b4b"></text>
-
-<g id="impactEffect" opacity="0" pointer-events="none">
-    <!-- Restored multi-ring impact effect, intentionally restrained. -->
-    <circle id="impactFlash" cx="500" cy="420" r="18" fill="none" stroke="#ffffff" stroke-width="3.5"/>
-    <circle id="impactRing" cx="500" cy="420" r="8" fill="none" stroke="#ffd43b" stroke-width="2.5"/>
-    <circle id="impactRing2" cx="500" cy="420" r="5" fill="none" stroke="#ffffff" stroke-width="2"/>
-    <circle id="impactRing3" cx="500" cy="420" r="3" fill="none" stroke="#ffd43b" stroke-width="1.5"/>
-     <circle id="impactExplosion" cx="500" cy="420" r="5" fill="#ffffff" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
-     <circle id="impactCore" cx="500" cy="420" r="4" fill="#ffd43b" opacity="0.95"/>
-     <g id="impactShock" opacity="0">
-       <circle id="impactShockOuter" cx="500" cy="420" r="10" fill="none" stroke="#ffffff" stroke-width="2.5"/>
-       <line id="impactShock1" x1="500" y1="420" x2="500" y2="388" stroke="#ffffff" stroke-width="3"/>
-       <line id="impactShock2" x1="500" y1="420" x2="532" y2="420" stroke="#ffffff" stroke-width="3"/>
-       <line id="impactShock3" x1="500" y1="420" x2="500" y2="452" stroke="#ffd43b" stroke-width="3"/>
-       <line id="impactShock4" x1="500" y1="420" x2="468" y2="420" stroke="#ffd43b" stroke-width="3"/>
-       <line id="impactShock5" x1="500" y1="420" x2="523" y2="397" stroke="#ffffff" stroke-width="2.5"/>
-       <line id="impactShock6" x1="500" y1="420" x2="477" y2="443" stroke="#ffffff" stroke-width="2.5"/>
-     </g>
-     <g id="impactSpokes" opacity="0">
-       <line id="impactSpoke1" x1="500" y1="420" x2="500" y2="398" stroke="#ffffff" stroke-width="2.6"/>
-       <line id="impactSpoke2" x1="500" y1="420" x2="522" y2="420" stroke="#ffffff" stroke-width="2.6"/>
-       <line id="impactSpoke3" x1="500" y1="420" x2="500" y2="442" stroke="#ffd43b" stroke-width="2.6"/>
-       <line id="impactSpoke4" x1="500" y1="420" x2="478" y2="420" stroke="#ffd43b" stroke-width="2.6"/>
-       <line id="impactSpoke5" x1="500" y1="420" x2="516" y2="404" stroke="#ffffff" stroke-width="2.0"/>
-       <line id="impactSpoke6" x1="500" y1="420" x2="484" y2="436" stroke="#ffffff" stroke-width="2.0"/>
-     </g>
-     <circle id="impactBurst1" cx="500" cy="420" r="2" fill="#ffffff" opacity="0.95"/>
-     <circle id="impactBurst2" cx="500" cy="420" r="2" fill="#ffd43b" opacity="0.9"/>
-    <text id="impactText" x="500" y="380" text-anchor="middle" font-size="20" font-weight="900" fill="#ffffff">HIT!</text>
-</g>
-
-</svg>
-
-</div>
-
-`;
-
-}
-
-function updateTrajectoryPreview(movement){
-    const playerPath=document.getElementById("playerTrajectory");
-    const cpuPath=document.getElementById("cpuTrajectory");
-    const playerEnd=document.getElementById("playerTrajectoryEnd");
-    const cpuEnd=document.getElementById("cpuTrajectoryEnd");
-    const contact=document.getElementById("contactMarker");
-    if(!playerPath || !cpuPath) return;
-
-    const setPath=(el,endEl,side,color,arrow)=>{
-        const zones=movementPointList(movement,side);
-        if(zones.length<2){
-            el.setAttribute("d",""); el.setAttribute("opacity","0");
-            if(endEl) endEl.setAttribute("opacity","0");
-            return;
-        }
-        const pts=zones.map(z=>ZONE_POSITIONS[z]).filter(Boolean);
-        const d=pts.map((p,i)=>`${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ");
-        el.setAttribute("d",d);
-        el.setAttribute("stroke",color);
-        el.setAttribute("marker-end",`url(#${arrow})`);
-        el.setAttribute("opacity","0.78");
-        if(endEl){
-            const last=pts[pts.length-1];
-            endEl.setAttribute("cx",last.x); endEl.setAttribute("cy",last.y); endEl.setAttribute("opacity","0.9");
-        }
-    };
-    setPath(playerPath,playerEnd,"player","#3ba8ff","playerArrow");
-    setPath(cpuPath,cpuEnd,"cpu","#ff4b4b","cpuArrow");
-
-    if(contact && movement?.contactPoint){
-        contact.setAttribute("cx",movement.contactPoint.x);
-        contact.setAttribute("cy",movement.contactPoint.y);
-        contact.setAttribute("opacity","0.9");
-    }else if(contact){
-        contact.setAttribute("opacity","0");
-    }
-}
 
 //=========================
 // BATTLE STATE / HUD 1.0
 //=========================
 
-function getStadiumPreview(){
-
-    return `
-
-    <div style="
-        text-align:center;
-        margin:15px 0;
-    ">
-
-        <svg
-            viewBox="0 0 1000 900"
-            style="
-                width:100%;
-                max-width:430px;
-                height:auto;
-            "
-        >
-
-            <!-- LEFT X-RAIL -->
-
-            <path
-                d="
-                M275 610
-                C205 520 185 360 220 245
-                C255 150 345 90 450 75
-                "
-                fill="none"
-                stroke="#666"
-                stroke-width="28"
-                stroke-linecap="round"
-            />
-
-            <!-- RIGHT X-RAIL -->
-
-            <path
-                d="
-                M725 610
-                C795 520 815 360 780 245
-                C745 150 655 90 550 75
-                "
-                fill="none"
-                stroke="#666"
-                stroke-width="28"
-                stroke-linecap="round"
-            />
-
-            <!-- BATTLE AREA -->
-
-            <path
-                d="
-                M260 210
-                Q500 120 740 210
-                Q820 300 800 470
-                Q790 560 730 605
-                Q655 655 565 620
-                L435 620
-                Q345 655 270 605
-                Q210 560 200 470
-                Q180 300 260 210
-                Z
-                "
-                fill="#191919"
-                stroke="#777"
-                stroke-width="10"
-            />
-
-            <!-- X EXIT -->
-
-            <rect
-                x="455"
-                y="62"
-                width="90"
-                height="40"
-                rx="12"
-                fill="#ffd43b"
-            />
-
-            <!-- POCKETS -->
-
-            <circle
-                cx="255"
-                cy="705"
-                r="38"
-                fill="#080808"
-                stroke="#777"
-                stroke-width="5"
-            />
-
-            <circle
-                cx="745"
-                cy="705"
-                r="38"
-                fill="#080808"
-                stroke="#777"
-                stroke-width="5"
-            />
-
-            <!-- XTREME ZONE -->
-
-            <rect
-                x="435"
-                y="690"
-                width="130"
-                height="45"
-                rx="18"
-                fill="#e33"
-            />
-
-            <!-- PLAYER SIDE -->
-
-            <circle
-                cx="${Game.arena.playerSide==="Left" ? 300 : 700}"
-                cy="420"
-                r="15"
-                fill="${Game.arena.playerColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
-            />
-
-            <!-- CPU SIDE -->
-
-            <circle
-                cx="${Game.arena.cpuSide==="Left" ? 300 : 700}"
-                cy="420"
-                r="15"
-                fill="${Game.arena.cpuColor==="Blue" ? "#3ba8ff" : "#ff4b4b"}"
-            />
-
-        </svg>
-
-        <p>
-            <strong>
-                ${Game.arena.playerColor} Bey:
-                ${Game.arena.playerSide} side
-            </strong>
-        </p>
-
-        <p style="opacity:.7;">
-            X-Rail is on both sides → X Exit is at the top
-        </p>
-
-    </div>
-
-    `;
-}
 
 //=========================
 // MENU
 //=========================
 
+function renderMainMenu(){
+    Game.screen="menu";
+    const app=document.getElementById("app");
+    if(!app) return;
+
+    app.innerHTML=`
+    <div class="background"></div>
+    <main class="main-menu-shell">
+        <section class="main-menu-hero">
+            <div class="hero-mark">
+                <div class="hero-ring hero-ring-a"></div>
+                <div class="hero-ring hero-ring-b"></div>
+                <div class="hero-core"></div>
+            </div>
+            <div class="hero-copy">
+                <span class="hero-kicker">XTREME GEAR BATTLE SIMULATOR</span>
+                <h1>SPIN WARS <em>X</em></h1>
+                <p>Build your combo. Choose your launch. Let it rip.</p>
+            </div>
+            <div class="hero-status"><span></span> SIMULATION READY</div>
+        </section>
+
+        <section class="battle-select">
+            <div class="section-head">
+                <div>
+                    <span class="section-kicker">BATTLE SELECT</span>
+                    <h2>Choose your battle pool</h2>
+                </div>
+                <span class="section-count">04 MODES</span>
+            </div>
+
+            <div class="tier-menu-grid">
+                <button class="tier-menu-card tier-menu-bronze" data-mode="bronze">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">01 · BRONZE</span>
+                    <strong>BRONZE</strong>
+                    <small>Build with the entry pool</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-silver" data-mode="silver">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">02 · SILVER</span>
+                    <strong>SILVER</strong>
+                    <small>Stronger parts. Tougher battles.</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-gold" data-mode="gold">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">03 · GOLD / DIAMOND</span>
+                    <strong>GOLD / DIAMOND</strong>
+                    <small>Top-tier competitive pool</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-custom" data-mode="custom">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">04 · CUSTOM LAB</span>
+                    <strong>CUSTOM</strong>
+                    <small>Build any combination</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="main-menu-lower">
+            <div class="menu-feature">
+                <span class="feature-icon">◈</span>
+                <div><b>PHYSICS SIMULATION</b><small>Movement, impact, RPM and X-Rail behavior</small></div>
+            </div>
+            <div class="menu-feature">
+                <span class="feature-icon">◎</span>
+                <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
+            </div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+        </section>
+    </main>`;
+}
+
 function hookMenuButtons(){
+    renderMainMenu();
 
-    let buttons = document.querySelectorAll(".menu-btn[data-mode]");
-    if(!document.querySelector('.menu-btn[data-mode="custom"]')){
-        const host=document.querySelector("main.menu") || document.querySelector(".menu-card") || document.getElementById("app");
-        if(host){
-            const custom=document.createElement("button");
-            custom.className="menu-btn gold";
-            custom.dataset.mode="custom";
-            custom.textContent="CUSTOM";
-            host.appendChild(custom);
-        }
-        buttons=document.querySelectorAll(".menu-btn[data-mode]");
-    }
-
-    buttons.forEach(button=>{
-
+    document.querySelectorAll(".tier-menu-card[data-mode]").forEach(button=>{
         button.onclick=()=>{
-
-            Game.mode = button.dataset.mode;
-
+            Game.mode=button.dataset.mode;
             startDraft();
-
         };
-
     });
-
 }
 
 //=========================
@@ -1865,11 +1524,11 @@ const RATCHET_BASES = [
 number:1,
 
 stats:{
-attack:4,
-knockback:5,
-defense:-2,
-mobility:3,
-balance:-3,
+attack:7,
+knockback:6,
+defense:-3,
+mobility:4,
+balance:-4,
 stamina:-2
 }
 },
@@ -1932,10 +1591,10 @@ number:9,
 stats:{
 attack:-4,
 knockback:-2,
-defense:8,
+defense:7,
 mobility:-4,
-balance:7,
-stamina:6
+balance:6,
+stamina:5
 }
 }
 
@@ -2108,25 +1767,6 @@ function renderBitPage(){
 }
 
 
-function buildCombo(blade,ratchet,bit){
-
-    return{
-
-        blade,
-        ratchet,
-        bit,
-
-        stats:null,
-
-        ovr:0,
-
-        meta:0,
-
-        compatibility:0
-
-    };
-
-}
 
 //=========================
 // STAT DATABASE NORMALIZATION
@@ -2157,11 +1797,6 @@ function getBladeEngine(blade){
 
 }
 
-function getHeightModifier(height){
-
-    return HEIGHT_ENGINE[String(height)];
-
-}
 
 function getBitCompatibility(bladeData,bit){
     const key=bit.name.replace(/ /g,"");
@@ -2192,9 +1827,6 @@ function getCompatibilityScore(blade,ratchet,bit){
         getBitCompatibility(bladeData,bit)*0.45
     );
 }
-function scoreHeight(bladeData,height){return getHeightCompatibility(bladeData,height);}
-function scoreBit(bladeData,bitName){return bladeData.compatibility?.bits?.[bitName.replace(/ /g,"")]??50;}
-function average(a,b){return Math.round((a+b)/2);}
 function clamp(value){return Math.max(60,Math.min(99,Math.round(value)));}
 
 function getBladePhysicalProfile(bladeData){
@@ -2490,37 +2122,9 @@ function calculateComboStats(blade,ratchet,bit){
 }
 
 
-function createStatBar(label,value){
-
-    return `
-
-    <div class="stat-row">
-
-        <div class="stat-label">
-
-            <span>${label}</span>
-
-            <span>${value}</span>
-
-        </div>
-
-        <div class="stat-bar">
-
-            <div
-                class="stat-fill"
-                style="width:${value}%">
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
-
-}
 
 /*
- V51 STAT DESIGN LOCK
+ V53 STAT DESIGN LOCK
  - Height is a penalty/constraint system, not a free stat upgrade.
  - 60 is the stable low baseline.
  - 70 is a niche middle height: usable, but less stable/burst-safe than 60.
@@ -2682,28 +2286,7 @@ function generateCPUCombo(){
     syncComboStats("cpu");
 }
 
-function getLaunchTechniqueText(blader){
-    const technique=Game[blader]?.launch?.technique;
-    const text={
-        Center:"aims for the center",
-        "X-Rail":"attempts an X Rail line",
-        "X-Rail Dash":"attempts an X Rail line",
-        "Reverse X-Dash":"attempts a reverse X Rail line",
-        "Direct Clash":"aims to meet the opponent early",
-        "Center":"takes a wide opening line"
-    };
-    return text[technique]||"takes a neutral opening line";
-}
 
-function getMatchPrediction(){
-    const p=Game.player.blade?.card||{};
-    const c=Game.cpu.blade?.card||{};
-    const ps=(p.attack||0)+(p.defense||0)+(p.stamina||0)+(p.balance||0)+(p.mobility||0);
-    const cs=(c.attack||0)+(c.defense||0)+(c.stamina||0)+(c.balance||0)+(c.mobility||0);
-    if(ps-cs>35) return `${Game.player.blade.name} has the stronger profile on paper.`;
-    if(cs-ps>35) return `${Game.cpu.blade.name} has the stronger profile on paper.`;
-    return "This matchup looks close on paper.";
-}
 
 function showVS(){
     generateCPUCombo();
@@ -4218,86 +3801,7 @@ function newXRailCrossedExit(previousDistance,nextDistance,direction){
     return previousDistance>=e-eps && nextDistance<=e+eps;
 }
 
-function newXRailEngagementChance(s,approachSpeed,alignment,approachRatio){
-    const bp=bitPhysics(s);
-    const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const stability=newBattleClamp(s.stability||0,0,1);
 
-    const affinity=(bp.xRailAffinity||0)/100;
-    const movement=(bp.movement||60)/100;
-    const control=(bp.control||60)/100;
-
-    /*
-      This is not a "chance to randomly grab the rail."
-      It represents how well the current physical state can satisfy the
-      rail's capture requirements.
-    */
-    const speedSupport=newBattleClamp(
-        (approachSpeed-0.010)/0.040,0,1
-    );
-
-    const alignmentSupport=newBattleClamp(
-        (alignment-0.20)/0.62,0,1
-    );
-
-    const approachSupport=newBattleClamp(
-        1-Math.abs(approachRatio-0.40)/0.40,0,1
-    );
-
-    const rpmSupport=newBattleClamp(
-        (rpm-0.22)/0.55,0,1
-    );
-
-    const tiltSupport=
-        1-newBattleClamp((tilt-0.08)/0.30,0,1);
-
-    const stabilitySupport=
-        0.45+stability*0.55;
-
-    const physicalScore=
-        speedSupport*0.24+
-        alignmentSupport*0.22+
-        approachSupport*0.17+
-        rpmSupport*0.14+
-        tiltSupport*0.13+
-        stabilitySupport*0.05+
-        control*0.03+
-        affinity*0.02;
-
-    return newBattleClamp(physicalScore,0,1);
-}
-
-function railCaptureSupport(s){
-    const bp=bitPhysics(s);
-    const speed=speedOf(s);
-    const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const stability=newBattleClamp(s.stability||0,0,1);
-
-    const movement=(bp.movement||60)/100;
-    const control=(bp.control||60)/100;
-    const affinity=(bp.xRailAffinity||50)/100;
-
-    // Attack bits have a natural rail advantage, but the actual state still
-    // has to support the capture.
-    const movementBias=0.78+movement*0.22;
-    const speedSupport=newBattleClamp((speed-0.014)/0.050,0,1);
-    const rpmSupport=newBattleClamp((rpm-0.18)/0.62,0,1);
-    const tiltSupport=1-newBattleClamp((tilt-0.10)/0.28,0,1);
-    const stabilitySupport=0.55+stability*0.45;
-
-    return newBattleClamp(
-        speedSupport*0.27+
-        rpmSupport*0.20+
-        tiltSupport*0.25+
-        stabilitySupport*0.10+
-        control*0.07+
-        affinity*0.06+
-        movementBias*0.05,
-        0,1
-    );
-}
 function speedOf(s){
     return Math.hypot(s.vx,s.vy);
 }
@@ -4325,77 +3829,6 @@ function railDirectionAtPoint(s,point){
     return s.spinDirection===1 ? -1 : 1;
 }
 
-function bounceOffRail(s,nearest){
-
-    const dx=s.x-nearest.x;
-    const dy=s.y-nearest.y;
-    const len=Math.hypot(dx,dy)||1;
-
-    const nx=dx/len;
-    const ny=dy/len;
-
-    const bp=bitPhysics(s);
-    const balance=(s.stats?.balance||70)/99;
-    const control=(bp.control||60)/100;
-    const speed=speedOf(s);
-
-    /*
-      IMPORTANT:
-      Merely being close to the rail is not a collision. If the Bey is moving
-      away from the rail or nearly tangent to it, do nothing. The old code
-      bounced every frame while inside the contact radius, which is the direct
-      cause of the "stuck to rail" behavior.
-    */
-    const incomingNormal=s.vx*nx+s.vy*ny;
-    if(incomingNormal>=-0.0015){
-        return false;
-    }
-
-    const contactRadius=0.030+s.radius*0.24;
-    const separation=Math.max(
-        contactRadius+0.006,
-        0.060+s.radius*0.04
-    );
-
-    s.x=nearest.x+nx*separation;
-    s.y=nearest.y+ny*separation;
-
-    const tx=-ny;
-    const ty=nx;
-    const tangent=s.vx*tx+s.vy*ty;
-
-    const restitution=newBattleClamp(
-        0.34+balance*0.20+control*0.12+
-        Math.min(0.14,speed*1.5),
-        0.24,0.54
-    );
-
-    const resolvedNormal=-incomingNormal*restitution;
-    const tangentDamp=newBattleClamp(
-        0.82+control*0.10,
-        0.80,0.94
-    );
-
-    s.vx=nx*resolvedNormal+tx*tangent*tangentDamp;
-    s.vy=ny*resolvedNormal+ty*tangent*tangentDamp;
-
-    s.surfaceBounce=0.20;
-    s.surfaceRecovery=0.12;
-    s.motionPhase+=0.75+Math.random()*0.60;
-    s.motionPhase2+=0.35+Math.random()*0.50;
-
-    const impactSpeed=Math.max(0,-incomingNormal);
-    s.rpm=newBattleClamp(
-        s.rpm-(0.0012+impactSpeed*0.014),
-        0,1
-    );
-    s.stability=newBattleClamp(
-        s.stability-(0.0025+impactSpeed*0.030),
-        0,1
-    );
-
-    return true;
-}
 function tryNewXRailEngagement(s){
     if(s.railEngaged) return true;
     if((s.railExitRefractory||0)>0) return false;
