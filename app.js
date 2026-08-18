@@ -3873,7 +3873,16 @@ function showLetItRip(){
     document.getElementById("launchDrop").onclick=()=>
         rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch");
 
-    document.getElementById("startBattleNow").onclick=startNewBattle;
+    const startButton=document.getElementById("startBattleNow");
+    if(startButton){
+        startButton.onclick=(event)=>{
+            event?.preventDefault?.();
+
+            // The CPU preview is intentionally incomplete. Its real launch
+            // is generated only now, after the player's choices are locked.
+            startNewBattle();
+        };
+    }
 
     document.getElementById("backToQuality").onclick=()=>{
         Game.player.launch.setupStage="quality";
@@ -4227,11 +4236,11 @@ function newBattleLaunchState(side){
     };
 }
 function startNewBattle(){
-    // Hard guard: never enter battle without valid launch state.
+    // A preview can legitimately have an incomplete CPU launch state.
+    // Rebuild both physical states at the moment the player commits.
     if(!NEW_BATTLE.player || !NEW_BATTLE.cpu){
-        console.error("Start battle blocked: launch state was not initialized.");
-        showLetItRip();
-        return;
+        NEW_BATTLE.player=newBattleLaunchState("player");
+        NEW_BATTLE.cpu=newBattleLaunchState("cpu");
     }
 
     cancelAnimationFrame(NEW_BATTLE.raf);
@@ -4259,9 +4268,9 @@ function startNewBattle(){
     Game.player.launch.quality=NEW_BATTLE.player.launchPlan.quality;
 
     Game.cpu.launch=Game.cpu.launch||{};
-    Game.cpu.launch.angle=NEW_BATTLE.cpu.launchPlan.angle;
-    Game.cpu.launch.technique=NEW_BATTLE.cpu.launchPlan.technique;
-    Game.cpu.launch.quality=NEW_BATTLE.cpu.launchPlan.quality;
+    Game.cpu.launch.angle=NEW_BATTLE.cpu.launchPlan?.angle||"Flat";
+    Game.cpu.launch.technique=NEW_BATTLE.cpu.launchPlan?.technique||"Center";
+    Game.cpu.launch.quality=NEW_BATTLE.cpu.launchPlan?.quality||"Okay";
 
     NEW_BATTLE.elapsed=0;
     NEW_BATTLE.active=true;
@@ -4427,7 +4436,11 @@ function renderNewBattle(){
     p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
     "settles into its opening line."
 }
-            ${c.blade.name} ${c.launchPlan.technique==="Direct Clash"?"answers with an aggressive launch.":"takes its opening position."}
+            ${c.blade.name} ${
+                c.launchPlan?.technique==="Direct Clash"
+                    ? "answers with an aggressive launch."
+                    : "is waiting for your launch."
+            }
           </div>
         </section>
       </main>`;
