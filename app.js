@@ -2288,6 +2288,186 @@ function getBladePhysicalProfile(bladeData){
   Stamina = RPM efficiency/retention.
   Burst = lock + ratchet + bit resistance.
 */
+
+/*
+  V48 BLADE × RATCHET SYNERGY
+  Ratchet side count is NOT a universal "attack/defense" switch.
+  Each blade has its own useful ratchet families because the number of
+  protrusions, weight and exposed shape interact with the blade's contact
+  geometry and weight distribution.
+
+  These profiles are deliberately expressed as small physical biases rather
+  than hard-coded final stats. They modify the underlying combo calculation,
+  so the visible combo card and the battle engine receive the same result.
+*/
+const BLADE_RATCHET_SYNERGY = {
+    "Phoenix Wing":{
+        "1":{attack:7,knockback:5,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
+        "3":{attack:4,knockback:2,mobility:1,stamina:4,balance:3,defense:2,burst:3},
+        "5":{attack:-2,knockback:-1,mobility:-1,stamina:-2,balance:-2,defense:-1,burst:0},
+        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:2,burst:2},
+        "7":{attack:2,knockback:3,mobility:-1,stamina:2,balance:2,defense:3,burst:1},
+        "9":{attack:1,knockback:0,mobility:-2,stamina:5,balance:4,defense:4,burst:5},
+        "0":{attack:-1,knockback:0,mobility:-2,stamina:4,balance:4,defense:4,burst:3}
+    },
+    "Shark Edge":{
+        "1":{attack:8,knockback:6,mobility:3,stamina:-2,balance:-3,defense:-2,burst:-2},
+        "3":{attack:5,knockback:3,mobility:1,stamina:2,balance:1,defense:1,burst:2},
+        "5":{attack:1,knockback:1,mobility:-1,stamina:0,balance:0,defense:0,burst:2},
+        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:1,burst:2},
+        "7":{attack:-1,knockback:0,mobility:-2,stamina:1,balance:0,defense:1,burst:1},
+        "9":{attack:0,knockback:0,mobility:-2,stamina:3,balance:2,defense:2,burst:5},
+        "0":{attack:-1,knockback:0,mobility:-2,stamina:2,balance:1,defense:1,burst:3}
+    },
+    "Dran Sword":{
+        "1":{attack:7,knockback:5,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
+        "3":{attack:5,knockback:3,mobility:1,stamina:1,balance:1,defense:1,burst:2},
+        "5":{attack:3,knockback:2,mobility:0,stamina:0,balance:0,defense:1,burst:2},
+        "6":{attack:1,knockback:1,mobility:-1,stamina:1,balance:1,defense:2,burst:2},
+        "7":{attack:1,knockback:2,mobility:-1,stamina:1,balance:1,defense:2,burst:1},
+        "9":{attack:0,knockback:0,mobility:-2,stamina:2,balance:2,defense:2,burst:5},
+        "0":{attack:-1,knockback:0,mobility:-2,stamina:2,balance:2,defense:2,burst:3}
+    },
+    "Aero Pegasus":{
+        "1":{attack:5,knockback:4,mobility:3,stamina:-1,balance:0,defense:-1,burst:-1},
+        "3":{attack:5,knockback:3,mobility:1,stamina:2,balance:2,defense:1,burst:2},
+        "5":{attack:4,knockback:2,mobility:0,stamina:3,balance:2,defense:2,burst:3},
+        "6":{attack:2,knockback:2,mobility:-1,stamina:2,balance:2,defense:2,burst:2},
+        "7":{attack:1,knockback:2,mobility:-1,stamina:2,balance:2,defense:3,burst:2},
+        "9":{attack:2,knockback:1,mobility:-2,stamina:4,balance:3,defense:3,burst:5},
+        "0":{attack:0,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    },
+    "Tyranno Beat":{
+        "1":{attack:3,knockback:3,mobility:2,stamina:0,balance:0,defense:0,burst:0},
+        "3":{attack:4,knockback:4,mobility:0,stamina:2,balance:2,defense:1,burst:2},
+        "5":{attack:6,knockback:5,mobility:-1,stamina:3,balance:3,defense:3,burst:4},
+        "6":{attack:4,knockback:4,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
+        "7":{attack:5,knockback:5,mobility:-1,stamina:2,balance:2,defense:4,burst:2},
+        "9":{attack:2,knockback:2,mobility:-2,stamina:3,balance:4,defense:4,burst:5},
+        "0":{attack:0,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    },
+    "Wizard Rod":{
+        "1":{attack:0,knockback:0,mobility:1,stamina:5,balance:4,defense:3,burst:3},
+        "3":{attack:0,knockback:0,mobility:0,stamina:4,balance:3,defense:3,burst:3},
+        "5":{attack:0,knockback:1,mobility:-1,stamina:5,balance:4,defense:4,burst:4},
+        "6":{attack:-1,knockback:1,mobility:-1,stamina:4,balance:4,defense:4,burst:4},
+        "7":{attack:0,knockback:2,mobility:-1,stamina:4,balance:4,defense:5,burst:3},
+        "9":{attack:0,knockback:0,mobility:-2,stamina:6,balance:5,defense:5,burst:6},
+        "0":{attack:-1,knockback:0,mobility:-2,stamina:4,balance:4,defense:4,burst:3}
+    },
+    "Silver Wolf":{
+        "1":{attack:1,knockback:2,mobility:1,stamina:4,balance:3,defense:2,burst:3},
+        "3":{attack:0,knockback:1,mobility:0,stamina:3,balance:3,defense:3,burst:3},
+        "5":{attack:0,knockback:1,mobility:-1,stamina:3,balance:3,defense:4,burst:4},
+        "6":{attack:-1,knockback:1,mobility:-1,stamina:3,balance:4,defense:4,burst:4},
+        "7":{attack:0,knockback:2,mobility:-1,stamina:4,balance:4,defense:5,burst:3},
+        "9":{attack:0,knockback:0,mobility:-2,stamina:5,balance:5,defense:5,burst:6},
+        "0":{attack:-1,knockback:0,mobility:-2,stamina:4,balance:4,defense:4,burst:3}
+    },
+    "Knight Mail":{
+        "1":{attack:0,knockback:1,mobility:1,stamina:1,balance:0,defense:-1,burst:0},
+        "3":{attack:0,knockback:1,mobility:0,stamina:2,balance:2,defense:2,burst:2},
+        "5":{attack:0,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:4},
+        "6":{attack:-1,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:4},
+        "7":{attack:0,knockback:3,mobility:-1,stamina:2,balance:3,defense:5,burst:3},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:5,burst:6},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:4,burst:3}
+    },
+    "Leon Crest":{
+        "1":{attack:0,knockback:1,mobility:1,stamina:0,balance:-1,defense:-1,burst:-1},
+        "3":{attack:0,knockback:1,mobility:0,stamina:2,balance:2,defense:3,burst:2},
+        "5":{attack:0,knockback:2,mobility:-1,stamina:3,balance:3,defense:5,burst:4},
+        "6":{attack:-1,knockback:2,mobility:-1,stamina:3,balance:3,defense:5,burst:4},
+        "7":{attack:0,knockback:3,mobility:-1,stamina:2,balance:3,defense:6,burst:3},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:6,burst:6},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:5,burst:3}
+    },
+    "Knight Shield":{
+        "1":{attack:1,knockback:2,mobility:1,stamina:0,balance:0,defense:-1,burst:-1},
+        "3":{attack:0,knockback:1,mobility:0,stamina:2,balance:2,defense:2,burst:2},
+        "5":{attack:0,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:4},
+        "6":{attack:-1,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:4},
+        "7":{attack:0,knockback:3,mobility:-1,stamina:2,balance:3,defense:5,burst:3},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:5,burst:6},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:4,burst:3}
+    },
+    "Unicorn Sting":{
+        "1":{attack:2,knockback:2,mobility:1,stamina:0,balance:0,defense:0,burst:0},
+        "3":{attack:1,knockback:1,mobility:0,stamina:2,balance:2,defense:2,burst:2},
+        "5":{attack:1,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:4},
+        "6":{attack:0,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:4},
+        "7":{attack:0,knockback:3,mobility:-1,stamina:2,balance:3,defense:4,burst:3},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:4,burst:6},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    },
+    "Shelter Drake":{
+        "1":{attack:2,knockback:2,mobility:2,stamina:-1,balance:-1,defense:-1,burst:-1},
+        "3":{attack:2,knockback:2,mobility:0,stamina:2,balance:2,defense:1,burst:2},
+        "5":{attack:1,knockback:2,mobility:-1,stamina:3,balance:3,defense:2,burst:3},
+        "6":{attack:0,knockback:2,mobility:-1,stamina:3,balance:3,defense:2,burst:3},
+        "7":{attack:1,knockback:3,mobility:-1,stamina:2,balance:3,defense:3,burst:2},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:3,burst:5},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    },
+    "Arrow Wizard":{
+        "1":{attack:1,knockback:1,mobility:1,stamina:1,balance:0,defense:0,burst:0},
+        "3":{attack:1,knockback:1,mobility:0,stamina:2,balance:2,defense:1,burst:2},
+        "5":{attack:0,knockback:1,mobility:-1,stamina:3,balance:3,defense:2,burst:3},
+        "6":{attack:0,knockback:1,mobility:-1,stamina:3,balance:3,defense:2,burst:3},
+        "7":{attack:0,knockback:2,mobility:-1,stamina:2,balance:3,defense:3,burst:2},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:4,balance:4,defense:3,burst:5},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    },
+    "Viper Tail":{
+        "1":{attack:5,knockback:4,mobility:3,stamina:-2,balance:-2,defense:-2,burst:-2},
+        "3":{attack:3,knockback:2,mobility:1,stamina:1,balance:0,defense:0,burst:1},
+        "5":{attack:1,knockback:2,mobility:0,stamina:1,balance:1,defense:1,burst:2},
+        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:1,burst:2},
+        "7":{attack:1,knockback:2,mobility:-1,stamina:1,balance:1,defense:2,burst:1},
+        "9":{attack:0,knockback:1,mobility:-2,stamina:2,balance:2,defense:2,burst:4},
+        "0":{attack:-1,knockback:1,mobility:-2,stamina:2,balance:2,defense:2,burst:2}
+    },
+    "Leon Claw":{
+        "1":{attack:2,knockback:2,mobility:1,stamina:0,balance:0,defense:0,burst:0},
+        "3":{attack:2,knockback:2,mobility:0,stamina:2,balance:2,defense:1,burst:2},
+        "5":{attack:2,knockback:3,mobility:-1,stamina:2,balance:2,defense:2,burst:3},
+        "6":{attack:1,knockback:3,mobility:-1,stamina:2,balance:2,defense:2,burst:3},
+        "7":{attack:2,knockback:4,mobility:-1,stamina:1,balance:2,defense:3,burst:2},
+        "9":{attack:1,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:5},
+        "0":{attack:0,knockback:1,mobility:-2,stamina:3,balance:3,defense:3,burst:3}
+    }
+};
+
+function getBladeRatchetSynergy(bladeName,ratchetNumber){
+    const row=BLADE_RATCHET_SYNERGY[bladeName];
+    return row?.[String(ratchetNumber)] || {attack:0,knockback:0,mobility:0,stamina:0,balance:0,defense:0,burst:0};
+}
+
+function applyHeightSynergy(profile,height){
+    const h=Number(height);
+    // 60 is the default competitive baseline. 70 is situational; 80 is
+    // intentionally risky unless the blade's geometry benefits from height.
+    if(h===60) return profile;
+    if(h===70){
+        profile.attack+=0.3;
+        profile.knockback+=0.4;
+        profile.stamina+=0.6;
+        profile.balance-=0.3;
+        return profile;
+    }
+    if(h===80){
+        profile.attack-=0.6;
+        profile.knockback-=0.4;
+        profile.defense-=1.6;
+        profile.balance-=1.8;
+        profile.stamina-=1.0;
+        profile.burst-=2.0;
+        profile.mobility-=1.0;
+        return profile;
+    }
+    return profile;
+}
+
 function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
     if(!bladeData) return null;
@@ -2307,16 +2487,41 @@ function calculateComboStats(blade,ratchet,bit){
     let burst=phys.lock*0.38+r.burstResistance*0.38+bp.burst*0.12+bladeData.card.burst*0.12+h.burst;
 
     const compatibility=getCompatibilityScore(blade,ratchet,bit);
-    const synergyStrength=(compatibility-70)/12;
+    const ratchetSynergy=getBladeRatchetSynergy(blade.name,ratchet.number);
+    const sideScale=Math.max(0.45,Math.min(1.0,compatibility/100));
 
+    // Blade-specific ratchet behavior is applied to the same underlying
+    // physical stats shown on the final combo card.
+    attack+=ratchetSynergy.attack*sideScale;
+    knockback+=ratchetSynergy.knockback*sideScale;
+    mobility+=ratchetSynergy.mobility*sideScale;
+    stamina+=ratchetSynergy.stamina*sideScale;
+    balance+=ratchetSynergy.balance*sideScale;
+    defense+=ratchetSynergy.defense*sideScale;
+    burst+=ratchetSynergy.burst*sideScale;
+
+    const heightSynergy=applyHeightSynergy(
+        {attack:0,knockback:0,mobility:0,stamina:0,balance:0,defense:0,burst:0},
+        ratchet.height
+    );
+    attack+=heightSynergy.attack;
+    knockback+=heightSynergy.knockback;
+    mobility+=heightSynergy.mobility;
+    stamina+=heightSynergy.stamina;
+    balance+=heightSynergy.balance;
+    defense+=heightSynergy.defense;
+    burst+=heightSynergy.burst;
+
+    // Bit family still matters, but it no longer overrides the blade/ratchet
+    // relationship.
     if(blade.type==="Attack"&&["Flat","Low Flat","Rush","Low Rush","Kick","Quake"].includes(bit.name)){
-        attack+=synergyStrength*1.8;knockback+=synergyStrength*1.2;mobility+=synergyStrength*1.4;
+        attack+=1.0;knockback+=0.7;mobility+=1.0;
     }
     if(blade.type==="Stamina"&&["Ball","Orb","Elevate","Wedge"].includes(bit.name)){
-        stamina+=synergyStrength*2.2;balance+=synergyStrength*1.4;
+        stamina+=1.3;balance+=0.8;
     }
     if(blade.type==="Defense"&&["Needle","High Needle","Hexa","Wedge","Ball","Orb"].includes(bit.name)){
-        defense+=synergyStrength*1.8;balance+=synergyStrength*1.4;
+        defense+=1.1;balance+=0.8;
     }
 
     if(bit.name==="Low Rush"){attack+=1.5;knockback+=1.0;mobility+=2.0;stamina-=4.0;balance-=1.0;}
@@ -2336,10 +2541,11 @@ function calculateComboStats(blade,ratchet,bit){
     const weights={attack:.18,knockback:.15,defense:.14,mobility:.13,balance:.12,stamina:.17,burst:.11};
     let weighted=0;
     Object.keys(weights).forEach(k=>weighted+=stats[k]*weights[k]);
-    const ovr=clamp(weighted+Math.max(-4,Math.min(4,(compatibility-70)*0.10)));
-    const meta=clamp(ovr*.72+compatibility*.18+stats.stamina*.04+stats.attack*.03+stats.defense*.03);
+    const synergyDelta=Math.max(-3.5,Math.min(3.5,(compatibility-70)*0.14));
+    const ovr=clamp(weighted+synergyDelta);
+    const meta=clamp(ovr*.74+compatibility*.12+stats.stamina*.05+stats.attack*.05+stats.defense*.04);
 
-    return {stats,compatibility,ovr,meta};
+    return {stats,compatibility,ovr,meta,ratchetSynergy};
 }
 
 
