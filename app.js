@@ -4430,6 +4430,60 @@ function renderNewBattle(){
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
               <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
+
+              <!-- Actual battle impact renderer. These IDs are the targets
+                   updated by newBattleFrame() on every collision. -->
+              <g id="impactEffect" opacity="0" pointer-events="none">
+                <circle id="impactFlash" cx="50" cy="46" r="10"
+                        fill="none" stroke="#ffffff" stroke-width="2.6"/>
+                <circle id="impactRing" cx="50" cy="46" r="6"
+                        fill="none" stroke="#ffd43b" stroke-width="1.8"/>
+                <circle id="impactRing2" cx="50" cy="46" r="4"
+                        fill="none" stroke="#ffffff" stroke-width="1.5"/>
+                <circle id="impactRing3" cx="50" cy="46" r="2"
+                        fill="none" stroke="#ffd43b" stroke-width="1.2"/>
+                <circle id="impactExplosion" cx="50" cy="46" r="4"
+                        fill="#ffffff" stroke="#ffffff" stroke-width="2.4"/>
+                <circle id="impactCore" cx="50" cy="46" r="3"
+                        fill="#ffd43b"/>
+                <g id="impactShock" opacity="0">
+                  <circle id="impactShockOuter" cx="50" cy="46" r="6"
+                          fill="none" stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="50" y2="40"
+                        stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="56" y2="46"
+                        stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="50" y2="52"
+                        stroke="#ffd43b" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="44" y2="46"
+                        stroke="#ffd43b" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="54.5" y2="41.5"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="45.5" y2="50.5"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                </g>
+                <g id="impactSpokes" opacity="0">
+                  <line x1="50" y1="46" x2="50" y2="42"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="54" y2="46"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="50" y2="50"
+                        stroke="#ffd43b" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="46" y2="46"
+                        stroke="#ffd43b" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="53" y2="43"
+                        stroke="#ffffff" stroke-width="1.3"/>
+                  <line x1="50" y1="46" x2="47" y2="49"
+                        stroke="#ffffff" stroke-width="1.3"/>
+                </g>
+                <circle id="impactBurst1" cx="50" cy="46" r="1.5"
+                        fill="#ffffff"/>
+                <circle id="impactBurst2" cx="50" cy="46" r="1.5"
+                        fill="#ffd43b"/>
+                <text id="impactText" x="50" y="40"
+                      text-anchor="middle" font-size="5.2"
+                      font-weight="900" fill="#ffffff"></text>
+              </g>
             </svg>
           </div>
 
@@ -4575,80 +4629,104 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     },2000);
 }
 function checkForcedStadiumFinish(s){
+    /*
+      AUTHORITATIVE STADIUM FINISH RESOLVER
 
-    const age=performance.now()-(s.lastImpactAt||0);
-    if(age>700) return null;
+      One system decides Xtreme/Over. There is deliberately no second
+      pocket validator later in the frame loop. A finish needs:
+        1) actual zone occupancy
+        2) a recent collision
+        3) enough impact energy
+        4) meaningful velocity into the zone
+      A marginal entry gets a short recovery window, but the window is short
+      enough that a real knockback isn't silently converted into a Spin Finish.
+    */
+    if(!s) return null;
 
     const now=performance.now();
+    const age=now-(s.lastImpactAt||0);
+    if(age>650) return null;
 
+    const speed=Math.hypot(s.vx,s.vy);
     const force=s.lastImpactForce||0;
-    const speed=speedOf(s);
-
-    // A rail-exit knockback gets a real advantage because the Bey is already
-    // moving toward the lower stadium when it leaves the rail.
-    const exitBoost=s.railExited?1.18:1.0;
+    const exitBoost=s.railExited ? 1.18 : 1.0;
     const effectiveForce=force*exitBoost;
 
-    // Xtreme zone: central lower opening. Require a genuine high-force
-    // displacement, not merely entering the red area.
+    // Xtreme: central lower opening. The detection region is deliberately
+    // slightly inside the visible opening so a near-miss doesn't score.
     const inXtreme=
-        s.y>=0.74 &&
-        s.y<=0.99 &&
-        Math.abs(s.x)<=0.23;
+        s.y>=0.71 &&
+        s.y<=0.995 &&
+        Math.abs(s.x)<=0.255;
 
-    const xtremeTargetX=0;
-    const xtremeTargetY=0.91;
-    const xtremeDx=xtremeTargetX-s.x;
-    const xtremeDy=xtremeTargetY-s.y;
-    const xtremeDistance=Math.hypot(xtremeDx,xtremeDy)||1;
-    const xtremeAlignment=
-        (s.vx*xtremeDx+s.vy*xtremeDy)/
-        Math.max(speed*xtremeDistance,0.0001);
+    if(inXtreme){
+        const dx=-s.x;
+        const dy=0.91-s.y;
+        const d=Math.hypot(dx,dy)||1;
+        const alignment=
+            (s.vx*dx+s.vy*dy)/
+            Math.max(speed*d,0.0001);
 
-    if(
-        inXtreme &&
-        effectiveForce>=0.0140 &&
-        speed>=0.042 &&
-        xtremeAlignment>=0.48
-    ){
-        if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=20) return "Xtreme";
-    }else if(!inXtreme){
+        const xtremeEnergy=
+            effectiveForce>=0.0105 &&
+            speed>=0.038 &&
+            alignment>=0.40;
+
+        if(xtremeEnergy){
+            if(!s.finishCandidateSince) s.finishCandidateSince=now;
+            s.finishCandidateType="Xtreme";
+            s.finishDebug=
+                `XTREME ENTRY · force ${effectiveForce.toFixed(3)} · `+
+                `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
+            if(now-s.finishCandidateSince>=35) return "Xtreme";
+        }else{
+            s.finishCandidateSince=0;
+            s.finishCandidateType=null;
+        }
+    }else if(s.finishCandidateType==="Xtreme"){
         s.finishCandidateSince=0;
+        s.finishCandidateType=null;
     }
 
-    // Pockets are wider and require slightly less force than Xtreme, but
-    // still require a recent impact and meaningful outward travel.
-    const leftPocket=
-        s.x<=-0.60 &&
-        s.y>=0.74 &&
-        speed>=0.028;
+    // Side pockets / Over: easier than Xtreme, but still requires outward
+    // movement. A slow Bey wandering into the corner does not score.
+    const leftPocket=s.x<=-0.575 && s.y>=0.72;
+    const rightPocket=s.x>=0.575 && s.y>=0.72;
 
-    const rightPocket=
-        s.x>=0.60 &&
-        s.y>=0.74 &&
-        speed>=0.028;
+    if(leftPocket||rightPocket){
+        const targetX=leftPocket ? -0.84 : 0.84;
+        const targetY=0.90;
+        const dx=targetX-s.x;
+        const dy=targetY-s.y;
+        const d=Math.hypot(dx,dy)||1;
+        const alignment=
+            (s.vx*dx+s.vy*dy)/
+            Math.max(speed*d,0.0001);
 
-    const pocketTargetX=leftPocket ? -0.82 : 0.82;
-    const pocketTargetY=0.90;
-    const pocketDx=pocketTargetX-s.x;
-    const pocketDy=pocketTargetY-s.y;
-    const pocketDistance=Math.hypot(pocketDx,pocketDy)||1;
-    const pocketAlignment=
-        (s.vx*pocketDx+s.vy*pocketDy)/
-        Math.max(speed*pocketDistance,0.0001);
+        const outward=
+            (s.vx*s.x+s.vy*s.y)/
+            Math.max(Math.hypot(s.x,s.y),0.0001);
 
-    if(
-        (leftPocket||rightPocket) &&
-        effectiveForce>=0.0120 &&
-        speed>=0.040 &&
-        s.y>0.77 &&
-        pocketAlignment>=0.48
-    ){
-        if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=25) return "Over";
-    }else if(!leftPocket && !rightPocket){
+        const overEnergy=
+            effectiveForce>=0.0085 &&
+            speed>=0.035 &&
+            outward>=0.004 &&
+            alignment>=0.36;
+
+        if(overEnergy){
+            if(!s.finishCandidateSince) s.finishCandidateSince=now;
+            s.finishCandidateType="Over";
+            s.finishDebug=
+                `OVER ENTRY · force ${effectiveForce.toFixed(3)} · `+
+                `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
+            if(now-s.finishCandidateSince>=45) return "Over";
+        }else if(s.finishCandidateType==="Over"){
+            s.finishCandidateSince=0;
+            s.finishCandidateType=null;
+        }
+    }else if(s.finishCandidateType==="Over"){
         s.finishCandidateSince=0;
+        s.finishCandidateType=null;
     }
 
     return null;
@@ -4758,7 +4836,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.62;
+            const life=0.56;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -4785,36 +4863,36 @@ function newBattleFrame(now){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
                     const flashPhase=Math.min(1,u*7);
-                    flash.setAttribute("r",String(21+u*40*strength));
+                    flash.setAttribute("r",String(4.5+u*7.5*strength));
                     flash.setAttribute("stroke-width",String(5.0-u*2.2));
                     flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
-                    ring.setAttribute("r",String(10+u*50*strength));
+                    ring.setAttribute("r",String(2.5+u*9.0*strength));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
                     ring2.setAttribute("cy",y);
-                    ring2.setAttribute("r",String(8+u*40*strength));
+                    ring2.setAttribute("r",String(2.0+u*7.0*strength));
                 }
                 if(ring3){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
-                    ring3.setAttribute("r",String(6+u*30*strength));
+                    ring3.setAttribute("r",String(1.2+u*5.0*strength));
                 }
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(9+u*38*strength));
+                    explosion.setAttribute("r",String(3.0+u*7.0*strength));
                     explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
                     explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.12)));
                 }
                 if(core){
                     core.setAttribute("cx",x);
                     core.setAttribute("cy",y);
-                    core.setAttribute("r",String(Math.max(1.6,9.0-u*6.4)));
+                    core.setAttribute("r",String(Math.max(0.9,4.2-u*3.0)));
                     core.setAttribute("opacity",String(Math.max(0,1.0-u*1.30)));
                 }
                 if(spokes){
@@ -4888,6 +4966,8 @@ function newBattleFrame(now){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
                     `${rider.blade.name} is riding the X Rail and building speed.`;
+            }else if(p.finishDebug || c.finishDebug){
+                commentary.textContent=p.finishDebug || c.finishDebug;
             }else if(NEW_BATTLE.finishPending){
                 commentary.textContent=
                     Game.battle.finishType==="Xtreme"
@@ -4908,74 +4988,9 @@ function newBattleFrame(now){
             }
         }
 
-        // Pocket finish validation:
-        // entering a pocket is not enough. The Bey must have been driven by
-        // a recent, substantial impact with enough outward/downward velocity.
-        const checkPocketFinish=(defender)=>{
-            const x=defender.x;
-            const y=defender.y;
-            const leftPocket =
-                x < -0.58 && y > 0.75;
-            const rightPocket =
-                x > 0.58 && y > 0.75;
-
-            if(!leftPocket && !rightPocket) return false;
-
-            const age=
-                performance.now()-
-                (defender.lastImpactAt||0);
-
-            if(age>900) return false;
-
-            const radial=Math.hypot(x,y);
-            const speed=Math.hypot(defender.vx,defender.vy);
-            const outward=
-                radial>0.001
-                    ? (defender.vx*x+defender.vy*y)/radial
-                    : 0;
-
-            const impactForce=defender.lastImpactForce||0;
-
-            // This is intentionally difficult: pocket finishes require a
-            // genuine knockback event, not a tap or slow drift.
-            const targetX=leftPocket ? -0.82 : 0.82;
-            const targetY=0.90;
-            const tdX=targetX-x;
-            const tdY=targetY-y;
-            const targetDistance=Math.hypot(tdX,tdY)||1;
-            const targetAlignment=
-                (defender.vx*tdX+defender.vy*tdY)/
-                Math.max(speed*targetDistance,0.0001);
-
-            return (
-                impactForce>=0.0120 &&
-                speed>=0.040 &&
-                outward>=0.008 &&
-                radial>=0.78 &&
-                targetAlignment>=0.48
-            );
-        };
-
-        const pForcedFinish=checkForcedStadiumFinish(p);
-        const cForcedFinish=checkForcedStadiumFinish(c);
-
-        if(pForcedFinish){
-            finishNewBattle("cpu",pForcedFinish);
-            return;
-        }
-        if(cForcedFinish){
-            finishNewBattle("player",cForcedFinish);
-            return;
-        }
-
-        if(checkPocketFinish(p)){
-            finishNewBattle("cpu","Over");
-            return;
-        }
-        if(checkPocketFinish(c)){
-            finishNewBattle("player","Over");
-            return;
-        }
+        // Xtreme / Over are resolved only by checkForcedStadiumFinish().
+        // Keeping a second pocket validator here caused valid finishes to be
+        // accepted by one system and rejected/overridden by another.
 
         if(p.rpm<=0.001 || c.rpm<=0.001){
             finishNewBattle(p.rpm>c.rpm?"player":"cpu");
