@@ -3686,7 +3686,8 @@ function showLetItRip(){
 
     const controls=document.createElement("div");
     controls.id="launchControls";
-    controls.style.cssText="margin-top:10px;";
+    controls.style.cssText=
+        "margin:0 0 8px;position:sticky;top:0;z-index:20;";
 
     const angleButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.angle===value?"gold":"silver"}"
@@ -3730,7 +3731,7 @@ function showLetItRip(){
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
-          <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
+          <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
             <div style="font-size:12px;opacity:.72;margin-bottom:7px;">
               LAUNCH QUALITY · SCORE ${Game.battle.score?.player||0}-${Game.battle.score?.cpu||0}
             </div>
@@ -3760,7 +3761,7 @@ function showLetItRip(){
         `;
     }else{
         controls.innerHTML=`
-          <div style="padding:10px;background:rgba(0,0,0,.20);border-radius:9px;">
+          <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
             <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
             <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">
               ${angleButton("FLAT","Flat","launchFlat")}
@@ -3796,7 +3797,7 @@ function showLetItRip(){
         `;
     }
 
-    card.appendChild(controls);
+    card.insertBefore(controls,document.getElementById("newStadium"));
 
     const rebuildAngleTechnique=(angle,technique)=>{
         Game.player.launch.angle=angle;
@@ -4015,27 +4016,32 @@ function newBattleLaunchState(side){
     const launchDirection=-sideXSign;
 
     const isXRailLaunch=plan.technique==="X-Rail";
+    const isCenterLaunch=plan.technique==="Center";
 
     /*
       X-Rail is a deliberate rail-seeking launch. Start near the appropriate
       upper rail rather than at the normal center-entry lane, then let the
       physical rail-capture test decide whether the Bey actually latches.
     */
-    const startX=isDropLaunch
-        ? sideXSign*(0.105 + placementJitter*0.14)
-        : isXRailLaunch
-            ? sideXSign*(0.68 + placementJitter*0.05)
-            : sideXSign*(0.70 + placementJitter*0.18);
+    const startX=isCenterLaunch
+        ? 0
+        : isDropLaunch
+            ? sideXSign*(0.105 + placementJitter*0.14)
+            : isXRailLaunch
+                ? sideXSign*(0.68 + placementJitter*0.05)
+                : sideXSign*(0.70 + placementJitter*0.18);
 
     // Drop Launch stays high near the player's side of the X Exit.
     // X-Rail Launch starts slightly off the rail so it must approach it.
-    const startY=isDropLaunch
-        ? -0.705 + placementJitter*0.06
-        : isXRailLaunch
-            ? 0.60 + placementJitter*0.04
-            : placementJitter;
+    const startY=isCenterLaunch
+        ? 0
+        : isDropLaunch
+            ? -0.705 + placementJitter*0.06
+            : isXRailLaunch
+                ? 0.60 + placementJitter*0.04
+                : placementJitter;
 
-    const direction=isDropLaunch ? 0 : launchDirection;
+    const direction=(isDropLaunch || isCenterLaunch) ? 0 : launchDirection;
 
     // Launch angle is a real release vector:
     // Flat = forward/stable
@@ -4061,6 +4067,11 @@ function newBattleLaunchState(side){
     const tiltSign=side==="player"?-1:1;
     let vx=direction*launchSpeed;
     let vy=tiltSign*tilt.lateral*launchSpeed;
+
+    if(isCenterLaunch){
+        vx=0;
+        vy=0;
+    }
 
     if(isXRailLaunch){
         const railTarget=newXRailNearest(sideXSign*0.82,0.48);
@@ -4149,7 +4160,6 @@ function newBattleLaunchState(side){
         railLoops:0,
         railGrip:0,
         railDirection:0,
-        railRideCommit:0,
         railContactPoint:null,
         railExitCooldown:0,
         railExited:false,
@@ -4332,15 +4342,6 @@ function renderNewBattle(){
             </svg>
           </div>
 
-          <div id="battleOrientationNotice"
-               style="margin:7px 0 8px;padding:7px 10px;text-align:center;
-                      border-radius:8px;background:rgba(24,168,74,.12);
-                      border:1px solid rgba(24,168,74,.30);
-                      font-size:12px;font-weight:700;">
-            PLAYER: ${getBattleOrientation().playerSide}
-            · CPU: ${getBattleOrientation().cpuSide}
-          </div>
-
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
             <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;">
               <strong>${p.blade.name}</strong><br>
@@ -4479,7 +4480,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 function checkForcedStadiumFinish(s){
 
     const age=performance.now()-(s.lastImpactAt||0);
-    if(age>900) return null;
+    if(age>700) return null;
 
     const force=s.lastImpactForce||0;
     const speed=speedOf(s);
@@ -4507,9 +4508,9 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0180 &&
-        speed>=0.045 &&
-        xtremeAlignment>=0.55
+        effectiveForce>=0.0225 &&
+        speed>=0.052 &&
+        xtremeAlignment>=0.66
     ){
         return "Xtreme";
     }
@@ -4537,15 +4538,38 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0145 &&
-        speed>=0.042 &&
-        s.y>0.80 &&
-        pocketAlignment>=0.58
+        effectiveForce>=0.0185 &&
+        speed>=0.050 &&
+        s.y>0.82 &&
+        pocketAlignment>=0.65
     ){
         return "Over";
     }
 
     return null;
+}
+
+function enforceRightSpinDirection(s){
+    if(!s || s.spinDirection!==1) return;
+
+    const r=Math.hypot(s.x,s.y);
+    const speed=Math.hypot(s.vx,s.vy);
+    if(r<0.08 || speed<0.009) return;
+
+    const invR=1/r;
+    const tx=s.y*invR;
+    const ty=-s.x*invR;
+    const tv=s.vx*tx+s.vy*ty;
+
+    // Right-spin cannot sustain a clockwise trajectory.
+    if(tv < -(speed*0.28)){
+        const radialX=s.x*invR;
+        const radialY=s.y*invR;
+        const radial=s.vx*radialX+s.vy*radialY;
+        const retainedClockwise=tv*0.08;
+        s.vx=radialX*radial+tx*retainedClockwise;
+        s.vy=radialY*radial+ty*retainedClockwise;
+    }
 }
 
 function applyKnockbackBoundaryOverride(s){
@@ -4591,6 +4615,9 @@ function newBattleFrame(now){
         }
 
         newPhysicsCollision(dt);
+
+        enforceRightSpinDirection(p);
+        enforceRightSpinDirection(c);
 
         if(
             !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -4782,11 +4809,11 @@ function newBattleFrame(now){
                 Math.max(speed*targetDistance,0.0001);
 
             return (
-                impactForce>=0.0145 &&
-                speed>=0.042 &&
-                outward>=0.012 &&
-                radial>=0.84 &&
-                targetAlignment>=0.58
+                impactForce>=0.0185 &&
+                speed>=0.050 &&
+                outward>=0.015 &&
+                radial>=0.86 &&
+                targetAlignment>=0.65
             );
         };
 
@@ -4828,15 +4855,6 @@ function newBattleFrame(now){
 
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
-function getBattleOrientation(){
-    const cycle=Math.floor((Game.battle?.round||0)/2)%2;
-    return {
-        cycle,
-        playerSide:cycle===0 ? "LEFT" : "RIGHT",
-        cpuSide:cycle===0 ? "RIGHT" : "LEFT"
-    };
-}
-
 function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
@@ -5186,7 +5204,6 @@ function tryNewXRailEngagement(s){
     s.railProgress=nearest.distance/g.total;
     s.railSpeed=railSpeed;
     s.railRideTime=0;
-    s.railRideCommit=0.34;
     s.railTravelDistance=0;
     s.railLoops=0;
 
@@ -5259,7 +5276,7 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>1.90){
+    if((s.railRideTime||0)>2.35){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5286,22 +5303,12 @@ function updateNewXRailRide(s,dt){
     const tiltSupport=1-newBattleClamp((tilt-0.06)/0.34,0,1);
     const stabilitySupport=0.45+stability*0.55;
     const support=
-        speedSupport*0.30+rpmSupport*0.22+tiltSupport*0.20+
-        stabilitySupport*0.14+control*0.07+affinity*0.07;
+        speedSupport*0.30+rpmSupport*0.22+tiltSupport*0.28+
+        stabilitySupport*0.12+control*0.05+affinity*0.03;
 
-    s.railGrip=newBattleClamp(
-        Math.max(s.railGrip||0,support),0,1
-    );
+    s.railGrip=newBattleClamp(support,0,1);
 
-    if(s.railRideCommit>0){
-        s.railRideCommit=Math.max(0,s.railRideCommit-dt);
-    }else if(
-        support<0.22 ||
-        tilt>0.62 ||
-        stability<0.08 ||
-        tangentVelocity<0.028 ||
-        rpm<0.08
-    ){
+    if(support<0.31||tilt>0.44||stability<0.12||tangentVelocity<0.034){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5310,7 +5317,7 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
-    if(s.railTravelDistance>g.total*0.72 &&
+    if(s.railTravelDistance>g.total*0.78 &&
        !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
         newXRailRailRelease(s,direction);
         return true;
@@ -5352,7 +5359,7 @@ function newXRailRailRelease(s,direction){
     const speed=Math.max(0.025,s.railSpeed||speedOf(s)*0.78);
 
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
-    s.railGrip=0; s.railDirection=0; s.railRideCommit=0;
+    s.railGrip=0; s.railDirection=0;
 
     const tangential=speed*0.88, normal=Math.max(0.014,speed*0.36);
     const separation=0.078+s.radius*0.10;
@@ -5360,6 +5367,7 @@ function newXRailRailRelease(s,direction){
     s.y=point.y+normalY*separation;
     s.vx=tangentX*tangential+normalX*normal;
     s.vy=tangentY*tangential+normalY*normal;
+    enforceRightSpinDirection(s);
 
     s.rpm=newBattleClamp(s.rpm-0.0025,0,1);
     s.stability=newBattleClamp(s.stability-0.006,0,1);
@@ -5508,8 +5516,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.026+
-            (stats.mobility||70)*0.000064;
+            0.024+
+            (stats.mobility||70)*0.000058;
 
         const rpmSpeedFactor=
             0.34+
@@ -5517,12 +5525,12 @@ function newPhysicsStep(s,dt){
 
         const physicalSpeedTarget=
             launchMobility*
-            (1.02+0.36*bitAcceleration)*
+            (0.98+0.34*bitAcceleration)*
             rpmSpeedFactor*
-            (0.87+0.24*bitStability)*
+            (0.86+0.24*bitStability)*
             (attackBit
-                ? 1.43+0.22*attackStat+0.14*Math.pow(rpm,0.70)
-                : 1.13+0.09*attackStat);
+                ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
+                : 1.08+0.08*attackStat);
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
@@ -5557,9 +5565,9 @@ function newPhysicsStep(s,dt){
 
         if(attackBit && rpm>0.38 && speedNow>0.001){
             const attackDrive=
-                (0.00042+attackStat*0.00038)*
+                (0.00036+attackStat*0.00034)*
                 Math.pow(rpm,0.82)*
-                (0.75+0.25*s.movementEnergy)*
+                (0.74+0.26*s.movementEnergy)*
                 bitAcceleration;
             s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
             s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
@@ -5649,10 +5657,11 @@ function newPhysicsStep(s,dt){
                 const incomingNormal=s.vx*nx+s.vy*ny;
 
                 if(!tryNewXRailEngagement(s)){
-                    if(
-                        (s.railExitRefractory||0)<=0 &&
-                        incomingNormal < -0.0015
-                    ){
+                    /*
+                      Only bounce when the Bey is actually entering the rail.
+                      Tangential/away movement is allowed to continue normally.
+                    */
+                    if(incomingNormal < -0.0015){
                         bounceOffRail(s,nearest);
                     }
                 }
@@ -6547,8 +6556,11 @@ function newPhysicsCollision(dt){
     const cAttackBit=attackBitNames.includes(c.bit?.name);
     const bothAttackCollision=pAttackBit&&cAttackBit;
 
+    const pBitKnockbackMultiplier=pAttackBit ? 1.06 : 0.92;
+    const cBitKnockbackMultiplier=cAttackBit ? 1.06 : 0.92;
+
     const nonAttackImpactMultiplier=
-        bothNonAttackCollision ? 1.14 : 1.0;
+        bothNonAttackCollision ? 1.02 : 1.0;
 
     // Attack-vs-Attack is energetic, but it should not produce excessive
     // recoil/RPM loss on every collision.
@@ -6567,7 +6579,8 @@ function newPhysicsCollision(dt){
     const pKnockback=
         Math.max(
             0.0048+contactEnergy*0.112,
-            pForce*nonAttackImpactMultiplier*
+            pForce*pBitKnockbackMultiplier*
+            nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             (1.18-cDef*0.24)
         );
@@ -6575,7 +6588,8 @@ function newPhysicsCollision(dt){
     const cKnockback=
         Math.max(
             0.0048+contactEnergy*0.112,
-            cForce*nonAttackImpactMultiplier*
+            cForce*cBitKnockbackMultiplier*
+            nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             (1.18-pDef*0.24)
         );
@@ -6616,25 +6630,11 @@ function newPhysicsCollision(dt){
     c.vy-=ty*cFollow;
 
     if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
-        p.railEngaged=false;
-        p.railGrip=0;
-        p.railSpeed=0;
-        p.railExited=false;
-        p.railExitRefractory=0.34;
-        p.railExitRefractoryPoint={x:p.x,y:p.y};
-        p.surfaceBounce=0.30;
-        p.surfaceRecovery=0.16;
+        breakXRailFromImpact(p,nx,ny,cRailBreakForce);
     }
 
     if(c.railEngaged && pRailBreakForce>=railBreakThreshold){
-        c.railEngaged=false;
-        c.railGrip=0;
-        c.railSpeed=0;
-        c.railExited=false;
-        c.railExitRefractory=0.34;
-        c.railExitRefractoryPoint={x:c.x,y:c.y};
-        c.surfaceBounce=0.30;
-        c.surfaceRecovery=0.16;
+        breakXRailFromImpact(c,-nx,-ny,pRailBreakForce);
     }
 
     /*
