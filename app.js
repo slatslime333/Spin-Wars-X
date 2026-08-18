@@ -4055,7 +4055,7 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.0255+(stats.mobility||70)*0.000062)*
+        (0.0290+(stats.mobility||70)*0.000070)*
         qualityFactor*techniqueSpeed*tilt.speed;
 
     const tiltSign=side==="player"?-1:1;
@@ -5083,8 +5083,8 @@ function tryNewXRailEngagement(s){
 
     const railContactDistance=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.065+s.radius*0.42
-            : 0.045+s.radius*0.32;
+            ? 0.075+s.radius*0.48
+            : 0.050+s.radius*0.36;
 
     if(Math.sqrt(nearest.dist2)>railContactDistance) return false;
 
@@ -5095,8 +5095,8 @@ function tryNewXRailEngagement(s){
 
     const minimumApproach=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0038+tilt*0.003+(1-stability)*0.0012
-            : 0.0085+tilt*0.006+(1-stability)*0.0025;
+            ? 0.0030+tilt*0.0025+(1-stability)*0.0010
+            : 0.0080+tilt*0.0055+(1-stability)*0.0022;
 
     if(approachSpeed<minimumApproach) return false;
 
@@ -5111,15 +5111,15 @@ function tryNewXRailEngagement(s){
 
     const minimumMomentum=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0038+tilt*0.0022+(1-stability)*0.0015
-            : 0.0068+tilt*0.0035+(1-stability)*0.0025;
+            ? 0.0030+tilt*0.0020+(1-stability)*0.0012
+            : 0.0065+tilt*0.0032+(1-stability)*0.0023;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.10-control*0.035-affinity*0.025-rpm*0.05
-            : 0.28-control*0.06-affinity*0.04-rpm*0.07;
+            ? 0.055-control*0.025-affinity*0.020-rpm*0.045
+            : 0.25-control*0.055-affinity*0.035-rpm*0.065;
 
     const maximumApproach=
         0.78+control*0.08+movement*0.05;
@@ -5141,15 +5141,21 @@ function tryNewXRailEngagement(s){
 
     const threshold=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.24-movement*0.05-affinity*0.03-rpm*0.07-stability*0.02
+            ? 0.15-movement*0.035-affinity*0.025-rpm*0.05-stability*0.015
             : 0.36-movement*0.06-affinity*0.04-rpm*0.06-stability*0.025;
-    if(physicalScore+(Math.random()-0.5)*0.012<threshold) return false;
+
+    // Deliberate X-Rail launches are player-selected. Once the Bey actually
+    // reaches the rail with the required momentum/alignment, do not roll a
+    // second RNG gate that makes it mysteriously bounce every time.
+    if(s.launchPlan?.technique!=="X-Rail" &&
+       physicalScore+(Math.random()-0.5)*0.012<threshold) return false;
+    if(s.launchPlan?.technique==="X-Rail" && physicalScore<threshold) return false;
 
     const g=getNewXRailGeometry();
-    const tangentialCarry=Math.max(tangentVelocity,speed*0.72);
+    const tangentialCarry=Math.max(tangentVelocity,speed*0.82);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.48+movement*0.18+rpm*0.18+affinity*0.08),
-        0.085,0.275
+        tangentialCarry*(1.52+movement*0.20+rpm*0.20+affinity*0.08),
+        0.095,0.300
     );
 
     s.railDirection=direction;
@@ -5233,7 +5239,7 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>1.85){
+    if((s.railRideTime||0)>2.35){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5242,7 +5248,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.028){
+    if(tangentVelocity<0.018){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5274,7 +5280,7 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
-    if(s.railTravelDistance>g.total*0.82 &&
+    if(s.railTravelDistance>g.total*0.78 &&
        !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
         newXRailRailRelease(s,direction);
         return true;
@@ -5331,7 +5337,7 @@ function newXRailRailRelease(s,direction){
     s.surfaceBounce=0.20; s.surfaceRecovery=0.12;
     s.motionPhase+=0.70+Math.random()*0.55;
     s.motionPhase2+=0.30+Math.random()*0.45;
-    s.railExitRefractory=0.55;
+    s.railExitRefractory=0.70;
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 }
 function enforceXRailExitBarrier(s){
@@ -5472,8 +5478,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.020+
-            (stats.mobility||70)*0.000050;
+            0.024+
+            (stats.mobility||70)*0.000058;
 
         const rpmSpeedFactor=
             0.34+
@@ -5481,12 +5487,12 @@ function newPhysicsStep(s,dt){
 
         const physicalSpeedTarget=
             launchMobility*
-            (0.94+0.32*bitAcceleration)*
+            (0.98+0.34*bitAcceleration)*
             rpmSpeedFactor*
-            (0.84+0.22*bitStability)*
+            (0.86+0.24*bitStability)*
             (attackBit
-                ? 1.24+0.18*attackStat+0.10*Math.pow(rpm,0.70)
-                : 1.04+0.07*attackStat);
+                ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
+                : 1.08+0.08*attackStat);
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
@@ -5521,7 +5527,7 @@ function newPhysicsStep(s,dt){
 
         if(attackBit && rpm>0.38 && speedNow>0.001){
             const attackDrive=
-                (0.00030+attackStat*0.00030)*
+                (0.00036+attackStat*0.00034)*
                 Math.pow(rpm,0.82)*
                 (0.74+0.26*s.movementEnergy)*
                 bitAcceleration;
@@ -5827,8 +5833,10 @@ function newPhysicsStep(s,dt){
 
             const invR=1/r;
 
+            // Screen coordinates: +Y is down. Right-spin is CCW, so its
+            // tangent at (x,y) is (y,-x).
             const spinSign=
-                s.spinDirection===-1 ? 1 : -1;
+                s.spinDirection===1 ? 1 : -1;
 
             const tangentX=
                 s.y*invR*spinSign;
@@ -5873,22 +5881,9 @@ function newPhysicsStep(s,dt){
             const radialX=s.x*invR;
             const radialY=s.y*invR;
 
-            // Right-spin is CCW. Remove only a reversed tangent component
-            // if a collision temporarily makes the trajectory clockwise.
-            if(s.spinDirection===1){
-                const angularCross=s.x*s.vy-s.y*s.vx;
-                if(angularCross>0){
-                    const tangentVelocity=s.vx*tangentX+s.vy*tangentY;
-                    if(tangentVelocity<0){
-                        const correction=Math.min(
-                            Math.abs(tangentVelocity)*0.42,
-                            angularCross/(r*r+0.001)*0.030
-                        );
-                        s.vx+=tangentX*correction;
-                        s.vy+=tangentY*correction;
-                    }
-                }
-            }
+            // Direction is produced by the corrected spin tangent above.
+            // Do not add another steering correction here; collisions and
+            // walls are allowed to redirect the Bey naturally.
 
             /*
               The direction of the travel force breathes in/out instead of
