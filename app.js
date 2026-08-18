@@ -4985,6 +4985,36 @@ function newBattleFrame(now){
             if(el) el.textContent=Math.round(v*100);
         }
 
+        /*
+          V44 FIX: invoke the authoritative finish resolver from the physics
+          loop. V43 defined the resolver but never executed it.
+        */
+        const finishCandidates=[];
+        const playerFinish=checkForcedStadiumFinish(p);
+        const cpuFinish=checkForcedStadiumFinish(c);
+
+        if(playerFinish){
+            finishCandidates.push({
+                side:"player",
+                type:playerFinish,
+                score:(p.lastImpactForce||0)+Math.hypot(p.vx,p.vy)*0.35
+            });
+        }
+        if(cpuFinish){
+            finishCandidates.push({
+                side:"cpu",
+                type:cpuFinish,
+                score:(c.lastImpactForce||0)+Math.hypot(c.vx,c.vy)*0.35
+            });
+        }
+
+        if(finishCandidates.length){
+            finishCandidates.sort((a,b)=>b.score-a.score);
+            const winner=finishCandidates[0];
+            finishNewBattle(winner.side,winner.type);
+            return;
+        }
+
         const commentary=document.getElementById("newCommentary");
         if(commentary){
             const distance=Math.hypot(p.x-c.x,p.y-c.y);
@@ -5022,9 +5052,8 @@ function newBattleFrame(now){
             }
         }
 
-        // Xtreme / Over are resolved only by checkForcedStadiumFinish().
-        // Keeping a second pocket validator here caused valid finishes to be
-        // accepted by one system and rejected/overridden by another.
+        // Xtreme / Over have already been resolved above by the single
+        // authoritative finish resolver.
 
         if(p.rpm<=0.001 || c.rpm<=0.001){
             finishNewBattle(p.rpm>c.rpm?"player":"cpu");
