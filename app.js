@@ -3752,7 +3752,7 @@ function showLetItRip(){
               Left = shown quality · Roll = random quality
             </div>
 
-            <div style="display:flex;gap:8px;margin-top:9px;">
+            <div style="display:flex;gap:8px;margin-top:6px;">
               <button class="menu-btn silver" id="backToVS" type="button" style="flex:1;">
                 ← BACK
               </button>
@@ -3763,21 +3763,21 @@ function showLetItRip(){
         controls.innerHTML=`
           <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
             <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">
               ${angleButton("FLAT","Flat","launchFlat")}
               ${angleButton("SLIGHT TILT","Slight Tilt","launchSlight")}
               ${angleButton("HARD TILT","Hard Tilt","launchHard")}
             </div>
 
-            <div style="font-size:12px;opacity:.72;margin:10px 0 7px;">LAUNCH TECHNIQUE</div>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:7px;">
+            <div style="font-size:12px;opacity:.72;margin:7px 0 5px;">LAUNCH TECHNIQUE</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;">
               ${techButton("CENTER","Center","launchCenter")}
               ${techButton("X-RAIL","X-Rail","launchRail")}
               ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
               ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
             </div>
 
-            <div id="launchInfo" style="margin-top:9px;font-size:12px;opacity:.82;text-align:center;">
+            <div id="launchInfo" style="margin-top:6px;font-size:12px;opacity:.82;text-align:center;">
               ${Game.player.launch.angle} · ${Game.player.launch.technique}
               <br>
               <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
@@ -3785,7 +3785,7 @@ function showLetItRip(){
               · START RPM: ${qualityRPM}%
             </div>
 
-            <div style="display:flex;gap:8px;margin-top:9px;">
+            <div style="display:flex;gap:8px;margin-top:6px;">
               <button class="menu-btn gold" id="startBattleNow" type="button" style="flex:1;">
                 LET IT RIP
               </button>
@@ -3923,25 +3923,57 @@ function getAutomaticLaunchPlan(side){
     const bitName=combo.bit.name;
     const personality=combo.blade.personality||{aggression:50,control:50,risk:50};
 
-    // Launches are automatic for now. The player will get launch/decision
-    // control later; this step establishes the physical opening both sides use.
+    /*
+      CPU launch is adaptive, not permanently Center.
+      It reads the player's locked technique when available, then chooses
+      from several physically sensible responses with personality weighting.
+    */
+    const playerLaunch=Game.player?.launch||{};
+    const playerTechnique=playerLaunch.technique||"Center";
+    const attackBits=["Flat","Low Flat","Low Rush","Rush","Kick","Quake"];
+    const isAttackBit=attackBits.includes(bitName);
+    const roll=Math.random();
+
     let technique="Center";
-    if(type==="Attack"){
-        if(["Flat","Low Flat","Low Rush","Rush","Kick","Quake"].includes(bitName) && personality.risk>=62){
-            const roll=Math.random();
-            technique=roll<0.16 ? "Drop Launch" : (roll<0.58 ? "Direct Clash" : "Center");
+
+    if(type==="Attack" && isAttackBit){
+        if(playerTechnique==="X-Rail"){
+            technique=roll<0.34 ? "X-Rail" :
+                      roll<0.64 ? "Direct Clash" :
+                      roll<0.84 ? "Center" : "Drop Launch";
+        }else if(playerTechnique==="Direct Clash"){
+            technique=roll<0.48 ? "Direct Clash" :
+                      roll<0.68 ? "Center" :
+                      roll<0.88 ? "X-Rail" : "Drop Launch";
+        }else if(playerTechnique==="Drop Launch"){
+            technique=roll<0.30 ? "Direct Clash" :
+                      roll<0.58 ? "X-Rail" :
+                      roll<0.82 ? "Center" : "Drop Launch";
         }else{
-            technique=personality.risk>=70 ? "Direct Clash":"Center";
+            technique=roll<0.28 ? "Direct Clash" :
+                      roll<0.52 ? "X-Rail" :
+                      roll<0.78 ? "Center" : "Drop Launch";
         }
+    }else if(type==="Attack"){
+        technique=roll<0.24 ? "Direct Clash" :
+                  roll<0.48 ? "X-Rail" :
+                  roll<0.82 ? "Center" : "Drop Launch";
     }else if(type==="Defense" || type==="Stamina"){
-        technique="Center";
+        // Defensive/stamina CPU still varies, but favors neutral starts.
+        technique=roll<0.16 ? "X-Rail" :
+                  roll<0.30 ? "Drop Launch" :
+                  roll<0.46 ? "Direct Clash" : "Center";
     }else{
-        technique="Center";
+        technique=roll<0.20 ? "X-Rail" :
+                  roll<0.38 ? "Direct Clash" :
+                  roll<0.55 ? "Drop Launch" : "Center";
     }
 
     let angle="Flat";
-    if(type==="Defense" || type==="Stamina") angle="Slight Tilt";
+    if(type==="Defense" || type==="Stamina") angle=roll<0.72 ? "Slight Tilt" : "Flat";
     if(type==="Attack" && personality.aggression>=90) angle="Flat";
+    if(playerLaunch.angle==="Hard Tilt" && roll<0.35) angle="Hard Tilt";
+    else if(playerLaunch.angle==="Slight Tilt" && roll<0.45) angle="Slight Tilt";
 
     const qualityBase=
         (stats.balance||70)*0.25 +
@@ -4228,6 +4260,13 @@ function renderNewBattle(){
     const cx=50+c.x*39;
     const cy=46+c.y*39;
 
+    const orientationCycle=
+        Math.floor((Game.battle?.round||0)/2)%2;
+    const playerSideLabel=
+        orientationCycle===0 ? "LEFT SIDE" : "RIGHT SIDE";
+    const cpuSideLabel=
+        orientationCycle===0 ? "RIGHT SIDE" : "LEFT SIDE";
+
     app.innerHTML=`
       <div class="background"></div>
       <main class="menu" style="max-width:920px;">
@@ -4239,8 +4278,8 @@ function renderNewBattle(){
           </div>
 
           <div id="newStadium" style="
-            position:relative;width:min(88vw,760px);aspect-ratio:1/1;
-            margin:14px auto;background:#c9cdd0;
+            position:relative;width:min(76vw,600px);aspect-ratio:1/1;
+            margin:7px auto;background:#c9cdd0;
             border:2px solid #6d757b;overflow:hidden;
             clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
             box-shadow:0 10px 28px rgba(0,0,0,.38);">
@@ -4342,15 +4381,17 @@ function renderNewBattle(){
             </svg>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
             <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;">
               <strong>${p.blade.name}</strong><br>
-              RPM <span id="newPlayerRPM">${Math.round(p.rpm*100)}</span>%
+              <span style="opacity:.68">${playerSideLabel}</span>
+              · RPM <span id="newPlayerRPM">${Math.round(p.rpm*100)}</span>%
               · Stability <span id="newPlayerStability">${Math.round(p.stability*100)}</span>%
             </div>
             <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;text-align:right;">
               <strong>${c.blade.name}</strong><br>
-              RPM <span id="newCpuRPM">${Math.round(c.rpm*100)}</span>%
+              <span style="opacity:.68">${cpuSideLabel}</span>
+              · RPM <span id="newCpuRPM">${Math.round(c.rpm*100)}</span>%
               · Stability <span id="newCpuStability">${Math.round(c.stability*100)}</span>%
             </div>
           </div>
@@ -5432,6 +5473,71 @@ function enforceXRailExitBarrier(s){
         }
     };
 
+/*
+  X-RAIL SAFETY / FINISH CORRIDOR
+  --------------------------------
+  The X Rail is a physical boundary everywhere except the lower finish
+  corridor. A Bey may only cross the rail there when it is moving outward
+  toward the pocket/Xtreme area. This prevents impact displacement from
+  burying a Bey inside the rail while still allowing legitimate finishes.
+*/
+function isBottomFinishCorridor(s){
+    if(!s) return false;
+    return s.y>0.70;
+}
+
+function applyXRailContactSafety(s,nearest,incomingNormal){
+    if(!s || !nearest) return false;
+
+    const railDistance=Math.sqrt(Math.max(0,nearest.dist2));
+    const contactRadius=0.030+s.radius*0.24;
+    if(railDistance>contactRadius) return false;
+
+    // Only the bottom corridor can pass through the X Rail.
+    if(isBottomFinishCorridor(s)){
+        const outwardY=s.vy;
+        if(outwardY>0.006){
+            return false; // legitimate finish-zone crossing
+        }
+    }
+
+    const dx=s.x-nearest.x;
+    const dy=s.y-nearest.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=dx/len;
+    const ny=dy/len;
+
+    // Never allow a non-engaged Bey to remain buried in the rail.
+    const penetration=contactRadius-railDistance;
+    if(penetration>0){
+        s.x+=nx*(penetration+0.004);
+        s.y+=ny*(penetration+0.004);
+    }
+
+    // If it is moving into the rail, reflect only the normal component.
+    const normalVelocity=s.vx*nx+s.vy*ny;
+    if(normalVelocity<0){
+        const bounce=0.72;
+        s.vx-=nx*normalVelocity*(1+bounce);
+        s.vy-=ny*normalVelocity*(1+bounce);
+    }
+
+    // A stalled/contacting Bey gets a small outward separation impulse so
+    // it cannot self-lock against the rail.
+    const speed=Math.hypot(s.vx,s.vy);
+    if(speed<0.006){
+        s.vx+=nx*0.0045;
+        s.vy+=ny*0.0045;
+    }
+
+    s.railEngaged=false;
+    s.railGrip=0;
+    s.railSpeed=0;
+    s.railContactPoint={x:s.x,y:s.y};
+    s.railSafetyUntil=performance.now()+180;
+    return true;
+}
+
 function newPhysicsStep(s,dt){
 
         const stats = s.stats || {};
@@ -5601,6 +5707,10 @@ function newPhysicsStep(s,dt){
                 Math.max(0,s.surfaceBounce-dt);
         }
 
+        if(s.railSafetyUntil && performance.now()>s.railSafetyUntil){
+            s.railSafetyUntil=0;
+        }
+
         if(s.railExitRefractory>0){
 
             s.railExitRefractory =
@@ -5656,14 +5766,16 @@ function newPhysicsStep(s,dt){
                 const ny=dy/len;
                 const incomingNormal=s.vx*nx+s.vy*ny;
 
-                if(!tryNewXRailEngagement(s)){
-                    /*
-                      Only bounce when the Bey is actually entering the rail.
-                      Tangential/away movement is allowed to continue normally.
-                    */
-                    if(incomingNormal < -0.0015){
-                        bounceOffRail(s,nearest);
-                    }
+                // Finish corridor is the ONLY place where normal rail
+                // collision may be bypassed.
+                const finishCorridor=
+                    isBottomFinishCorridor(s) &&
+                    s.vy>0.006;
+
+                if(!finishCorridor && !tryNewXRailEngagement(s)){
+                    applyXRailContactSafety(
+                        s,nearest,incomingNormal
+                    );
                 }
 
                 if(s.railEngaged) return;
@@ -6344,6 +6456,7 @@ function breakXRailFromImpact(s,nx,ny,force){
     s.railExited=false;
     s.railGrip=0;
     s.railContactPoint=null;
+    s.railSafetyUntil=performance.now()+240;
     s.railTravelDistance=0;
     s.railRideTime=0;
     s.railDirection=0;
@@ -6668,6 +6781,26 @@ function newPhysicsCollision(dt){
     p.y-=ny*(separation*0.62+0.0040);
     c.x+=nx*(separation*0.62+0.0040);
     c.y+=ny*(separation*0.62+0.0040);
+
+    // A collision can otherwise push a Bey deep into the rail in one frame.
+    // Resolve that immediately. The bottom finish corridor remains the only
+    // intentional pass-through route.
+    for(const rider of [p,c]){
+        if(!rider.railEngaged){
+            const railPoint=newXRailNearest(rider.x,rider.y);
+            if(railPoint){
+                const rd=Math.sqrt(Math.max(0,railPoint.dist2));
+                const rr=0.030+rider.radius*0.24;
+                if(rd<=rr && !isBottomFinishCorridor(rider)){
+                    applyXRailContactSafety(
+                        rider,
+                        railPoint,
+                        0
+                    );
+                }
+            }
+        }
+    }
 
     /*
       RPM damage is now attacker -> target.
