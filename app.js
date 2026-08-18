@@ -4592,9 +4592,9 @@ function checkForcedStadiumFinish(s){
     // Xtreme zone: central lower opening. Require a genuine high-force
     // displacement, not merely entering the red area.
     const inXtreme=
-        s.y>=0.78 &&
-        s.y<=0.98 &&
-        Math.abs(s.x)<=0.19;
+        s.y>=0.74 &&
+        s.y<=0.99 &&
+        Math.abs(s.x)<=0.23;
 
     const xtremeTargetX=0;
     const xtremeTargetY=0.91;
@@ -4607,12 +4607,12 @@ function checkForcedStadiumFinish(s){
 
     if(
         inXtreme &&
-        effectiveForce>=0.0190 &&
-        speed>=0.047 &&
-        xtremeAlignment>=0.58
+        effectiveForce>=0.0140 &&
+        speed>=0.042 &&
+        xtremeAlignment>=0.48
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=30) return "Xtreme";
+        if(now-s.finishCandidateSince>=20) return "Xtreme";
     }else if(!inXtreme){
         s.finishCandidateSince=0;
     }
@@ -4620,14 +4620,14 @@ function checkForcedStadiumFinish(s){
     // Pockets are wider and require slightly less force than Xtreme, but
     // still require a recent impact and meaningful outward travel.
     const leftPocket=
-        s.x<=-0.64 &&
-        s.y>=0.76 &&
-        speed>=0.030;
+        s.x<=-0.60 &&
+        s.y>=0.74 &&
+        speed>=0.028;
 
     const rightPocket=
-        s.x>=0.64 &&
-        s.y>=0.76 &&
-        speed>=0.030;
+        s.x>=0.60 &&
+        s.y>=0.74 &&
+        speed>=0.028;
 
     const pocketTargetX=leftPocket ? -0.82 : 0.82;
     const pocketTargetY=0.90;
@@ -4640,13 +4640,13 @@ function checkForcedStadiumFinish(s){
 
     if(
         (leftPocket||rightPocket) &&
-        effectiveForce>=0.0165 &&
-        speed>=0.045 &&
-        s.y>0.78 &&
-        pocketAlignment>=0.58
+        effectiveForce>=0.0120 &&
+        speed>=0.040 &&
+        s.y>0.77 &&
+        pocketAlignment>=0.48
     ){
         if(!s.finishCandidateSince) s.finishCandidateSince=now;
-        if(now-s.finishCandidateSince>=40) return "Over";
+        if(now-s.finishCandidateSince>=25) return "Over";
     }else if(!leftPocket && !rightPocket){
         s.finishCandidateSince=0;
     }
@@ -4915,9 +4915,9 @@ function newBattleFrame(now){
             const x=defender.x;
             const y=defender.y;
             const leftPocket =
-                x < -0.60 && y > 0.78;
+                x < -0.58 && y > 0.75;
             const rightPocket =
-                x > 0.60 && y > 0.78;
+                x > 0.58 && y > 0.75;
 
             if(!leftPocket && !rightPocket) return false;
 
@@ -4925,7 +4925,7 @@ function newBattleFrame(now){
                 performance.now()-
                 (defender.lastImpactAt||0);
 
-            if(age>850) return false;
+            if(age>900) return false;
 
             const radial=Math.hypot(x,y);
             const speed=Math.hypot(defender.vx,defender.vy);
@@ -4948,11 +4948,11 @@ function newBattleFrame(now){
                 Math.max(speed*targetDistance,0.0001);
 
             return (
-                impactForce>=0.0165 &&
-                speed>=0.045 &&
-                outward>=0.012 &&
-                radial>=0.82 &&
-                targetAlignment>=0.58
+                impactForce>=0.0120 &&
+                speed>=0.040 &&
+                outward>=0.008 &&
+                radial>=0.78 &&
+                targetAlignment>=0.48
             );
         };
 
