@@ -4483,6 +4483,12 @@ function renderNewBattle(){
                 <text id="impactText" x="50" y="40"
                       text-anchor="middle" font-size="5.2"
                       font-weight="900" fill="#ffffff"></text>
+                <text id="playerDamageText" x="50" y="46"
+                      text-anchor="middle" font-size="3.5"
+                      font-weight="900" fill="#35d26b" opacity="0"></text>
+                <text id="cpuDamageText" x="50" y="46"
+                      text-anchor="middle" font-size="3.5"
+                      font-weight="900" fill="#ff4b4b" opacity="0"></text>
               </g>
             </svg>
           </div>
@@ -4668,9 +4674,9 @@ function checkForcedStadiumFinish(s){
             Math.max(speed*d,0.0001);
 
         const xtremeEnergy=
-            effectiveForce>=0.0105 &&
-            speed>=0.038 &&
-            alignment>=0.40;
+            effectiveForce>=0.0075 &&
+            speed>=0.032 &&
+            alignment>=0.30;
 
         if(xtremeEnergy){
             if(!s.finishCandidateSince) s.finishCandidateSince=now;
@@ -4678,7 +4684,7 @@ function checkForcedStadiumFinish(s){
             s.finishDebug=
                 `XTREME ENTRY · force ${effectiveForce.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            if(now-s.finishCandidateSince>=35) return "Xtreme";
+            if(now-s.finishCandidateSince>=18){ s.finishDebug+=" · CONFIRMED"; return "Xtreme"; }
         }else{
             s.finishCandidateSince=0;
             s.finishCandidateType=null;
@@ -4708,10 +4714,10 @@ function checkForcedStadiumFinish(s){
             Math.max(Math.hypot(s.x,s.y),0.0001);
 
         const overEnergy=
-            effectiveForce>=0.0085 &&
-            speed>=0.035 &&
-            outward>=0.004 &&
-            alignment>=0.36;
+            effectiveForce>=0.0055 &&
+            speed>=0.030 &&
+            outward>=0.002 &&
+            alignment>=0.26;
 
         if(overEnergy){
             if(!s.finishCandidateSince) s.finishCandidateSince=now;
@@ -4719,7 +4725,7 @@ function checkForcedStadiumFinish(s){
             s.finishDebug=
                 `OVER ENTRY · force ${effectiveForce.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            if(now-s.finishCandidateSince>=45) return "Over";
+            if(now-s.finishCandidateSince>=22){ s.finishDebug+=" · CONFIRMED"; return "Over"; }
         }else if(s.finishCandidateType==="Over"){
             s.finishCandidateSince=0;
             s.finishCandidateType=null;
@@ -4858,6 +4864,8 @@ function newBattleFrame(now){
                 const burst1=document.getElementById("impactBurst1");
                 const burst2=document.getElementById("impactBurst2");
                 const txt=document.getElementById("impactText");
+                const playerDamageText=document.getElementById("playerDamageText");
+                const cpuDamageText=document.getElementById("cpuDamageText");
 
                 if(flash){
                     flash.setAttribute("cx",x);
@@ -4929,10 +4937,28 @@ function newBattleFrame(now){
                     txt.setAttribute("x",x);
                     txt.setAttribute("y",String(y-22-u*12));
                     txt.setAttribute("font-size",String(19+Math.min(6,strength*2.2)));
-                    txt.textContent=imp.heavy?"HEAVY HIT!":"HIT!";
+                    txt.textContent="";
                 }
-            }else{
+                const pLoss=imp.playerRpmLoss||0;
+                const cLoss=imp.cpuRpmLoss||0;
+                if(playerDamageText){
+                    playerDamageText.setAttribute("x",String(x));
+                    playerDamageText.setAttribute("y",String(y-8-u*8));
+                    playerDamageText.textContent=pLoss>0.0005?`-${Math.round(pLoss*100)} RPM`:"";
+                    playerDamageText.setAttribute("opacity",String(pLoss>0.0005?Math.max(0,1-u*1.35):0));
+                }
+                if(cpuDamageText){
+                    cpuDamageText.setAttribute("x",String(x));
+                    cpuDamageText.setAttribute("y",String(y+2-u*8));
+                    cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
+                    cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.35):0));
+                }
+             }else{
                 impactGroup.setAttribute("opacity","0");
+                const pd=document.getElementById("playerDamageText");
+                const cd=document.getElementById("cpuDamageText");
+                if(pd) pd.setAttribute("opacity","0");
+                if(cd) cd.setAttribute("opacity","0");
                 NEW_BATTLE.lastImpact=null;
             }
         }
@@ -5451,6 +5477,14 @@ function updateNewXRailRide(s,dt){
     s.railRideTime=(s.railRideTime||0)+dt;
 
     const direction=s.railDirection||railDirection(s);
+
+    // V42: prevent awkward slow rail crawling. A rider must retain enough
+    // tangential energy to stay on the rail; otherwise release cleanly.
+    if(s.railEngaged && speedOf(s)<0.045 && (s.railRideTime||0)>0.08){
+        newXRailRailRelease(s,direction);
+        s.railReengageCooldown=0.28;
+        return false;
+    }
     const bp=bitPhysics(s);
     const rpm=newBattleClamp(s.rpm,0,1);
     const tilt=newBattleClamp(s.tiltLevel||0,0,1);
@@ -5495,10 +5529,12 @@ function updateNewXRailRide(s,dt){
     const railDrive=(0.0019+movement*0.0030+affinity*0.0016)*(0.38+rpm*0.62);
     const railFriction=0.00028+(1-rpm)*0.00034+tilt*0.00024;
 
-    tangentVelocity=Math.max(
-        0.056,
-        tangentVelocity+(railDrive-railFriction)*dt*60
-    );
+    tangentVelocity += (railDrive-railFriction)*dt*60;
+    if(tangentVelocity<0.045){
+        newXRailRailRelease(s,direction);
+        s.railReengageCooldown=0.28;
+        return false;
+    }
 
     const speedSupport=newBattleClamp((tangentVelocity-0.056)/0.120,0,1);
     const rpmSupport=newBattleClamp((rpm-0.16)/0.70,0,1);
@@ -7022,6 +7058,10 @@ function newPhysicsCollision(dt){
         (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
         (1-pDef*0.30);
 
+    const __cRpmLoss=pToCDamage;
+    const __pRpmLoss=cToPDamage;
+    let __pExtraRpmLoss=0;
+    let __cExtraRpmLoss=0;
     c.rpm=newBattleClamp(c.rpm-pToCDamage,0,1);
     p.rpm=newBattleClamp(p.rpm-cToPDamage,0,1);
 
@@ -7045,12 +7085,14 @@ function newPhysicsCollision(dt){
         c.vx+=nx*(cKnockback*(centerImpactBoost-1)*0.52);
         c.vy+=ny*(cKnockback*(centerImpactBoost-1)*0.52);
 
+        __pExtraRpmLoss=cToPDamage*(centerImpactBoost-1)*0.52;
         p.rpm=newBattleClamp(
-            p.rpm-cToPDamage*(centerImpactBoost-1)*0.52,
+            p.rpm-__pExtraRpmLoss,
             0,1
         );
+        __cExtraRpmLoss=pToCDamage*(centerImpactBoost-1)*0.52;
         c.rpm=newBattleClamp(
-            c.rpm-pToCDamage*(centerImpactBoost-1)*0.52,
+            c.rpm-__cExtraRpmLoss,
             0,1
         );
     }
@@ -7126,7 +7168,9 @@ function newPhysicsCollision(dt){
         x:(p.x+c.x)*0.5,
         y:(p.y+c.y)*0.5,
         strength:visualStrength,
-        heavy:heavyFactor>1.25,
+        heavy:false,
+        playerRpmLoss:__pRpmLoss+__pExtraRpmLoss,
+        cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
         time:performance.now()
     };
 
