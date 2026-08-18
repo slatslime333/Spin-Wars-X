@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 0.6.1
+ Version 0.6.2
 ==================================*/
 
 //=========================
@@ -9,7 +9,7 @@
 
 const Game = {
 
-    version:"0.6.1",
+    version:"0.6.2",
 
     screen:"menu",
 
@@ -1087,50 +1087,8 @@ function getBitPhysics(blader){
     return BIT_PHYSICS[name] || BIT_PHYSICS.Point;
 }
 
-function getCurrentControl(blader){
-    const state=Game.battle[blader];
-    const side=Game[blader];
-    const combo=getBattleCombo(blader);
-    const bit=getBitPhysics(blader);
-    if(!state || !side || !combo) return 50;
-    const fatigue=(100-state.spin)*0.20 + (100-state.balance)*0.24;
-    const momentumPenalty=Math.max(0,-state.momentum)*0.10;
-    const launchBonus=side.launch?.controlBonus || 0;
-    return clampBattleValue(
-        bit.control*0.52 + (combo.stats.balance||70)*0.30 + (combo.stats.defense||70)*0.08 + launchBonus - fatigue - momentumPenalty,
-        5,99
-    );
-}
 
 
-function getLaunchAngleProfile(angle,bit){
-    const isAttack=bit.movement>=80;
-    const isStable=bit.control>=90;
-    if(angle==='Flat') return {
-        movement:isAttack?1.10:1.02,
-        control:isAttack?-6:2,
-        drain:isAttack?1.10:0.96,
-        xrail:isAttack?1.08:0.90,
-        balance:isStable?3:-2,
-        spin:isStable?4:-1
-    };
-    if(angle==='Slight Tilt') return {
-        movement:isAttack?0.84:1.00,
-        control:isAttack?12:7,
-        drain:isAttack?0.80:0.94,
-        xrail:isAttack?0.78:0.92,
-        balance:isAttack?5:4,
-        spin:isAttack?7:3
-    };
-    return {
-        movement:isAttack?0.66:0.90,
-        control:isAttack?20:10,
-        drain:isAttack?0.70:0.88,
-        xrail:isAttack?0.58:0.78,
-        balance:isAttack?8:6,
-        spin:isAttack?9:4
-    };
-}
 
 
 
@@ -2224,13 +2182,20 @@ function showComboCard(){
 
     `;
 
-    document
-    .getElementById("battleButton")
-    .onclick = () => {
+    const battleButton=document.getElementById("battleButton");
+    if(battleButton){
+        battleButton.type="button";
+        battleButton.onclick=(event)=>{
+            event?.preventDefault?.();
 
-        showVS();
+            if(!Game.player.blade || !Game.player.ratchet || !Game.player.bit){
+                console.error("Start Battle blocked: player combo is incomplete.");
+                return;
+            }
 
-    };
+            showVS();
+        };
+    }
 const menuCard=document.querySelector(".menu-card");
 
 menuCard.appendChild(
@@ -2606,6 +2571,42 @@ function newBattleClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
 }
 
+
+/*========================================================
+ LAUNCH QUALITY — CANONICAL
+========================================================*/
+const LAUNCH_QUALITY_WEIGHTS=[
+    ["Horrible",8],["Bad",17],["Okay",40],["Good",25],["Perfect",10]
+];
+
+function rollRandomLaunchQuality(){
+    let total=0;
+    for(const [,weight] of LAUNCH_QUALITY_WEIGHTS) total+=weight;
+    let roll=Math.random()*total;
+    for(const [quality,weight] of LAUNCH_QUALITY_WEIGHTS){
+        roll-=weight;
+        if(roll<=0) return quality;
+    }
+    return "Okay";
+}
+
+function rollLaunchQuality(side){
+    if(!Game[side]) return "Okay";
+    Game[side].launch=Game[side].launch||{};
+    Game[side].launch.quality=rollRandomLaunchQuality();
+    Game[side].launch.qualityMode="Roll";
+    return Game[side].launch.quality;
+}
+
+function ensureLaunchQuality(side){
+    if(!Game[side]) return "Okay";
+    Game[side].launch=Game[side].launch||{};
+    if(!Game[side].launch.quality){
+        Game[side].launch.quality=rollRandomLaunchQuality();
+    }
+    return Game[side].launch.quality;
+}
+
 function getAutomaticLaunchPlan(side){
     const combo=Game[side];
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
@@ -2866,9 +2867,24 @@ function newBattleLaunchState(side){
         movementNoiseX:(Math.random()-0.5)*0.0002,
         movementNoiseY:(Math.random()-0.5)*0.0002,
         movementNoiseTimer:0.25+Math.random()*0.35,
-        movementEnergy:1.0,
+        movementEnergy:newBattleClamp(
+            0.92+
+            getBattleStat({stats},"stamina")*0.08,
+            0.92,1.0
+        ),
+        statProfile:{
+            attack:getBattleStat({stats},"attack"),
+            knockback:getBattleStat({stats},"knockback"),
+            defense:getBattleStat({stats},"defense"),
+            mobility:getBattleStat({stats},"mobility"),
+            balance:getBattleStat({stats},"balance"),
+            stamina:getBattleStat({stats},"stamina")
+        },
         axisStability:newBattleClamp(
-            ((stats.balance||70)/99)*
+            (
+                getBattleStat({stats},"balance")*0.72+
+                getBattleStat({stats},"defense")*0.28
+            )*
             ((bitPhysics({bit:combo.bit}).stability||70)/100),
             0.25,1
         ),
@@ -2892,14 +2908,17 @@ function newBattleLaunchState(side){
     };
 }
 function startNewBattle(){
-    // A preview can legitimately have an incomplete CPU launch state.
-    // Rebuild both physical states at the moment the player commits.
-    if(!NEW_BATTLE.player || !NEW_BATTLE.cpu){
-        NEW_BATTLE.player=newBattleLaunchState("player");
-        NEW_BATTLE.cpu=newBattleLaunchState("cpu");
+    // This is the only function allowed to start the live physics loop.
+    if(NEW_BATTLE.active) return false;
+
+    if(!Game.player.blade || !Game.player.ratchet || !Game.player.bit ||
+       !Game.cpu.blade || !Game.cpu.ratchet || !Game.cpu.bit){
+        console.error("Battle start blocked: combo data is incomplete.");
+        return false;
     }
 
-    cancelAnimationFrame(NEW_BATTLE.raf);
+    try{
+        cancelAnimationFrame(NEW_BATTLE.raf);
 
     Game.screen="battle";
     Game.battle.engineMode="new_physics";
@@ -2928,12 +2947,26 @@ function startNewBattle(){
     Game.cpu.launch.technique=NEW_BATTLE.cpu.launchPlan?.technique||"Center";
     Game.cpu.launch.quality=NEW_BATTLE.cpu.launchPlan?.quality||"Okay";
 
-    NEW_BATTLE.elapsed=0;
-    NEW_BATTLE.active=true;
-    NEW_BATTLE.last=performance.now();
+        NEW_BATTLE.elapsed=0;
+        NEW_BATTLE.active=true;
+        NEW_BATTLE.last=performance.now();
 
-    renderNewBattle();
-    NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+        renderNewBattle();
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+
+        return true;
+    }catch(error){
+        console.error("Spin Wars could not start the battle:",error);
+        NEW_BATTLE.active=false;
+
+        const app=document.getElementById("app");
+        if(app){
+            const note=app.querySelector("#newCommentary");
+            if(note) note.textContent="Battle start error — launch state was rejected.";
+        }
+
+        return false;
+    }
 }
 function renderNewBattle(){
     const app=document.getElementById("app");
@@ -3137,12 +3170,20 @@ function renderNewBattle(){
               <span style="opacity:.68">${playerSideLabel}</span>
               · RPM <span id="newPlayerRPM">${Math.round(p.rpm*100)}</span>%
               · Stability <span id="newPlayerStability">${Math.round(p.stability*100)}</span>%
+              <div class="battle-stat-line">
+                ATK ${p.stats.attack} · KB ${p.stats.knockback} · DEF ${p.stats.defense}<br>
+                MOB ${p.stats.mobility} · BAL ${p.stats.balance} · STA ${p.stats.stamina}
+              </div>
             </div>
             <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;text-align:right;">
               <strong>${c.blade.name}</strong><br>
               <span style="opacity:.68">${cpuSideLabel}</span>
               · RPM <span id="newCpuRPM">${Math.round(c.rpm*100)}</span>%
               · Stability <span id="newCpuStability">${Math.round(c.stability*100)}</span>%
+              <div class="battle-stat-line">
+                ATK ${c.stats.attack} · KB ${c.stats.knockback} · DEF ${c.stats.defense}<br>
+                MOB ${c.stats.mobility} · BAL ${c.stats.balance} · STA ${c.stats.stamina}
+              </div>
             </div>
           </div>
 
@@ -3806,6 +3847,13 @@ function speedOf(s){
     return Math.hypot(s.vx,s.vy);
 }
 
+
+function getBattleStat(s,key,fallback=70){
+    const value=Number(s?.stats?.[key]);
+    if(!Number.isFinite(value)) return Math.max(60,Math.min(99,fallback))/99;
+    return Math.max(60,Math.min(99,value))/99;
+}
+
 function bitPhysics(s){
     return BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
 }
@@ -4279,14 +4327,18 @@ function newPhysicsStep(s,dt){
         const bp = bitPhysics(s);
 
         const rpm = newBattleClamp(s.rpm,0,1);
-        const mobility = (stats.mobility||70)/100;
-        const balance = (stats.balance||70)/99;
+        const mobility = getBattleStat(s,"mobility");
+        const balance = getBattleStat(s,"balance");
+        const stamina = getBattleStat(s,"stamina");
         const control = (bp.control||60)/100;
+
+        // Stamina is spin efficiency, not a free speed bonus.
+        const staminaEfficiency=0.70+stamina*0.52;
         const centerAffinity = (bp.centerAffinity||60)/100;
         const movement = (bp.movement||60)/100;
         const attackBit = movement>=0.80;
-        const attackStat=(stats.attack||70)/99;
-        const knockbackStat=(stats.knockback||70)/99;
+        const attackStat=getBattleStat(s,"attack");
+        const knockbackStat=getBattleStat(s,"knockback");
         const attackSpeedBoost =
             attackBit
                 ? (1.28 + 0.28*attackStat + 0.18*Math.pow(rpm,0.70))
@@ -5142,8 +5194,11 @@ function newPhysicsStep(s,dt){
         s.rpm =
             newBattleClamp(
                 s.rpm-
-                movementDrain*
-                tiltDrain*
+                (
+                    movementDrain*
+                    tiltDrain/
+                    staminaEfficiency
+                )*
                 dt*60,
                 0,1
             );
@@ -5156,11 +5211,14 @@ function newPhysicsStep(s,dt){
         const recovery =
             (bp.recovery||60)/100;
 
+        const staminaRecovery=0.78+stamina*0.34;
+
         s.stability =
             newBattleClamp(
                 s.stability+
                 0.00024*
                 recovery*
+                staminaRecovery*
                 rpm*
                 dt*60 -
                 (
@@ -5263,12 +5321,12 @@ function newPhysicsCollision(dt){
     // stationary overlap.
     if(closing>=0 && relativeSpeed<0.0022) return;
 
-    const pAttack=(p.stats.attack||70)/99;
-    const cAttack=(c.stats.attack||70)/99;
-    const pKB=(p.stats.knockback||70)/99;
-    const cKB=(c.stats.knockback||70)/99;
-    const pDef=(p.stats.defense||70)/99;
-    const cDef=(c.stats.defense||70)/99;
+    const pAttack=getBattleStat(p,"attack");
+    const cAttack=getBattleStat(c,"attack");
+    const pKB=getBattleStat(p,"knockback");
+    const cKB=getBattleStat(c,"knockback");
+    const pDef=getBattleStat(p,"defense");
+    const cDef=getBattleStat(c,"defense");
     const pRPM=newBattleClamp(p.rpm,0,1);
     const cRPM=newBattleClamp(c.rpm,0,1);
 
