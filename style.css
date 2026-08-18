@@ -214,3 +214,236 @@ button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
   stroke-width:.7px;
 }
 #impactText{display:none}
+
+/* =========================================================
+   V51 COMBO BUILDER — COHESIVE GAME UI
+   This layer intentionally comes LAST so older card rules cannot
+   collapse the layout or override tier backgrounds.
+========================================================= */
+.selection-screen{
+  width:min(100%,1040px)!important;max-width:1040px!important;
+  padding:24px 18px 34px!important;
+}
+.selection-header{
+  display:flex!important;align-items:center!important;gap:14px!important;
+  margin:0 0 4px!important;padding:0 2px!important;
+}
+.selection-icon{
+  width:48px!important;height:48px!important;flex:0 0 48px!important;
+  display:grid!important;place-items:center!important;border-radius:14px!important;
+  background:linear-gradient(145deg,#1d2838,#0e141d)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  box-shadow:0 10px 25px rgba(0,0,0,.25)!important;
+  font-size:22px!important;
+}
+.selection-header .eyebrow{
+  display:block!important;font-size:9px!important;line-height:1!important;
+  font-weight:900!important;letter-spacing:1.5px!important;color:#7f8da0!important;
+  margin:0 0 5px!important;
+}
+.selection-header h1{
+  margin:0!important;font-size:28px!important;line-height:1!important;
+  font-weight:950!important;letter-spacing:.5px!important;color:#f4f7fb!important;
+}
+.selection-header p{
+  margin:6px 0 0!important;font-size:10px!important;line-height:1!important;
+  color:#8e9aaa!important;
+}
+.selection-card{
+  width:100%!important;display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;padding:12px!important;
+  background:linear-gradient(180deg,rgba(17,23,32,.98),rgba(9,13,19,.99))!important;
+  border:1px solid rgba(255,255,255,.10)!important;
+}
+.selection-card > .game-blade-card,
+.selection-card > .part-select-card{
+  width:100%!important;min-width:0!important;
+}
+
+/* BLADE CARDS */
+.game-blade-card{
+  appearance:none!important;-webkit-appearance:none!important;
+  position:relative!important;display:flex!important;flex-direction:column!important;
+  align-items:stretch!important;justify-content:flex-start!important;
+  min-height:190px!important;padding:15px!important;margin:0!important;
+  text-align:left!important;color:#fff!important;overflow:hidden!important;
+  border-radius:14px!important;cursor:pointer!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+  box-shadow:0 12px 26px rgba(0,0,0,.24)!important;
+  transition:transform .14s ease,filter .14s ease,box-shadow .14s ease!important;
+}
+.game-blade-card:hover{
+  transform:translateY(-3px)!important;filter:brightness(1.08)!important;
+  box-shadow:0 17px 34px rgba(0,0,0,.30)!important;
+}
+.game-blade-card:active{transform:translateY(-1px) scale(.995)!important}
+.game-blade-card.tier-gold{
+  background:
+    radial-gradient(circle at 90% 0%,rgba(255,222,95,.36),transparent 34%),
+    linear-gradient(145deg,#8b6a20 0%,#4e3a10 48%,#1d1709 100%)!important;
+}
+.game-blade-card.tier-silver{
+  background:
+    radial-gradient(circle at 90% 0%,rgba(225,234,248,.28),transparent 34%),
+    linear-gradient(145deg,#69788d 0%,#3c4757 48%,#171d25 100%)!important;
+}
+.game-blade-card.tier-bronze{
+  background:
+    radial-gradient(circle at 90% 0%,rgba(225,143,92,.28),transparent 34%),
+    linear-gradient(145deg,#815137 0%,#4d2f20 48%,#1c120c 100%)!important;
+}
+.game-blade-card.tier-custom{
+  background:
+    radial-gradient(circle at 90% 0%,rgba(89,170,255,.30),transparent 34%),
+    linear-gradient(145deg,#315d91 0%,#1e3c5d 48%,#0d1724 100%)!important;
+}
+.blade-card-head{
+  display:flex!important;justify-content:space-between!important;align-items:flex-start!important;
+  gap:12px!important;width:100%!important;
+}
+.blade-card-title{min-width:0!important;text-align:left!important}
+.tier-ribbon{
+  display:inline-flex!important;align-items:center!important;height:19px!important;padding:0 7px!important;
+  border-radius:5px!important;background:rgba(0,0,0,.28)!important;
+  border:1px solid rgba(255,255,255,.18)!important;color:#fff!important;
+  font-size:8px!important;line-height:1!important;font-weight:950!important;letter-spacing:1.1px!important;
+}
+.game-blade-card h2{
+  margin:7px 0 6px!important;font-size:20px!important;line-height:1!important;
+  font-weight:950!important;letter-spacing:.1px!important;color:#fff!important;
+}
+.blade-meta{
+  display:flex!important;flex-wrap:wrap!important;gap:5px!important;margin:0!important;
+}
+.blade-meta span{
+  display:inline-flex!important;align-items:center!important;padding:4px 6px!important;
+  border-radius:5px!important;background:rgba(0,0,0,.22)!important;
+  color:rgba(255,255,255,.72)!important;font-size:8px!important;line-height:1!important;
+}
+.ovr-badge{
+  width:60px!important;height:60px!important;flex:0 0 60px!important;
+  display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+  border-radius:50%!important;background:rgba(7,10,14,.60)!important;
+  border:2px solid rgba(255,255,255,.28)!important;box-shadow:0 7px 17px rgba(0,0,0,.28)!important;
+}
+.ovr-badge small{font-size:7px!important;line-height:1!important;font-weight:900!important;letter-spacing:1px!important;color:rgba(255,255,255,.65)!important}
+.ovr-badge b{font-size:25px!important;line-height:1!important;font-weight:950!important;color:#fff!important}
+.blade-stat-grid{
+  width:100%!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;margin:14px 0 0!important;
+}
+.mini-stat{
+  min-width:0!important;padding:7px 6px!important;border-radius:6px!important;
+  display:flex!important;flex-direction:column!important;gap:3px!important;
+  background:rgba(0,0,0,.22)!important;border:1px solid rgba(255,255,255,.08)!important;
+  text-align:left!important;
+}
+.mini-stat span{
+  display:block!important;font-size:7px!important;line-height:1!important;
+  letter-spacing:.65px!important;color:rgba(255,255,255,.56)!important;font-weight:900!important;
+}
+.mini-stat b{
+  display:block!important;font-size:12px!important;line-height:1!important;
+  color:#fff!important;font-weight:950!important;
+}
+.select-hint{
+  display:flex!important;justify-content:space-between!important;align-items:center!important;
+  width:100%!important;margin-top:auto!important;padding-top:12px!important;
+  color:rgba(255,255,255,.62)!important;font-size:8px!important;line-height:1!important;
+  letter-spacing:1.1px!important;font-weight:950!important;
+}
+.select-hint span{font-size:17px!important;line-height:7px!important;color:#fff!important}
+
+/* RATCHET + BIT CARDS */
+.part-select-card{
+  appearance:none!important;-webkit-appearance:none!important;
+  width:100%!important;min-height:124px!important;padding:14px!important;margin:0!important;
+  display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+  text-align:left!important;color:#fff!important;border-radius:12px!important;
+  border:1px solid rgba(255,255,255,.13)!important;cursor:pointer!important;
+  background:linear-gradient(145deg,#1d2632,#111720)!important;
+  box-shadow:0 9px 20px rgba(0,0,0,.22)!important;
+  transition:transform .14s ease,filter .14s ease,border-color .14s ease!important;
+}
+.part-select-card:hover{
+  transform:translateY(-2px)!important;filter:brightness(1.07)!important;
+  border-color:rgba(255,255,255,.25)!important;
+}
+.part-card-top{
+  width:100%!important;display:flex!important;justify-content:space-between!important;
+  align-items:flex-start!important;gap:12px!important;
+}
+.part-copy{min-width:0!important;text-align:left!important}
+.part-card-kicker{
+  display:block!important;margin:0 0 4px!important;font-size:7px!important;line-height:1!important;
+  letter-spacing:1.2px!important;color:#7f8c9e!important;font-weight:950!important;
+}
+.part-card-top strong{
+  display:block!important;margin:0!important;font-size:18px!important;line-height:1!important;
+  font-weight:950!important;color:#fff!important;
+}
+.part-card-top small{
+  display:block!important;margin:6px 0 0!important;font-size:8px!important;line-height:1.25!important;
+  color:#9aa5b4!important;white-space:normal!important;
+}
+.part-index{
+  width:34px!important;height:34px!important;flex:0 0 34px!important;
+  display:grid!important;place-items:center!important;border-radius:9px!important;
+  background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.12)!important;
+  color:#fff!important;font-size:16px!important;line-height:1!important;font-weight:950!important;
+}
+.mini-stat-grid{
+  width:100%!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:6px!important;margin-top:auto!important;padding-top:12px!important;
+}
+.part-select-card .mini-stat{padding:7px 6px!important}
+.part-select-card .mini-stat b{font-size:12px!important}
+.ratchet-1{border-left:3px solid #ef6b57!important}
+.ratchet-3{border-left:3px solid #7da9e8!important}
+.ratchet-5,.ratchet-6{border-left:3px solid #71c69d!important}
+.ratchet-7{border-left:3px solid #d9b55d!important}
+.ratchet-9{border-left:3px solid #a98de2!important}
+.ratchet-0{border-left:3px solid #8aa2ad!important}
+.bit-attack{border-left:3px solid #ef625d!important}
+.bit-defense{border-left:3px solid #65c995!important}
+.bit-stamina{border-left:3px solid #69b9e8!important}
+.bit-balance{border-left:3px solid #b08ae5!important}
+.bit-type-pill{
+  display:inline-flex!important;align-items:center!important;padding:4px 7px!important;
+  border-radius:6px!important;background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.12)!important;font-size:7px!important;
+  line-height:1!important;font-weight:900!important;letter-spacing:.7px!important;
+}
+.selection-nav{
+  grid-column:1/-1!important;display:grid!important;grid-template-columns:48px 1fr 48px!important;
+  gap:8px!important;align-items:center!important;margin:2px 0 0!important;
+}
+.selection-nav .menu-btn{
+  width:48px!important;min-height:40px!important;padding:7px!important;
+}
+.selection-nav span{
+  text-align:center!important;font-size:9px!important;line-height:1!important;
+  color:#7e8998!important;font-weight:850!important;letter-spacing:.6px!important;
+}
+.selection-card > .back-btn{
+  grid-column:1/-1!important;width:100%!important;margin-top:1px!important;
+}
+
+/* Ensure the old generic .blade-card cannot force the new card into its old grid. */
+.game-blade-card.blade-card{
+  display:flex!important;grid-template-columns:none!important;align-items:stretch!important;
+}
+@media(max-width:700px){
+  .selection-screen{padding:14px 9px 22px!important}
+  .selection-header h1{font-size:23px!important}
+  .selection-card{grid-template-columns:1fr!important}
+  .game-blade-card{min-height:182px!important}
+}
+@media(max-width:430px){
+  .selection-header{gap:10px!important}
+  .selection-icon{width:42px!important;height:42px!important;flex-basis:42px!important}
+  .selection-header h1{font-size:20px!important}
+  .blade-stat-grid{gap:5px!important}
+  .mini-stat{padding:6px 5px!important}
+}
