@@ -4149,6 +4149,7 @@ function newBattleLaunchState(side){
         railLoops:0,
         railGrip:0,
         railDirection:0,
+        railRideCommit:0,
         railContactPoint:null,
         railExitCooldown:0,
         railExited:false,
@@ -4329,6 +4330,15 @@ function renderNewBattle(){
               <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
             </svg>
+          </div>
+
+          <div id="battleOrientationNotice"
+               style="margin:7px 0 8px;padding:7px 10px;text-align:center;
+                      border-radius:8px;background:rgba(24,168,74,.12);
+                      border:1px solid rgba(24,168,74,.30);
+                      font-size:12px;font-weight:700;">
+            PLAYER: ${getBattleOrientation().playerSide}
+            · CPU: ${getBattleOrientation().cpuSide}
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
@@ -4818,6 +4828,15 @@ function newBattleFrame(now){
 
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
+function getBattleOrientation(){
+    const cycle=Math.floor((Game.battle?.round||0)/2)%2;
+    return {
+        cycle,
+        playerSide:cycle===0 ? "LEFT" : "RIGHT",
+        cpuSide:cycle===0 ? "RIGHT" : "LEFT"
+    };
+}
+
 function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
@@ -5167,6 +5186,7 @@ function tryNewXRailEngagement(s){
     s.railProgress=nearest.distance/g.total;
     s.railSpeed=railSpeed;
     s.railRideTime=0;
+    s.railRideCommit=0.34;
     s.railTravelDistance=0;
     s.railLoops=0;
 
@@ -5239,7 +5259,7 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>2.35){
+    if((s.railRideTime||0)>1.90){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5266,12 +5286,22 @@ function updateNewXRailRide(s,dt){
     const tiltSupport=1-newBattleClamp((tilt-0.06)/0.34,0,1);
     const stabilitySupport=0.45+stability*0.55;
     const support=
-        speedSupport*0.30+rpmSupport*0.22+tiltSupport*0.28+
-        stabilitySupport*0.12+control*0.05+affinity*0.03;
+        speedSupport*0.30+rpmSupport*0.22+tiltSupport*0.20+
+        stabilitySupport*0.14+control*0.07+affinity*0.07;
 
-    s.railGrip=newBattleClamp(support,0,1);
+    s.railGrip=newBattleClamp(
+        Math.max(s.railGrip||0,support),0,1
+    );
 
-    if(support<0.31||tilt>0.44||stability<0.12||tangentVelocity<0.034){
+    if(s.railRideCommit>0){
+        s.railRideCommit=Math.max(0,s.railRideCommit-dt);
+    }else if(
+        support<0.22 ||
+        tilt>0.62 ||
+        stability<0.08 ||
+        tangentVelocity<0.028 ||
+        rpm<0.08
+    ){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -5280,7 +5310,7 @@ function updateNewXRailRide(s,dt){
     s.railDistance+=direction*travel;
     s.railTravelDistance+=Math.abs(travel);
 
-    if(s.railTravelDistance>g.total*0.78 &&
+    if(s.railTravelDistance>g.total*0.72 &&
        !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
         newXRailRailRelease(s,direction);
         return true;
@@ -5322,7 +5352,7 @@ function newXRailRailRelease(s,direction){
     const speed=Math.max(0.025,s.railSpeed||speedOf(s)*0.78);
 
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
-    s.railGrip=0; s.railDirection=0;
+    s.railGrip=0; s.railDirection=0; s.railRideCommit=0;
 
     const tangential=speed*0.88, normal=Math.max(0.014,speed*0.36);
     const separation=0.078+s.radius*0.10;
@@ -5478,8 +5508,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.024+
-            (stats.mobility||70)*0.000058;
+            0.026+
+            (stats.mobility||70)*0.000064;
 
         const rpmSpeedFactor=
             0.34+
@@ -5487,12 +5517,12 @@ function newPhysicsStep(s,dt){
 
         const physicalSpeedTarget=
             launchMobility*
-            (0.98+0.34*bitAcceleration)*
+            (1.02+0.36*bitAcceleration)*
             rpmSpeedFactor*
-            (0.86+0.24*bitStability)*
+            (0.87+0.24*bitStability)*
             (attackBit
-                ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
-                : 1.08+0.08*attackStat);
+                ? 1.43+0.22*attackStat+0.14*Math.pow(rpm,0.70)
+                : 1.13+0.09*attackStat);
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
@@ -5527,9 +5557,9 @@ function newPhysicsStep(s,dt){
 
         if(attackBit && rpm>0.38 && speedNow>0.001){
             const attackDrive=
-                (0.00036+attackStat*0.00034)*
+                (0.00042+attackStat*0.00038)*
                 Math.pow(rpm,0.82)*
-                (0.74+0.26*s.movementEnergy)*
+                (0.75+0.25*s.movementEnergy)*
                 bitAcceleration;
             s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
             s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
@@ -5619,11 +5649,10 @@ function newPhysicsStep(s,dt){
                 const incomingNormal=s.vx*nx+s.vy*ny;
 
                 if(!tryNewXRailEngagement(s)){
-                    /*
-                      Only bounce when the Bey is actually entering the rail.
-                      Tangential/away movement is allowed to continue normally.
-                    */
-                    if(incomingNormal < -0.0015){
+                    if(
+                        (s.railExitRefractory||0)<=0 &&
+                        incomingNormal < -0.0015
+                    ){
                         bounceOffRail(s,nearest);
                     }
                 }
