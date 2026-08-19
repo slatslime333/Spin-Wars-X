@@ -2975,14 +2975,14 @@ function renderNewBattle(){
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
             <div class="battle-hud-card battle-hud-player">
               <div class="battle-hud-top"><div><strong>${p.blade.name}</strong><span class="battle-side-label">${playerSideLabel}</span></div><span class="battle-hud-role">PLAYER</span></div>
-              <div class="battle-combo-line">${p.blade.name} / ${p.ratchet?.name||""} / ${p.bit.name} <b>META ${p.comboMeta||Game.player.comboMeta||"—"}</b></div>
+              <div class="battle-combo-line">${p.blade.name} / ${p.ratchet?.name||""} / ${p.bit.name} <b>OVERALL ${p.comboMeta||Game.player.comboMeta||"—"}</b></div>
               <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em>%</em></div>
               <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
               <div class="stability-readout">STABILITY <b id="newPlayerStability">${Math.round(p.stability*100)}</b>%</div>
             </div>
             <div class="battle-hud-card battle-hud-cpu">
               <div class="battle-hud-top"><div><strong>${c.blade.name}</strong><span class="battle-side-label">${cpuSideLabel}</span></div><span class="battle-hud-role">CPU</span></div>
-              <div class="battle-combo-line">${c.blade.name} / ${c.ratchet?.name||""} / ${c.bit.name} <b>META ${c.comboMeta||Game.cpu.comboMeta||"—"}</b></div>
+              <div class="battle-combo-line">${c.blade.name} / ${c.ratchet?.name||""} / ${c.bit.name} <b>OVERALL ${c.comboMeta||Game.cpu.comboMeta||"—"}</b></div>
               <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b><em>%</em></div>
               <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
               <div class="stability-readout">STABILITY <b id="newCpuStability">${Math.round(c.stability*100)}</b>%</div>
@@ -3048,10 +3048,23 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
       already entered the finish area; don't replace it with a menu instantly.
     */
     const stadium=document.getElementById("newStadium");
-    if(stadium && (finishType==="Xtreme" || finishType==="Over")){
+    if(stadium){
         const flash=document.createElement("div");
         flash.className=`finish-flash finish-flash-${finishType.toLowerCase()}`;
-        flash.innerHTML=`<div class="finish-lightning lightning-left">⚡</div><div class="finish-lightning lightning-right">⚡</div><div class="finish-flash-kicker">${winner.blade.name}</div><div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div><div class="finish-flash-points">+${finishPoints}</div>`;
+        if(finishType==="Spin Finish"){
+            flash.innerHTML=
+                `<div class="finish-flash-spin-ring"></div>
+                 <div class="finish-flash-kicker">${winner.blade.name}</div>
+                 <div class="finish-flash-main">SPIN FINISH</div>
+                 <div class="finish-flash-points">+1</div>`;
+        }else{
+            flash.innerHTML=
+                `<div class="finish-lightning lightning-left">⚡</div>
+                 <div class="finish-lightning lightning-right">⚡</div>
+                 <div class="finish-flash-kicker">${winner.blade.name}</div>
+                 <div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div>
+                 <div class="finish-flash-points">+${finishPoints}</div>`;
+        }
         stadium.appendChild(flash);
     }
     const commentary=document.getElementById("newCommentary");
@@ -3842,8 +3855,8 @@ function tryNewXRailEngagement(s){
 
     const railContactDistance=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.078+s.radius*0.50
-            : 0.056+s.radius*0.40;
+            ? 0.082+s.radius*0.52
+            : 0.064+s.radius*0.44;
 
     if(Math.sqrt(nearest.dist2)>railContactDistance) return false;
 
@@ -3854,8 +3867,8 @@ function tryNewXRailEngagement(s){
 
     const minimumApproach=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0028+tilt*0.0022+(1-stability)*0.0009
-            : 0.0068+tilt*0.0048+(1-stability)*0.0019;
+            ? 0.0026+tilt*0.0020+(1-stability)*0.0008
+            : 0.0055+tilt*0.0042+(1-stability)*0.0017;
 
     if(approachSpeed<minimumApproach) return false;
 
@@ -3870,15 +3883,15 @@ function tryNewXRailEngagement(s){
 
     const minimumMomentum=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.0028+tilt*0.0018+(1-stability)*0.0011
-            : 0.0058+tilt*0.0028+(1-stability)*0.0020;
+            ? 0.0028+tilt*0.0017+(1-stability)*0.0010
+            : 0.0050+tilt*0.0025+(1-stability)*0.0018;
 
     if(effectiveMomentum<minimumMomentum) return false;
 
     const minimumTangent=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.050-control*0.026-affinity*0.021-rpm*0.046
-            : 0.22-control*0.058-affinity*0.038-rpm*0.070;
+            ? 0.048-control*0.026-affinity*0.021-rpm*0.046
+            : 0.18-control*0.058-affinity*0.038-rpm*0.070;
 
     const maximumApproach=
         0.78+control*0.08+movement*0.05;
@@ -3922,8 +3935,8 @@ function tryNewXRailEngagement(s){
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.82);
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.52+movement*0.20+rpm*0.20+affinity*0.08),
-        0.095,0.300
+        tangentialCarry*(1.58+movement*0.22+rpm*0.22+affinity*0.09),
+        0.115,0.300
     );
 
     s.railDirection=direction;
@@ -3964,38 +3977,36 @@ function newXRailExit(s){
     s.railExitRefractoryPoint={x:exit.x,y:exit.y};
 
     const incomingSpeed=speedOf(s);
+    const approachQuality=newBattleClamp(incomingSpeed/0.18,0,1);
     const exitBias=newBattleClamp(s.railExitBias||0,-0.34,0.34);
 
-    // Exit is not a canned straight-down launch. High-speed, well-aligned
-    // rail rides leave with more forward projection; imperfect approaches
-    // produce a small left/right departure. The center line remains the most
-    // common result.
-    const forwardFactor=
-        0.78+
-        rpm*0.18+
-        newBattleClamp(incomingSpeed/0.16,0,1)*0.18;
+    /*
+      X-Exit is a launch fan, not one fixed vector.
+      0° = straight down the middle.
+      Negative = lower-left.
+      Positive = lower-right.
+      High-speed / well-aligned rides can leave farther off-center;
+      imperfect rides stay closer to the center line.
+    */
+    const spread=
+        0.16+
+        rpm*0.13+
+        approachQuality*0.16;
 
-    const lateralFactor=
-        exitBias*
-        (0.42+rpm*0.48)*
-        (0.80+newBattleClamp(incomingSpeed/0.16,0,1)*0.30);
+    const roll=(Math.random()-0.5)*0.14;
+    const exitAngle=newBattleClamp(
+        (exitBias*0.95+roll)*spread,
+        -0.52,0.52
+    );
 
-    const exitNormalX=-tangentY;
-    const exitNormalY=tangentX;
+    const exitVX=Math.sin(exitAngle)*speed;
+    const exitVY=Math.cos(exitAngle)*speed;
 
     s.x=exit.x;
     s.y=exit.y+0.070;
 
-    s.vx=
-        tangentX*speed*forwardFactor+
-        exitNormalX*speed*lateralFactor;
-    s.vy=
-        Math.max(
-            0.014,
-            speed*forwardFactor*0.92+
-            tangentY*speed*0.16+
-            exitNormalY*speed*lateralFactor
-        );
+    s.vx=exitVX;
+    s.vy=Math.max(0.016,exitVY);
 
     // A little more speed means a more forceful X-Exit launch, but never an
     // uncontrolled teleport or giant velocity spike.
@@ -4022,9 +4033,9 @@ function updateNewXRailRide(s,dt){
 
     // V42: prevent awkward slow rail crawling. A rider must retain enough
     // tangential energy to stay on the rail; otherwise release cleanly.
-    if(s.railEngaged && (s.railRideTime||0)>0.28 && speedOf(s)<0.075){
+    if(s.railEngaged && (s.railRideTime||0)>0.18 && speedOf(s)<0.105){
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.36;
+        s.railReengageCooldown=0.30;
         return false;
     }
     const bp=bitPhysics(s);
@@ -4063,7 +4074,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.052){
+    if(tangentVelocity<0.102){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -4072,9 +4083,9 @@ function updateNewXRailRide(s,dt){
     const railFriction=0.00034+(1-rpm)*0.00052+tilt*0.00028;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
-    if(tangentVelocity<0.075){
+    if(tangentVelocity<0.105){
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.34;
+        s.railReengageCooldown=0.30;
         return false;
     }
 
@@ -4380,8 +4391,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.024+
-            (stats.mobility||70)*0.000058;
+            0.0254+
+            (stats.mobility||70)*0.000060;
 
         const rpmSpeedFactor=
             0.20+
@@ -4394,7 +4405,7 @@ function newPhysicsStep(s,dt){
             (0.86+0.24*bitStability)*
             (attackBit
                 ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
-                : 1.08+0.08*attackStat) *
+                : 1.11+0.08*attackStat) *
             (rpm<0.60 ? 0.76+0.40*(rpm/0.60) : 1.0);
 
         const speedNow=Math.hypot(s.vx,s.vy);
@@ -5599,7 +5610,7 @@ function newPhysicsCollision(dt){
     const pRailAttackMultiplier=pWasOnRail ? 1.22 : 1.0;
     const cRailAttackMultiplier=cWasOnRail ? 1.22 : 1.0;
 
-    const pToCDamage=
+    const pToCDamageRaw=
         baseRPMDamage*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
@@ -5609,7 +5620,7 @@ function newPhysicsCollision(dt){
         (0.86+newBattleClamp(pMomentum/0.035,0,2.2)*0.14)*
         (1-cDef*0.20);
 
-    const cToPDamage=
+    const cToPDamageRaw=
         baseRPMDamage*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
@@ -5618,6 +5629,20 @@ function newPhysicsCollision(dt){
         (0.80+cRPM*0.28)*
         (0.86+newBattleClamp(cMomentum/0.035,0,2.2)*0.14)*
         (1-pDef*0.20);
+
+    /*
+      Every confirmed contact must matter.
+      The floor is intentionally small: at low RPM a Bey still loses a
+      visible amount of spin, but repeated low-energy taps cannot melt it.
+      The floor also applies to X-Rail contacts so rail attacks never report
+      zero damage.
+    */
+    const contactDamageFloor=
+        0.0050+
+        newBattleClamp(effectiveImpact/0.030,0,1)*0.0015;
+
+    const pToCDamage=Math.max(contactDamageFloor,pToCDamageRaw);
+    const cToPDamage=Math.max(contactDamageFloor,cToPDamageRaw);
 
     const __cRpmLoss=pToCDamage;
     const __pRpmLoss=cToPDamage;
