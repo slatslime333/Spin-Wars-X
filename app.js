@@ -539,7 +539,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:36.0,
 
-        card:{ovr:84,attack:68,knockback:82,defense:91,mobility:60,balance:90,stamina:76,burst:91},
+        card:{ovr:84,attack:68,knockback:85,defense:89,mobility:60,balance:88,stamina:76,burst:91},
 
         physics:{
             weightClass:"Heavy",
@@ -845,7 +845,7 @@ const BLADE_ENGINE = {
     aero_pegasus:{name:"Aero Pegasus",type:"Attack",tier:"Gold",spin:"Right",weight:38.3,card:{ovr:96,attack:96,knockback:94,defense:81,mobility:92,balance:87,stamina:87,burst:91},physics:{weightClass:"Very Heavy",centerOfGravity:"Medium",contactShape:"Upper Smash",recoil:"Medium",lockStrength:91,weightDistribution:"Outer"},behavior:{attackStyle:"Smash",smashPower:96,upperPower:82,barragePower:72,counterPower:48,movementControl:88,spinRetention:84,lad:82,burstResistance:91,winConditions:{spin:70,burst:92,knockout:97,counter:58}},compatibility:{heights:{60:96,70:94,80:58},bits:{Rush:99,LowRush:99,Flat:92,LowFlat:94,Level:94,Kick:88,Point:86,HighNeedle:68,Quake:82,Hexa:72,Wedge:55,Ball:70,Orb:74,Elevate:80,Needle:60}},traits:["Versatile","Heavy","Smash","Attack","Stamina"],personality:{aggression:96,control:86,consistency:84,risk:72}},
     leon_crest:{name:"Leon Crest",type:"Defense",tier:"Silver",spin:"Right",weight:35.0,card:{ovr:79,attack:63,knockback:69,defense:95,mobility:50,balance:90,stamina:76,burst:85},physics:{weightClass:"Medium",centerOfGravity:"High",contactShape:"Round",recoil:"Low",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Counter",smashPower:32,upperPower:18,barragePower:36,counterPower:82,movementControl:86,spinRetention:74,lad:76,burstResistance:84,winConditions:{spin:58,burst:64,knockout:24,counter:90}},compatibility:{heights:{60:92,70:84,80:64},bits:{Needle:92,HighNeedle:95,Point:82,Hexa:90,Wedge:88,Ball:86,Orb:84,Elevate:72,Level:68,Rush:38,LowRush:34,Flat:30,LowFlat:28,Kick:48,Quake:30}},traits:["Defense","Round","Counter","Plastic Frame","Stability"],personality:{aggression:20,control:90,consistency:78,risk:20}},
     unicorn_sting:{name:"Unicorn Sting",type:"Balance",tier:"Silver",spin:"Right",weight:33.3,card:{ovr:83,attack:76,knockback:72,defense:84,mobility:64,balance:91,stamina:87,burst:88},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Hybrid",recoil:"Medium",lockStrength:88,weightDistribution:"Outer"},behavior:{attackStyle:"Counter Attack",smashPower:62,upperPower:36,barragePower:64,counterPower:88,movementControl:78,spinRetention:84,lad:86,burstResistance:88,winConditions:{spin:78,burst:76,knockout:48,counter:92}},compatibility:{heights:{60:96,70:82,80:48},bits:{Point:96,Level:88,Hexa:90,Elevate:82,Needle:84,HighNeedle:86,Ball:88,Orb:86,Wedge:80,Rush:68,LowRush:64,Flat:56,LowFlat:54,Kick:82,Quake:50}},traits:["Balance","Counter","Round","Stamina","Versatile"],personality:{aggression:58,control:88,consistency:86,risk:40}},
-    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:73,attack:61,knockback:73,defense:84,mobility:56,balance:79,stamina:75,burst:80},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:82,movementControl:87,spinRetention:72,lad:70,burstResistance:80,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:96,70:88,80:68},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
+    knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,card:{ovr:71,attack:61,knockback:73,defense:78,mobility:56,balance:75,stamina:75,burst:80},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:82,movementControl:87,spinRetention:72,lad:70,burstResistance:80,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:96,70:88,80:68},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
     tyranno_beat:{name:"Tyranno Beat",type:"Attack",tier:"Gold",spin:"Right",weight:37.0,card:{ovr:88,attack:91,knockback:89,defense:72,mobility:84,balance:74,stamina:73,burst:84},physics:{weightClass:"Heavy",centerOfGravity:"Medium",contactShape:"Elliptical",recoil:"High",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Elliptical Smash",smashPower:90,upperPower:58,barragePower:72,counterPower:60,movementControl:84,spinRetention:70,lad:67,burstResistance:84,winConditions:{spin:38,burst:74,knockout:94,counter:68}},compatibility:{heights:{60:96,70:90,80:48},bits:{Quake:98,Flat:94,LowFlat:96,Rush:90,LowRush:88,Point:74,Level:80,Kick:84,HighNeedle:46,Needle:38,Hexa:54,Wedge:46,Ball:30,Orb:34,Elevate:52}},traits:["Attack","Elliptical","Heavy","Smash","Counter Attack","High Recoil"],personality:{aggression:92,control:76,consistency:72,risk:86}},
 
     leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,card:{ovr:76,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:92,70:84,80:66},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
@@ -985,7 +985,7 @@ wedge:{
 
     type:"Defense",
 
-    card:{attack:58,knockback:62,defense:78,mobility:44,balance:84,stamina:82,burst:80},
+    card:{attack:58,knockback:62,defense:74,mobility:54,balance:78,stamina:82,burst:80},
 
     behavior:{speed:48,aggression:30,control:98,staminaRetention:84}
 
@@ -1009,28 +1009,17 @@ needle:{
 
     type:"Defense",
 
-    card:{attack:58,knockback:55,defense:76,mobility:36,balance:81,stamina:88,burst:72},
+    card:{attack:58,knockback:55,defense:66,mobility:36,balance:70,stamina:90,burst:72},
 
     behavior:{speed:38,aggression:20,control:94,staminaRetention:86}
 
 },
 
 ball:{
-
     name:"Ball",
-
     type:"Stamina",
-
     card:{attack:57,knockback:53,defense:72,mobility:42,balance:88,stamina:98,burst:72},
-
     behavior:{speed:46,aggression:18,control:96,staminaRetention:99}
-
-},
-
-free_ball:{
-    name:"Free Ball",type:"Stamina",
-    card:{attack:56,knockback:52,defense:70,mobility:36,balance:90,stamina:94,burst:72},
-    behavior:{speed:38,aggression:12,control:96,staminaRetention:96}
 },
 orb:{
 
@@ -1045,7 +1034,7 @@ orb:{
 },
 
     point:{name:"Point",type:"Balance",card:{attack:74,knockback:68,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
-    high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:72,mobility:40,balance:76,stamina:91,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
+    high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:64,mobility:40,balance:68,stamina:92,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
     quake:{name:"Quake",type:"Attack",card:{attack:80,knockback:75,defense:45,mobility:89,balance:45,stamina:45,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
 
 };
@@ -1070,7 +1059,7 @@ const BIT_PHYSICS = {
     Needle:{movement:20,control:90,spinDrain:.40,xRailAffinity:14,centerAffinity:100,recovery:76,attackBias:-8,acceleration:22,friction:95,precession:18,stability:48},
     "High Needle":{movement:28,control:84,spinDrain:.38,xRailAffinity:20,centerAffinity:96,recovery:72,attackBias:-7,acceleration:30,friction:94,precession:24,stability:42},
     Ball:{movement:30,control:96,spinDrain:.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:32,friction:94,precession:18,stability:94},
-    "Free Ball":{movement:34,control:96,spinDrain:.37,xRailAffinity:22,centerAffinity:94,recovery:96,attackBias:-6,acceleration:36,friction:93,precession:18,stability:92},
+    "":{movement:34,control:96,spinDrain:.37,xRailAffinity:22,centerAffinity:94,recovery:96,attackBias:-6,acceleration:36,friction:93,precession:18,stability:92},
     Orb:{movement:22,control:94,spinDrain:.39,xRailAffinity:14,centerAffinity:98,recovery:88,attackBias:-6,acceleration:28,friction:95,precession:18,stability:90},
     Point:{movement:62,control:84,spinDrain:.76,xRailAffinity:56,centerAffinity:70,recovery:74,attackBias:1,acceleration:62,friction:74,precession:40,stability:68},
     Quake:{movement:88,control:42,spinDrain:1.72,xRailAffinity:72,centerAffinity:22,recovery:30,attackBias:8,acceleration:90,friction:44,precession:70,stability:34}
@@ -1580,23 +1569,27 @@ function getBitPhysicalProfileV56(bit){
     const name=bit?.name||"Point";
     const bp=BIT_PHYSICS[name]||BIT_PHYSICS.Point;
     const b=bit?.behavior||{};
+    /*
+      These are normalized physical roles, not standalone FIFA stats.
+      The combination engine uses them to refine the Blade rather than
+      replacing the Blade's identity.
+    */
     const roles={
-        "Flat":{attack:.86,knockback:.72,defense:.12,balance:.22,stamina:.12,mobility:.96,burst:.80},
-        "Low Flat":{attack:.92,knockback:.78,defense:.08,balance:.18,stamina:.08,mobility:1.00,burst:.80},
-        "Rush":{attack:.68,knockback:.54,defense:.18,balance:.40,stamina:.34,mobility:.90,burst:.80},
-        "Low Rush":{attack:.78,knockback:.62,defense:.14,balance:.30,stamina:.24,mobility:.96,burst:.80},
-        "Taper":{attack:.42,knockback:.32,defense:.22,balance:.54,stamina:.68,mobility:.70,burst:.80},
-        "Kick":{attack:.66,knockback:.64,defense:.18,balance:.32,stamina:.28,mobility:.82,burst:.80},
-        "Quake":{attack:.78,knockback:.70,defense:.08,balance:.16,stamina:.08,mobility:.86,burst:.72},
-        "Ball":{attack:.14,knockback:.10,defense:.24,balance:.56,stamina:1.00,mobility:.30,burst:.30},
-        "Free Ball":{attack:.12,knockback:.08,defense:.26,balance:.60,stamina:.96,mobility:.34,burst:.30},
-        "Orb":{attack:.18,knockback:.14,defense:.24,balance:.50,stamina:.92,mobility:.22,burst:.30},
-        "Needle":{attack:.06,knockback:.05,defense:.18,balance:.22,stamina:.90,mobility:.20,burst:.30},
-        "High Needle":{attack:.06,knockback:.05,defense:.16,balance:.18,stamina:.96,mobility:.28,burst:.30},
-        "Wedge":{attack:.10,knockback:.14,defense:.22,balance:.38,stamina:.86,mobility:.48,burst:.30},
-        "Hexa":{attack:.20,knockback:.12,defense:.28,balance:.64,stamina:.72,mobility:.40,burst:.80},
-        "Point":{attack:.46,knockback:.34,defense:.18,balance:.56,stamina:.66,mobility:.62,burst:.80},
-        "Level":{attack:.50,knockback:.40,defense:.24,balance:.62,stamina:.76,mobility:.72,burst:.80}
+        "Flat":       {attack:.86,knockback:.72,defense:.12,balance:.18,stamina:.10,mobility:.96,burst:.80},
+        "Low Flat":   {attack:.92,knockback:.78,defense:.08,balance:.14,stamina:.06,mobility:1.00,burst:.80},
+        "Rush":       {attack:.68,knockback:.54,defense:.18,balance:.36,stamina:.32,mobility:.90,burst:.80},
+        "Low Rush":   {attack:.78,knockback:.62,defense:.14,balance:.28,stamina:.22,mobility:.96,burst:.80},
+        "Taper":      {attack:.42,knockback:.32,defense:.22,balance:.54,stamina:.68,mobility:.70,burst:.80},
+        "Kick":       {attack:.66,knockback:.64,defense:.18,balance:.32,stamina:.28,mobility:.82,burst:.80},
+        "Quake":      {attack:.82,knockback:.70,defense:.08,balance:.10,stamina:.04,mobility:.86,burst:.80},
+        "Ball":       {attack:.14,knockback:.10,defense:.24,balance:.56,stamina:1.00,mobility:.30,burst:.30},
+        "Orb":        {attack:.18,knockback:.14,defense:.24,balance:.50,stamina:.92,mobility:.22,burst:.30},
+        "Needle":     {attack:.06,knockback:.05,defense:.08,balance:.10,stamina:.90,mobility:.20,burst:.30},
+        "High Needle":{attack:.06,knockback:.05,defense:.06,balance:.08,stamina:.94,mobility:.28,burst:.30},
+        "Wedge":      {attack:.10,knockback:.14,defense:.18,balance:.28,stamina:.84,mobility:.58,burst:.30},
+        "Hexa":       {attack:.20,knockback:.12,defense:.34,balance:.72,stamina:.72,mobility:.40,burst:.80},
+        "Point":      {attack:.46,knockback:.34,defense:.18,balance:.52,stamina:.60,mobility:.62,burst:.80},
+        "Level":      {attack:.50,knockback:.40,defense:.16,balance:.46,stamina:.58,mobility:.72,burst:.80}
     };
     const role=roles[name]||roles.Point;
     return {...role,
@@ -1608,11 +1601,11 @@ function getBitPhysicalProfileV56(bit){
         xRail:(Number(bp.xRailAffinity)||50)/100,
         stableMode:{
             mobility:(name==="Point"||name==="Level")?.36:role.mobility,
-            stamina:name==="Point"?.82:name==="Level"?.86:role.stamina
+            stamina:name==="Point"?.72:name==="Level"?.70:role.stamina
         },
         aggressiveMode:{
-            mobility:(name==="Point"||name==="Level")?.78:role.mobility,
-            stamina:name==="Point"?.54:name==="Level"?.60:role.stamina
+            mobility:(name==="Point"||name==="Level")?.82:role.mobility,
+            stamina:name==="Point"?.48:name==="Level"?.44:role.stamina
         }
     };
 }
@@ -1733,14 +1726,11 @@ function calculateComboStats(blade,ratchet,bit){
     stats.balance-=destabilizationRisk;
     stats.defense-=destabilizationRisk*.55;
 
-    if(bit.name==="Point"){stats.stamina-=1.5;stats.balance+=1.5;}
-    if(bit.name==="Level"){stats.attack+=2;stats.stamina+=1;stats.balance+=1;}
+    // Bit-specific tradeoffs are already encoded in bp. Do not add a second
+    // generic "Defense Bit = Defense/Balance" bonus on top of that model.
+    // Point/Level use continuous behavior in battle; their card stamina is
+    // intentionally moderate so the gimmick does not become free endurance.
     stats.stamina-=Math.max(0,bp.speed-.55)*4+Math.max(0,bp.friction-.65)*5;
-
-    if(bit.name==="Needle"){stats.balance-=3;stats.defense-=2;}
-    if(bit.name==="High Needle"){stats.balance-=4;stats.defense-=2.5;stats.mobility+=2;}
-    if(bit.name==="Wedge"){stats.balance-=2;stats.mobility+=4;}
-    if(bit.name==="Hexa"){stats.stamina-=2;stats.balance+=2;}
 
     const fitDelta=ratchetFit-.50;
     if(bladeData.type==="Attack"){
@@ -1773,7 +1763,7 @@ function calculateComboStats(blade,ratchet,bit){
     const meta=calculateMetaScoreV57(bladeData,ratchet,bit,stats,ratchetFit*heightFit);
     return {stats,compatibility:Math.round((explicitBitFit*.55+heightFit*.25+ratchetFit*.20)*100),ovr,meta,
         physical:{ratchetFit,heightFit,bitFit:explicitBitFit,bladeWeight:bladePhys.weight,
-            bitMode:(bit.name==="Point"||bit.name==="Level")?"launch-dependent":"fixed"}};
+            bitMode:(bit.name==="Point"||bit.name==="Level")?"Physical behavior":"fixed"}};
 }
 
 
@@ -1781,10 +1771,10 @@ function calculateComboStats(blade,ratchet,bit){
  V57 RESEARCH / SYSTEM LOCK
  - 0 Ratchets removed from selectable pool.
  - Elevate removed from selectable Bit pool.
- - Taper and Free Ball restored as distinct parts.
+ - Taper and  restored as distinct parts.
  - Needle/HN: high stamina potential, low real stability; no free Defense/Balance.
  - Wedge: semi-mobile, high stamina, less stable than Ball.
- - Point: launch-dependent stable/aggressive behavior.
+ - Point: Physical behavior stable/aggressive behavior.
  - Level: aggressive early behavior can transition conservative.
  - Rush: mobile/control-oriented attack Bit with less raw aggression than Flat.
  - Low Rush: similar to Rush, lower and more consistent, with decent endurance.
@@ -3572,6 +3562,33 @@ function speedOf(s){
 }
 
 
+function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
+    const n=bit?.name||"";
+    const r=newBattleClamp((Number(rpm)||0)/100,0,1);
+    const s=newBattleClamp((Number(stability)||0)/100,0,1);
+    const tilt=newBattleClamp(Math.abs(Number(currentTilt)||0),0,1);
+
+    if(n==="Point"){
+        const aggression=newBattleClamp(0.10+tilt*0.72+(1-s)*0.18,0,1);
+        return {
+            mode:aggression>0.58?"aggressive":"stable",
+            aggression,
+            mobility:0.30+aggression*0.58,
+            staminaEfficiency:1-aggression*0.30
+        };
+    }
+    if(n==="Level"){
+        const aggression=newBattleClamp(0.06+tilt*0.56+(1-s)*0.20+(1-r)*0.12,0,1);
+        return {
+            mode:aggression>0.62?"aggressive":"stable",
+            aggression,
+            mobility:0.34+aggression*0.50,
+            staminaEfficiency:1-aggression*0.24
+        };
+    }
+    return null;
+}
+
 function getBattleStat(s,key,fallback=70){
     const value=Number(s?.stats?.[key]);
     if(!Number.isFinite(value)) return Math.max(60,Math.min(99,fallback))/99;
@@ -4057,9 +4074,31 @@ function newPhysicsStep(s,dt){
         const control = (bp.control||60)/100;
 
         // Stamina is spin efficiency, not a free speed bonus.
-        const staminaEfficiency=0.70+stamina*0.52;
+        const staminaEfficiency=(0.70+stamina*0.52)*
+            (s.dynamicBitStaminaEfficiency||1);
         const centerAffinity = (bp.centerAffinity||60)/100;
-        const movement = (bp.movement||60)/100;
+        let movement = (bp.movement||60)/100;
+
+        // Point and Level are continuous physical behaviors. Their state
+        // changes with actual tilt, RPM and stability during the battle;
+        // there is no separate "launch mode" toggle.
+        const dynamicBit=getDynamicBitBehavior(
+            s.bit,
+            s.rpm*100,
+            s.stability*100,
+            s.tiltLevel||0
+        );
+        if(dynamicBit){
+            movement=dynamicBit.mobility;
+            s.dynamicBitMode=dynamicBit.mode;
+            s.dynamicBitAggression=dynamicBit.aggression;
+            s.dynamicBitStaminaEfficiency=dynamicBit.staminaEfficiency;
+        }else{
+            s.dynamicBitMode=null;
+            s.dynamicBitAggression=0;
+            s.dynamicBitStaminaEfficiency=1;
+        }
+
         const attackBit = movement>=0.80;
         const attackStat=getBattleStat(s,"attack");
         const knockbackStat=getBattleStat(s,"knockback");
