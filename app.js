@@ -930,7 +930,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:80,knockback:70,defense:54,mobility:88,balance:70,stamina:68,burst:80},
+        card:{attack:82,knockback:70,defense:57,mobility:88,balance:76,stamina:65,burst:80},
 
         behavior:{speed:98,aggression:88,control:78,staminaRetention:68}
 
@@ -942,7 +942,7 @@ const BIT_ENGINE = {
 
     type:"Attack",
 
-    card:{attack:82,knockback:72,defense:54,mobility:90,balance:69,stamina:71,burst:80},
+    card:{attack:84,knockback:71,defense:55,mobility:91,balance:77,stamina:62,burst:80},
 
     behavior:{speed:100,aggression:98,control:64,staminaRetention:52}
 
@@ -1008,7 +1008,7 @@ needle:{
 
     type:"Defense",
 
-    card:{attack:58,knockback:55,defense:66,mobility:36,balance:70,stamina:90,burst:72},
+    card:{attack:58,knockback:55,defense:58,mobility:36,balance:58,stamina:91,burst:72},
 
     behavior:{speed:38,aggression:20,control:94,staminaRetention:86}
 
@@ -1033,8 +1033,8 @@ orb:{
 },
 
     point:{name:"Point",type:"Balance",card:{attack:74,knockback:68,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
-    high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:64,mobility:40,balance:68,stamina:92,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
-    quake:{name:"Quake",type:"Attack",card:{attack:80,knockback:75,defense:45,mobility:89,balance:45,stamina:45,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
+    high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:54,mobility:40,balance:54,stamina:94,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
+    quake:{name:"Quake",type:"Attack",card:{attack:87,knockback:83,defense:45,mobility:89,balance:42,stamina:38,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
 
 };
 
@@ -1048,20 +1048,19 @@ orb:{
 const BIT_PHYSICS = {
     Flat:{movement:96,control:48,spinDrain:1.55,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
     "Low Flat":{movement:100,control:43,spinDrain:1.70,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
-    Rush:{movement:91,control:72,spinDrain:1.08,xRailAffinity:88,centerAffinity:42,recovery:58,attackBias:6,acceleration:86,friction:48,precession:60,stability:52},
-    "Low Rush":{movement:95,control:66,spinDrain:1.18,xRailAffinity:93,centerAffinity:32,recovery:54,attackBias:9,acceleration:94,friction:42,precession:70,stability:45},
+    Rush:{movement:91,control:72,spinDrain:1.05,xRailAffinity:88,centerAffinity:42,recovery:60,attackBias:5,acceleration:86,friction:48,precession:58,stability:54},
+    "Low Rush":{movement:94,control:70,spinDrain:1.10,xRailAffinity:93,centerAffinity:35,recovery:58,attackBias:8,acceleration:93,friction:43,precession:66,stability:50},
     Taper:{movement:68,control:84,spinDrain:.82,xRailAffinity:58,centerAffinity:60,recovery:72,attackBias:1,acceleration:64,friction:66,precession:44,stability:68},
     Level:{movement:72,control:84,spinDrain:.78,xRailAffinity:64,centerAffinity:62,recovery:76,attackBias:3,acceleration:68,friction:70,precession:42,stability:72},
     Kick:{movement:82,control:62,spinDrain:1.16,xRailAffinity:78,centerAffinity:36,recovery:52,attackBias:7,acceleration:82,friction:52,precession:58,stability:48},
     Wedge:{movement:48,control:78,spinDrain:.60,xRailAffinity:34,centerAffinity:86,recovery:72,attackBias:-3,acceleration:48,friction:88,precession:30,stability:55},
     Hexa:{movement:40,control:96,spinDrain:.68,xRailAffinity:34,centerAffinity:94,recovery:88,attackBias:-4,acceleration:42,friction:86,precession:24,stability:88},
-    Needle:{movement:20,control:90,spinDrain:.40,xRailAffinity:14,centerAffinity:100,recovery:76,attackBias:-8,acceleration:22,friction:95,precession:18,stability:48},
-    "High Needle":{movement:28,control:84,spinDrain:.38,xRailAffinity:20,centerAffinity:96,recovery:72,attackBias:-7,acceleration:30,friction:94,precession:24,stability:42},
+    Needle:{movement:18,control:86,spinDrain:.40,xRailAffinity:14,centerAffinity:100,recovery:82,attackBias:-8,acceleration:20,friction:95,precession:24,stability:34},
+    "High Needle":{movement:27,control:80,spinDrain:.37,xRailAffinity:20,centerAffinity:96,recovery:84,attackBias:-7,acceleration:29,friction:94,precession:30,stability:30},
     Ball:{movement:30,control:96,spinDrain:.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:32,friction:94,precession:18,stability:94},
-    "":{movement:34,control:96,spinDrain:.37,xRailAffinity:22,centerAffinity:94,recovery:96,attackBias:-6,acceleration:36,friction:93,precession:18,stability:92},
     Orb:{movement:22,control:94,spinDrain:.39,xRailAffinity:14,centerAffinity:98,recovery:88,attackBias:-6,acceleration:28,friction:95,precession:18,stability:90},
     Point:{movement:62,control:84,spinDrain:.76,xRailAffinity:56,centerAffinity:70,recovery:74,attackBias:1,acceleration:62,friction:74,precession:40,stability:68},
-    Quake:{movement:88,control:42,spinDrain:1.72,xRailAffinity:72,centerAffinity:22,recovery:30,attackBias:8,acceleration:90,friction:44,precession:70,stability:34}
+    Quake:{movement:89,control:40,spinDrain:1.88,xRailAffinity:75,centerAffinity:20,recovery:24,attackBias:11,acceleration:92,friction:43,precession:74,stability:30}
 };
 
 function getBitPhysics(blader){
@@ -1150,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V113 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">gay · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -1369,17 +1368,20 @@ function ratchetCard(r){
     const exposure=p.exposure>.65?"HIGH":p.exposure>.45?"MEDIUM":"LOW";
     const mass=p.weight>=6.8?"HEAVY":p.weight>=6.4?"MEDIUM":"LIGHT";
     const desc={
-        1:"One large contact point. Excellent for attack, with niche defensive/recovery value on low stamina builds.",
-        3:"Three-sided geometry can line up with three-sided Blades; versatile, but alignment matters.",
+        1:"Universal workhorse: asymmetric mass can add attack and impact, while its low profile works across many archetypes.",
+        3:"Versatile three-sided geometry; alignment can create useful attack, balance or stamina combinations.",
         4:"Niche four-sided option. Low height can work, but exposed protrusions make Burst risk high.",
-        5:"Stability/balance specialist. Helps imbalanced Blades, but can hurt already-stable stamina setups.",
-        6:"Circular six-sided shape gives useful balance and LAD without being universally optimal.",
-        7:"Heavy, round and stable. Broadly useful, especially when a Blade benefits from added mass.",
-        9:"Compact and burst-resistant. Strong general-purpose choice, but not automatically best for every Blade."
+        5:"Niche balance specialist. It can correct certain weight distributions, but can hurt already-stable builds.",
+        6:"Versatile circular shape that can add balance and LAD without being a universal best choice.",
+        7:"Universal heavy round workhorse: adds mass, stability and useful low-height performance to many archetypes.",
+        9:"Universal compact workhorse: low exposure and good balance make it useful across attack, balance and stamina."
     }[r.number]||"Physical Ratchet geometry changes height, contact and Burst behavior.";
     return createPartCard({title:r.name,subtitle:`${shape} · ${heightNote}`,
         accentClass:`ratchet-card ratchet-${r.number}`,
-        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",r.number===5?"NICHE":r.number===4?"RISKY":"SPECIALIZED"]],
+        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",
+            r.number===5?"NICHE":
+            r.number===4?"RISKY":
+            (r.number===1||r.number===7||r.number===9)?"UNIVERSAL":"VERSATILE"]],
         extra:`<span class="part-index">${r.number}</span>`,
         description:desc,
         onClick:()=>{Game.player.ratchet=r;showBitDraft();}});
@@ -1789,6 +1791,7 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
 
     // 1-60 attack identity.
     if(ratchet.number===1 && height===60 && bladeType==="Attack") signature+=1.80;
+    if((ratchet.number===1||ratchet.number===7||ratchet.number===9) && height===60) signature+=.18;
 
     // 1-60 defensive/recovery identity. This is the physical reason Wizard Rod
     // 1-60 Hexa can reach the absolute ceiling without making every 1-60 combo
@@ -1804,9 +1807,10 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     // balance correction, especially with pointy/stability-oriented Bits.
     if(ratchet.number===5 && phys.stability<.55 &&
        (bitName==="Needle"||bitName==="High Needle"||bitName==="Hexa"||bitName==="Wedge")){
-        signature+=.75;
+        signature+=.90;
     }
-    if(ratchet.number===5 && phys.stability>.68 && (bitName==="Ball"||bitName==="Orb")) signature-=1.0;
+    if(ratchet.number===5 && phys.stability>.68) signature-=.18;
+    if(ratchet.number===5 && (bitName==="Ball"||bitName==="Orb") && phys.stability>.68) signature-=.85;
 
     // Broadly useful circular ratchets receive small, not dominant, bonuses.
     if((ratchet.number===3||ratchet.number===7)&&height===60&&shapeHasRoundOrTriShape(blade)) signature+=.45;
@@ -1953,120 +1957,61 @@ function calculateComboStats(blade,ratchet,bit){
 // COMBO CARD
 //=========================
 
-function showComboCard(){
-
-    const combo = calculateComboStats(
-    Game.player.blade,
-    Game.player.ratchet,
-    Game.player.bit
-);
-
-    const blade = Game.player.blade;
-
-    const app = document.getElementById("app");
-
-    app.innerHTML = `
-    
-    <div class="background"></div>
-
-    <main class="menu">
-
-        <div class="logo">
-
-            <div class="logo-icon">⚔</div>
-
-            <h1>YOUR COMBO</h1>
-
-        </div>
-
-        <section class="menu-card">
-
-            <div class="blade-name">
-
-                ${blade.name}
-
-            </div>
-
-            <div class="blade-type">
-
-                ${blade.type}
-
-            </div>
-
-            <br>
-
-            <h2>META ${combo.meta}</h2>
-
-          <h3>OVR ${combo.ovr}</h3>
-
-          <p class="combo-stat-note">Attack = RPM damage · Knockback = displacement · Mobility = movement · Defense = stability · Balance = recovery · Stamina = spin efficiency</p>
-
-            <hr>
-
-            <p>⚔ Attack: ${combo.stats.attack}</p>
-
-            <p>💥 Knockback: ${combo.stats.knockback}</p>
-
-            <p>🛡 Defense: ${combo.stats.defense}</p>
-
-            <p>🌀 Mobility: ${combo.stats.mobility}</p>
-            
-            <p>⚖ Balance: ${combo.stats.balance}</p>
-
-            <p>🔋 Stamina: ${combo.stats.stamina}</p>
-
-            <hr>
-
-            <p><strong>Ratchet:</strong> ${Game.player.ratchet.name}</p>
-
-            <p><strong>Bit:</strong> ${Game.player.bit.name}</p>
-
-            <br>
-
-            <button
-                class="menu-btn gold"
-                id="battleButton">
-
-                START BATTLE
-
-            </button>
-
-        </section>
-
-    </main>
-
-    `;
-
-    const battleButton=document.getElementById("battleButton");
-    if(battleButton){
-        battleButton.type="button";
-        battleButton.onclick=(event)=>{
-            event?.preventDefault?.();
-
-            if(!Game.player.blade || !Game.player.ratchet || !Game.player.bit){
-                console.error("Start Battle blocked: player combo is incomplete.");
-                return;
-            }
-
-            showVS();
-        };
+function createComboSummaryCard(side,combo,launchQuality){
+    const isPlayer=side==="player";
+    const stats=combo.stats||{};
+    for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
+        if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
-const menuCard=document.querySelector(".menu-card");
-
-menuCard.appendChild(
-
-    createBackButton(()=>{
-
-        showBitDraft();
-
-    })
-
-);
-
-} 
+    return `<article class="combo-summary-card ${isPlayer?"combo-side-player":"combo-side-cpu"}">
+      <div class="combo-summary-head">
+        <div><span class="combo-summary-label">${isPlayer?"PLAYER COMBO":"CPU COMBO"}</span>
+          <h2>${combo.blade.name}</h2>
+          <div class="combo-summary-parts"><span>${combo.blade.type}</span><span>${combo.ratchet.name}</span><span>${combo.bit.name}</span></div>
+        </div>
+        <div class="combo-summary-ratings"><div><small>OVR</small><b>${combo.ovr}</b></div><div><small>META</small><b>${combo.meta}</b></div></div>
+      </div>
+      <div class="combo-summary-stats">
+        <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
+        <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
+      </div>
+      ${!isPlayer?`<div class="cpu-quality-row"><span>CPU LAUNCH QUALITY</span><strong>${launchQuality||"—"}</strong></div>`:""}
+    </article>`;
+}
+function showComboCard(){
+    const playerCombo=calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
+    if(!Game.cpu?.blade||!Game.cpu?.ratchet||!Game.cpu?.bit) generateCPUCombo();
+    Game.cpu.launch=Game.cpu.launch||{};
+    if(!Game.cpu.launch.quality) rollLaunchQuality("cpu");
+    const cpuCombo=calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background"></div><main class="menu combo-review-screen">
+      <div class="selection-header combo-review-header"><div class="selection-icon">⚔</div><div><span class="eyebrow">BATTLE REVIEW</span><h1>COMBO CHECK</h1><p>Know the matchup before you launch.</p></div></div>
+      <section class="combo-matchup-grid">
+        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta},"")}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta},Game.cpu.launch.quality)}
+      </section>
+      <section class="combo-review-note"><span>STAT KEY</span><p>Attack = RPM damage · Knockback = displacement · Defense = stability · Mobility = movement · Balance = recovery · Stamina = spin efficiency.</p></section>
+      <section class="combo-review-actions"><button class="menu-btn gold" id="battleButton" type="button">START BATTLE</button></section>
+    </main>`;
+    const battleButton=document.getElementById("battleButton");
+    if(battleButton) battleButton.onclick=(event)=>{
+        event?.preventDefault?.();
+        if(!Game.player.blade||!Game.player.ratchet||!Game.player.bit||!Game.cpu.blade||!Game.cpu.ratchet||!Game.cpu.bit){
+            console.error("Start Battle blocked: matchup data is incomplete."); return;
+        }
+        showVS();
+    };
+    const menu=document.querySelector(".combo-review-screen");
+    if(menu) menu.appendChild(createBackButton(()=>showBitDraft()));
+}
 
 //=========================
 // CPU DRAFT
+//=========================
+
+
+
 //=========================
 
 
@@ -2109,7 +2054,9 @@ function generateCPUCombo(){
 
 
 function showVS(){
-    generateCPUCombo();
+    if(!Game.cpu?.blade||!Game.cpu?.ratchet||!Game.cpu?.bit) generateCPUCombo();
+    Game.cpu.launch=Game.cpu.launch||{};
+    if(!Game.cpu.launch.quality) rollLaunchQuality("cpu");
     assignStadiumSides();
 
     // Match is first-to-7 points. Only initialize this when creating the
@@ -2527,10 +2474,11 @@ function getAutomaticLaunchPlan(side){
         (stats.stamina||70)*0.15 +
         (personality.consistency||50)*0.40;
     const qualityRoll=qualityBase + (Math.random()*14-7);
-    const quality=qualityRoll>=92?"Perfect":
+    const rolledQuality=qualityRoll>=92?"Perfect":
         qualityRoll>=82?"Good":
         qualityRoll>=68?"Okay":
         qualityRoll>=55?"Bad":"Horrible";
+    const quality=side==="cpu" ? (Game.cpu?.launch?.quality||rolledQuality) : (Game.player?.launch?.quality||rolledQuality);
 
     return {technique,angle,quality};
 }
@@ -3020,25 +2968,17 @@ function renderNewBattle(){
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-            <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;">
-              <strong>${p.blade.name}</strong><br>
-              <span style="opacity:.68">${playerSideLabel}</span>
-              · RPM <span id="newPlayerRPM">${Math.round(p.rpm*100)}</span>%
-              · Stability <span id="newPlayerStability">${Math.round(p.stability*100)}</span>%
-              <div class="battle-stat-line">
-                ATK ${p.stats.attack} · KB ${p.stats.knockback} · DEF ${p.stats.defense}<br>
-                MOB ${p.stats.mobility} · BAL ${p.stats.balance} · STA ${p.stats.stamina}
-              </div>
+            <div class="battle-hud-card battle-hud-player">
+              <div class="battle-hud-top"><div><strong>${p.blade.name}</strong><span class="battle-side-label">${playerSideLabel}</span></div><span class="battle-hud-role">PLAYER</span></div>
+              <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em>%</em></div>
+              <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
+              <div class="stability-readout">STABILITY <b id="newPlayerStability">${Math.round(p.stability*100)}</b>%</div>
             </div>
-            <div style="padding:9px;background:rgba(255,255,255,.05);border-radius:8px;text-align:right;">
-              <strong>${c.blade.name}</strong><br>
-              <span style="opacity:.68">${cpuSideLabel}</span>
-              · RPM <span id="newCpuRPM">${Math.round(c.rpm*100)}</span>%
-              · Stability <span id="newCpuStability">${Math.round(c.stability*100)}</span>%
-              <div class="battle-stat-line">
-                ATK ${c.stats.attack} · KB ${c.stats.knockback} · DEF ${c.stats.defense}<br>
-                MOB ${c.stats.mobility} · BAL ${c.stats.balance} · STA ${c.stats.stamina}
-              </div>
+            <div class="battle-hud-card battle-hud-cpu">
+              <div class="battle-hud-top"><div><strong>${c.blade.name}</strong><span class="battle-side-label">${cpuSideLabel}</span></div><span class="battle-hud-role">CPU</span></div>
+              <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b><em>%</em></div>
+              <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
+              <div class="stability-readout">STABILITY <b id="newCpuStability">${Math.round(c.stability*100)}</b>%</div>
             </div>
           </div>
 
@@ -3206,8 +3146,8 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0072;
-    const railEntry=recentRailExit && speed>=0.075 && force>=0.0025;
+    const impactEntry=recentImpact && force>=0.0078;
+    const railEntry=recentRailExit && speed>=0.078 && force>=0.0027;
 
     // V55 FINISH QUALIFICATION
     // A Bey must actually enter the finish zone with meaningful momentum
@@ -3238,13 +3178,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.052 &&
-            alignment>=0.40;
+            speed>=0.055 &&
+            alignment>=0.43;
 
         const railQualified=
             railEntry &&
-            speed>=0.078 &&
-            alignment>=0.40;
+            speed>=0.081 &&
+            alignment>=0.43;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3281,15 +3221,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.050 &&
-            outward>=0.0055 &&
-            alignment>=0.39;
+            speed>=0.053 &&
+            outward>=0.0060 &&
+            alignment>=0.42;
 
         const railQualified=
             railEntry &&
-            speed>=0.074 &&
-            outward>=0.005 &&
-            alignment>=0.38;
+            speed>=0.077 &&
+            outward>=0.0055 &&
+            alignment>=0.41;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3406,7 +3346,7 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.56;
+            const life=0.78;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -3509,13 +3449,13 @@ function newBattleFrame(now){
                     playerDamageText.setAttribute("x",String(x));
                     playerDamageText.setAttribute("y",String(y-8-u*8));
                     playerDamageText.textContent=pLoss>0.0005?`-${Math.round(pLoss*100)} RPM`:"";
-                    playerDamageText.setAttribute("opacity",String(pLoss>0.0005?Math.max(0,1-u*1.35):0));
+                    playerDamageText.setAttribute("opacity",String(pLoss>0.0005?Math.max(0,1-u*1.08):0));
                 }
                 if(cpuDamageText){
                     cpuDamageText.setAttribute("x",String(x));
                     cpuDamageText.setAttribute("y",String(y+2-u*8));
                     cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
-                    cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.35):0));
+                    cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.08):0));
                 }
              }else{
                 impactGroup.setAttribute("opacity","0");
@@ -3539,6 +3479,14 @@ function newBattleFrame(now){
         ]){
             const el=document.getElementById(id);
             if(el) el.textContent=Math.round(v*100);
+        }
+        for(const [id,v] of [["newPlayerRPMBar",p.rpm],["newCpuRPMBar",c.rpm]]){
+            const bar=document.getElementById(id);
+            if(bar){
+                const pct=Math.max(0,Math.min(100,v*100));
+                bar.style.width=`${pct}%`;
+                bar.setAttribute("aria-valuenow",String(Math.round(pct)));
+            }
         }
 
         /*
@@ -4729,7 +4677,7 @@ function newPhysicsStep(s,dt){
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.56+0.44*(1-centerAffinity));
+                    : (0.24+0.30*(1-centerAffinity));
 
             const lateralStrength=
                 (0.00014+movement*0.00042)*
@@ -4805,21 +4753,30 @@ function newPhysicsStep(s,dt){
           central battle area. This is a continuous force, not a hard target
           and not a teleport, so they can still drift and collide naturally.
         */
-        if(r>0.08 && rpm>0.12){
+        if(r>0.08 && rpm>0.20){
             const lowRpmCenterBoost=
-                rpm<0.60 ? 1.0+((0.60-rpm)/0.60)*2.20 : 1.0;
+                rpm<0.72 ? 1.0+((0.72-rpm)/0.72)*2.55 : 1.0;
             const typeCenterBoost=
-                !attackBit ? 1.0 : (rpm<0.42 ? 0.72 : 0.34);
+                !attackBit ? 1.35 : (rpm<0.42 ? 0.72 : 0.34);
 
             const centerStrength=
-                (0.00034+centerAffinity*0.00062)*
-                (0.62+0.38*rpm)*
-                (0.78+0.22*s.movementEnergy)*
+                (0.00040+centerAffinity*0.00076)*
+                (0.58+0.42*rpm)*
+                (0.76+0.24*s.movementEnergy)*
                 lowRpmCenterBoost*
                 typeCenterBoost;
 
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
+
+            if(!attackBit && r<0.42 && rpm<0.68){
+                const centralDamp=1-newBattleClamp(
+                    0.018+(0.68-rpm)*0.045+centerAffinity*0.012,
+                    0.018,0.065
+                );
+                s.vx*=centralDamp;
+                s.vy*=centralDamp;
+            }
         }
 
         /*
@@ -5019,20 +4976,22 @@ function newPhysicsStep(s,dt){
 
                 const restitution=
                     newBattleClamp(
-                        0.16+
-                        balance*0.14+
-                        control*0.07+
-                        wallImpactQuality*0.045+
-                        ((s.mass||1)-1)*0.04,
-                        0.16,0.46
+                        0.12+
+                        balance*0.10+
+                        control*0.045+
+                        wallImpactQuality*0.035+
+                        ((s.mass||1)-1)*0.025,
+                        0.12,0.34
                     );
 
+                // Wall friction makes the impact feel planted instead of
+                // turning a hard strike into a long floating glide.
                 const tangentRetention =
                     newBattleClamp(
-                        0.52+
-                        control*0.16,
-                        0.52,
-                        0.70
+                        0.38+
+                        control*0.12,
+                        0.38,
+                        0.52
                     );
 
                 const bouncedNormal =
