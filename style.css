@@ -575,3 +575,43 @@ button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
     .tier-menu-card{min-height:145px;padding:13px}.tier-menu-card strong{font-size:16px}.tier-menu-card small{font-size:8px}
     .menu-feature{min-width:100%}
 }
+
+/* V54 LIVE STAT READOUT */
+.battle-stat-line{
+    margin-top:5px;
+    padding-top:5px;
+    border-top:1px solid rgba(255,255,255,.07);
+    font-size:8px;
+    line-height:1.45;
+    letter-spacing:.15px;
+    color:#9aa6b5;
+}
+
+/* V58 PART GIMMICK DESCRIPTIONS */
+.part-description{
+  width:100%!important;
+  margin:8px 0 0!important;
+  padding:7px 8px!important;
+  border-radius:7px!important;
+  background:rgba(7,11,17,.42)!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  color:#aab5c4!important;
+  font-size:8px!important;
+  line-height:1.35!important;
+  text-align:left!important;
+}
+
+/* V58 POLISH — matchup review + official-style RPM HUD */
+.combo-review-screen{max-width:980px!important}.combo-review-header{margin-bottom:14px}
+.combo-matchup-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.combo-summary-card{position:relative;padding:16px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:linear-gradient(145deg,rgba(27,35,47,.98),rgba(12,17,24,.98));box-shadow:0 12px 30px rgba(0,0,0,.22);overflow:hidden}
+.combo-summary-card:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:#6e7b8d}.combo-side-player:before{background:#35d26b}.combo-side-cpu:before{background:#ff4b4b}
+.combo-summary-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.combo-summary-label{display:block;font-size:9px;font-weight:900;letter-spacing:.16em;opacity:.62;margin-bottom:4px}.combo-summary-card h2{margin:0;font-size:24px;line-height:1.05}
+.combo-summary-parts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.combo-summary-parts span{padding:4px 7px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.045);font-size:9px;font-weight:800;opacity:.82}
+.combo-summary-ratings{display:flex;gap:7px}.combo-summary-ratings div{min-width:52px;padding:7px 8px;text-align:center;border-radius:10px;background:rgba(255,255,255,.06)}.combo-summary-ratings small{display:block;font-size:8px;opacity:.58;letter-spacing:.08em}.combo-summary-ratings b{display:block;font-size:22px;line-height:1;margin-top:3px}
+.combo-summary-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}.combo-summary-stats span{display:flex;justify-content:space-between;padding:7px 8px;border-radius:8px;background:rgba(5,9,14,.45);border:1px solid rgba(255,255,255,.055);font-size:9px;opacity:.82}.combo-summary-stats b{font-size:11px;opacity:1}
+.cpu-quality-row{display:flex;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-size:9px;letter-spacing:.08em}.cpu-quality-row strong{color:#ff6b6b}
+.combo-review-note{margin-top:12px;padding:10px 13px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.035)}.combo-review-note span{font-size:8px;letter-spacing:.15em;font-weight:900;opacity:.55}.combo-review-note p{margin:4px 0 0;font-size:10px;line-height:1.4;opacity:.68}.combo-review-actions{margin-top:12px}.combo-review-actions .menu-btn{width:100%}
+.battle-hud-card{padding:10px 11px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:linear-gradient(145deg,rgba(26,34,45,.98),rgba(12,17,23,.98));box-shadow:0 8px 18px rgba(0,0,0,.18)}.battle-hud-player{border-left:3px solid #35d26b}.battle-hud-cpu{border-right:3px solid #ff4b4b}.battle-hud-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.battle-hud-top strong{display:block;font-size:12px;line-height:1.1}.battle-side-label{display:block;margin-top:3px;font-size:8px;letter-spacing:.12em;opacity:.52}.battle-hud-role{font-size:8px;font-weight:900;letter-spacing:.13em;opacity:.5}
+.rpm-readout{display:flex;align-items:baseline;gap:4px;margin-top:8px}.rpm-readout span{font-size:8px;font-weight:900;letter-spacing:.12em;opacity:.55}.rpm-readout b{font-size:23px;line-height:1;margin-left:auto}.rpm-readout em{font-size:9px;font-style:normal;opacity:.55}.rpm-bar-shell{height:8px;margin-top:7px;border-radius:999px;background:#070b10;border:1px solid rgba(255,255,255,.11);overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.65)}.rpm-bar-fill{width:100%;height:100%;border-radius:999px;transition:width .08s linear;box-shadow:0 0 9px rgba(255,255,255,.13)}.rpm-bar-player{background:linear-gradient(90deg,#1d9e52,#35d26b)}.rpm-bar-cpu{background:linear-gradient(90deg,#c93434,#ff4b4b)}.stability-readout{margin-top:6px;font-size:8px;letter-spacing:.10em;opacity:.55}.stability-readout b{font-size:9px;opacity:1}
+@media(max-width:700px){.combo-matchup-grid{grid-template-columns:1fr}.combo-summary-card h2{font-size:20px}.combo-summary-stats{grid-template-columns:repeat(2,1fr)}}
