@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 0.6.4
+ Version 0.6.5
 ==================================*/
 
 //=========================
@@ -9,7 +9,7 @@
 
 const Game = {
 
-    version:"0.6.4",
+    version:"0.6.5",
 
     screen:"menu",
 
@@ -926,6 +926,11 @@ function normalizeHeightCompatibility(){
     });
 }
 normalizeHeightCompatibility();
+// V56 UI compatibility: Ratchet cards read the physical profile.
+RATCHETS.forEach(r=>{
+    if(!r.physics) r.physics=getRatchetProfile(r).base;
+});
+
 
 const BIT_ENGINE = {
 
@@ -1113,6 +1118,285 @@ function getBitPhysics(blader){
 
 
 
+
+
+function renderMainMenu(){
+    Game.screen="menu";
+    const app=document.getElementById("app");
+    if(!app) return;
+
+    app.innerHTML=`
+    <div class="background"></div>
+    <main class="main-menu-shell">
+        <section class="main-menu-hero">
+            <div class="hero-mark">
+                <div class="hero-ring hero-ring-a"></div>
+                <div class="hero-ring hero-ring-b"></div>
+                <div class="hero-core"></div>
+            </div>
+            <div class="hero-copy">
+                <span class="hero-kicker">XTREME GEAR BATTLE SIMULATOR</span>
+                <h1>SPIN WARS <em>X</em></h1>
+                <p>Build your combo. Choose your launch. Let it rip.</p>
+            </div>
+            <div class="hero-status"><span></span> SIMULATION READY</div>
+        </section>
+
+        <section class="battle-select">
+            <div class="section-head">
+                <div>
+                    <span class="section-kicker">BATTLE SELECT</span>
+                    <h2>Choose your battle pool</h2>
+                </div>
+                <span class="section-count">04 MODES</span>
+            </div>
+
+            <div class="tier-menu-grid">
+                <button class="tier-menu-card tier-menu-bronze" data-mode="bronze">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">01 · BRONZE</span>
+                    <strong>BRONZE</strong>
+                    <small>Build with the entry pool</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-silver" data-mode="silver">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">02 · SILVER</span>
+                    <strong>SILVER</strong>
+                    <small>Stronger parts. Tougher battles.</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-gold" data-mode="gold">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">03 · GOLD / DIAMOND</span>
+                    <strong>GOLD / DIAMOND</strong>
+                    <small>Top-tier competitive pool</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+
+                <button class="tier-menu-card tier-menu-custom" data-mode="custom">
+                    <div class="tier-card-glow"></div>
+                    <span class="tier-code">04 · CUSTOM LAB</span>
+                    <strong>CUSTOM</strong>
+                    <small>Build any combination</small>
+                    <span class="tier-arrow">→</span>
+                </button>
+            </div>
+        </section>
+
+        <section class="main-menu-lower">
+            <div class="menu-feature">
+                <span class="feature-icon">◈</span>
+                <div><b>PHYSICS SIMULATION</b><small>Movement, impact, RPM and X-Rail behavior</small></div>
+            </div>
+            <div class="menu-feature">
+                <span class="feature-icon">◎</span>
+                <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
+            </div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+        </section>
+    </main>`;
+}
+
+function hookMenuButtons(){
+    renderMainMenu();
+
+    document.querySelectorAll(".tier-menu-card[data-mode]").forEach(button=>{
+        button.onclick=()=>{
+            Game.mode=button.dataset.mode;
+            startDraft();
+        };
+    });
+}
+
+//=========================
+// DRAFT LOADING
+//=========================
+
+function startDraft(){
+
+    Game.screen="loading";
+
+    const app=document.getElementById("app");
+
+    app.innerHTML=`
+
+    <div class="background"></div>
+
+    <main class="menu">
+
+        <div class="logo">
+
+            <div class="logo-icon">🎴</div>
+
+            <h1>GENERATING DRAFT</h1>
+
+            <p>Please Wait...</p>
+
+        </div>
+
+        <section class="menu-card">
+
+            <div class="loading">
+
+                <div class="loading-fill"
+                id="loadingFill"></div>
+
+            </div>
+
+            <h2 id="loadingText">
+
+                Preparing Blade Pool...
+
+            </h2>
+
+        </section>
+
+    </main>
+
+    `;
+
+    animateLoading();
+
+}
+
+//=========================
+// LOADING BAR
+//=========================
+
+function animateLoading(){
+
+    const fill=document.getElementById("loadingFill");
+
+    let progress=0;
+
+    const timer=setInterval(()=>{
+
+        progress+=2;
+
+        fill.style.width=progress+"%";
+
+        if(progress>=100){
+
+            clearInterval(timer);
+
+            setTimeout(showBladeDraft,300);
+
+        }
+
+    },25);
+
+}
+//=========================
+// BACK BUTTON
+//=========================
+
+function createBackButton(onClick){
+
+    const button=document.createElement("button");
+
+    button.className="back-btn";
+
+    button.textContent="← Back";
+
+    button.onclick=onClick;
+
+    return button;
+
+}
+
+//=========================
+// SHOW BLADE DRAFT
+//=========================
+function showBladeDraft(){
+    Game.screen="bladeDraft";
+    const pool=Object.values(BLADE_ENGINE).filter(blade=>{
+        if(Game.mode==="bronze") return blade.tier==="Bronze";
+        if(Game.mode==="silver") return blade.tier==="Silver";
+        if(Game.mode==="gold") return blade.tier==="Gold";
+        return true;
+    }).sort(()=>Math.random()-0.5);
+    Game.selection=Game.selection||{}; Game.selection.bladePool=pool; Game.selection.bladePage=0; renderBladeDraft();
+}
+function renderBladeDraft(){
+    const pool=Game.selection?.bladePool||[], page=Game.selection?.bladePage||0, size=3;
+    const total=Math.max(1,Math.ceil(pool.length/size)), safe=Math.min(Math.max(page,0),total-1); Game.selection.bladePage=safe;
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL"}</p></div></div><section class="menu-card selection-card" id="bladeContainer"></section></main>`;
+    const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
+    if(total>1){
+        const nav=document.createElement("div"); nav.className="selection-nav";;
+        nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
+        document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
+    }
+    container.appendChild(createBackButton(()=>location.reload()));
+}
+
+//=========================
+// CREATE CARD
+//=========================
+
+
+function tierClass(tier){
+    const v=String(tier||"custom").toLowerCase();
+    return v==="gold"?"tier-gold":v==="silver"?"tier-silver":v==="bronze"?"tier-bronze":"tier-custom";
+}
+function statMini(label,value){
+    return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
+}
+function createPartCard({title,subtitle,stats,accentClass,onClick,extra=""}){
+    const card=document.createElement("button");
+    card.type="button";
+    card.className=`part-select-card ${accentClass||""}`;
+    card.innerHTML=`<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
+    <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
+    card.onclick=onClick;
+    return card;
+}
+function createBladeCard(blade){
+    const card=document.createElement("button");
+    card.type="button";
+    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}`;
+    card.innerHTML=`
+        <div class="blade-card-head">
+            <div class="blade-card-title">
+                <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
+                <h2>${blade.name}</h2>
+                <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
+            </div>
+            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
+        </div>
+        <div class="blade-stat-grid">
+            ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
+            ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
+            ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
+            ${statMini("BST",blade.card.burst)}
+        </div>
+        <div class="select-hint">SELECT BLADE <span>›</span></div>`;
+    card.onclick=()=>chooseBlade(blade,card);
+    return card;
+}
+
+//=========================
+// SELECT BLADE
+//=========================
+
+function chooseBlade(blade,card){
+
+    Game.player.blade=blade;
+
+    card.style.transform="scale(1.08)";
+    card.style.boxShadow="0 0 30px gold";
+
+    setTimeout(()=>{
+
+        showRatchetPlaceholder();
+
+    },350);
+
+}
 
 
 //=========================
