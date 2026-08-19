@@ -1032,7 +1032,7 @@ orb:{
 
 },
 
-    point:{name:"Point",type:"Balance",card:{attack:74,knockback:68,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
+    point:{name:"Point",type:"Balance",card:{attack:74,knockback:62,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
     high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:54,mobility:40,balance:54,stamina:94,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
     quake:{name:"Quake",type:"Attack",card:{attack:87,knockback:83,defense:45,mobility:89,balance:42,stamina:38,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
 
@@ -1051,7 +1051,7 @@ const BIT_PHYSICS = {
     Rush:{movement:91,control:72,spinDrain:1.05,xRailAffinity:88,centerAffinity:42,recovery:60,attackBias:5,acceleration:86,friction:48,precession:58,stability:54},
     "Low Rush":{movement:94,control:70,spinDrain:1.10,xRailAffinity:93,centerAffinity:35,recovery:58,attackBias:8,acceleration:93,friction:43,precession:66,stability:50},
     Taper:{movement:68,control:84,spinDrain:.82,xRailAffinity:58,centerAffinity:60,recovery:72,attackBias:1,acceleration:64,friction:66,precession:44,stability:68},
-    Level:{movement:72,control:84,spinDrain:.78,xRailAffinity:64,centerAffinity:62,recovery:76,attackBias:3,acceleration:68,friction:70,precession:42,stability:72},
+    Level:{movement:66,control:88,spinDrain:.76,xRailAffinity:58,centerAffinity:72,recovery:82,attackBias:2,acceleration:62,friction:76,precession:32,stability:82},
     Kick:{movement:82,control:62,spinDrain:1.16,xRailAffinity:78,centerAffinity:36,recovery:52,attackBias:7,acceleration:82,friction:52,precession:58,stability:48},
     Wedge:{movement:48,control:78,spinDrain:.60,xRailAffinity:34,centerAffinity:86,recovery:72,attackBias:-3,acceleration:48,friction:88,precession:30,stability:55},
     Hexa:{movement:40,control:96,spinDrain:.68,xRailAffinity:34,centerAffinity:94,recovery:88,attackBias:-4,acceleration:42,friction:86,precession:24,stability:88},
@@ -1059,7 +1059,7 @@ const BIT_PHYSICS = {
     "High Needle":{movement:27,control:80,spinDrain:.37,xRailAffinity:20,centerAffinity:96,recovery:84,attackBias:-7,acceleration:29,friction:94,precession:30,stability:30},
     Ball:{movement:30,control:96,spinDrain:.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:32,friction:94,precession:18,stability:94},
     Orb:{movement:22,control:94,spinDrain:.39,xRailAffinity:14,centerAffinity:98,recovery:88,attackBias:-6,acceleration:28,friction:95,precession:18,stability:90},
-    Point:{movement:62,control:84,spinDrain:.76,xRailAffinity:56,centerAffinity:70,recovery:74,attackBias:1,acceleration:62,friction:74,precession:40,stability:68},
+    Point:{movement:58,control:86,spinDrain:.78,xRailAffinity:52,centerAffinity:74,recovery:76,attackBias:1,acceleration:58,friction:77,precession:34,stability:72},
     Quake:{movement:89,control:40,spinDrain:1.88,xRailAffinity:75,centerAffinity:20,recovery:24,attackBias:11,acceleration:92,friction:43,precession:74,stability:30}
 };
 
@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">gay · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">swegh · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -1414,8 +1414,8 @@ function bitCard(bit){
     const mob=bp.mobility>.82?"HIGH":bp.mobility>.62?"MEDIUM":"LOW";
     const stability=bp.stability>.80?"HIGH":bp.stability>.55?"MEDIUM":"LOW";
     const descriptions={
-        "Point":"Tilt shifts it from a stable center tip to an aggressive outer ring.",
-        "Level":"Stable at high RPM; tilt gradually brings out its aggressive movement.",
+        "Point":"Stays controlled while upright; meaningful in-game tilt makes it move outward and attack.",
+        "Level":"Stable and centered at high RPM; as RPM falls, natural tilt and wobble make it progressively more mobile.",
         "Hexa":"Hexagonal tip helps the Bey right itself and increases defensive stability.",
         "Rush":"Controlled attack: less raw power than Flat, but better stamina and X-Line consistency.",
         "Low Rush":"Lower, smoother Rush: more stamina than Rush with slightly less impact.",
@@ -1957,7 +1957,7 @@ function calculateComboStats(blade,ratchet,bit){
 // COMBO CARD
 //=========================
 
-function createComboSummaryCard(side,combo,launchQuality){
+function createComboSummaryCard(side,combo){
     const isPlayer=side==="player";
     const stats=combo.stats||{};
     for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
@@ -1975,23 +1975,19 @@ function createComboSummaryCard(side,combo,launchQuality){
         <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
         <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
       </div>
-      ${!isPlayer?`<div class="cpu-quality-row"><span>CPU LAUNCH QUALITY</span><strong>${launchQuality||"—"}</strong></div>`:""}
     </article>`;
 }
 function showComboCard(){
     const playerCombo=calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
-    if(!Game.cpu?.blade||!Game.cpu?.ratchet||!Game.cpu?.bit) generateCPUCombo();
-    Game.cpu.launch=Game.cpu.launch||{};
-    if(!Game.cpu.launch.quality) rollLaunchQuality("cpu");
+    generateCPUCombo();
     const cpuCombo=calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div><main class="menu combo-review-screen">
       <div class="selection-header combo-review-header"><div class="selection-icon">⚔</div><div><span class="eyebrow">BATTLE REVIEW</span><h1>COMBO CHECK</h1><p>Know the matchup before you launch.</p></div></div>
       <section class="combo-matchup-grid">
-        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta},"")}
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta},Game.cpu.launch.quality)}
+        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta})}
       </section>
-      <section class="combo-review-note"><span>STAT KEY</span><p>Attack = RPM damage · Knockback = displacement · Defense = stability · Mobility = movement · Balance = recovery · Stamina = spin efficiency.</p></section>
       <section class="combo-review-actions"><button class="menu-btn gold" id="battleButton" type="button">START BATTLE</button></section>
     </main>`;
     const battleButton=document.getElementById("battleButton");
@@ -2035,28 +2031,34 @@ function assignStadiumSides(){
     Game.arena.cpuColor="Red";
 }
 
-function generateCPUCombo(){
+function generateCPUCombo(force=false){
+    if(!force && Game.cpu?.blade && Game.cpu?.ratchet && Game.cpu?.bit) return;
     const playerTier=Game.player.blade?.tier;
-    const blades=Game.mode==="custom"
-        ? Object.values(BLADE_ENGINE)
-        : Object.values(BLADE_ENGINE).filter(b=>!playerTier || b.tier===playerTier);
-    const pool=blades.length?blades:Object.values(BLADE_ENGINE);
-    Game.cpu.blade=pool[Math.floor(Math.random()*pool.length)];
-    Game.cpu.ratchet=RATCHETS[Math.floor(Math.random()*RATCHETS.length)];
-    const bits=Object.values(BIT_ENGINE);
-    Game.cpu.bit=bits[Math.floor(Math.random()*bits.length)];
+    const playerBlade=Game.player.blade;
+    const playerRatchet=Game.player.ratchet;
+    const playerBit=Game.player.bit;
+    const allBlades=Object.values(BLADE_ENGINE);
+    const tierPool=Game.mode==="custom" ? allBlades : allBlades.filter(b=>!playerTier || b.tier===playerTier);
+    const differentBlades=tierPool.filter(b=>b!==playerBlade && b.name!==playerBlade?.name);
+    const bladePool=differentBlades.length?differentBlades:tierPool.filter(b=>b!==playerBlade);
+    const finalBladePool=bladePool.length?bladePool:allBlades;
+    const differentRatchets=RATCHETS.filter(r=>r!==playerRatchet && r.name!==playerRatchet?.name);
+    const ratchetPool=differentRatchets.length?differentRatchets:RATCHETS;
+    const allBits=Object.values(BIT_ENGINE);
+    const differentBits=allBits.filter(b=>b!==playerBit && b.name!==playerBit?.name);
+    const bitPool=differentBits.length?differentBits:allBits;
+    Game.cpu.blade=finalBladePool[Math.floor(Math.random()*finalBladePool.length)];
+    Game.cpu.ratchet=ratchetPool[Math.floor(Math.random()*ratchetPool.length)];
+    Game.cpu.bit=bitPool[Math.floor(Math.random()*bitPool.length)];
     Game.cpu.spin=Game.cpu.blade.spin||"Right";
     Game.cpu.launch={angle:null,technique:null,quality:null};
-    syncComboStats("player");
-    syncComboStats("cpu");
+    syncComboStats("player"); syncComboStats("cpu");
 }
 
 
 
 function showVS(){
-    if(!Game.cpu?.blade||!Game.cpu?.ratchet||!Game.cpu?.bit) generateCPUCombo();
-    Game.cpu.launch=Game.cpu.launch||{};
-    if(!Game.cpu.launch.quality) rollLaunchQuality("cpu");
+    generateCPUCombo();
     assignStadiumSides();
 
     // Match is first-to-7 points. Only initialize this when creating the
@@ -2151,17 +2153,11 @@ function showLetItRip(){
 
     if(stage==="qualityReveal"){
         controls.innerHTML=`
-          <div style="padding:18px;background:rgba(0,0,0,.20);border-radius:9px;text-align:center;">
-            <div style="font-size:12px;opacity:.72;">LAUNCH QUALITY</div>
-            <div style="font-size:30px;font-weight:800;margin:10px 0;">
-              ${Game.player.launch.quality}
-            </div>
-            <div style="font-size:12px;opacity:.70;">
-              ${Game.player.launch.qualityMode==="Roll" ? "ROLLED QUALITY" : "FIXED QUALITY"}
-            </div>
-            <div style="font-size:11px;opacity:.55;margin-top:8px;">
-              Quality locked · next: launch angle & technique
-            </div>
+          <div class="launch-quality-reveal">
+            <div class="launch-quality-column player-quality-reveal"><span>YOUR LAUNCH</span><strong>${Game.player.launch.quality}</strong><small>${Game.player.launch.qualityMode==="Roll" ? "ROLLED QUALITY" : "FIXED QUALITY"}</small></div>
+            <div class="launch-quality-divider">VS</div>
+            <div class="launch-quality-column cpu-quality-reveal"><span>CPU LAUNCH</span><strong>${Game.cpu.launch?.quality||"Okay"}</strong><small>CPU ROLL</small></div>
+            <div class="launch-quality-next">QUALITY LOCKED · NEXT: LAUNCH ANGLE & TECHNIQUE</div>
           </div>
         `;
 
@@ -2257,9 +2253,9 @@ function showLetItRip(){
 
     if(stage==="quality"){
         document.getElementById("fixedQualityBtn").onclick=()=>{
-            Game.player.launch.quality=
-                Game.player.launch.fixedQualityPreview ||
-                rollRandomLaunchQuality();
+            Game.player.launch.quality=Game.player.launch.fixedQualityPreview || rollRandomLaunchQuality();
+            Game.cpu.launch=Game.cpu.launch||{};
+            Game.cpu.launch.quality=rollRandomLaunchQuality();
             Game.player.launch.qualityMode="Fixed";
             Game.player.launch.setupStage="qualityReveal";
             showLetItRip();
@@ -2267,6 +2263,8 @@ function showLetItRip(){
 
         document.getElementById("rollQualityBtn").onclick=()=>{
             rollLaunchQuality("player");
+            Game.cpu.launch=Game.cpu.launch||{};
+            Game.cpu.launch.quality=rollRandomLaunchQuality();
             Game.player.launch.setupStage="qualityReveal";
             showLetItRip();
         };
@@ -3040,6 +3038,13 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
       Keep the actual stadium visible after a Pocket/Xtreme. The Bey has
       already entered the finish area; don't replace it with a menu instantly.
     */
+    const stadium=document.getElementById("newStadium");
+    if(stadium && (finishType==="Xtreme" || finishType==="Over")){
+        const flash=document.createElement("div");
+        flash.className=`finish-flash finish-flash-${finishType.toLowerCase()}`;
+        flash.innerHTML=`<div class="finish-flash-kicker">${winner.blade.name}</div><div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div><div class="finish-flash-points">+${finishPoints}</div>`;
+        stadium.appendChild(flash);
+    }
     const commentary=document.getElementById("newCommentary");
     if(commentary){
         commentary.textContent=
@@ -3664,22 +3669,15 @@ function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
     const tilt=newBattleClamp(Math.abs(Number(currentTilt)||0),0,1);
 
     if(n==="Point"){
-        const aggression=newBattleClamp(0.10+tilt*0.72+(1-s)*0.18,0,1);
-        return {
-            mode:aggression>0.58?"aggressive":"stable",
-            aggression,
-            mobility:0.30+aggression*0.58,
-            staminaEfficiency:1-aggression*0.30
-        };
+        const battleTilt=newBattleClamp(tilt,0,1);
+        const aggression=newBattleClamp(0.04+Math.pow(battleTilt,1.55)*0.78+(1-s)*0.14,0,1);
+        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.27+aggression*0.55,staminaEfficiency:1-aggression*0.26};
     }
     if(n==="Level"){
-        const aggression=newBattleClamp(0.06+tilt*0.56+(1-s)*0.20+(1-r)*0.12,0,1);
-        return {
-            mode:aggression>0.62?"aggressive":"stable",
-            aggression,
-            mobility:0.34+aggression*0.50,
-            staminaEfficiency:1-aggression*0.24
-        };
+        const lowRpm=Math.pow(1-r,1.18);
+        const battleTilt=newBattleClamp(tilt,0,1);
+        const aggression=newBattleClamp(0.035+lowRpm*0.64+Math.pow(battleTilt,1.35)*0.34+(1-s)*0.10,0,1);
+        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.28+aggression*0.60,staminaEfficiency:1-aggression*0.22};
     }
     return null;
 }
@@ -3909,9 +3907,9 @@ function updateNewXRailRide(s,dt){
 
     // V42: prevent awkward slow rail crawling. A rider must retain enough
     // tangential energy to stay on the rail; otherwise release cleanly.
-    if(s.railEngaged && speedOf(s)<0.045 && (s.railRideTime||0)>0.08){
+    if(s.railEngaged && (s.railRideTime||0)>0.35 && speedOf(s)<0.065){
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.28;
+        s.railReengageCooldown=0.36;
         return false;
     }
     const bp=bitPhysics(s);
@@ -3941,7 +3939,7 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>2.35){
+    if((s.railRideTime||0)>1.90){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -3950,18 +3948,18 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.018){
+    if(tangentVelocity<0.040){
         newXRailRailRelease(s,direction);
         return true;
     }
 
-    const railDrive=(0.0019+movement*0.0030+affinity*0.0016)*(0.38+rpm*0.62);
-    const railFriction=0.00028+(1-rpm)*0.00034+tilt*0.00024;
+    const railDrive=(0.0023+movement*0.0032+affinity*0.0018)*(0.42+rpm*0.58);
+    const railFriction=0.00034+(1-rpm)*0.00052+tilt*0.00028;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
-    if(tangentVelocity<0.045){
+    if(tangentVelocity<0.060){
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.28;
+        s.railReengageCooldown=0.34;
         return false;
     }
 
@@ -4677,11 +4675,11 @@ function newPhysicsStep(s,dt){
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.24+0.30*(1-centerAffinity));
+                    : (0.18+0.24*(1-centerAffinity));
 
             const lateralStrength=
-                (0.00014+movement*0.00042)*
-                Math.pow(rpm,1.02)*
+                (0.00012+movement*0.00036)*
+                Math.pow(rpm,1.16)*
                 (0.52+control*0.48)*
                 (0.76+0.24*attackStat)*
                 (0.72+0.38*bitPrecession)*
@@ -4753,29 +4751,15 @@ function newPhysicsStep(s,dt){
           central battle area. This is a continuous force, not a hard target
           and not a teleport, so they can still drift and collide naturally.
         */
-        if(r>0.08 && rpm>0.20){
-            const lowRpmCenterBoost=
-                rpm<0.72 ? 1.0+((0.72-rpm)/0.72)*2.55 : 1.0;
-            const typeCenterBoost=
-                !attackBit ? 1.35 : (rpm<0.42 ? 0.72 : 0.34);
-
-            const centerStrength=
-                (0.00040+centerAffinity*0.00076)*
-                (0.58+0.42*rpm)*
-                (0.76+0.24*s.movementEnergy)*
-                lowRpmCenterBoost*
-                typeCenterBoost;
-
+        if(r>0.08 && rpm>0.10){
+            const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
+            const typeCenterBoost=!attackBit ? 1.30 : (rpm<0.38 ? 0.72 : 0.34);
+            const centerStrength=(0.00040+centerAffinity*0.00078)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
-
             if(!attackBit && r<0.42 && rpm<0.68){
-                const centralDamp=1-newBattleClamp(
-                    0.018+(0.68-rpm)*0.045+centerAffinity*0.012,
-                    0.018,0.065
-                );
-                s.vx*=centralDamp;
-                s.vy*=centralDamp;
+                const centralDamp=1-newBattleClamp(0.020+(0.68-rpm)*0.055+centerAffinity*0.014,0.020,0.075);
+                s.vx*=centralDamp; s.vy*=centralDamp;
             }
         }
 
@@ -4846,8 +4830,7 @@ function newPhysicsStep(s,dt){
             movement*0.004 -
             (attackBit ? 0.0018*rpm : 0);
 
-        const rpmFrictionBonus =
-            0.004*rpm;
+        const rpmFrictionBonus=0.003*rpm+(1-rpm)*0.0035;
 
         const friction =
             newBattleClamp(
@@ -4877,8 +4860,8 @@ function newPhysicsStep(s,dt){
             const lateralDamp =
                 Math.pow(
                     attackBit
-                        ? 0.955+0.012*bitStability
-                        : 0.968+0.014*bitStability,
+                        ? 0.948+0.014*bitStability
+                        : 0.958+0.016*bitStability,
                     lowRpm*dt*60
                 );
 
@@ -5356,61 +5339,37 @@ function newPhysicsCollision(dt){
     const cAttackBit=attackBitNames.includes(c.bit?.name);
     const bothAttackCollision=pAttackBit&&cAttackBit;
 
-    const pBitKnockbackMultiplier=pAttackBit ? 1.06 : 0.92;
-    const cBitKnockbackMultiplier=cAttackBit ? 1.06 : 0.92;
-
-    const nonAttackImpactMultiplier=
-        bothNonAttackCollision ? 1.02 : 1.0;
-
-    // Attack-vs-Attack is energetic, but it should not produce excessive
-    // recoil/RPM loss on every collision.
-    const attackVsAttackImpactMultiplier=
-        bothAttackCollision ? 0.86 : 1.0;
-
-    // Rail riding is not immunity. A genuinely heavy collision can break the
-    // rider's grip and send it back into normal stadium physics.
+    const pDynamicBit=getDynamicBitBehavior(p.bit,p.rpm*100,p.stability*100,p.tiltLevel||0);
+    const cDynamicBit=getDynamicBitBehavior(c.bit,c.rpm*100,c.stability*100,c.tiltLevel||0);
+    const bitImpactMultiplier=(s,dynamic)=>{
+        const name=s.bit?.name;
+        if(name==="Point") return 0.82+(dynamic?.aggression||0)*0.30;
+        if(name==="Level") return 0.84+(dynamic?.aggression||0)*0.20;
+        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.02 : 0.90;
+    };
+    const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
+    const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
+    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.90 : 1.0;
+    const attackVsAttackImpactMultiplier=bothAttackCollision ? 0.82 : 1.0;
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
-    const railBreakThreshold=0.0065;
-    const railCollisionBreakThreshold=0.0012;
-
-    // IMPORTANT: each Bey's own force is applied to the opponent.
-    // This restores the directional Knockback model.
-    const pKnockback=
-        Math.max(
-            0.0048+contactEnergy*0.112,
-            pForce*pBitKnockbackMultiplier*
-            nonAttackImpactMultiplier*
-            attackVsAttackImpactMultiplier*
-            (1.18-cDef*0.24)
-        );
-
-    const cKnockback=
-        Math.max(
-            0.0048+contactEnergy*0.112,
-            cForce*cBitKnockbackMultiplier*
-            nonAttackImpactMultiplier*
-            attackVsAttackImpactMultiplier*
-            (1.18-pDef*0.24)
-        );
-
-    // Opponent displacement.
-    p.vx-=nx*pKnockback;
-    p.vy-=ny*pKnockback;
-    c.vx+=nx*pKnockback;
-    c.vy+=ny*pKnockback;
-
-    p.vx+=nx*cKnockback;
-    p.vy+=ny*cKnockback;
-    c.vx-=nx*cKnockback;
-    c.vy-=ny*cKnockback;
+    const railBreakThreshold=0.0068;
+    const railCollisionBreakThreshold=0.0014;
+    const pKnockback=Math.max(0.0028+contactEnergy*0.068,pForce*pBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(1.08-cDef*0.30));
+    const cKnockback=Math.max(0.0028+contactEnergy*0.068,cForce*cBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(1.08-pDef*0.30));
+    c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
+    p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
+    const recoilP=pKnockback*(0.16+0.18*pDef);
+    const recoilC=cKnockback*(0.16+0.18*cDef);
+    p.vx-=nx*recoilC; p.vy-=ny*recoilC;
+    c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
         0.0012+
-        effectiveImpact*0.024+
-        Math.abs(tangentRelative)*0.0050+
-        heavyFactor*0.0012;
+        effectiveImpact*0.016+
+        Math.abs(tangentRelative)*0.0032+
+        heavyFactor*0.0008;
 
     const pFollow=
         followThrough*
