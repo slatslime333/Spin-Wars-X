@@ -614,3 +614,47 @@ button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
 .finish-lightning{position:absolute;font-size:clamp(58px,10vw,110px);font-family:Impact,Haettenschweiler,sans-serif;color:#fff;line-height:1;filter:drop-shadow(0 0 6px rgba(139,220,255,.8));animation:lightningStrike .42s steps(2,end) both;z-index:-1}.lightning-left{left:15%;top:28%;transform:rotate(-12deg)}.lightning-right{right:15%;top:44%;transform:rotate(16deg)}
 @keyframes lightningStrike{0%{opacity:0;transform:scale(.65) rotate(-12deg)}18%{opacity:1;transform:scale(1.15) rotate(7deg)}38%{opacity:.35;transform:scale(.88) rotate(-4deg)}58%{opacity:1;transform:scale(1.02) rotate(8deg)}100%{opacity:.15;transform:scale(.96) rotate(0)}}
 .finish-flash-xtreme{background:radial-gradient(circle,rgba(120,220,255,.18),rgba(0,0,0,.58))}.finish-flash-over{background:radial-gradient(circle,rgba(255,220,90,.16),rgba(0,0,0,.58))}.finish-flash-xtreme .finish-lightning{color:#bcefff}.finish-flash-over .finish-lightning{color:#fff2a0}
+
+/* V59 FINAL POLISH */
+.cpu-reroll-btn{
+  width:100%;margin-top:10px;min-height:36px;padding:8px 10px;
+  border:1px solid rgba(74,169,255,.22);border-radius:9px;
+  background:linear-gradient(180deg,rgba(42,103,164,.32),rgba(25,61,98,.34));
+  color:#bfe3ff;font-size:9px;font-weight:950;letter-spacing:.11em;cursor:pointer;
+}
+.battle-combo-line{
+  display:flex;justify-content:space-between;gap:8px;align-items:center;
+  margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.06);
+  font-size:7.5px;line-height:1.2;letter-spacing:.035em;opacity:.58;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.battle-combo-line b{flex:0 0 auto;font-size:8px;color:#f0bd35;opacity:.9;letter-spacing:.08em}
+.hero-kicker,.hero-status,.tier-menu-card small,.launch-quality-next{display:none!important}
+.combo-review-screen{width:min(100%,960px)!important;padding:14px 12px 20px!important}
+.combo-review-header{margin-bottom:8px!important}.combo-summary-card{padding:13px!important}
+.combo-summary-stats{margin-top:10px!important}.battle-hud-card{padding:8px 9px!important}
+.battle-hud-top strong{font-size:11px!important}.rpm-readout{margin-top:6px!important}
+.rpm-readout b{font-size:21px!important}.rpm-bar-shell{height:7px!important;margin-top:5px!important}
+.stability-readout{margin-top:5px!important}
+@media(max-width:700px){
+  .main-menu-shell{min-height:100svh;padding:10px 0 14px!important;gap:10px!important}
+  .main-menu-hero{min-height:112px!important;padding:17px 16px!important}
+  .hero-copy h1{font-size:31px!important;margin:0 0 4px!important}.hero-copy p{font-size:9px!important}
+  .battle-select{padding:10px!important}.section-head{margin-bottom:8px!important}
+  .section-head h2{font-size:15px!important}.tier-menu-card{min-height:112px!important;padding:11px!important}
+  .tier-code{top:10px!important;left:11px!important;font-size:7px!important}
+  .tier-menu-card strong{font-size:15px!important}.tier-arrow{right:10px!important;bottom:9px!important;font-size:17px!important}
+  .main-menu-lower{display:none!important}.selection-screen{padding:12px 9px 18px!important}
+  .selection-header{gap:10px!important}.selection-icon{width:40px!important;height:40px!important;flex-basis:40px!important}
+  .selection-header h1{font-size:27px!important}.selection-card{padding:9px!important}
+  .combo-review-screen{padding:10px 8px 14px!important}.combo-summary-card h2{font-size:19px!important}
+  .combo-summary-ratings div{min-width:46px;padding:6px!important}.combo-summary-ratings b{font-size:19px!important}
+  .combo-summary-stats span{padding:6px!important}.battle-combo-line{font-size:6.8px!important}
+  .battle-combo-line b{font-size:7px!important}
+}
+@media(max-width:430px){
+  .main-menu-shell{width:calc(100% - 12px)!important}.tier-menu-grid{gap:6px!important}
+  .tier-menu-card{min-height:102px!important}.tier-menu-card strong{font-size:14px!important}
+  .selection-header h1{font-size:24px!important}.battle-hud-card{padding:7px!important}
+  .battle-hud-top strong{font-size:10px!important}.rpm-readout b{font-size:19px!important}
+}
