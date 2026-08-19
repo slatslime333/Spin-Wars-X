@@ -859,20 +859,18 @@ const BLADE_ENGINE = {
 // tendencies that the combo solver converts into 60-99 performance ratings.
 // 3/4/5/6 are intentionally distinct; none is a universal upgrade.
 const RATCHET_PHYSICS_V56={
-    "1":{weight:6.0,sides:1,geometry:"asymmetric",attack:.82,knockback:.72,defense:.30,balance:.32,stamina:.28,mobility:.55,burst:.42,lad:.25,exposure:.65},
-    "3":{weight:6.3,sides:3,geometry:"triangular",attack:.62,knockback:.56,defense:.50,balance:.60,stamina:.52,mobility:.48,burst:.50,lad:.50,exposure:.50},
-    "4":{weight:6.3,sides:4,geometry:"small-square",attack:.48,knockback:.45,defense:.28,balance:.35,stamina:.42,mobility:.44,burst:.12,lad:.30,exposure:.82},
-    "5":{weight:6.6,sides:5,geometry:"wide-outer",attack:.44,knockback:.44,defense:.60,balance:.74,stamina:.60,mobility:.40,burst:.62,lad:.78,exposure:.48},
-    "6":{weight:6.65,sides:6,geometry:"six-sided-round",attack:.48,knockback:.46,defense:.58,balance:.70,stamina:.62,mobility:.40,burst:.68,lad:.82,exposure:.42},
-    "7":{weight:7.1,sides:7,geometry:"heavy-round",attack:.45,knockback:.54,defense:.66,balance:.76,stamina:.68,mobility:.36,burst:.72,lad:.70,exposure:.44},
-    "9":{weight:6.1,sides:9,geometry:"compact-round",attack:.38,knockback:.38,defense:.64,balance:.72,stamina:.64,mobility:.34,burst:.92,lad:.84,exposure:.30}
+    "1":{weight:6.0,sides:1,geometry:"asymmetric",attack:.82,knockback:.72,defense:.26,balance:.28,stamina:.28,mobility:.55,burst:.42,lad:.25,exposure:.65},
+    "3":{weight:6.3,sides:3,geometry:"triangular",attack:.62,knockback:.56,defense:.48,balance:.56,stamina:.48,mobility:.48,burst:.50,lad:.50,exposure:.50},
+    "4":{weight:6.3,sides:4,geometry:"small-square",attack:.48,knockback:.45,defense:.28,balance:.35,stamina:.42,mobility:.44,burst:.16,lad:.30,exposure:.82},
+    "5":{weight:6.6,sides:5,geometry:"wide-outer",attack:.42,knockback:.40,defense:.40,balance:.48,stamina:.42,mobility:.40,burst:.50,lad:.70,exposure:.56},
+    "6":{weight:6.65,sides:6,geometry:"six-sided-round",attack:.48,knockback:.46,defense:.50,balance:.58,stamina:.50,mobility:.40,burst:.60,lad:.76,exposure:.48},
+    "7":{weight:7.1,sides:7,geometry:"heavy-round",attack:.45,knockback:.54,defense:.60,balance:.68,stamina:.58,mobility:.36,burst:.72,lad:.70,exposure:.44},
+    "9":{weight:6.1,sides:9,geometry:"compact-round",attack:.38,knockback:.38,defense:.54,balance:.62,stamina:.52,mobility:.34,burst:.92,lad:.84,exposure:.30}
 };
 
 const RATCHET_BASES=Object.entries(RATCHET_PHYSICS_V56).map(([number,p])=>({number:Number(number),stats:{
-    attack:Math.round(60+p.attack*40),
-    defense:Math.round(60+p.defense*40),
-    stamina:Math.round(60+p.stamina*40),
-    balance:Math.round(60+p.balance*40)
+    attack:Math.round(60+p.attack*40),defense:Math.round(60+p.defense*40),
+    stamina:Math.round(60+p.stamina*40),balance:Math.round(60+p.balance*40)
 }}));
 
 const HEIGHTS=[60,70,80];
@@ -884,6 +882,7 @@ for(const [number,p] of Object.entries(RATCHET_PHYSICS_V56)){
             stamina:Math.round(60+p.stamina*40),balance:Math.round(60+p.balance*40)}});
     }
 }
+
 function getRatchetProfile(ratchet){
     const p=RATCHET_PHYSICS_V56[String(ratchet?.number)]||RATCHET_PHYSICS_V56["3"];
     return {base:p,height:Number(ratchet?.height)||60};
@@ -907,7 +906,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:88,knockback:78,defense:52,mobility:94,balance:62,stamina:57,burst:80},
+        card:{attack:88,knockback:80,defense:52,mobility:95,balance:62,stamina:56,burst:80},
 
         behavior:{speed:96,aggression:92,control:60,staminaRetention:58}
 
@@ -919,7 +918,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:92,knockback:82,defense:48,mobility:98,balance:56,stamina:52,burst:80},
+        card:{attack:92,knockback:84,defense:48,mobility:98,balance:55,stamina:51,burst:80},
 
         behavior:{speed:99,aggression:96,control:70,staminaRetention:50}
 
@@ -931,7 +930,7 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:82,knockback:71,defense:52,mobility:91,balance:68,stamina:64,burst:80},
+        card:{attack:80,knockback:70,defense:54,mobility:88,balance:70,stamina:68,burst:80},
 
         behavior:{speed:98,aggression:88,control:78,staminaRetention:68}
 
@@ -943,7 +942,7 @@ const BIT_ENGINE = {
 
     type:"Attack",
 
-    card:{attack:87,knockback:76,defense:48,mobility:96,balance:61,stamina:58,burst:80},
+    card:{attack:82,knockback:72,defense:54,mobility:90,balance:69,stamina:71,burst:80},
 
     behavior:{speed:100,aggression:98,control:64,staminaRetention:52}
 
@@ -973,7 +972,7 @@ kick:{
 
     type:"Attack",
 
-    card:{attack:82,knockback:89,defense:54,mobility:83,balance:61,stamina:59,burst:80},
+    card:{attack:76,knockback:65,defense:68,mobility:79,balance:76,stamina:73,burst:80},
 
     behavior:{speed:84,aggression:94,control:74,staminaRetention:62}
 
@@ -1302,11 +1301,12 @@ function tierClass(tier){
 function statMini(label,value){
     return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
 }
-function createPartCard({title,subtitle,stats,accentClass,onClick,extra=""}){
+function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description=""}){
     const card=document.createElement("button");
     card.type="button";
     card.className=`part-select-card ${accentClass||""}`;
     card.innerHTML=`<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
+    ${description?`<p class="part-description">${description}</p>`:""}
     <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
     card.onclick=onClick;
     return card;
@@ -1361,18 +1361,27 @@ function chooseBlade(blade,card){
 function ratchetCard(r){
     const p=r.physics||{};
     const shape={1:"ASYMMETRIC · DIRECTIONAL MASS",3:"3-SIDED · ALIGNMENT / VERSATILE",
-        4:"4-SIDED · EXPOSED / NICHE",5:"5-SIDED · WIDE / BALANCE",6:"6-SIDED · ROUND / LAD",
-        7:"7-SIDED · HEAVY / STABLE",9:"9-SIDED · COMPACT / BURST SAFE"}[r.number]||"RATCHET";
+        4:"4-SIDED · EXPOSED / NICHE",5:"5-SIDED · BALANCE CORRECTION",
+        6:"6-SIDED · ROUND / LAD",7:"7-SIDED · HEAVY / STABLE",
+        9:"9-SIDED · COMPACT / BURST SAFE"}[r.number]||"RATCHET";
     const heightNote=r.height===60?"LOW PROFILE":r.height===70?"MID HEIGHT":"TALL / EXPOSED";
     const burstRisk=p.burst<.35?"HIGH":p.burst<.60?"MEDIUM":"LOW";
     const exposure=p.exposure>.65?"HIGH":p.exposure>.45?"MEDIUM":"LOW";
     const mass=p.weight>=6.8?"HEAVY":p.weight>=6.4?"MEDIUM":"LIGHT";
-    const role={1:"ATTACK / IMPACT",3:"ALIGNMENT / VERSATILE",4:"NICHE / RISKY",
-        5:"BALANCE / LAD",6:"ROUND / LAD",7:"STABILITY / MASS",9:"COMPACT / BURST"}[r.number];
+    const desc={
+        1:"One large contact point. Excellent for attack, with niche defensive/recovery value on low stamina builds.",
+        3:"Three-sided geometry can line up with three-sided Blades; versatile, but alignment matters.",
+        4:"Niche four-sided option. Low height can work, but exposed protrusions make Burst risk high.",
+        5:"Stability/balance specialist. Helps imbalanced Blades, but can hurt already-stable stamina setups.",
+        6:"Circular six-sided shape gives useful balance and LAD without being universally optimal.",
+        7:"Heavy, round and stable. Broadly useful, especially when a Blade benefits from added mass.",
+        9:"Compact and burst-resistant. Strong general-purpose choice, but not automatically best for every Blade."
+    }[r.number]||"Physical Ratchet geometry changes height, contact and Burst behavior.";
     return createPartCard({title:r.name,subtitle:`${shape} · ${heightNote}`,
         accentClass:`ratchet-card ratchet-${r.number}`,
-        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",role]],
+        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",r.number===5?"NICHE":r.number===4?"RISKY":"SPECIALIZED"]],
         extra:`<span class="part-index">${r.number}</span>`,
+        description:desc,
         onClick:()=>{Game.player.ratchet=r;showBitDraft();}});
 }
 
@@ -1402,13 +1411,29 @@ function bitCard(bit){
     const sta=bp.stamina>.90?"VERY HIGH":bp.stamina>.75?"HIGH":bp.stamina>.55?"MEDIUM":"LOW";
     const mob=bp.mobility>.82?"HIGH":bp.mobility>.62?"MEDIUM":"LOW";
     const stability=bp.stability>.80?"HIGH":bp.stability>.55?"MEDIUM":"LOW";
-    const behavior=(bit.name==="Point"||bit.name==="Level")?"LAUNCH-DEPENDENT":
-        ((bp.centerAffinity||0)>80?"CENTER / STATIONARY":"ROLE-SPECIFIC");
-    return createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT · ${behavior}`,
+    const descriptions={
+        "Point":"Tilt shifts it from a stable center tip to an aggressive outer ring.",
+        "Level":"Stable at high RPM; tilt gradually brings out its aggressive movement.",
+        "Hexa":"Hexagonal tip helps the Bey right itself and increases defensive stability.",
+        "Rush":"Controlled attack: less raw power than Flat, but better stamina and X-Line consistency.",
+        "Low Rush":"Lower, smoother Rush: more stamina than Rush with slightly less impact.",
+        "Flat":"High-friction attack Bit built for aggressive movement and powerful Xtreme Dashes.",
+        "Low Flat":"Lower, wider Flat: maximum aggression and X-Line speed at a stamina cost.",
+        "Kick":"Balance/counter Bit with better stamina, stability and control than pure attack Bits.",
+        "Taper":"Controlled balance Bit that trades some attack for mobility and stamina.",
+        "Wedge":"Semi-mobile Defense Bit with strong stamina, then a more stationary late battle.",
+        "Needle":"Very stationary and stamina-efficient, but its tiny tip can wobble and destabilize.",
+        "High Needle":"More mobile than Needle, with strong stamina but even more exposure to destabilization.",
+        "Ball":"High-stamina center Bit with excellent stability and low movement.",
+        "Orb":"High-stamina Bit with slightly more movement and less pure stability than Ball.",
+        "Quake":"Jumping attack Bit: high impact and knockback, but poor stamina and balance."
+    };
+    return createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT`,
         accentClass:`bit-card bit-${typeClass}`,
         stats:[["MOVE",mob],["STA",sta],["STABLE",stability],
             ["CONTROL",bp.control>.85?"HIGH":bp.control>.65?"MEDIUM":"LOW"]],
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
+        description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
         onClick:()=>{Game.player.bit=bit;showComboCard();}});
 }
 
@@ -1575,13 +1600,13 @@ function getBitPhysicalProfileV56(bit){
       replacing the Blade's identity.
     */
     const roles={
-        "Flat":       {attack:.86,knockback:.72,defense:.12,balance:.18,stamina:.10,mobility:.96,burst:.80},
-        "Low Flat":   {attack:.92,knockback:.78,defense:.08,balance:.14,stamina:.06,mobility:1.00,burst:.80},
-        "Rush":       {attack:.68,knockback:.54,defense:.18,balance:.36,stamina:.32,mobility:.90,burst:.80},
-        "Low Rush":   {attack:.78,knockback:.62,defense:.14,balance:.28,stamina:.22,mobility:.96,burst:.80},
-        "Taper":      {attack:.42,knockback:.32,defense:.22,balance:.54,stamina:.68,mobility:.70,burst:.80},
-        "Kick":       {attack:.66,knockback:.64,defense:.18,balance:.32,stamina:.28,mobility:.82,burst:.80},
-        "Quake":      {attack:.82,knockback:.70,defense:.08,balance:.10,stamina:.04,mobility:.86,burst:.80},
+        "Flat":       {attack:.86,knockback:.74,defense:.12,balance:.18,stamina:.10,mobility:.96,burst:.80},
+        "Low Flat":   {attack:.92,knockback:.80,defense:.08,balance:.14,stamina:.06,mobility:1.00,burst:.80},
+        "Rush":       {attack:.68,knockback:.54,defense:.18,balance:.40,stamina:.40,mobility:.88,burst:.80},
+        "Low Rush":   {attack:.70,knockback:.56,defense:.16,balance:.36,stamina:.46,mobility:.92,burst:.80},
+        "Taper":      {attack:.42,knockback:.32,defense:.26,balance:.58,stamina:.70,mobility:.70,burst:.80},
+        "Kick":       {attack:.54,knockback:.46,defense:.42,balance:.62,stamina:.54,mobility:.76,burst:.80},
+        "Quake":      {attack:.82,knockback:.72,defense:.08,balance:.10,stamina:.04,mobility:.86,burst:.80},
         "Ball":       {attack:.14,knockback:.10,defense:.24,balance:.56,stamina:1.00,mobility:.30,burst:.30},
         "Orb":        {attack:.18,knockback:.14,defense:.24,balance:.50,stamina:.92,mobility:.22,burst:.30},
         "Needle":     {attack:.06,knockback:.05,defense:.08,balance:.10,stamina:.90,mobility:.20,burst:.30},
@@ -1625,45 +1650,87 @@ function getRatchetGeometryFitV56(blade,ratchet){
     const shape=String(blade.physics?.contactShape||"").toLowerCase();
     const dist=String(blade.physics?.weightDistribution||"").toLowerCase();
     const type=blade.type||"Balance";
+    const phys=getBladePhysicalProfileV56(blade);
     let fit=.50;
+
+    // 3: three-sided/alignment-sensitive. Strong when the Blade actually has
+    // three main contact points; merely being an Attack Blade is not enough.
     if(ratchet.number===3){
         if(shape.includes("three")||shape.includes("tri")) fit+=.20;
         else if(shape.includes("sword")||shape.includes("claw")) fit+=.12;
         else fit+=.01;
-    }
-    if(ratchet.number===4){
-        fit-=.10;
-        if(type==="Attack"&&(shape.includes("upper")||shape.includes("smash"))) fit+=.08;
-        if(shape.includes("round")) fit-=.05;
         if(ratchet.height===60) fit+=.03;
     }
-    if(ratchet.number===5){
-        if(dist.includes("forward")) fit+=.14;
-        else if(dist.includes("balanced")) fit+=.05;
-        if(type==="Defense") fit+=.06;
-        if(type==="Stamina") fit+=.03;
-        if(type==="Attack") fit+=.01;
+
+    // 4: useful low profile, but the four wide exposed weak points make it
+    // genuinely niche. 60 is far more sensible than 70/80.
+    if(ratchet.number===4){
+        fit-=.10;
+        if(ratchet.height===60) fit+=.06;
+        if(type==="Attack"&&(shape.includes("upper")||shape.includes("smash"))) fit+=.08;
+        if(shape.includes("round")&&type!=="Attack") fit-=.04;
+        if(type==="Stamina"||type==="Defense") fit-=.03;
     }
+
+    // 5: balance-correction ratchet. It should shine only when the Blade
+    // actually benefits from the added balance/stability. On already-stable
+    // Blades + high-friction stamina Bits, it can reduce precession.
+    if(ratchet.number===5){
+        const imbalance=Math.max(0,.58-phys.stability);
+        const recoilNeed=Math.max(0,phys.recoil-.55);
+        if(!dist.includes("outer") && !dist.includes("balanced")) fit+=imbalance*.24;
+        if(dist.includes("forward")) fit+=.10;
+        if(type==="Defense"||type==="Stamina") fit+=.02;
+        if(type==="Attack"&&phys.recoil>.65) fit+=.04;
+        if(imbalance<.08) fit-=.04;
+        if(ratchet.height===80) fit-=.08;
+        if(ratchet.height===60) fit+=.02;
+        fit-=recoilNeed*.05;
+    }
+
+    // 6: circular and versatile, but not a free upgrade. It prefers round or
+    // balanced shapes and gets only a modest benefit from stamina/defense.
     if(ratchet.number===6){
         if(shape.includes("round")) fit+=.12;
-        if(type==="Stamina"||type==="Defense") fit+=.05;
-        if(type==="Attack") fit+=.01;
+        else if(shape.includes("three")||shape.includes("tri")) fit+=.03;
+        if(type==="Stamina"||type==="Defense") fit+=.03;
+        if(type==="Attack"&&shape.includes("smash")) fit-=.02;
+        if(ratchet.height===80) fit-=.06;
     }
+
+    // 7: heavy circular stabilizer. This is broadly useful, but its weight
+    // should not erase a Blade's own weaknesses.
     if(ratchet.number===7){
-        if(type==="Stamina"||type==="Defense") fit+=.08;
         if(shape.includes("round")) fit+=.07;
-        if(type==="Attack"&&!shape.includes("round")) fit-=.05;
+        if(type==="Stamina"||type==="Defense") fit+=.06;
+        if(type==="Attack"&&!shape.includes("round")) fit-=.03;
+        if(ratchet.height===60) fit+=.03;
+        if(ratchet.height===80) fit-=.06;
     }
+
+    // 9: compact, burst-safe and generally strong, but not automatically the
+    // best Ratchet for every Blade. Round/stamina shapes get the most value.
     if(ratchet.number===9){
-        if(type==="Stamina"||type==="Defense") fit+=.05;
-        if(shape.includes("round")) fit+=.08;
+        if(shape.includes("round")) fit+=.07;
+        if(type==="Stamina"||type==="Defense") fit+=.04;
         if(shape.includes("smash")&&type==="Attack") fit+=.04;
+        if(type==="Attack"&&!shape.includes("smash")&&!shape.includes("round")) fit-=.02;
+        if(ratchet.height===80) fit-=.05;
     }
+
+    // 1: asymmetric mass is a real offensive tool, but it has a second use:
+    // low 1-60 can help some high-stamina Blades recover from the pocket/rail
+    // by changing the contact geometry. It is not a universal stamina boost.
     if(ratchet.number===1){
-        if(type==="Attack") fit+=.16; else fit-=.05;
+        if(type==="Attack") fit+=.14;
+        else if(type==="Stamina"||type==="Defense") fit+=.02;
+        else fit-=.03;
         if((shape.includes("upper")||shape.includes("smash"))&&type==="Attack") fit+=.05;
+        if((type==="Stamina"||type==="Defense")&&phys.stability>.62&&ratchet.height===60) fit+=.08;
+        if(ratchet.height===80) fit-=.07;
     }
-    return Math.max(.22,Math.min(.88,fit));
+
+    return Math.max(.18,Math.min(.88,fit));
 }
 
 function getHeightFitV56(blade,height){
@@ -1680,16 +1747,96 @@ function partContributionV56(base,role,weight,fit){
 }
 
 function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
-    const type=blade.type||"Balance", bitType=bit.type||"Balance";
-    const typeFit=type===bitType?84:type==="Balance"?76:
-        (type==="Attack"&&bitType==="Stamina")?48:
-        (type==="Stamina"&&bitType==="Attack")?46:68;
-    const explicit=Number(blade.compatibility?.bits?.[bit.name.replace(/ /g,"")])||50;
-    const heightFit=getHeightFitV56(blade,ratchet.height)*100;
-    const avg=(stats.attack+stats.knockback+stats.defense+stats.mobility+stats.balance+stats.stamina)/6;
+    /*
+      Meta is the competitive quality of THIS combo.
+      The Blade's own strength is the anchor; parts unlock or suppress it.
+      This deliberately prevents the old problem where a 90+ Blade could
+      become an 80 simply because the stat average disliked its Bit.
+    */
+    const bladeOvr=Number(blade.card?.ovr)||70;
+    const bladeType=blade.type||"Balance";
+    const bitName=bit.name||"";
+    const phys=getBladePhysicalProfileV56(blade);
+    const height=Number(ratchet.height)||60;
+
+    let roleQuality=(
+        stats.attack*.14+stats.knockback*.14+stats.defense*.14+
+        stats.mobility*.14+stats.balance*.14+stats.stamina*.18+stats.burst*.12
+    );
+    if(bladeType==="Attack") roleQuality+=stats.attack*.05+stats.knockback*.05+stats.mobility*.03;
+    else if(bladeType==="Stamina") roleQuality+=stats.stamina*.06+stats.balance*.04+stats.defense*.03;
+    else if(bladeType==="Defense") roleQuality+=stats.defense*.06+stats.balance*.04+stats.stamina*.03;
+    else roleQuality+=stats.balance*.04+stats.attack*.03+stats.stamina*.02;
+    roleQuality=Math.max(60,Math.min(99,roleQuality));
+
+    const explicit=Number(blade.compatibility?.bits?.[bitName.replace(/ /g,"")]);
+    const bitFit=Number.isFinite(explicit)?explicit:getBitCompatibility(blade,bit);
+    const ratchetFit=Math.max(.18,Math.min(.88,fit/Math.max(.30,getHeightFitV56(blade,height))));
+
+    let roleFit=70;
+    if(bitName==="Rush"||bitName==="Low Rush") roleFit=(bladeType==="Attack"||bladeType==="Balance")?94:72;
+    else if(bitName==="Flat"||bitName==="Low Flat") roleFit=bladeType==="Attack"?91:(bladeType==="Balance"?70:56);
+    else if(bitName==="Kick") roleFit=(bladeType==="Defense"||bladeType==="Balance")?92:(bladeType==="Attack"?76:72);
+    else if(bitName==="Wedge") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?91:70;
+    else if(bitName==="Hexa") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?92:(bladeType==="Balance"?84:68);
+    else if(bitName==="Ball"||bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?95:(bladeType==="Balance"?82:58);
+    else if(bitName==="Needle"||bitName==="High Needle") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?78:(bladeType==="Balance"?70:62);
+    else if(bitName==="Point"||bitName==="Level") roleFit=(bladeType==="Balance"||bladeType==="Attack")?88:(bladeType==="Defense"?82:78);
+    else if(bitName==="Quake") roleFit=bladeType==="Attack"?84:58;
+    else if(bitName==="Taper") roleFit=(bladeType==="Balance"||bladeType==="Attack"||bladeType==="Defense")?86:78;
+
+    let signature=0;
+
+    // 1-60 attack identity.
+    if(ratchet.number===1 && height===60 && bladeType==="Attack") signature+=1.80;
+
+    // 1-60 defensive/recovery identity. This is the physical reason Wizard Rod
+    // 1-60 Hexa can reach the absolute ceiling without making every 1-60 combo
+    // universally elite.
+    if(ratchet.number===1 && height===60 &&
+       (bladeType==="Stamina"||bladeType==="Defense") &&
+       phys.stability>.62 && phys.retention>.80){
+        signature+=.75;
+        if(bitName==="Hexa") signature+=1.25;
+    }
+
+    // 5 is niche: only reward it when the Blade actually benefits from
+    // balance correction, especially with pointy/stability-oriented Bits.
+    if(ratchet.number===5 && phys.stability<.55 &&
+       (bitName==="Needle"||bitName==="High Needle"||bitName==="Hexa"||bitName==="Wedge")){
+        signature+=.75;
+    }
+    if(ratchet.number===5 && phys.stability>.68 && (bitName==="Ball"||bitName==="Orb")) signature-=1.0;
+
+    // Broadly useful circular ratchets receive small, not dominant, bonuses.
+    if((ratchet.number===3||ratchet.number===7)&&height===60&&shapeHasRoundOrTriShape(blade)) signature+=.45;
+    if(ratchet.number===9&&height===60){
+        signature+=.25;
+        if((bladeType==="Attack"&&phys.recoil>.70)||(bladeType==="Stamina"||bladeType==="Defense")) signature+=.25;
+    }
+
+    if(height===80){
+        signature-=1.15;
+        if(bitName==="Point"||bitName==="Level"||bitName==="Kick") signature+=.25;
+    }
+    if(height>=70&&stats.burst<72) signature-=.85;
+
+    // Small, bounded modifiers. Blade quality remains the dominant anchor.
+    const qualityDelta=(roleQuality-bladeOvr)*.05;
+    const bitDelta=(bitFit-75)*.010;
+    const ratchetDelta=(ratchetFit-.50)*3.0;
+    const heightDelta=height===60?.65:height===70?0:-1.05;
+    const roleDelta=(roleFit-75)*.015;
+
     return Math.max(60,Math.min(99,Math.round(
-        avg*.45+explicit*.12+heightFit*.08+fit*100*.15+typeFit*.10+(Number(blade.card?.ovr)||70)*.10
+        bladeOvr-2.0+qualityDelta+bitDelta+ratchetDelta+heightDelta+roleDelta+signature
     )));
+}
+
+function shapeHasRoundOrTriShape(blade){
+    const s=String(blade.physics?.contactShape||"").toLowerCase();
+    return s.includes("round")||s.includes("three")||s.includes("tri")||
+        s.includes("sword")||s.includes("claw")||s.includes("hybrid");
 }
 
 function normalizePhysicalStat(v){return Math.max(60,Math.min(99,Math.round(v)));}
