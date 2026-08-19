@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53gay · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -5596,53 +5596,147 @@ function newPhysicsCollision(dt){
       actually received the hit. Knockback is separate, so a massive shove
       doesn't automatically equal an instant Spin Finish.
     */
-    const baseRPMDamage=
-        0.0018+
-        effectiveImpact*0.016+
-        Math.pow(momentumFactor,1.20)*0.00055;
+    /*
+      V61 DAMAGE MODEL
+      ----------------
+      Damage is not a flat "contact happened = 1 RPM" event anymore.
+
+      The attacker contributes:
+        1) physical momentum
+        2) the actual knockback impulse it generated
+        3) impact/force delivered at contact
+        4) a modest Attack/Knockback stat influence
+
+      Momentum and delivered force are deliberately the dominant terms.
+      This lets the same Bey produce a light scrape, a medium clash, or a
+      genuinely damaging smash without making every hit lethal.
+
+      Low-RPM Beys retain a small damage floor. Their attacks become less
+      frequent/effective because momentum, speed and force fall, but they
+      never become mathematically incapable of dealing damage.
+    */
+
+    const pMomentumQuality=
+        newBattleClamp(pMomentum/0.040,0,3.0);
+    const cMomentumQuality=
+        newBattleClamp(cMomentum/0.040,0,3.0);
+
+    // pKnockback/cKnockback is the actual displacement impulse generated
+    // by each attacker after defense and Bit behavior are applied.
+    const pKnockQuality=
+        newBattleClamp(pKnockback/0.0060,0,3.0);
+    const cKnockQuality=
+        newBattleClamp(cKnockback/0.0060,0,3.0);
+
+    const pForceQuality=
+        newBattleClamp(pForce/0.020,0,3.0);
+    const cForceQuality=
+        newBattleClamp(cForce/0.020,0,3.0);
+
+    /*
+      RPM is used as a supporting multiplier rather than the primary damage
+      source. A 40-RPM Bey can still hurt; it just has much less momentum and
+      delivered force available to do it consistently.
+    */
+    const pRPMQuality=0.58+0.42*newBattleClamp(pRPM,0,1);
+    const cRPMQuality=0.58+0.42*newBattleClamp(cRPM,0,1);
+
+    /*
+      Attack and Knockback matter, but neither is allowed to overpower the
+      physical collision. This preserves the distinction:
+        Attack = ability to convert contact into offensive damage.
+        Knockback = ability to deliver displacement/impact.
+    */
+    const pStatDamageFactor=
+        (0.88+pAttack*0.0016)*
+        (0.92+pKB*0.0010);
+    const cStatDamageFactor=
+        (0.88+cAttack*0.0016)*
+        (0.92+cKB*0.0010);
 
     const nonAttackRPMMultiplier=
-        (pNonAttackType && cNonAttackType) ? 1.12 : 1.0;
+        (pNonAttackType && cNonAttackType) ? 1.08 : 1.0;
 
     const attackVsAttackRPMMultiplier=
-        bothAttackCollision ? 0.84 : 1.0;
+        bothAttackCollision ? 0.92 : 1.0;
 
-    const pRailAttackMultiplier=pWasOnRail ? 1.22 : 1.0;
-    const cRailAttackMultiplier=cWasOnRail ? 1.22 : 1.0;
+    /*
+      X-Rail attacks get a controlled damage bonus because the rail supplies
+      additional launch energy. It is a bonus, not an automatic heavy hit.
+    */
+    const pRailAttackMultiplier=pWasOnRail ? 1.18 : 1.0;
+    const cRailAttackMultiplier=cWasOnRail ? 1.18 : 1.0;
 
+    /*
+      Physical damage curve:
+        - momentum is the largest contributor
+        - actual knockback is the second major contributor
+        - delivered force adds the final impact component
+        - RPM/stat factors refine rather than dominate
+
+      Typical contacts land around 1–6 RPM.
+      Strong clashes can reach roughly 7–12+ RPM.
+      Truly exceptional collisions can go higher, but the cap prevents
+      single impacts from melting a full-spin Bey.
+    */
+    const pDamageCurve=
+        0.0030+
+        0.0115*Math.pow(pMomentumQuality,0.82)+
+        0.0150*Math.pow(pKnockQuality,0.88)+
+        0.0100*Math.pow(pForceQuality,0.84);
+
+    const cDamageCurve=
+        0.0030+
+        0.0115*Math.pow(cMomentumQuality,0.82)+
+        0.0150*Math.pow(cKnockQuality,0.88)+
+        0.0100*Math.pow(cForceQuality,0.84);
+
+    /*
+      Defender still matters. Defense reduces incoming damage, but never
+      reduces it to zero. This is intentionally softer than the old system.
+    */
     const pToCDamageRaw=
-        baseRPMDamage*
+        pDamageCurve*
+        pStatDamageFactor*
+        pRPMQuality*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         pRailAttackMultiplier*
-        (0.90+pAttack*0.32)*
-        (0.80+pRPM*0.28)*
-        (0.86+newBattleClamp(pMomentum/0.035,0,2.2)*0.14)*
-        (1-cDef*0.20);
+        (0.82+0.18*(1-newBattleClamp(cDef/100,0,1)));
 
     const cToPDamageRaw=
-        baseRPMDamage*
+        cDamageCurve*
+        cStatDamageFactor*
+        cRPMQuality*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         cRailAttackMultiplier*
-        (0.90+cAttack*0.32)*
-        (0.80+cRPM*0.28)*
-        (0.86+newBattleClamp(cMomentum/0.035,0,2.2)*0.14)*
-        (1-pDef*0.20);
+        (0.82+0.18*(1-newBattleClamp(pDef/100,0,1)));
 
     /*
-      Every confirmed contact must matter.
-      The floor is intentionally small: at low RPM a Bey still loses a
-      visible amount of spin, but repeated low-energy taps cannot melt it.
-      The floor also applies to X-Rail contacts so rail attacks never report
-      zero damage.
+      Small guaranteed floor: a real contact always matters, including at
+      low RPM. This is below the normal 1-RPM display threshold, so it does
+      not turn every tiny scrape into a large visible hit.
     */
-    const contactDamageFloor=
-        0.0050+
-        newBattleClamp(effectiveImpact/0.030,0,1)*0.0015;
+    const contactDamageFloor=0.0055;
 
-    const pToCDamage=Math.max(contactDamageFloor,pToCDamageRaw);
-    const cToPDamage=Math.max(contactDamageFloor,cToPDamageRaw);
+    /*
+      Hard cap prevents a single collision from deleting a huge percentage
+      of the battle's remaining RPM. Strong hits still feel dramatically
+      different because they can reach the upper portion of this range.
+    */
+    const maximumSingleHitDamage=0.135;
+
+    const pToCDamage=newBattleClamp(
+        Math.max(contactDamageFloor,pToCDamageRaw),
+        contactDamageFloor,
+        maximumSingleHitDamage
+    );
+    const cToPDamage=newBattleClamp(
+        Math.max(contactDamageFloor,cToPDamageRaw),
+        contactDamageFloor,
+        maximumSingleHitDamage
+    );
 
     const __cRpmLoss=pToCDamage;
     const __pRpmLoss=cToPDamage;
