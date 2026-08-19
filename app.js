@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">swegh · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2704,6 +2704,8 @@ function newBattleLaunchState(side){
         railExited:false,
         railExitRefractory:0,
         railExitRefractoryPoint:null,
+        finishRecoveryUsed:false,
+        recoveredFlashUntil:0,
         surfaceRecovery:0,
         surfaceBounce:0
     };
@@ -2961,6 +2963,12 @@ function renderNewBattle(){
                 <text id="cpuDamageText" x="50" y="46"
                       text-anchor="middle" font-size="3.5"
                       font-weight="900" fill="#ff4b4b" opacity="0"></text>
+                <text id="playerRecoveredText" x="50" y="46"
+                      text-anchor="middle" font-size="4.0" font-weight="1000"
+                      fill="#8bdcff" opacity="0">RECOVERED</text>
+                <text id="cpuRecoveredText" x="50" y="46"
+                      text-anchor="middle" font-size="4.0" font-weight="1000"
+                      fill="#8bdcff" opacity="0">RECOVERED</text>
               </g>
             </svg>
           </div>
@@ -3042,7 +3050,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(stadium && (finishType==="Xtreme" || finishType==="Over")){
         const flash=document.createElement("div");
         flash.className=`finish-flash finish-flash-${finishType.toLowerCase()}`;
-        flash.innerHTML=`<div class="finish-flash-kicker">${winner.blade.name}</div><div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div><div class="finish-flash-points">+${finishPoints}</div>`;
+        flash.innerHTML=`<div class="finish-lightning lightning-left">⚡</div><div class="finish-lightning lightning-right">⚡</div><div class="finish-flash-kicker">${winner.blade.name}</div><div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div><div class="finish-flash-points">+${finishPoints}</div>`;
         stadium.appendChild(flash);
     }
     const commentary=document.getElementById("newCommentary");
@@ -3107,12 +3115,82 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
         NEW_BATTLE.finishPending=false;
         NEW_BATTLE.active=false;
+        Game.player.recoveredFlashUntil=0;
+        Game.cpu.recoveredFlashUntil=0;
         NEW_BATTLE.player=null;
         NEW_BATTLE.cpu=null;
 
         showLetItRip();
     },2000);
 }
+
+function tryFinishZoneRecovery(s,zone){
+    if(!s || s.finishRecoveryUsed) return false;
+    const now=performance.now();
+    const rpm=newBattleClamp(s.rpm,0,1);
+    const stamina=getBattleStat(s,"stamina");
+    const defense=getBattleStat(s,"defense");
+    const balance=getBattleStat(s,"balance");
+    const stability=newBattleClamp(s.stability||0,0,1);
+    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
+    const force=newBattleClamp((s.lastImpactForce||0)/0.018,0,1.8);
+    const speed=newBattleClamp(speedOf(s)/0.075,0,1.5);
+    const impactAge=now-(s.lastImpactAt||0);
+
+    // Recovery is a real contest, not a fixed escape chance. Stronger hits,
+    // heavy tilt and low stability suppress it; remaining RPM/stamina,
+    // balance and defense preserve a path out.
+    const impactPenalty=Math.pow(force/1.15,1.28)*0.48;
+    const tiltPenalty=Math.pow(tilt,1.35)*0.18;
+    const base=0.08+
+        stamina*0.24+
+        defense*0.08+
+        balance*0.20+
+        stability*0.22+
+        rpm*0.12;
+    const momentumPenalty=Math.max(0,speed-0.82)*0.12;
+    const chance=newBattleClamp(
+        base-impactPenalty-tiltPenalty-momentumPenalty,
+        0.035,0.72
+    );
+
+    // A recovery is only rolled when the Bey was actually driven into the
+    // finish area by a recent impact/rail event.
+    if(impactAge>700) return false;
+    if(Math.random()>chance) return false;
+
+    s.finishRecoveryUsed=true;
+    s.recoveredFlashUntil=now+900;
+
+    const centerX=0;
+    const centerY=0.48;
+    const dx=centerX-s.x;
+    const dy=centerY-s.y;
+    const len=Math.hypot(dx,dy)||1;
+    const escapeSpeed=0.032+0.018*newBattleClamp(rpm,0,1)+0.008*balance;
+
+    // Put the Bey just back inside the finish boundary and give it a real
+    // outward-from-pocket / toward-stadium velocity instead of teleporting it.
+    if(zone==="Xtreme"){
+        s.y=0.675;
+        s.x=newBattleClamp(s.x,-0.20,0.20);
+    }else{
+        s.y=Math.min(0.71,s.y);
+        s.x=s.x<0 ? -0.52 : 0.52;
+    }
+    s.vx=(dx/len)*escapeSpeed;
+    s.vy=(dy/len)*escapeSpeed;
+    s.stability=newBattleClamp(s.stability+0.035+balance*0.025,0,1);
+    s.axisStability=newBattleClamp((s.axisStability||0.70)+0.035,0.15,1);
+    s.tiltLevel=newBattleClamp((s.tiltLevel||0)-0.12,0,1);
+    s.surfaceRecovery=0.30;
+    s.surfaceBounce=0.28;
+    s.motionPhase+=0.8+Math.random()*0.5;
+    s.motionPhase2+=0.4+Math.random()*0.3;
+
+    return true;
+}
+
 function checkForcedStadiumFinish(s){
     /*
       V46 FINISH BALANCE
@@ -3173,6 +3251,7 @@ function checkForcedStadiumFinish(s){
     const enteredXtreme=!wasXtreme && inXtreme;
 
     if(enteredXtreme){
+        if(tryFinishZoneRecovery(s,"Xtreme")) return "Recovered";
         const dx=-s.x;
         const dy=0.91-s.y;
         const d=Math.hypot(dx,dy)||1;
@@ -3210,6 +3289,7 @@ function checkForcedStadiumFinish(s){
         (!wasRightPocket && rightPocket);
 
     if(enteredPocket){
+        if(tryFinishZoneRecovery(s,"Pocket")) return "Recovered";
         const targetX=leftPocket ? -0.84 : 0.84;
         const targetY=0.90;
         const dx=targetX-s.x;
@@ -3351,12 +3431,17 @@ function newBattleFrame(now){
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const life=0.78;
+            const life=
+                imp.impactClass==="heavy" ? 0.92 :
+                imp.impactClass==="medium" ? 0.76 : 0.60;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
                 const y=46+imp.y*39;
                 const strength=imp.strength||1;
+                const impactMultiplier=
+                    imp.impactClass==="heavy" ? 1.22 :
+                    imp.impactClass==="medium" ? 1.0 : 0.78;
 
                 impactGroup.setAttribute("opacity",
                     String(Math.max(0,0.90-u*0.90)));
@@ -3375,19 +3460,21 @@ function newBattleFrame(now){
                 const txt=document.getElementById("impactText");
                 const playerDamageText=document.getElementById("playerDamageText");
                 const cpuDamageText=document.getElementById("cpuDamageText");
+                const playerRecoveredText=document.getElementById("playerRecoveredText");
+                const cpuRecoveredText=document.getElementById("cpuRecoveredText");
 
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
                     const flashPhase=Math.min(1,u*7);
-                    flash.setAttribute("r",String(4.5+u*7.5*strength));
+                    flash.setAttribute("r",String(4.5+u*7.5*strength*impactMultiplier));
                     flash.setAttribute("stroke-width",String(5.0-u*2.2));
                     flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
-                    ring.setAttribute("r",String(2.5+u*9.0*strength));
+                    ring.setAttribute("r",String(2.5+u*9.0*strength*impactMultiplier));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
@@ -3402,7 +3489,7 @@ function newBattleFrame(now){
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(3.0+u*7.0*strength));
+                    explosion.setAttribute("r",String(3.0+u*7.0*strength*impactMultiplier));
                     explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
                     explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.12)));
                 }
@@ -3462,12 +3549,26 @@ function newBattleFrame(now){
                     cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
                     cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.08):0));
                 }
+                const nowRecovery=performance.now();
+                for(const [el,s] of [[playerRecoveredText,p],[cpuRecoveredText,c]]){
+                    if(el && s.recoveredFlashUntil>nowRecovery){
+                        el.setAttribute("x",String(50+s.x*39));
+                        el.setAttribute("y",String(46+s.y*39-8));
+                        const ru=1-(s.recoveredFlashUntil-nowRecovery)/900;
+                        el.setAttribute("opacity",String(Math.max(0,1-ru)));
+                        el.setAttribute("font-size",String(3.8+ru*0.8));
+                    }else if(el){ el.setAttribute("opacity","0"); }
+                }
              }else{
                 impactGroup.setAttribute("opacity","0");
                 const pd=document.getElementById("playerDamageText");
                 const cd=document.getElementById("cpuDamageText");
                 if(pd) pd.setAttribute("opacity","0");
                 if(cd) cd.setAttribute("opacity","0");
+                const pr=document.getElementById("playerRecoveredText");
+                const cr=document.getElementById("cpuRecoveredText");
+                if(pr && p.recoveredFlashUntil<=performance.now()) pr.setAttribute("opacity","0");
+                if(cr && c.recoveredFlashUntil<=performance.now()) cr.setAttribute("opacity","0");
                 NEW_BATTLE.lastImpact=null;
             }
         }
@@ -3504,7 +3605,7 @@ function newBattleFrame(now){
 
         // checkForcedStadiumFinish identifies the Bey that ENTERED the zone.
         // The opponent is therefore the finisher/winner for scoring purposes.
-        if(playerFinish){
+        if(playerFinish && playerFinish!=="Recovered"){
             finishCandidates.push({
                 enteredSide:"player",
                 winnerSide:"cpu",
@@ -3512,7 +3613,7 @@ function newBattleFrame(now){
                 strength:(p.lastImpactForce||0)+Math.hypot(p.vx,p.vy)*0.35
             });
         }
-        if(cpuFinish){
+        if(cpuFinish && cpuFinish!=="Recovered"){
             finishCandidates.push({
                 enteredSide:"cpu",
                 winnerSide:"player",
@@ -3907,7 +4008,7 @@ function updateNewXRailRide(s,dt){
 
     // V42: prevent awkward slow rail crawling. A rider must retain enough
     // tangential energy to stay on the rail; otherwise release cleanly.
-    if(s.railEngaged && (s.railRideTime||0)>0.35 && speedOf(s)<0.065){
+    if(s.railEngaged && (s.railRideTime||0)>0.28 && speedOf(s)<0.075){
         newXRailRailRelease(s,direction);
         s.railReengageCooldown=0.36;
         return false;
@@ -3948,7 +4049,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.040){
+    if(tangentVelocity<0.052){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -3957,7 +4058,7 @@ function updateNewXRailRide(s,dt){
     const railFriction=0.00034+(1-rpm)*0.00052+tilt*0.00028;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
-    if(tangentVelocity<0.060){
+    if(tangentVelocity<0.075){
         newXRailRailRelease(s,direction);
         s.railReengageCooldown=0.34;
         return false;
@@ -4197,7 +4298,7 @@ function newPhysicsStep(s,dt){
         const knockbackStat=getBattleStat(s,"knockback");
         const attackSpeedBoost =
             attackBit
-                ? (1.28 + 0.28*attackStat + 0.18*Math.pow(rpm,0.70))
+                ? (1.14 + 0.12*attackStat + 0.10*Math.pow(rpm,0.70))
                 : (0.98 + 0.06*rpm + 0.04*attackStat);
 
         /*
@@ -4677,9 +4778,12 @@ function newPhysicsStep(s,dt){
                     ? 1.0
                     : (0.18+0.24*(1-centerAffinity));
 
+            const lateGameMovementGate=
+                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
             const lateralStrength=
-                (0.00012+movement*0.00036)*
-                Math.pow(rpm,1.16)*
+                (0.00010+movement*0.00030)*
+                Math.pow(rpm,1.42)*
+                lateGameMovementGate*
                 (0.52+control*0.48)*
                 (0.76+0.24*attackStat)*
                 (0.72+0.38*bitPrecession)*
@@ -5294,16 +5398,16 @@ function newPhysicsCollision(dt){
     const pHit =
         contactEnergy *
         pEnergyScale *
-        (0.62+pKB*1.28) *
-        (0.64+pAttack*0.70) *
-        (0.68+pRPM*0.50);
+        (0.78+pKB*0.48) *
+        (0.78+pAttack*0.38) *
+        (0.76+pRPM*0.34);
 
     const cHit =
         contactEnergy *
         cEnergyScale *
-        (0.62+cKB*1.28) *
-        (0.64+cAttack*0.70) *
-        (0.68+cRPM*0.50);
+        (0.78+cKB*0.48) *
+        (0.78+cAttack*0.38) *
+        (0.76+cRPM*0.34);
 
     const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
     const hitRoll=0.90+Math.random()*0.20;
@@ -5343,8 +5447,8 @@ function newPhysicsCollision(dt){
     const cDynamicBit=getDynamicBitBehavior(c.bit,c.rpm*100,c.stability*100,c.tiltLevel||0);
     const bitImpactMultiplier=(s,dynamic)=>{
         const name=s.bit?.name;
-        if(name==="Point") return 0.82+(dynamic?.aggression||0)*0.30;
-        if(name==="Level") return 0.84+(dynamic?.aggression||0)*0.20;
+        if(name==="Point") return 0.88+(dynamic?.aggression||0)*0.12;
+        if(name==="Level") return 0.90+(dynamic?.aggression||0)*0.08;
         return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.02 : 0.90;
     };
     const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
@@ -5355,8 +5459,8 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const pKnockback=Math.max(0.0028+contactEnergy*0.068,pForce*pBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(1.08-cDef*0.30));
-    const cKnockback=Math.max(0.0028+contactEnergy*0.068,cForce*cBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(1.08-pDef*0.30));
+    const pKnockback=Math.max(0.0016+contactEnergy*0.040,pForce*pBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(0.90-cDef*0.24));
+    const cKnockback=Math.max(0.0016+contactEnergy*0.040,cForce*cBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(0.90-pDef*0.24));
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
     const recoilP=pKnockback*(0.16+0.18*pDef);
@@ -5366,10 +5470,10 @@ function newPhysicsCollision(dt){
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.0012+
-        effectiveImpact*0.016+
-        Math.abs(tangentRelative)*0.0032+
-        heavyFactor*0.0008;
+        0.0007+
+        effectiveImpact*0.010+
+        Math.abs(tangentRelative)*0.0020+
+        heavyFactor*0.00045;
 
     const pFollow=
         followThrough*
@@ -5456,12 +5560,12 @@ function newPhysicsCollision(dt){
       doesn't automatically equal an instant Spin Finish.
     */
     const baseRPMDamage=
-        0.0046+
-        effectiveImpact*0.041+
-        Math.pow(momentumFactor,1.42)*0.0018;
+        0.0028+
+        effectiveImpact*0.025+
+        Math.pow(momentumFactor,1.35)*0.0010;
 
     const nonAttackRPMMultiplier=
-        (pNonAttackType && cNonAttackType) ? 1.62 : 1.0;
+        (pNonAttackType && cNonAttackType) ? 1.12 : 1.0;
 
     const attackVsAttackRPMMultiplier=
         bothAttackCollision ? 0.84 : 1.0;
@@ -5584,10 +5688,13 @@ function newPhysicsCollision(dt){
         );
 
     const visualStrength=newBattleClamp(
-        0.78+
-        impactVisualEnergy*0.62,
-        0.78,1.52
+        0.70+
+        impactVisualEnergy*0.72,
+        0.70,1.58
     );
+    const impactClass=
+        visualStrength>=1.28 ? "heavy" :
+        visualStrength>=0.98 ? "medium" : "light";
 
     p.hitFlash=0.27*visualStrength;
     c.hitFlash=0.27*visualStrength;
@@ -5599,7 +5706,8 @@ function newPhysicsCollision(dt){
         x:(p.x+c.x)*0.5,
         y:(p.y+c.y)*0.5,
         strength:visualStrength,
-        heavy:false,
+        impactClass,
+        heavy:impactClass==="heavy",
         playerRpmLoss:__pRpmLoss+__pExtraRpmLoss,
         cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
         time:performance.now()
