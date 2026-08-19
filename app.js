@@ -1089,11 +1089,9 @@ function renderMainMenu(){
                 <div class="hero-core"></div>
             </div>
             <div class="hero-copy">
-                <span class="hero-kicker">XTREME GEAR BATTLE SIMULATOR</span>
                 <h1>SPIN WARS <em>X</em></h1>
-                <p>Build your combo. Choose your launch. Let it rip.</p>
+                <p>Choose your launch. LET IT RIP.</p>
             </div>
-            <div class="hero-status"><span></span> SIMULATION READY</div>
         </section>
 
         <section class="battle-select">
@@ -1110,7 +1108,6 @@ function renderMainMenu(){
                     <div class="tier-card-glow"></div>
                     <span class="tier-code">01 · BRONZE</span>
                     <strong>BRONZE</strong>
-                    <small>Build with the entry pool</small>
                     <span class="tier-arrow">→</span>
                 </button>
 
@@ -1118,7 +1115,6 @@ function renderMainMenu(){
                     <div class="tier-card-glow"></div>
                     <span class="tier-code">02 · SILVER</span>
                     <strong>SILVER</strong>
-                    <small>Stronger parts. Tougher battles.</small>
                     <span class="tier-arrow">→</span>
                 </button>
 
@@ -1126,7 +1122,6 @@ function renderMainMenu(){
                     <div class="tier-card-glow"></div>
                     <span class="tier-code">03 · GOLD / DIAMOND</span>
                     <strong>GOLD / DIAMOND</strong>
-                    <small>Top-tier competitive pool</small>
                     <span class="tier-arrow">→</span>
                 </button>
 
@@ -1134,7 +1129,6 @@ function renderMainMenu(){
                     <div class="tier-card-glow"></div>
                     <span class="tier-code">04 · CUSTOM LAB</span>
                     <strong>CUSTOM</strong>
-                    <small>Build any combination</small>
                     <span class="tier-arrow">→</span>
                 </button>
             </div>
@@ -1149,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">swag3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -1975,6 +1969,8 @@ function createComboSummaryCard(side,combo){
         <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
         <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
       </div>
+      ${!isPlayer && Game.mode==="custom" ? `
+        <button class="cpu-reroll-btn" id="cpuRerollBtn" type="button">↻ REROLL CPU COMBO</button>` : ""}
     </article>`;
 }
 function showComboCard(){
@@ -1998,6 +1994,16 @@ function showComboCard(){
         }
         showVS();
     };
+
+    const cpuRerollButton=document.getElementById("cpuRerollBtn");
+    if(cpuRerollButton){
+        cpuRerollButton.onclick=(event)=>{
+            event?.preventDefault?.();
+            generateCPUCombo(true);
+            showComboCard();
+        };
+    }
+
     const menu=document.querySelector(".combo-review-screen");
     if(menu) menu.appendChild(createBackButton(()=>showBitDraft()));
 }
@@ -2042,6 +2048,7 @@ function generateCPUCombo(force=false){
     const differentBlades=tierPool.filter(b=>b!==playerBlade && b.name!==playerBlade?.name);
     const bladePool=differentBlades.length?differentBlades:tierPool.filter(b=>b!==playerBlade);
     const finalBladePool=bladePool.length?bladePool:allBlades;
+    // CPU may never share the player's selected Blade, Ratchet, or Bit.
     const differentRatchets=RATCHETS.filter(r=>r!==playerRatchet && r.name!==playerRatchet?.name);
     const ratchetPool=differentRatchets.length?differentRatchets:RATCHETS;
     const allBits=Object.values(BIT_ENGINE);
@@ -2157,7 +2164,6 @@ function showLetItRip(){
             <div class="launch-quality-column player-quality-reveal"><span>YOUR LAUNCH</span><strong>${Game.player.launch.quality}</strong><small>${Game.player.launch.qualityMode==="Roll" ? "ROLLED QUALITY" : "FIXED QUALITY"}</small></div>
             <div class="launch-quality-divider">VS</div>
             <div class="launch-quality-column cpu-quality-reveal"><span>CPU LAUNCH</span><strong>${Game.cpu.launch?.quality||"Okay"}</strong><small>CPU ROLL</small></div>
-            <div class="launch-quality-next">QUALITY LOCKED · NEXT: LAUNCH ANGLE & TECHNIQUE</div>
           </div>
         `;
 
@@ -2176,13 +2182,6 @@ function showLetItRip(){
     }else if(stage==="quality"){
         controls.innerHTML=`
           <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
-            <div style="font-size:12px;opacity:.72;margin-bottom:7px;">
-              LAUNCH QUALITY · SCORE ${Game.battle.score?.player||0}-${Game.battle.score?.cpu||0}
-            </div>
-            <div style="font-size:12px;opacity:.78;text-align:center;margin-bottom:9px;">
-              Choose your launch quality. Your choice is locked for this launch.
-            </div>
-
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <button class="menu-btn silver" id="fixedQualityBtn" type="button">
                 ${Game.player.launch.fixedQualityPreview || "Okay"}
@@ -2798,13 +2797,13 @@ function renderNewBattle(){
       <main class="menu" style="max-width:920px;">
         <section class="menu-card" style="padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong>LIVE BATTLE</strong>
+            <strong>BATTLE</strong>
             <span style="font-weight:700;">${Game.battle.score?.player||0} — ${Game.battle.score?.cpu||0}</span>
             <span style="opacity:.65;font-size:12px;">FIRST TO 7</span>
           </div>
 
           <div id="newStadium" style="
-            position:relative;width:min(76vw,600px);aspect-ratio:1/1;
+            position:relative;width:min(68vw,58vh,560px);aspect-ratio:1/1;
             margin:7px auto;background:#c9cdd0;
             border:2px solid #6d757b;overflow:hidden;
             clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
@@ -2963,25 +2962,27 @@ function renderNewBattle(){
                 <text id="cpuDamageText" x="50" y="46"
                       text-anchor="middle" font-size="3.5"
                       font-weight="900" fill="#ff4b4b" opacity="0"></text>
-                <text id="playerRecoveredText" x="50" y="46"
-                      text-anchor="middle" font-size="4.0" font-weight="1000"
-                      fill="#8bdcff" opacity="0">RECOVERED</text>
-                <text id="cpuRecoveredText" x="50" y="46"
-                      text-anchor="middle" font-size="4.0" font-weight="1000"
-                      fill="#8bdcff" opacity="0">RECOVERED</text>
               </g>
+              <text id="playerRecoveredText" x="50" y="46"
+                    text-anchor="middle" font-size="4.0" font-weight="1000"
+                    fill="#8bdcff" opacity="0">RECOVERED</text>
+              <text id="cpuRecoveredText" x="50" y="46"
+                    text-anchor="middle" font-size="4.0" font-weight="1000"
+                    fill="#8bdcff" opacity="0">RECOVERED</text>
             </svg>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
             <div class="battle-hud-card battle-hud-player">
               <div class="battle-hud-top"><div><strong>${p.blade.name}</strong><span class="battle-side-label">${playerSideLabel}</span></div><span class="battle-hud-role">PLAYER</span></div>
+              <div class="battle-combo-line">${p.blade.name} / ${p.ratchet?.name||""} / ${p.bit.name} <b>META ${p.comboMeta||Game.player.comboMeta||"—"}</b></div>
               <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em>%</em></div>
               <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
               <div class="stability-readout">STABILITY <b id="newPlayerStability">${Math.round(p.stability*100)}</b>%</div>
             </div>
             <div class="battle-hud-card battle-hud-cpu">
               <div class="battle-hud-top"><div><strong>${c.blade.name}</strong><span class="battle-side-label">${cpuSideLabel}</span></div><span class="battle-hud-role">CPU</span></div>
+              <div class="battle-combo-line">${c.blade.name} / ${c.ratchet?.name||""} / ${c.bit.name} <b>META ${c.comboMeta||Game.cpu.comboMeta||"—"}</b></div>
               <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b><em>%</em></div>
               <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
               <div class="stability-readout">STABILITY <b id="newCpuStability">${Math.round(c.stability*100)}</b>%</div>
@@ -3140,18 +3141,25 @@ function tryFinishZoneRecovery(s,zone){
     // Recovery is a real contest, not a fixed escape chance. Stronger hits,
     // heavy tilt and low stability suppress it; remaining RPM/stamina,
     // balance and defense preserve a path out.
-    const impactPenalty=Math.pow(force/1.15,1.28)*0.48;
-    const tiltPenalty=Math.pow(tilt,1.35)*0.18;
-    const base=0.08+
-        stamina*0.24+
-        defense*0.08+
-        balance*0.20+
-        stability*0.22+
-        rpm*0.12;
-    const momentumPenalty=Math.max(0,speed-0.82)*0.12;
+    const impactPenalty=newBattleClamp(
+        Math.pow(newBattleClamp(force/1.55,0,1.55),1.18)*0.34,
+        0,0.34
+    );
+    const tiltPenalty=Math.pow(tilt,1.22)*0.12;
+    const instabilityPenalty=(1-stability)*0.10;
+    const speedPenalty=Math.max(0,speed-0.95)*0.08;
+
+    const base=
+        0.16+
+        stamina*0.28+
+        defense*0.07+
+        balance*0.24+
+        stability*0.20+
+        rpm*0.15;
+
     const chance=newBattleClamp(
-        base-impactPenalty-tiltPenalty-momentumPenalty,
-        0.035,0.72
+        base-impactPenalty-tiltPenalty-instabilityPenalty-speedPenalty,
+        0.08,0.78
     );
 
     // A recovery is only rolled when the Bey was actually driven into the
@@ -3160,14 +3168,14 @@ function tryFinishZoneRecovery(s,zone){
     if(Math.random()>chance) return false;
 
     s.finishRecoveryUsed=true;
-    s.recoveredFlashUntil=now+900;
+    s.recoveredFlashUntil=now+1150;
 
     const centerX=0;
     const centerY=0.48;
     const dx=centerX-s.x;
     const dy=centerY-s.y;
     const len=Math.hypot(dx,dy)||1;
-    const escapeSpeed=0.032+0.018*newBattleClamp(rpm,0,1)+0.008*balance;
+    const escapeSpeed=0.038+0.020*newBattleClamp(rpm,0,1)+0.010*balance;
 
     // Put the Bey just back inside the finish boundary and give it a real
     // outward-from-pocket / toward-stadium velocity instead of teleporting it.
@@ -3549,16 +3557,6 @@ function newBattleFrame(now){
                     cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
                     cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.08):0));
                 }
-                const nowRecovery=performance.now();
-                for(const [el,s] of [[playerRecoveredText,p],[cpuRecoveredText,c]]){
-                    if(el && s.recoveredFlashUntil>nowRecovery){
-                        el.setAttribute("x",String(50+s.x*39));
-                        el.setAttribute("y",String(46+s.y*39-8));
-                        const ru=1-(s.recoveredFlashUntil-nowRecovery)/900;
-                        el.setAttribute("opacity",String(Math.max(0,1-ru)));
-                        el.setAttribute("font-size",String(3.8+ru*0.8));
-                    }else if(el){ el.setAttribute("opacity","0"); }
-                }
              }else{
                 impactGroup.setAttribute("opacity","0");
                 const pd=document.getElementById("playerDamageText");
@@ -3572,6 +3570,22 @@ function newBattleFrame(now){
                 NEW_BATTLE.lastImpact=null;
             }
         }
+        const nowRecovery=performance.now();
+        for(const [el,s] of [
+            [document.getElementById("playerRecoveredText"),p],
+            [document.getElementById("cpuRecoveredText"),c]
+        ]){
+            if(el && s.recoveredFlashUntil>nowRecovery){
+                el.setAttribute("x",String(50+s.x*39));
+                el.setAttribute("y",String(46+s.y*39-8));
+                const ru=1-(s.recoveredFlashUntil-nowRecovery)/1150;
+                el.setAttribute("opacity",String(Math.max(0,1-ru)));
+                el.setAttribute("font-size",String(3.8+ru*0.9));
+            }else if(el){
+                el.setAttribute("opacity","0");
+            }
+        }
+
         p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
         p.impactScale=Math.max(1,(p.impactScale||1)-dt*1.8);
@@ -5343,12 +5357,12 @@ function newPhysicsCollision(dt){
     // Blade Attack + Knockback are combat stats, not Bit-type permissions.
     const pCombatRating=
         0.58+
-        pAttack*0.78+
-        pKB*0.52;
+        pAttack*0.44+
+        pKB*0.28;
     const cCombatRating=
         0.58+
-        cAttack*0.78+
-        cKB*0.52;
+        cAttack*0.44+
+        cKB*0.28;
 
     // Momentum is the physical input; Attack/Knockback determine how well
     // the Bey converts that input into an offensive collision.
@@ -5365,8 +5379,8 @@ function newPhysicsCollision(dt){
     )*cContactEfficiency;
 
     const statDrivenContact=
-        (0.0016+Math.min(pCombatRating,cCombatRating)*0.00155)*
-        Math.pow((pRPM+cRPM)*0.5,0.68);
+        (0.0010+Math.min(pCombatRating,cCombatRating)*0.00082)*
+        Math.pow((pRPM+cRPM)*0.5,0.72);
 
     const effectiveImpact=Math.max(
         impactSpeed,
@@ -5398,33 +5412,33 @@ function newPhysicsCollision(dt){
     const pHit =
         contactEnergy *
         pEnergyScale *
-        (0.78+pKB*0.48) *
-        (0.78+pAttack*0.38) *
-        (0.76+pRPM*0.34);
+        (0.90+pKB*0.22) *
+        (0.90+pAttack*0.18) *
+        (0.82+pRPM*0.26);
 
     const cHit =
         contactEnergy *
         cEnergyScale *
-        (0.78+cKB*0.48) *
-        (0.78+cAttack*0.38) *
-        (0.76+cRPM*0.34);
+        (0.90+cKB*0.22) *
+        (0.90+cAttack*0.18) *
+        (0.82+cRPM*0.26);
 
     const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
     const hitRoll=0.90+Math.random()*0.20;
     const heavyFactor=
-        Math.pow(momentumFactor,1.22)*
-        (0.70+directness*0.55);
+        Math.pow(momentumFactor,1.08)*
+        (0.58+directness*0.38);
 
     const pForce=
         pHit*
-        (0.78+directness*0.34)*
-        (0.86+heavyFactor*0.44)*
+        (0.76+directness*0.22)*
+        (0.84+heavyFactor*0.25)*
         hitRoll;
 
     const cForce=
         cHit*
-        (0.78+directness*0.34)*
-        (0.86+heavyFactor*0.44)*
+        (0.76+directness*0.22)*
+        (0.84+heavyFactor*0.25)*
         hitRoll;
 
     const pNonAttackType=
@@ -5459,32 +5473,44 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const pKnockback=Math.max(0.0016+contactEnergy*0.040,pForce*pBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(0.90-cDef*0.24));
-    const cKnockback=Math.max(0.0016+contactEnergy*0.040,cForce*cBitKnockbackMultiplier*nonAttackImpactMultiplier*attackVsAttackImpactMultiplier*(0.90-pDef*0.24));
+    const pKnockback=Math.max(
+        0.0009+contactEnergy*0.022,
+        pForce*pBitKnockbackMultiplier*
+        nonAttackImpactMultiplier*
+        attackVsAttackImpactMultiplier*
+        (0.64-cDef*0.12)
+    );
+    const cKnockback=Math.max(
+        0.0009+contactEnergy*0.022,
+        cForce*cBitKnockbackMultiplier*
+        nonAttackImpactMultiplier*
+        attackVsAttackImpactMultiplier*
+        (0.64-pDef*0.12)
+    );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
-    const recoilP=pKnockback*(0.16+0.18*pDef);
-    const recoilC=cKnockback*(0.16+0.18*cDef);
+    const recoilP=pKnockback*(0.08+0.10*pDef);
+    const recoilC=cKnockback*(0.08+0.10*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.0007+
-        effectiveImpact*0.010+
-        Math.abs(tangentRelative)*0.0020+
-        heavyFactor*0.00045;
+        0.00035+
+        effectiveImpact*0.0052+
+        Math.abs(tangentRelative)*0.0010+
+        heavyFactor*0.00022;
 
     const pFollow=
         followThrough*
-        (0.74+0.50*pAttack)*
-        (0.70+0.40*pKB)*
+        (0.84+0.24*pAttack)*
+        (0.82+0.20*pKB)*
         attackVsAttackImpactMultiplier;
 
     const cFollow=
         followThrough*
-        (0.74+0.50*cAttack)*
-        (0.70+0.40*cKB)*
+        (0.84+0.24*cAttack)*
+        (0.82+0.20*cKB)*
         attackVsAttackImpactMultiplier;
 
     p.vx+=tx*pFollow;
@@ -5560,9 +5586,9 @@ function newPhysicsCollision(dt){
       doesn't automatically equal an instant Spin Finish.
     */
     const baseRPMDamage=
-        0.0028+
-        effectiveImpact*0.025+
-        Math.pow(momentumFactor,1.35)*0.0010;
+        0.0018+
+        effectiveImpact*0.016+
+        Math.pow(momentumFactor,1.20)*0.00055;
 
     const nonAttackRPMMultiplier=
         (pNonAttackType && cNonAttackType) ? 1.12 : 1.0;
@@ -5578,20 +5604,20 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         pRailAttackMultiplier*
-        (0.82+pAttack*0.58)*
-        (0.72+pRPM*0.42)*
-        (0.82+newBattleClamp(pMomentum/0.035,0,2.2)*0.22)*
-        (1-cDef*0.30);
+        (0.90+pAttack*0.32)*
+        (0.80+pRPM*0.28)*
+        (0.86+newBattleClamp(pMomentum/0.035,0,2.2)*0.14)*
+        (1-cDef*0.20);
 
     const cToPDamage=
         baseRPMDamage*
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         cRailAttackMultiplier*
-        (0.82+cAttack*0.58)*
-        (0.72+cRPM*0.42)*
-        (0.82+newBattleClamp(cMomentum/0.035,0,2.2)*0.22)*
-        (1-pDef*0.30);
+        (0.90+cAttack*0.32)*
+        (0.80+cRPM*0.28)*
+        (0.86+newBattleClamp(cMomentum/0.035,0,2.2)*0.14)*
+        (1-pDef*0.20);
 
     const __cRpmLoss=pToCDamage;
     const __pRpmLoss=cToPDamage;
@@ -5633,9 +5659,9 @@ function newPhysicsCollision(dt){
     }
 
     const stabilityHit=
-        0.007+
-        effectiveImpact*0.085+
-        heavyFactor*0.012;
+        0.004+
+        effectiveImpact*0.050+
+        heavyFactor*0.006;
 
     p.stability=newBattleClamp(
         p.stability-stabilityHit*(1-pDef*0.36),
@@ -5667,9 +5693,9 @@ function newPhysicsCollision(dt){
     );
 
     const tiltHit=
-        0.060+
-        effectiveImpact*0.52+
-        newBattleClamp(heavyFactor,0,2.5)*0.024;
+        0.035+
+        effectiveImpact*0.32+
+        newBattleClamp(heavyFactor,0,2.5)*0.015;
 
     p.tiltLevel=newBattleClamp((p.tiltLevel||0)+tiltHit,0,1);
     c.tiltLevel=newBattleClamp((c.tiltLevel||0)+tiltHit,0,1);
