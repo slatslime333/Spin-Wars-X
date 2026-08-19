@@ -658,3 +658,37 @@ button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
   .selection-header h1{font-size:24px!important}.battle-hud-card{padding:7px!important}
   .battle-hud-top strong{font-size:10px!important}.rpm-readout b{font-size:19px!important}
 }
+
+/* V60 FINISH / HUD POLISH */
+.finish-flash-spin{
+  background:radial-gradient(circle,rgba(150,210,255,.10),rgba(0,0,0,.40));
+  transform:skew(-3deg);
+}
+.finish-flash-spin .finish-flash-main{
+  font-size:clamp(30px,6vw,58px);
+  letter-spacing:.08em;
+  text-shadow:3px 3px 0 #111,-1px -1px 0 #111;
+  -webkit-text-stroke:1px #111;
+}
+.finish-flash-spin .finish-flash-kicker{
+  margin-bottom:8px;
+  opacity:.62;
+  letter-spacing:.18em;
+}
+.finish-flash-spin .finish-flash-points{
+  font-size:15px;
+  margin-top:8px;
+  opacity:.78;
+}
+.finish-flash-spin-ring{
+  position:absolute;width:clamp(90px,16vw,180px);height:clamp(90px,16vw,180px);
+  border:2px solid rgba(190,235,255,.28);border-radius:50%;
+  box-shadow:0 0 22px rgba(140,215,255,.12),inset 0 0 18px rgba(140,215,255,.06);
+  animation:spinFinishRing .48s ease-out both;
+}
+@keyframes spinFinishRing{
+  from{opacity:0;transform:scale(.72) rotate(-18deg)}
+  45%{opacity:1}
+  to{opacity:.55;transform:scale(1.08) rotate(12deg)}
+}
+.battle-combo-line b{letter-spacing:.07em}
