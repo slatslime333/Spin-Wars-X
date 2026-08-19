@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 0.6.3
+ Version 0.6.4
 ==================================*/
 
 //=========================
@@ -9,7 +9,7 @@
 
 const Game = {
 
-    version:"0.6.3",
+    version:"0.6.4",
 
     screen:"menu",
 
@@ -853,57 +853,79 @@ const BLADE_ENGINE = {
 };
 
 //=========================
-// ENGINE 2.0 RATCHETS
+// V56 RATCHET PHYSICS
 //=========================
-
-const RATCHET_ENGINE = {
-    // Weight is approximate physical part weight; biases describe tendencies,
-    // not guaranteed outcomes. Blade geometry and alignment are applied separately.
-    "1":{weight:6.0,stability:70,burstResistance:70,attackBias:99,defenseBias:45,staminaBias:50,mobilityBias:94,profile:"asymmetric attack"},
-    "3":{weight:6.3,stability:84,burstResistance:84,attackBias:82,defenseBias:72,staminaBias:72,mobilityBias:82,profile:"balanced universal"},
-    "5":{weight:6.6,stability:89,burstResistance:80,attackBias:72,defenseBias:82,staminaBias:78,mobilityBias:72,profile:"wide stable"},
-    "6":{weight:6.6,stability:91,burstResistance:86,attackBias:70,defenseBias:86,staminaBias:82,mobilityBias:69,profile:"stable circular"},
-    "7":{weight:7.1,stability:94,burstResistance:88,attackBias:78,defenseBias:94,staminaBias:88,mobilityBias:65,profile:"heavy circular"},
-    "9":{weight:6.1,stability:90,burstResistance:94,attackBias:70,defenseBias:87,staminaBias:83,mobilityBias:60,profile:"recessed round"},
-    "0":{weight:7.0,stability:92,burstResistance:82,attackBias:60,defenseBias:88,staminaBias:84,mobilityBias:58,profile:"wide smooth"}
+// Ratchets are physical geometry, not stat sticks.  These values describe
+// tendencies that the combo solver converts into 60-99 performance ratings.
+// 3/4/5/6 are intentionally distinct; none is a universal upgrade.
+const RATCHET_PHYSICS_V56={
+    "1":{weight:6.0,sides:1,geometry:"asymmetric",attack:.82,knockback:.72,defense:.30,balance:.32,stamina:.28,mobility:.68,burst:.42,lad:.25,exposure:.65},
+    "3":{weight:6.3,sides:3,geometry:"triangular",attack:.62,knockback:.56,defense:.50,balance:.60,stamina:.52,mobility:.48,burst:.50,lad:.50,exposure:.50},
+    "4":{weight:6.3,sides:4,geometry:"small-square",attack:.48,knockback:.45,defense:.32,balance:.42,stamina:.45,mobility:.45,burst:.15,lad:.35,exposure:.78},
+    "5":{weight:6.6,sides:5,geometry:"wide-outer",attack:.45,knockback:.45,defense:.72,balance:.78,stamina:.72,mobility:.35,burst:.62,lad:.72,exposure:.46},
+    "6":{weight:6.65,sides:6,geometry:"circular",attack:.48,knockback:.45,defense:.67,balance:.74,stamina:.70,mobility:.32,burst:.68,lad:.82,exposure:.40},
+    "7":{weight:7.1,sides:7,geometry:"heavy-circular",attack:.45,knockback:.55,defense:.78,balance:.82,stamina:.78,mobility:.28,burst:.72,lad:.68,exposure:.45},
+    "9":{weight:6.1,sides:9,geometry:"compact-round",attack:.35,knockback:.35,defense:.72,balance:.76,stamina:.68,mobility:.25,burst:.92,lad:.82,exposure:.32},
+    "0":{weight:7.0,sides:0,geometry:"smooth-outer",attack:.32,knockback:.42,defense:.70,balance:.78,stamina:.74,mobility:.25,burst:.50,lad:.74,exposure:.48}
 };
-function getRatchetProfile(ratchet){
-    const number=String(ratchet?.number||3);
-    const base=RATCHET_ENGINE[number]||RATCHET_ENGINE["3"];
 
-    // Height is handled once, by applyHeightSynergy().
-    // This prevents the old raw-height profile from double-counting
-    // stamina/defense/balance penalties in final combo stats.
-    const height={
-        attack:0,knockback:0,defense:0,mobility:0,
-        balance:0,stamina:0,burst:0
-    };
+const RATCHET_BASES=Object.entries(RATCHET_PHYSICS_V56).map(([number,p])=>({number:Number(number),stats:{
+    attack:Math.round(60+p.attack*20),
+    knockback:Math.round(60+p.knockback*20),
+    defense:Math.round(60+p.defense*20),
+    mobility:Math.round(60+p.mobility*20),
+    balance:Math.round(60+p.balance*20),
+    stamina:Math.round(60+p.stamina*20)
+}}));
 
-    return {base,height};
+const HEIGHTS=[60,70,80];
+const RATCHETS=[];
+
+for(const [number,p] of Object.entries(RATCHET_PHYSICS_V56)){
+    for(const height of HEIGHTS){
+        RATCHETS.push({
+            name:`${number}-${height}`,
+            number:Number(number),
+            height,
+            physics:p,
+            // These are intentionally restrained part-display tendencies,
+            // not bonuses applied directly to final combo stats.
+            stats:{
+                attack:Math.round(60+p.attack*20),
+                defense:Math.round(60+p.defense*20),
+                stamina:Math.round(60+p.stamina*20),
+                balance:Math.round(60+p.balance*20)
+            }
+        });
+    }
 }
 
+function getRatchetProfile(ratchet){
+    const p=RATCHET_PHYSICS_V56[String(ratchet?.number)]||RATCHET_PHYSICS_V56["3"];
+    return {base:p,height:Number(ratchet?.height)||60};
+}
 
+// V56 height model: height changes physical exposure and center of mass.
+// It never grants a generic stamina/defense bonus simply for being taller.
+function getHeightPhysicsV56(height){
+    if(Number(height)===80) return {attack:.04,knockback:.07,defense:-.45,balance:-.45,stamina:-1.00,mobility:-.12,burst:-.30,exposure:.22};
+    if(Number(height)===70) return {attack:.01,knockback:.02,defense:-.12,balance:-.12,stamina:-.35,mobility:-.04,burst:-.08,exposure:.07};
+    return {attack:0,knockback:0,defense:0,balance:0,stamina:0,mobility:0,burst:0,exposure:0};
+}
 
-
-// V53 HEIGHT COMPATIBILITY GUARD
-// Compatibility describes blade/height fit, not a hidden stat bonus.
-// 60 is the safe baseline; 70 can be niche; 80 can be specialized but
-// cannot receive a higher general compatibility score than the lower heights.
+// V56 HEIGHT COMPATIBILITY GUARD
+// Height fit is kept as compatibility information for UI/Meta only.
 function normalizeHeightCompatibility(){
     Object.values(BLADE_ENGINE).forEach(blade=>{
         const h=blade.compatibility?.heights;
         if(!h) return;
         const h60=Number(h[60]??70);
         h[60]=h60;
-        h[70]=Math.min(Number(h[70]??h60),Math.max(50,h60-5));
-        h[80]=Math.min(Number(h[80]??h[70]),Math.max(40,h[70]-8));
+        h[70]=Math.min(Number(h[70]??h60),Math.max(50,h60));
+        h[80]=Math.min(Number(h[80]??h[70]),Math.max(40,h60));
     });
 }
 normalizeHeightCompatibility();
-
-//=========================
-// ENGINE 2.0 BITS
-//=========================
 
 const BIT_ENGINE = {
 
@@ -1092,567 +1114,6 @@ function getBitPhysics(blader){
 
 
 
-//=========================
-// ZONE POSITIONS
-//=========================
-
-const ZONE_POSITIONS={
-    TopLeft:{x:330,y:245}, TopCenter:{x:500,y:300}, TopRight:{x:670,y:245},
-    LeftMid:{x:300,y:420}, Center:{x:500,y:430}, RightMid:{x:700,y:420},
-    BottomLeft:{x:360,y:560}, BottomCenter:{x:500,y:585}, BottomRight:{x:640,y:560},
-
-    // Continuous oval X-Line. The named LeftRail/RightRail zones are entry
-    // sections; the upper arc feeds the single X Exit at the top.
-    LeftRail:{x:220,y:410}, RailLeftTop:{x:300,y:170}, XRailExit:{x:500,y:92},
-    RailRightTop:{x:700,y:170}, RightRail:{x:780,y:410},
-    RailLeftBottom:{x:275,y:585}, RailBottom:{x:500,y:660}, RailRightBottom:{x:725,y:585},
-
-    LeftPocket:{x:255,y:705}, XtremeZone:{x:500,y:712}, RightPocket:{x:745,y:705}
-};
-
-//=========================
-// STADIUM ENGINE 3.0
-//=========================
-const STADIUM_MAP={
-    TopLeft:{neighbors:['TopCenter','LeftMid']},
-    TopCenter:{neighbors:['TopLeft','TopRight','Center','RailLeftTop','RailRightTop']},
-    TopRight:{neighbors:['TopCenter','RightMid']},
-    LeftMid:{neighbors:['TopLeft','Center','BottomLeft','LeftRail']},
-    Center:{neighbors:['TopCenter','LeftMid','RightMid','BottomCenter']},
-    RightMid:{neighbors:['TopRight','Center','BottomRight','RightRail']},
-    BottomLeft:{neighbors:['LeftMid','BottomCenter','LeftPocket','RailLeftBottom']},
-    BottomCenter:{neighbors:['BottomLeft','Center','BottomRight','XtremeZone','RailBottom']},
-    BottomRight:{neighbors:['RightMid','BottomCenter','RightPocket','RailRightBottom']},
-
-    LeftRail:{neighbors:['LeftMid','RailLeftTop','RailLeftBottom']},
-    RailLeftTop:{neighbors:['LeftRail','XRailExit']},
-    XRailExit:{neighbors:['RailLeftTop','RailRightTop','Center']},
-    RailRightTop:{neighbors:['XRailExit','RightRail']},
-    RightRail:{neighbors:['RightMid','RailRightTop','RailRightBottom']},
-    RailLeftBottom:{neighbors:['BottomLeft','RailBottom','LeftRail']},
-    RailBottom:{neighbors:['RailLeftBottom','RailRightBottom','BottomCenter']},
-    RailRightBottom:{neighbors:['BottomRight','RailBottom','RightRail']},
-
-    XtremeZone:{neighbors:[]}, LeftPocket:{neighbors:[]}, RightPocket:{neighbors:[]}
-};
-
-//=========================
-// MOVEMENT PATH / TRAJECTORY HELPERS
-//=========================
-function getMovementPath(from,to){
-    if(!from || !to) return [];
-    if(from===to) return [from];
-
-    const direct=STADIUM_MAP[from]?.neighbors || [];
-    if(direct.includes(to)) return [from,to];
-
-    // Find a short route through the stadium graph so visual playback never
-    // appears to teleport between unrelated zones.
-    const queue=[[from]];
-    const seen=new Set([from]);
-    while(queue.length){
-        const path=queue.shift();
-        const last=path[path.length-1];
-        for(const next of (STADIUM_MAP[last]?.neighbors||[])){
-            if(seen.has(next)) continue;
-            const nextPath=[...path,next];
-            if(next===to) return nextPath;
-            seen.add(next);
-            if(nextPath.length<=5) queue.push(nextPath);
-        }
-    }
-    return [from,to];
-}
-
-function movementPointList(movement,side){
-    if(!movement || !movement[side]) return [];
-    const m=movement[side];
-    // Use the exact recorded route when available. The fallback is only for
-    // older sequences that predate route recording.
-    if(Array.isArray(m.path) && m.path.length) return m.path.slice();
-    return getMovementPath(m.from,m.to);
-}
-
-
-
-
-
-
-
-//=========================
-// RENDER STADIUM
-//=========================
-
-
-
-//=========================
-// BATTLE STATE / HUD 1.0
-//=========================
-
-
-//=========================
-// MENU
-//=========================
-
-function renderMainMenu(){
-    Game.screen="menu";
-    const app=document.getElementById("app");
-    if(!app) return;
-
-    app.innerHTML=`
-    <div class="background"></div>
-    <main class="main-menu-shell">
-        <section class="main-menu-hero">
-            <div class="hero-mark">
-                <div class="hero-ring hero-ring-a"></div>
-                <div class="hero-ring hero-ring-b"></div>
-                <div class="hero-core"></div>
-            </div>
-            <div class="hero-copy">
-                <span class="hero-kicker">XTREME GEAR BATTLE SIMULATOR</span>
-                <h1>SPIN WARS <em>X</em></h1>
-                <p>Build your combo. Choose your launch. Let it rip.</p>
-            </div>
-            <div class="hero-status"><span></span> SIMULATION READY</div>
-        </section>
-
-        <section class="battle-select">
-            <div class="section-head">
-                <div>
-                    <span class="section-kicker">BATTLE SELECT</span>
-                    <h2>Choose your battle pool</h2>
-                </div>
-                <span class="section-count">04 MODES</span>
-            </div>
-
-            <div class="tier-menu-grid">
-                <button class="tier-menu-card tier-menu-bronze" data-mode="bronze">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">01 · BRONZE</span>
-                    <strong>BRONZE</strong>
-                    <small>Build with the entry pool</small>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-silver" data-mode="silver">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">02 · SILVER</span>
-                    <strong>SILVER</strong>
-                    <small>Stronger parts. Tougher battles.</small>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-gold" data-mode="gold">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">03 · GOLD / DIAMOND</span>
-                    <strong>GOLD / DIAMOND</strong>
-                    <small>Top-tier competitive pool</small>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-custom" data-mode="custom">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">04 · CUSTOM LAB</span>
-                    <strong>CUSTOM</strong>
-                    <small>Build any combination</small>
-                    <span class="tier-arrow">→</span>
-                </button>
-            </div>
-        </section>
-
-        <section class="main-menu-lower">
-            <div class="menu-feature">
-                <span class="feature-icon">◈</span>
-                <div><b>PHYSICS SIMULATION</b><small>Movement, impact, RPM and X-Rail behavior</small></div>
-            </div>
-            <div class="menu-feature">
-                <span class="feature-icon">◎</span>
-                <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
-            </div>
-            <div class="menu-version">gay1 · STAT &amp; SYSTEM CLEANUP</div>
-        </section>
-    </main>`;
-}
-
-function hookMenuButtons(){
-    renderMainMenu();
-
-    document.querySelectorAll(".tier-menu-card[data-mode]").forEach(button=>{
-        button.onclick=()=>{
-            Game.mode=button.dataset.mode;
-            startDraft();
-        };
-    });
-}
-
-//=========================
-// DRAFT LOADING
-//=========================
-
-function startDraft(){
-
-    Game.screen="loading";
-
-    const app=document.getElementById("app");
-
-    app.innerHTML=`
-
-    <div class="background"></div>
-
-    <main class="menu">
-
-        <div class="logo">
-
-            <div class="logo-icon">🎴</div>
-
-            <h1>GENERATING DRAFT</h1>
-
-            <p>Please Wait...</p>
-
-        </div>
-
-        <section class="menu-card">
-
-            <div class="loading">
-
-                <div class="loading-fill"
-                id="loadingFill"></div>
-
-            </div>
-
-            <h2 id="loadingText">
-
-                Preparing Blade Pool...
-
-            </h2>
-
-        </section>
-
-    </main>
-
-    `;
-
-    animateLoading();
-
-}
-
-//=========================
-// LOADING BAR
-//=========================
-
-function animateLoading(){
-
-    const fill=document.getElementById("loadingFill");
-
-    let progress=0;
-
-    const timer=setInterval(()=>{
-
-        progress+=2;
-
-        fill.style.width=progress+"%";
-
-        if(progress>=100){
-
-            clearInterval(timer);
-
-            setTimeout(showBladeDraft,300);
-
-        }
-
-    },25);
-
-}
-//=========================
-// BACK BUTTON
-//=========================
-
-function createBackButton(onClick){
-
-    const button=document.createElement("button");
-
-    button.className="back-btn";
-
-    button.textContent="← Back";
-
-    button.onclick=onClick;
-
-    return button;
-
-}
-
-//=========================
-// SHOW BLADE DRAFT
-//=========================
-function showBladeDraft(){
-    Game.screen="bladeDraft";
-    const pool=Object.values(BLADE_ENGINE).filter(blade=>{
-        if(Game.mode==="bronze") return blade.tier==="Bronze";
-        if(Game.mode==="silver") return blade.tier==="Silver";
-        if(Game.mode==="gold") return blade.tier==="Gold";
-        return true;
-    }).sort(()=>Math.random()-0.5);
-    Game.selection=Game.selection||{}; Game.selection.bladePool=pool; Game.selection.bladePage=0; renderBladeDraft();
-}
-function renderBladeDraft(){
-    const pool=Game.selection?.bladePool||[], page=Game.selection?.bladePage||0, size=3;
-    const total=Math.max(1,Math.ceil(pool.length/size)), safe=Math.min(Math.max(page,0),total-1); Game.selection.bladePage=safe;
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL"}</p></div></div><section class="menu-card selection-card" id="bladeContainer"></section></main>`;
-    const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
-    if(total>1){
-        const nav=document.createElement("div"); nav.className="selection-nav";;
-        nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
-        document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
-    }
-    container.appendChild(createBackButton(()=>location.reload()));
-}
-
-//=========================
-// CREATE CARD
-//=========================
-
-
-function tierClass(tier){
-    const v=String(tier||"custom").toLowerCase();
-    return v==="gold"?"tier-gold":v==="silver"?"tier-silver":v==="bronze"?"tier-bronze":"tier-custom";
-}
-function statMini(label,value){
-    return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
-}
-function createPartCard({title,subtitle,stats,accentClass,onClick,extra=""}){
-    const card=document.createElement("button");
-    card.type="button";
-    card.className=`part-select-card ${accentClass||""}`;
-    card.innerHTML=`<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
-    <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
-    card.onclick=onClick;
-    return card;
-}
-function createBladeCard(blade){
-    const card=document.createElement("button");
-    card.type="button";
-    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}`;
-    card.innerHTML=`
-        <div class="blade-card-head">
-            <div class="blade-card-title">
-                <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
-                <h2>${blade.name}</h2>
-                <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
-            </div>
-            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
-        </div>
-        <div class="blade-stat-grid">
-            ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-            ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
-            ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
-            ${statMini("BST",blade.card.burst)}
-        </div>
-        <div class="select-hint">SELECT BLADE <span>›</span></div>`;
-    card.onclick=()=>chooseBlade(blade,card);
-    return card;
-}
-
-//=========================
-// SELECT BLADE
-//=========================
-
-function chooseBlade(blade,card){
-
-    Game.player.blade=blade;
-
-    card.style.transform="scale(1.08)";
-    card.style.boxShadow="0 0 30px gold";
-
-    setTimeout(()=>{
-
-        showRatchetPlaceholder();
-
-    },350);
-
-}
-
-//=========================
-// RATCHET BASE DATABASE
-//=========================
-
-const RATCHET_BASES = [
-
-{
-number:1,
-
-stats:{
-attack:7,
-knockback:6,
-defense:-3,
-mobility:4,
-balance:-4,
-stamina:-2
-}
-},
-
-{
-number:3,
-
-stats:{
-attack:2,
-knockback:2,
-defense:1,
-mobility:1,
-balance:2,
-stamina:1
-}
-},
-
-{
-number:5,
-
-stats:{
-attack:-1,
-knockback:1,
-defense:3,
-mobility:-1,
-balance:3,
-stamina:3
-}
-},
-
-{
-number:6,
-
-stats:{
-attack:-2,
-knockback:0,
-defense:5,
-mobility:-2,
-balance:4,
-stamina:4
-}
-},
-
-{
-number:7,
-
-stats:{
-attack:-3,
-knockback:-1,
-defense:6,
-mobility:-3,
-balance:5,
-stamina:5
-}
-},
-
-{
-number:9,
-
-stats:{
-attack:-4,
-knockback:-2,
-defense:7,
-mobility:-4,
-balance:6,
-stamina:5
-}
-}
-
-];
-//=========================
-// BUILD ALL RATCHETS
-//=========================
-
-/* EXPANDED ROSTER + CUSTOM MODE PRESERVED */
-const HEIGHTS=[60,70,80];
-
-const RATCHETS=[];
-
-RATCHET_BASES.forEach(base=>{
-
-    HEIGHTS.forEach(height=>{
-
-        const modifier={
-            attack:0,
-            knockback:0,
-            defense:0,
-            mobility:0,
-            balance:0,
-            stamina:0
-        };
-
-        // Height is never a free stamina bonus.
-        // 60 = low baseline; 70 = intermediate; 80 = tall/exposed.
-        if(height===70){
-            modifier.knockback+=0.2;
-            modifier.defense-=1;
-            modifier.mobility-=1;
-            modifier.balance-=1;
-            modifier.stamina-=1;
-        }
-
-        if(height===80){
-            // Small attack/knockback niche from the higher contact point.
-            modifier.attack+=1;
-            modifier.knockback+=1;
-
-            // Tall height is a real cost to tanking, balance and stamina.
-            modifier.defense-=4;
-            modifier.mobility-=2;
-            modifier.balance-=4;
-            modifier.stamina-=4;
-        }
-
-        RATCHETS.push({
-
-            name:`${base.number}-${height}`,
-
-            number:base.number,
-
-            height,
-
-            stats:{
-
-                attack:base.stats.attack+modifier.attack,
-
-                knockback:base.stats.knockback+modifier.knockback,
-
-                defense:base.stats.defense+modifier.defense,
-
-                mobility:base.stats.mobility+modifier.mobility,
-
-                balance:base.stats.balance+modifier.balance,
-
-                stamina:base.stats.stamina+modifier.stamina
-
-            }
-
-        });
-
-    });
-
-});
-// V52 HEIGHT INVARIANT:
-// Same ratchet side: 60 > 70 > 80 for stamina, defense and balance.
-// This is a safety check against future generic modifiers accidentally
-// making a taller variant stronger in these categories.
-function enforceHeightInvariants(){
-    for(const base of RATCHET_BASES){
-        const variants=RATCHETS.filter(r=>r.number===base.number);
-        const r60=variants.find(r=>r.height===60);
-        const r70=variants.find(r=>r.height===70);
-        const r80=variants.find(r=>r.height===80);
-        if(!r60||!r70||!r80) continue;
-
-        r70.stats.stamina=Math.min(r70.stats.stamina,r60.stats.stamina-1);
-        r80.stats.stamina=Math.min(r80.stats.stamina,r70.stats.stamina-1);
-
-        r70.stats.defense=Math.min(r70.stats.defense,r60.stats.defense-1);
-        r80.stats.defense=Math.min(r80.stats.defense,r70.stats.defense-1);
-
-        r70.stats.balance=Math.min(r70.stats.balance,r60.stats.balance-1);
-        r80.stats.balance=Math.min(r80.stats.balance,r70.stats.balance-1);
-    }
-}
-enforceHeightInvariants();
 
 //=========================
 // SHOW RATCHETS
@@ -1660,8 +1121,9 @@ enforceHeightInvariants();
 function ratchetCard(r){
     const shape={
         1:"ASYMMETRIC · ATTACK / IMPACT",
-        3:"BALANCED · UNIVERSAL",
-        5:"WIDE · STABILITY / BALANCE",
+        3:"3-SIDED · ALIGNMENT / VERSATILE",
+        4:"4-SIDED · LOW / NICHE / EXPOSED",
+        5:"5-SIDED · WIDE / BALANCE",
         6:"CIRCULAR · STABILITY",
         7:"HEAVY CIRCULAR · DEFENSE / STAMINA",
         9:"RECESSED ROUND · BURST RESISTANCE",
@@ -1672,7 +1134,12 @@ function ratchetCard(r){
         title:r.name,
         subtitle:`${shape} · ${heightNote}`,
         accentClass:`ratchet-card ratchet-${r.number}`,
-        stats:[["ATK",r.stats.attack],["DEF",r.stats.defense],["STA",r.stats.stamina],["BAL",r.stats.balance]],
+        stats:[
+            ["ATK",Math.round(60+(r.physics.attack*35))],
+            ["DEF",Math.round(60+(r.physics.defense*35))],
+            ["STA",Math.round(60+(r.physics.stamina*35))],
+            ["BAL",Math.round(60+(r.physics.balance*35))]
+        ],
         extra:`<span class="part-index">${r.number}</span>`,
         onClick:()=>{Game.player.ratchet=r;showBitDraft();}
     });
@@ -1703,9 +1170,14 @@ function bitCard(bit){
     const typeClass=String(bit.type||"Balance").toLowerCase();
     return createPartCard({
         title:bit.name,
-        subtitle:`${bit.type.toUpperCase()} BIT · ${bit.behavior?.speed||bit.card?.mobility||60} MOVEMENT`,
+        subtitle:`${bit.type.toUpperCase()} BIT · PHYSICAL PROFILE`,
         accentClass:`bit-card bit-${typeClass}`,
-        stats:[["ATK",bit.card.attack],["MOB",bit.card.mobility],["STA",bit.card.stamina],["BAL",bit.card.balance]],
+        stats:(()=>{const bp=getBitPhysicalProfileV56(bit); return [
+            ["ATK",Math.round(60+bp.attack*35)],
+            ["MOB",Math.round(60+bp.mobility*35)],
+            ["STA",Math.round(60+bp.stamina*35)],
+            ["BAL",Math.round(60+bp.balance*35)]
+        ];})(),
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
         onClick:()=>{Game.player.bit=bit;showComboCard();}
     });
@@ -1823,465 +1295,336 @@ function getBladePhysicalProfile(bladeData){
   than hard-coded final stats. They modify the underlying combo calculation,
   so the visible combo card and the battle engine receive the same result.
 */
-const BLADE_RATCHET_SYNERGY = {
-    "Phoenix Wing":{
-        "1":{attack:8,knockback:6,mobility:2,stamina:-3,balance:-2,defense:-1,burst:-2},
-        "3":{attack:4,knockback:3,mobility:1,stamina:2,balance:2,defense:2,burst:3},
-        "5":{attack:-3,knockback:-2,mobility:-1,stamina:-2,balance:-2,defense:-2,burst:-2},
-        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:2,burst:2},
-        "7":{attack:4,knockback:4,mobility:-1,stamina:2,balance:3,defense:3,burst:2},
-        "9":{attack:5,knockback:2,mobility:-2,stamina:2,balance:3,defense:3,burst:5},
-        "0":{attack:-1,knockback:0,mobility:-3,stamina:3,balance:3,defense:3,burst:3}
-    },
-    "Shark Edge":{
-        "1":{attack:8,knockback:6,mobility:3,stamina:-3,balance:-3,defense:-2,burst:-2},
-        "3":{attack:5,knockback:3,mobility:1,stamina:2,balance:1,defense:1,burst:2},
-        "5":{attack:1,knockback:1,mobility:-1,stamina:0,balance:0,defense:0,burst:1},
-        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:1,burst:2},
-        "7":{attack:-1,knockback:1,mobility:-2,stamina:1,balance:0,defense:1,burst:1},
-        "9":{attack:0,knockback:0,mobility:-3,stamina:3,balance:2,defense:2,burst:5},
-        "0":{attack:-1,knockback:0,mobility:-3,stamina:2,balance:1,defense:1,burst:3}
-    },
-    "Dran Sword":{
-        "1":{attack:7,knockback:5,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:5,knockback:3,mobility:1,stamina:1,balance:1,defense:1,burst:2},
-        "5":{attack:2,knockback:2,mobility:-1,stamina:1,balance:0,defense:1,burst:2},
-        "6":{attack:1,knockback:1,mobility:-1,stamina:1,balance:1,defense:2,burst:2},
-        "7":{attack:2,knockback:2,mobility:-2,stamina:1,balance:1,defense:2,burst:1},
-        "9":{attack:0,knockback:0,mobility:-3,stamina:2,balance:2,defense:3,burst:5},
-        "0":{attack:0,knockback:1,mobility:-3,stamina:2,balance:2,defense:3,burst:3}
-    },
-    "Tyranno Beat":{
-        "1":{attack:6,knockback:6,mobility:3,stamina:-2,balance:-2,defense:-1,burst:0},
-        "3":{attack:4,knockback:4,mobility:1,stamina:2,balance:2,defense:1,burst:3},
-        "5":{attack:3,knockback:3,mobility:-1,stamina:2,balance:2,defense:2,burst:2},
-        "6":{attack:2,knockback:2,mobility:-1,stamina:2,balance:2,defense:2,burst:2},
-        "7":{attack:4,knockback:5,mobility:-2,stamina:2,balance:2,defense:3,burst:1},
-        "9":{attack:2,knockback:2,mobility:-3,stamina:3,balance:3,defense:4,burst:5},
-        "0":{attack:1,knockback:2,mobility:-3,stamina:2,balance:3,defense:3,burst:3}
-    },
-    "Aero Pegasus":{
-        "1":{attack:7,knockback:6,mobility:2,stamina:-2,balance:-1,defense:0,burst:-1},
-        "3":{attack:6,knockback:5,mobility:1,stamina:3,balance:3,defense:3,burst:4},
-        "5":{attack:3,knockback:3,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "6":{attack:2,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:5,knockback:5,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "9":{attack:2,knockback:2,mobility:-2,stamina:3,balance:3,defense:3,burst:5},
-        "0":{attack:1,knockback:2,mobility:-3,stamina:4,balance:4,defense:4,burst:3}
-    },
-    "Viper Tail":{
-        "1":{attack:6,knockback:5,mobility:3,stamina:-3,balance:-3,defense:-2,burst:-1},
-        "3":{attack:4,knockback:3,mobility:1,stamina:1,balance:1,defense:1,burst:2},
-        "5":{attack:1,knockback:1,mobility:-1,stamina:1,balance:1,defense:1,burst:2},
-        "6":{attack:0,knockback:1,mobility:-1,stamina:1,balance:1,defense:2,burst:2},
-        "7":{attack:1,knockback:2,mobility:-2,stamina:1,balance:1,defense:2,burst:1},
-        "9":{attack:0,knockback:1,mobility:-3,stamina:2,balance:2,defense:3,burst:5},
-        "0":{attack:-1,knockback:1,mobility:-3,stamina:2,balance:2,defense:2,burst:3}
-    },
-    "Wizard Rod":{
-        "1":{attack:-2,knockback:-1,mobility:1,stamina:-4,balance:-3,defense:-2,burst:-2},
-        "3":{attack:0,knockback:0,mobility:0,stamina:1,balance:2,defense:2,burst:3},
-        "5":{attack:1,knockback:1,mobility:-1,stamina:2,balance:3,defense:3,burst:3},
-        "6":{attack:1,knockback:1,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:1,knockback:2,mobility:-1,stamina:2,balance:3,defense:4,burst:2},
-        "9":{attack:0,knockback:0,mobility:-2,stamina:3,balance:4,defense:4,burst:5},
-        "0":{attack:1,knockback:1,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Silver Wolf":{
-        "1":{attack:-5,knockback:-4,mobility:3,stamina:-2,balance:-3,defense:-2,burst:-2},
-        "3":{attack:-1,knockback:-1,mobility:1,stamina:2,balance:2,defense:3,burst:3},
-        "5":{attack:2,knockback:1,mobility:-1,stamina:4,balance:4,defense:4,burst:3},
-        "6":{attack:1,knockback:1,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:2,knockback:2,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:2,knockback:1,mobility:-3,stamina:5,balance:5,defense:5,burst:5},
-        "0":{attack:1,knockback:1,mobility:-3,stamina:4,balance:4,defense:4,burst:3}
-    },
-    "Knight Mail":{
-        "1":{attack:-2,knockback:-1,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:1,knockback:1,mobility:1,stamina:2,balance:2,defense:3,burst:3},
-        "5":{attack:2,knockback:2,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "6":{attack:1,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:3},
-        "7":{attack:2,knockback:3,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:1,knockback:2,mobility:-3,stamina:4,balance:5,defense:5,burst:5},
-        "0":{attack:0,knockback:2,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Leon Crest":{
-        "1":{attack:-4,knockback:-3,mobility:3,stamina:-2,balance:-3,defense:-2,burst:-2},
-        "3":{attack:-1,knockback:0,mobility:1,stamina:1,balance:2,defense:3,burst:3},
-        "5":{attack:1,knockback:1,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "6":{attack:0,knockback:1,mobility:-1,stamina:3,balance:3,defense:4,burst:3},
-        "7":{attack:2,knockback:3,mobility:-2,stamina:4,balance:4,defense:5,burst:2},
-        "9":{attack:1,knockback:1,mobility:-3,stamina:4,balance:5,defense:5,burst:5},
-        "0":{attack:0,knockback:1,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Knight Shield":{
-        "1":{attack:-5,knockback:-3,mobility:3,stamina:-2,balance:-3,defense:-2,burst:-2},
-        "3":{attack:-1,knockback:0,mobility:1,stamina:2,balance:2,defense:3,burst:3},
-        "5":{attack:2,knockback:2,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "6":{attack:1,knockback:2,mobility:-1,stamina:3,balance:3,defense:4,burst:3},
-        "7":{attack:2,knockback:3,mobility:-2,stamina:4,balance:4,defense:5,burst:2},
-        "9":{attack:1,knockback:2,mobility:-3,stamina:5,balance:5,defense:5,burst:5},
-        "0":{attack:0,knockback:1,mobility:-3,stamina:4,balance:4,defense:4,burst:3}
-    },
-    "Unicorn Sting":{
-        "1":{attack:1,knockback:1,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:3,knockback:2,mobility:1,stamina:2,balance:2,defense:2,burst:3},
-        "5":{attack:3,knockback:3,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "6":{attack:2,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:3,knockback:4,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:2,knockback:2,mobility:-3,stamina:4,balance:4,defense:5,burst:5},
-        "0":{attack:1,knockback:2,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Shelter Drake":{
-        "1":{attack:3,knockback:3,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:4,knockback:3,mobility:1,stamina:2,balance:2,defense:3,burst:3},
-        "5":{attack:3,knockback:3,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "6":{attack:2,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:3,knockback:4,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:2,knockback:2,mobility:-3,stamina:4,balance:5,defense:5,burst:5},
-        "0":{attack:1,knockback:2,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Arrow Wizard":{
-        "1":{attack:-2,knockback:-1,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:1,knockback:1,mobility:1,stamina:2,balance:2,defense:3,burst:3},
-        "5":{attack:2,knockback:2,mobility:-1,stamina:3,balance:4,defense:4,burst:3},
-        "6":{attack:1,knockback:1,mobility:-1,stamina:3,balance:3,defense:4,burst:3},
-        "7":{attack:2,knockback:3,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:2,knockback:1,mobility:-3,stamina:4,balance:5,defense:5,burst:5},
-        "0":{attack:1,knockback:1,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    },
-    "Leon Claw":{
-        "1":{attack:1,knockback:2,mobility:3,stamina:-2,balance:-2,defense:-1,burst:-1},
-        "3":{attack:3,knockback:2,mobility:1,stamina:2,balance:2,defense:2,burst:3},
-        "5":{attack:3,knockback:3,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "6":{attack:2,knockback:2,mobility:-1,stamina:3,balance:3,defense:3,burst:3},
-        "7":{attack:3,knockback:4,mobility:-2,stamina:3,balance:4,defense:4,burst:2},
-        "9":{attack:2,knockback:2,mobility:-3,stamina:4,balance:4,defense:5,burst:5},
-        "0":{attack:1,knockback:2,mobility:-3,stamina:3,balance:4,defense:4,burst:3}
-    }
-};
+//=========================
+// V56 COMBINATION PHYSICS
+//=========================
+// The old V48/V55 blade-ratchet stat table is retired.  Synergy is now
+// derived from physical relationships so unpopular parts can be good/bad
+// for the right reasons instead of receiving universal +stat bonuses.
 
-function getBladeRatchetSynergy(bladeName,ratchetNumber){
-    const row=BLADE_RATCHET_SYNERGY[bladeName];
-    return row?.[String(ratchetNumber)] || {attack:0,knockback:0,mobility:0,stamina:0,balance:0,defense:0,burst:0};
-}
+function getBladePhysicalProfileV56(blade){
+    const p=blade.physics||{};
+    const b=blade.behavior||{};
+    const shape=String(p.contactShape||"").toLowerCase();
+    const distribution=String(p.weightDistribution||"").toLowerCase();
+    const recoil=String(p.recoil||"Medium");
+    const recoilValue={"Very Low":.15,Low:.30,Medium:.50,High:.75,"Very High":.90}[recoil]??.50;
 
-function applyHeightSynergy(profile,height){
-    const h=Number(height);
+    let contact=.50;
+    if(shape.includes("smash")||shape.includes("upper")) contact=.80;
+    else if(shape.includes("round")) contact=.48;
+    else if(shape.includes("elliptical")) contact=.68;
+    else if(shape.includes("claw")||shape.includes("hybrid")) contact=.60;
 
-    // 60 = physical baseline. Height itself contributes no stamina.
-    if(h===60){
-        return profile;
-    }
+    let stability=.50;
+    if(String(p.centerOfGravity).toLowerCase().includes("low")) stability+=.10;
+    if(String(p.centerOfGravity).toLowerCase().includes("high")) stability-=.12;
+    stability+=(Number(b.movementControl)||70-70)/300;
 
-    // 70 = intermediate: slightly more exposed, slightly less stable.
-    if(h===70){
-        profile.knockback+=0.2;
-        profile.mobility-=0.8;
-        profile.defense-=1.2;
-        profile.balance-=1.2;
-        profile.stamina-=1.2;
-        profile.burst-=1.5;
-        return profile;
-    }
+    let outer=distribution.includes("outer")?.12:distribution.includes("forward")?-.04:0;
+    const weight=Math.max(30,Math.min(40,Number(blade.weight)||35));
 
-    // 80 = tall/exposed: a small attack/knockback niche, but always worse
-    // for defense, balance, stamina efficiency and burst resistance.
-    if(h===80){
-        profile.attack+=0.5;
-        profile.knockback+=0.8;
-        profile.mobility-=1.5;
-        profile.defense-=4.5;
-        profile.balance-=4.5;
-        profile.stamina-=4.5;
-        profile.burst-=4.5;
-        return profile;
-    }
-
-    return profile;
-}
-
-
-function getMetaRoleFit(bladeData,bit){
-    const matrix={
-        Attack:{Attack:100,Balance:78,Stamina:42,Defense:32},
-        Defense:{Attack:34,Balance:82,Stamina:92,Defense:96},
-        Stamina:{Attack:36,Balance:84,Stamina:98,Defense:92},
-        Balance:{Attack:82,Balance:96,Stamina:86,Defense:82}
+    return {
+        weight,
+        contact,
+        recoil:recoilValue,
+        stability:Math.max(.20,Math.min(.90,stability)),
+        retention:Math.max(.20,Math.min(1,(Number(b.spinRetention)||70)/100)),
+        lad:Math.max(.20,Math.min(1,(Number(b.lad)||70)/100)),
+        lock:Math.max(.20,Math.min(1,(Number(p.lockStrength)||70)/100)),
+        outer
     };
-
-    let score=matrix[bladeData.type]?.[bit.type]??60;
-    const name=bit.name;
-
-    // Specific competitive roles. These are synergy adjustments, not
-    // blanket stat buffs.
-    if(bladeData.type==="Attack"){
-        if(name==="Rush") score+=7;
-        if(name==="Low Rush") score+=8;
-        if(name==="Flat") score+=4;
-        if(name==="Low Flat") score+=5;
-        if(name==="Kick") score+=3;
-    }
-
-    if(bladeData.type==="Stamina"){
-        if(name==="Ball") score+=7;
-        if(name==="Hexa") score+=6;
-        if(name==="Wedge") score+=4;
-        if(name==="Orb") score+=5;
-        if(name==="Elevate") score+=2;
-    }
-
-    if(bladeData.type==="Defense"){
-        if(name==="Hexa") score+=5;
-        if(name==="Wedge") score+=5;
-        if(name==="Needle"||name==="High Needle") score+=4;
-        if(name==="Ball"||name==="Orb") score+=3;
-    }
-
-    if(bladeData.type==="Balance"){
-        if(name==="Hexa") score+=4;
-        if(name==="Point") score+=4;
-        if(name==="Rush") score+=4;
-        if(name==="Level") score+=5;
-    }
-
-    // Explicit blade compatibility is the final authority for the
-    // individual blade/bit pairing. Never let a generic matrix override it.
-    const explicit=getBitCompatibility(bladeData,bit);
-    return Math.max(0,Math.min(100,(score*0.35)+(explicit*0.65)));
 }
 
-function getRatchetMetaFit(bladeData,ratchet,ratchetSynergy){
-    const s=ratchetSynergy||{};
-    let raw=0;
+function getBitPhysicalProfileV56(bit){
+    const name=bit?.name||"Point";
+    const bp=BIT_PHYSICS[name]||BIT_PHYSICS.Point;
+    const c=bit?.card||{};
+    const b=bit?.behavior||{};
 
-    if(bladeData.type==="Attack"){
-        raw=
-            s.attack*1.45+
-            s.knockback*1.20+
-            s.mobility*0.65-
-            Math.max(0,-s.stamina)*0.30;
-    }else if(bladeData.type==="Stamina"){
-        raw=
-            s.stamina*1.45+
-            s.balance*1.10+
-            s.defense*0.90+
-            s.burst*0.55;
-    }else if(bladeData.type==="Defense"){
-        raw=
-            s.defense*1.35+
-            s.balance*1.15+
-            s.stamina*0.80+
-            s.burst*0.55;
-    }else{
-        raw=
-            s.attack*0.55+
-            s.knockback*0.55+
-            s.defense*0.85+
-            s.balance*1.05+
-            s.stamina*0.75;
-    }
-
-    // 50 = neutral. Positive blade/side alignment can push toward 100,
-    // while a bad geometry match can meaningfully lower the meta rating.
-    return Math.max(40,Math.min(100,50+raw*2.45));
+    // Unique roles. These are normalized physical tendencies, not final stats.
+    const roles={
+        "Flat":       {attack:.86,knockback:.72,defense:.20,balance:.30,stamina:.18,mobility:.96,burst:.72},
+        "Low Flat":   {attack:.92,knockback:.78,defense:.16,balance:.25,stamina:.12,mobility:1.00,burst:.70},
+        "Rush":       {attack:.68,knockback:.54,defense:.25,balance:.42,stamina:.34,mobility:.88,burst:.74},
+        "Low Rush":   {attack:.78,knockback:.64,defense:.18,balance:.32,stamina:.22,mobility:.94,burst:.72},
+        "Kick":       {attack:.66,knockback:.64,defense:.24,balance:.34,stamina:.30,mobility:.78,burst:.72},
+        "Quake":      {attack:.78,knockback:.70,defense:.14,balance:.20,stamina:.10,mobility:.84,burst:.68},
+        "Ball":       {attack:.14,knockback:.10,defense:.70,balance:.88,stamina:1.00,mobility:.22,burst:.72},
+        "Orb":        {attack:.20,knockback:.18,defense:.70,balance:.84,stamina:.94,mobility:.30,burst:.72},
+        "Wedge":      {attack:.12,knockback:.18,defense:.72,balance:.78,stamina:.78,mobility:.26,burst:.76},
+        "Needle":     {attack:.08,knockback:.08,defense:.86,balance:.78,stamina:.82,mobility:.14,burst:.66},
+        "High Needle":{attack:.08,knockback:.08,defense:.76,balance:.70,stamina:.88,mobility:.18,burst:.64},
+        "Hexa":       {attack:.28,knockback:.20,defense:.78,balance:.94,stamina:.70,mobility:.30,burst:.82},
+        "Point":      {attack:.48,knockback:.36,defense:.50,balance:.70,stamina:.66,mobility:.56,burst:.74},
+        "Level":      {attack:.38,knockback:.30,defense:.56,balance:.82,stamina:.72,mobility:.64,burst:.74},
+        "Elevate":    {attack:.24,knockback:.18,defense:.64,balance:.88,stamina:.82,mobility:.52,burst:.74}
+    };
+    const role=roles[name]||roles.Point;
+    return {...role,
+        speed:(Number(b.speed)||Number(bp.movement)||60)/100,
+        control:(Number(b.control)||Number(bp.control)||60)/100,
+        retention:(Number(b.staminaRetention)||60)/100,
+        friction:(Number(bp.friction)||60)/100,
+        stability:(Number(bp.stability)||60)/100,
+        xRail:(Number(bp.xRailAffinity)||50)/100
+    };
 }
 
-function getBladeCompetitiveIndex(bladeData){
-    const c=bladeData.card||{};
-    const b=bladeData.behavior||{};
-    const p=bladeData.personality||{};
-
-    // Existing card OVR is deliberately only one input.
-    // Consistency, spin retention/LAD and the blade's real win condition
-    // determine the competitive ceiling separately.
-    const cardQuality=Number(c.ovr)||70;
-    const consistency=Number(p.consistency)||70;
-    const retention=Number(b.spinRetention)||70;
-    const lad=Number(b.lad)||70;
-
-    const wins=b.winConditions||{};
-    let roleWin=70;
-
-    if(bladeData.type==="Attack"){
-        roleWin=
-            (Number(wins.knockout)||50)*0.55+
-            (Number(wins.burst)||50)*0.15+
-            (Number(wins.spin)||50)*0.10+
-            (Number(wins.counter)||50)*0.20;
-    }else if(bladeData.type==="Stamina"){
-        roleWin=
-            (Number(wins.spin)||50)*0.60+
-            (Number(wins.burst)||50)*0.15+
-            (Number(wins.counter)||50)*0.15+
-            (Number(wins.knockout)||50)*0.10;
-    }else if(bladeData.type==="Defense"){
-        roleWin=
-            (Number(wins.counter)||50)*0.45+
-            (Number(wins.spin)||50)*0.30+
-            (Number(wins.burst)||50)*0.15+
-            (Number(wins.knockout)||50)*0.10;
-    }else{
-        roleWin=
-            (Number(wins.spin)||50)*0.30+
-            (Number(wins.knockout)||50)*0.25+
-            (Number(wins.counter)||50)*0.25+
-            (Number(wins.burst)||50)*0.20;
-    }
-
-    return Math.max(60,Math.min(99,
-        cardQuality*0.75+
-        consistency*0.10+
-        retention*0.05+
-        lad*0.05+
-        roleWin*0.05
-    ));
+function getBladeTypeProfileV56(blade){
+    const type=blade.type||"Balance";
+    return {
+        attack:type==="Attack"?.72:type==="Balance"?.55:.35,
+        defense:type==="Defense"?.75:type==="Stamina"?.62:.42,
+        stamina:type==="Stamina"?.80:type==="Defense"?.58:.42,
+        balance:type==="Balance"?.76:type==="Defense"?.70:type==="Stamina"?.72:.48,
+        mobility:type==="Attack"?.78:type==="Balance"?.62:.38
+    };
 }
 
-function calculateMetaScore(bladeData,ratchet,bit,compatibility,ratchetSynergy){
-    const bladeQuality=getBladeCompetitiveIndex(bladeData);
-    const bitFit=getMetaRoleFit(bladeData,bit);
-    const heightFit=getHeightCompatibility(bladeData,ratchet.height);
+function getRatchetGeometryFitV56(blade,ratchet){
+    const p=ratchet.physics||RATCHET_PHYSICS_V56[String(ratchet.number)];
+    const shape=String(blade.physics?.contactShape||"").toLowerCase();
+    const dist=String(blade.physics?.weightDistribution||"").toLowerCase();
+    const type=blade.type||"Balance";
+    let fit=.50;
 
-    // Geometry/height is weighted heavily because the same blade can be
-    // excellent on one ratchet and mediocre on another.
-    const comboFit=bitFit*0.55+heightFit*0.45;
-    const ratchetFit=getRatchetMetaFit(bladeData,ratchet,ratchetSynergy);
-    const consistency=Number(bladeData.personality?.consistency)||70;
+    // 3: strongest when the Blade has a three-point/triangular contact layout.
+    if(ratchet.number===3){
+        if(shape.includes("three")||shape.includes("tri")) fit+=.20;
+        else if(shape.includes("sword")) fit+=.14;
+        else if(type==="Attack"&&shape.includes("smash")) fit+=.08;
+        else fit+=.01;
+    }
+    // 4: low-height niche, but exposed/small contact points make it risky.
+    if(ratchet.number===4){
+        if(type==="Attack" && (shape.includes("upper")||shape.includes("smash"))) fit+=.08;
+        if(shape.includes("round")) fit-=.05;
+        fit-=.04; // baseline exposure penalty; exact Blade fit can offset it.
+    }
+    // 5: corrects uneven/forward weight distribution and likes stable setups.
+    if(ratchet.number===5){
+        if(dist.includes("forward")||dist.includes("balanced")) fit+=.12;
+        if(type==="Defense"||type==="Stamina") fit+=.07;
+        if(type==="Attack") fit+=.02;
+    }
+    // 6: circular/LAD geometry, especially useful when the Blade benefits from
+    // a smooth lower mass distribution rather than asymmetric attack weight.
+    if(ratchet.number===6){
+        if(shape.includes("round")) fit+=.12;
+        if(type!=="Attack") fit+=.05;
+    }
+    // 7: heavy circular mass can stabilize heavy/round Blades but can blunt
+    // an attack Blade's intended asymmetric contact behavior.
+    if(ratchet.number===7){
+        if(type==="Stamina"||type==="Defense") fit+=.08;
+        if(shape.includes("round")) fit+=.08;
+        if(type==="Attack" && !shape.includes("round")) fit-=.04;
+    }
+    // 9: compact round perimeter and strong burst resistance; not a universal
+    // stamina button.
+    if(ratchet.number===9){
+        if(type==="Stamina"||type==="Defense") fit+=.07;
+        if(shape.includes("round")) fit+=.08;
+    }
+    // 1: asymmetry helps blades with a strong directional attack line.
+    if(ratchet.number===1){
+        if(type==="Attack") fit+=.18;
+        if(type!=="Attack") fit-=.06;
+        if((shape.includes("upper")||shape.includes("smash"))&&type==="Attack") fit+=.05;
+    }
 
-    // Height is a real competitive tradeoff. 70 can remain useful, but it
-    // should not score like the same geometry at 60. 80 is a specialization,
-    // not a free upgrade.
-    const heightMetaPenalty=
-        ratchet.height===70 ? 2 :
-        ratchet.height===80 ? 8 : 0;
+    return Math.max(.25,Math.min(.90,fit));
+}
 
-    /*
-      META is NOT OVR.
-      OVR asks: "How strong are these six/seven raw stats?"
-      META asks: "How good is this exact combination in a real competitive
-      role, given blade quality, part fit, geometry and consistency?"
+function getHeightFitV56(blade,height){
+    const h=Number(height);
+    const explicit=Number(blade.compatibility?.heights?.[h]);
+    if(Number.isFinite(explicit)) return Math.max(.25,Math.min(1,explicit/100));
+    return h===60?.78:h===70?.62:.42;
+}
 
-      This is why Phoenix Wing 1-60 Rush can be meta 95+ while another
-      Phoenix Wing combo can have a similar raw OVR but a lower meta.
-    */
+function partContributionV56(base,role,weight,fit){
+    // Part influence is deliberately bounded. A Bit/Ratchet can refine a Blade
+    // but cannot replace the Blade's physical identity.
+    return (role-base)*weight*fit;
+}
+
+function calculateMetaScoreV56(blade,ratchet,bit,stats,fit){
+    const type=blade.type||"Balance";
+    const roleFit={Attack:0,Defense:0,Stamina:0,Balance:0};
+    const bitType=bit.type||"Balance";
+    roleFit[bitType]=1;
+    const explicit=(Number(blade.compatibility?.bits?.[bit.name.replace(/ /g,"")])||50)/100;
+    const heightFit=getHeightFitV56(blade,ratchet.height);
+    const ratchetFit=fit;
+    const typeAlignment=type===bitType?.78:type==="Balance"&&bitType!=="Attack"?.74:.62;
     const raw=
-        55+
-        (bladeQuality-60)*0.35+
-        comboFit*0.12+
-        consistency*0.06+
-        ratchetFit*0.10+
-        compatibility*0.03-
-        heightMetaPenalty;
-
+        (Number(blade.card?.ovr)||70)*.48+
+        explicit*100*.12+
+        heightFit*100*.08+
+        ratchetFit*100*.16+
+        typeAlignment*100*.06+
+        ((stats.attack+stats.knockback+stats.defense+stats.mobility+stats.balance+stats.stamina)/6)*.10;
     return Math.max(60,Math.min(99,Math.round(raw)));
 }
 
 function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
-    if(!bladeData) return null;
+    if(!bladeData||!ratchet||!bit) return null;
 
-    const rp=getRatchetProfile(ratchet),r=rp.base,h=rp.height;
-    const bp=bit.card||{},bb=bit.behavior||{},phys=getBladePhysicalProfile(bladeData);
-    const bitMovement=Number(bb.speed)||Number(bp.mobility)||60;
-    const bitControl=Number(bb.control)||Number(bp.balance)||60;
-    const retention=Number(bb.staminaRetention)||70;
+    const rb=getRatchetProfile(ratchet).base;
+    const h=getHeightPhysicsV56(ratchet.height);
+    const bp=getBitPhysicalProfileV56(bit);
+    const bladePhys=getBladePhysicalProfileV56(bladeData);
+    const ratchetFit=getRatchetGeometryFitV56(bladeData,ratchet);
+    const heightFit=getHeightFitV56(bladeData,ratchet.height);
 
-    let attack=bladeData.card.attack*0.58+bp.attack*0.12+phys.contactAttack*0.20+r.attackBias*0.06+h.attack;
-    let knockback=bladeData.card.knockback*0.52+phys.momentumPotential*1.15+bp.knockback*0.10+r.weight*1.05+h.knockback;
-    let defense=bladeData.card.defense*0.48+r.defenseBias*0.20+r.stability*0.14+phys.stability*0.10+bp.defense*0.08+h.defense;
-    let mobility=bitMovement*0.58+bladeData.card.mobility*0.20+(bb.aggression||60)*0.08+r.mobilityBias*0.06+h.mobility;
-    let balance=bitControl*0.28+(bb.control||60)*0.18+bladeData.card.balance*0.30+r.stability*0.14+phys.stability*0.10+h.balance;
-    let stamina=bladeData.card.stamina*0.50+retention*0.26+bp.stamina*0.10+r.staminaBias*0.07+h.stamina;
-    let burst=phys.lock*0.38+r.burstResistance*0.38+bp.burst*0.12+bladeData.card.burst*0.12+h.burst;
-
-    const compatibility=getCompatibilityScore(blade,ratchet,bit);
-    const ratchetSynergy=getBladeRatchetSynergy(blade.name,ratchet.number);
-    // Compatibility is a multiplier on blade/side interaction, not a magic
-    // stat boost. A poor geometric match should be allowed to hurt the combo.
-    const sideScale=Math.max(0.35,Math.min(1.0,0.55+(compatibility-50)/110));
-
-    // Blade-specific ratchet behavior is applied to the same underlying
-    // physical stats shown on the final combo card.
-    attack+=ratchetSynergy.attack*sideScale;
-    knockback+=ratchetSynergy.knockback*sideScale;
-    mobility+=ratchetSynergy.mobility*sideScale;
-    stamina+=ratchetSynergy.stamina*sideScale;
-    balance+=ratchetSynergy.balance*sideScale;
-    defense+=ratchetSynergy.defense*sideScale;
-    burst+=ratchetSynergy.burst*sideScale;
-
-    const heightSynergy=applyHeightSynergy(
-        {attack:0,knockback:0,mobility:0,stamina:0,balance:0,defense:0,burst:0},
-        ratchet.height
-    );
-    attack+=heightSynergy.attack;
-    knockback+=heightSynergy.knockback;
-    mobility+=heightSynergy.mobility;
-    stamina+=heightSynergy.stamina;
-    balance+=heightSynergy.balance;
-    defense+=heightSynergy.defense;
-    burst+=heightSynergy.burst;
-
-    // Bit family still matters, but it no longer overrides the blade/ratchet
-    // relationship.
-    if(blade.type==="Attack"&&["Flat","Low Flat","Rush","Low Rush","Kick","Quake"].includes(bit.name)){
-        attack+=1.0;knockback+=0.7;mobility+=1.0;
-    }
-    if(blade.type==="Stamina"&&["Ball","Orb","Elevate","Wedge"].includes(bit.name)){
-        stamina+=1.3;balance+=0.8;
-    }
-    // Defense Bits provide control and stamina characteristics through their
-    // own raw profiles. They do not receive a blanket +Defense bonus merely
-    // because their category says "Defense".
-
-    if(bit.name==="Low Rush"){attack+=1.5;knockback+=1.0;mobility+=2.0;stamina-=3.0;balance-=1.0;}
-    if(bit.name==="Rush"){stamina-=0.5;mobility-=1.0;balance+=0.5;}
-    if(bit.name==="Low Flat"){attack+=2.0;knockback+=1.5;mobility+=2.0;stamina-=3.0;}
-    if(bit.name==="Flat"){stamina-=1.5;}
-
-    const stats={
-        attack:clamp(attack),knockback:clamp(knockback),defense:clamp(defense),
-        mobility:clamp(mobility),balance:clamp(balance),stamina:clamp(stamina),burst:clamp(burst)
+    // Start from the Blade's established identity. Parts refine it instead of
+    // replacing it. Every part contribution is bounded and physically typed.
+    const base={
+        attack:Number(bladeData.card.attack)||70,
+        knockback:Number(bladeData.card.knockback)||70,
+        defense:Number(bladeData.card.defense)||70,
+        mobility:Number(bladeData.card.mobility)||70,
+        balance:Number(bladeData.card.balance)||70,
+        stamina:Number(bladeData.card.stamina)||70,
+        burst:Number(bladeData.card.burst)||70
     };
 
-    // OVR remains the simple overall rating: all displayed stats averaged.
-    // Meta is deliberately independent and evaluates the exact competitive
-    // combo instead of recycling OVR.
-    const weights={
-        attack:.18,knockback:.15,defense:.14,mobility:.13,
-        balance:.12,stamina:.17,burst:.11
+    const ratchetRole={
+        attack:rb.attack,
+        knockback:rb.knockback,
+        defense:rb.defense,
+        mobility:rb.mobility,
+        balance:rb.balance,
+        stamina:rb.stamina,
+        burst:rb.burst
     };
-    let weighted=0;
-    Object.keys(weights).forEach(k=>weighted+=stats[k]*weights[k]);
+    const bitRole={
+        attack:bp.attack,
+        knockback:bp.knockback,
+        defense:bp.defense,
+        mobility:bp.mobility,
+        balance:bp.balance,
+        stamina:bp.stamina,
+        burst:bp.burst
+    };
 
-    const synergyDelta=Math.max(-5.0,Math.min(5.0,(compatibility-70)*0.20));
-    const ovr=clamp(weighted+synergyDelta);
+    // Part baselines are centered around .50, but each stat has its own
+    // physical sensitivity. Bits are allowed to make a meaningful difference
+    // in their specialty, while the Blade remains the dominant identity.
+    const stats={};
+    const bitWeight={attack:8.0,knockback:7.0,defense:8.0,mobility:9.0,balance:9.0,stamina:15.0,burst:6.0};
+    const ratWeight={attack:3.0,knockback:3.0,defense:4.5,mobility:3.0,balance:4.5,stamina:5.5,burst:3.5};
 
-    const meta=calculateMetaScore(
-        bladeData,
-        ratchet,
-        bit,
-        compatibility,
-        ratchetSynergy
-    );
+    for(const key of Object.keys(base)){
+        let v=base[key];
+        v+=partContributionV56(.50,bitRole[key],bitWeight[key],.82);
+        v+=partContributionV56(.50,ratchetRole[key],ratWeight[key],ratchetFit);
+        stats[key]=v;
+    }
 
-    return {stats,compatibility,ovr,meta,ratchetSynergy};
+    // Stamina is especially sensitive to Bit friction/retention. This is why
+    // a stamina Blade on Rush does not retain the same endurance it has on
+    // Ball/Orb/Hexa, while an already weak Blade cannot be rescued into a
+    // top-tier stamina monster by simply changing Bits.
+    const staminaEfficiency=(bp.retention-.50)*12.0 + (bp.friction-.50)*6.0;
+    stats.stamina+=staminaEfficiency;
+
+    // Aggressive Bits spend more spin energy creating movement and X-Line
+    // attacks. This is a physical cost, not a blanket type penalty.
+    const activityCost=Math.max(0,bp.speed-.55)*9.0 + Math.max(0,bp.friction-.60)*4.0;
+    stats.stamina-=activityCost;
+    const attackBitSpinTax=(bit.type==="Attack")
+        ? 2.5 + Math.max(0,bp.speed-.50)*6.0 + Math.max(0,.50-bp.retention)*4.0
+        : 0;
+    stats.stamina-=attackBitSpinTax;
+
+    // Defensive pointy Bits have high theoretical stationary stability, but
+    // their tiny contact area and wobble risk keep them from being universal
+    // tanks. Ball is more forgiving because its rounded contact can recover.
+    const destabilizationRisk=(1-bp.control)*3.0 + (1-bp.stability)*2.5;
+    stats.balance-=destabilizationRisk;
+    stats.defense-=destabilizationRisk*.55;
+
+    // Blade × Ratchet alignment is a controlled secondary effect. It is never
+    // allowed to manufacture a new offensive identity from a defensive setup.
+    const attackAlignment=(ratchetFit-.50)*6.0;
+    const stabilityAlignment=(ratchetFit-.50)*4.0;
+    if(bladeData.type==="Attack"){
+        stats.attack+=attackAlignment;
+        stats.knockback+=attackAlignment*.72;
+    }else{
+        stats.attack+=attackAlignment*.35;
+        stats.knockback+=attackAlignment*.25;
+    }
+    stats.defense+=stabilityAlignment;
+    stats.balance+=stabilityAlignment*1.15;
+    stats.stamina+=stabilityAlignment*.90;
+
+    // Bit identity is strongest where its physical design actually matters.
+    // Rush is intentionally less aggressive than Flat; Hexa is stable but not
+    // an attack/knockback source; Ball is endurance-focused; Needle is a tank.
+    stats.mobility+=(bp.speed-.50)*5.0;
+    stats.balance+=(bp.control-.50)*3.0;
+    stats.stamina+=(bp.retention-.50)*2.0;
+
+    // Blade mass/contact/recoil provide physical ceilings for attack/KB.
+    stats.knockback+=(bladePhys.weight-35)*0.42;
+    stats.knockback+=(bladePhys.contact-.50)*4.0;
+    stats.attack+=(bladePhys.contact-.50)*3.0;
+    stats.defense+=(bladePhys.stability-.50)*3.0;
+    stats.balance+=(bladePhys.stability-.50)*3.0;
+    stats.stamina+=(bladePhys.retention-.50)*1.2;
+
+    // Height is never a free stamina bonus. Taller variants are more exposed
+    // and lose stability/retention, with only a small possible impact benefit.
+    stats.attack+=h.attack*8;
+    stats.knockback+=h.knockback*8;
+    stats.defense+=h.defense*8;
+    stats.balance+=h.balance*8;
+    stats.stamina+=h.stamina*8;
+    stats.mobility+=h.mobility*8;
+    stats.burst+=h.burst*8;
+
+    // Explicit Blade/Bit compatibility is a fit signal, not a giant stat buff.
+    const explicitBitFit=getBitCompatibility(bladeData,bit)/100;
+    const bitFitDelta=(explicitBitFit-.70)*3.0;
+    if(bladeData.type==="Attack"){
+        stats.attack+=bitFitDelta;
+        stats.knockback+=bitFitDelta*.55;
+    }else{
+        stats.balance+=bitFitDelta*.65;
+        stats.stamina+=bitFitDelta*.50;
+    }
+
+    for(const key of Object.keys(stats)) stats[key]=clamp(stats[key]);
+
+    // OVR is exactly the average of the seven displayed stats.
+    const ovr=clamp(Object.values(stats).reduce((a,b)=>a+b,0)/Object.keys(stats).length);
+    const meta=calculateMetaScoreV56(bladeData,ratchet,bit,stats,ratchetFit*heightFit);
+
+    return {stats,compatibility:Math.round(((explicitBitFit*0.55)+(heightFit*0.25)+(ratchetFit*0.20))*100),ovr,meta,
+        physical:{ratchetFit,heightFit,bitFit:explicitBitFit,bladeWeight:bladePhys.weight}};
 }
 
 
-
 /*
- V53 STAT DESIGN LOCK
- - Height is a penalty/constraint system, not a free stat upgrade.
- - 60 is the stable low baseline.
- - 70 is a niche middle height: usable, but less stable/burst-safe than 60.
- - 80 is intentionally difficult to justify: higher exposure and center of gravity
-   reduce defense, balance, stamina efficiency and burst resistance. It can still
-   gain a little attack/knockback/deflection value in the right geometry.
- - Ratchet side count is not a linear "more sides = more defense" scale.
- - Blade-specific alignment is represented by BLADE_RATCHET_SYNERGY.
- - Final combo stats are the same stats used by the battle engine.
+ V56 SYNERGY ENGINE LOCK
+ - Displayed stats remain FIFA-style 60-99.
+ - OVR is the simple average of the seven displayed stats.
+ - Blade identity is the dominant input; Ratchet and Bit refine it.
+ - No generic part is allowed to manufacture a new offensive identity.
+ - Ratchet side count is geometric, not a linear quality ladder.
+ - 4 is intentionally niche and exposed rather than being made artificially good.
+ - 5 corrects balance/weight distribution; 6 favors circular/LAD behavior;
+   3 is versatile/alignment-sensitive; 1 is asymmetric attack-oriented.
+ - Height is a physical exposure/center-of-mass modifier. 80 never receives a
+   generic stamina/defense upgrade.
+ - Bits have unique roles and tradeoffs; Ball, Hexa, Needle, Wedge, Rush, Flat,
+   Low Rush, etc. are not interchangeable stat packages.
+ - The current battle engine remains intact. It consumes the resulting stats.
 */
 
 //=========================
