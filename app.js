@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V111111153 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4226,9 +4226,9 @@ function tryNewXRailEngagement(s){
     // style Bits should not casually lock onto the rail after they have
     // already lost most of their movement energy.
     const minimumCaptureRPM=
-        0.27+
-        (1-affinity)*0.20+
-        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.025);
+        0.34+
+        (1-affinity)*0.22+
+        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.015);
 
     if(speed<0.012 || rpm<minimumCaptureRPM){
         return false;
@@ -4343,10 +4343,16 @@ function tryNewXRailEngagement(s){
             ? 0.68+physicalScore*0.20
             : 0.32+physicalScore*0.42;
 
+    const rpmCaptureFactor=newBattleClamp(
+        0.20+
+        0.80*Math.pow(rpm,1.65),
+        0.20,1
+    );
+
     const captureChance=newBattleClamp(
-        baseChance+
-        (Math.random()-0.5)*0.08,
-        0.18,
+        baseChance*rpmCaptureFactor+
+        (Math.random()-0.5)*0.06,
+        0.08,
         0.90
     );
 
@@ -4596,19 +4602,24 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.105+
-        0.055*rpm+
-        0.038*affinity+
-        0.012*control,
-        0.105,
+        0.055+
+        0.090*rpm+
+        0.030*affinity+
+        0.010*control,
+        0.060,
         0.190
     );
 
+    /*
+      Rail acceleration remains a real boost, but its strength follows RPM.
+      A 50% RPM rider should not receive anything close to the 100% RPM
+      rail velocity simply because it has high rail affinity.
+    */
     const accelerator=
         (
-            0.00180+
-            0.00215*rpm+
-            0.00155*affinity
+            0.00070+
+            0.00290*rpm+
+            0.00110*affinity
         )*
         (
             0.76+
@@ -4633,9 +4644,9 @@ function applyXRailConstraint(s,dt){
     */
     const frictionRate=
         (
-            0.000010+
-            (1-control)*0.000008+
-            (1-rpm)*0.000010
+            0.000012+
+            (1-control)*0.000010+
+            (1-rpm)*0.000018
         )*
         dt*60;
 
@@ -5418,7 +5429,7 @@ function newPhysicsStep(s,dt){
 
             const lowRpmAttackSuppression =
                 attackBit
-                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
+                    ? newBattleClamp((rpm-0.42)/0.34,0,1)
                     : 1;
 
             const nonAttackMovementScale=
@@ -5427,7 +5438,7 @@ function newPhysicsStep(s,dt){
                     : (0.18+0.24*(1-centerAffinity));
 
             const lateGameMovementGate=
-                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
+                rpm<0.48 ? 0.26+0.74*(rpm/0.48) : 1.0;
             const lateralStrength=
                 (0.00010+movement*0.00030)*
                 Math.pow(rpm,1.42)*
@@ -6127,31 +6138,49 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.00045+contactEnergy*0.0080,
+        0.00030+contactEnergy*0.0048,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.30-cDef*0.055)
+        (0.22-cDef*0.040)
     );
     const cKnockback=Math.max(
-        0.00045+contactEnergy*0.0080,
+        0.00030+contactEnergy*0.0048,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.30-pDef*0.055)
+        (0.22-pDef*0.040)
     );
-    c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
-    p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
-    const recoilP=pKnockback*(0.08+0.10*pDef);
-    const recoilC=cKnockback*(0.08+0.10*cDef);
+
+    /*
+      V80 IMPACT SCALE:
+      Keep the existing impact calculation and damage inputs intact, but
+      reduce ordinary physical displacement. Big hits can still be big;
+      routine contacts should not launch a Bey across the stadium.
+    */
+    const finalKnockbackScale=
+        newBattleClamp(
+            0.68+
+            heavyFactor*0.06+
+            directness*0.04,
+            0.66,0.78
+        );
+
+    const pKnockbackFinal=pKnockback*finalKnockbackScale;
+    const cKnockbackFinal=cKnockback*finalKnockbackScale;
+
+    c.vx+=nx*pKnockbackFinal; c.vy+=ny*pKnockbackFinal;
+    p.vx-=nx*cKnockbackFinal; p.vy-=ny*cKnockbackFinal;
+    const recoilP=pKnockbackFinal*(0.06+0.08*pDef);
+    const recoilC=cKnockbackFinal*(0.06+0.08*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
         0.00018+
-        effectiveImpact*0.0019+
-        Math.abs(tangentRelative)*0.00032+
+        effectiveImpact*0.00135+
+        Math.abs(tangentRelative)*0.00024+
         heavyFactor*0.00008;
 
     const pFollow=
