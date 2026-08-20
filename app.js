@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5g5y3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2277,6 +2277,10 @@ function showLetItRip(){
         document.getElementById("backToVS").onclick=showVS;
         return;
     }
+
+    // The quality reveal is intentionally a button-free transition. Do not
+    // bind launch controls that are not present in the DOM yet.
+    if(stage==="qualityReveal") return;
 
     document.getElementById("launchFlat").onclick=()=>
         rebuildAngleTechnique("Flat",Game.player.launch.technique);
@@ -3841,6 +3845,40 @@ function newXRailNearest(x,y){
     best.inwardY=-best.outwardY;
     best.dist=Math.sqrt(best.dist2);
     return best;
+}
+
+function speedOf(s){
+    return Math.hypot(s.vx,s.vy);
+}
+
+function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
+    const n=bit?.name||"";
+    const r=newBattleClamp((Number(rpm)||0)/100,0,1);
+    const st=newBattleClamp((Number(stability)||0)/100,0,1);
+    const tilt=newBattleClamp(Math.abs(Number(currentTilt)||0),0,1);
+
+    if(n==="Point"){
+        const battleTilt=tilt;
+        const aggression=newBattleClamp(0.04+Math.pow(battleTilt,1.55)*0.78+(1-st)*0.14,0,1);
+        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.27+aggression*0.55,staminaEfficiency:1-aggression*0.26};
+    }
+    if(n==="Level"){
+        const lowRpm=Math.pow(1-r,1.18);
+        const battleTilt=tilt;
+        const aggression=newBattleClamp(0.035+lowRpm*0.64+Math.pow(battleTilt,1.35)*0.34+(1-st)*0.10,0,1);
+        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.28+aggression*0.60,staminaEfficiency:1-aggression*0.22};
+    }
+    return null;
+}
+
+function getBattleStat(s,key,fallback=70){
+    const value=Number(s?.stats?.[key]);
+    if(!Number.isFinite(value)) return Math.max(60,Math.min(99,fallback))/99;
+    return Math.max(60,Math.min(99,value))/99;
+}
+
+function bitPhysics(s){
+    return BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
 }
 
 function railDirection(s){
