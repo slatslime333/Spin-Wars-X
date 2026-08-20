@@ -1040,7 +1040,7 @@ orb:{
 
 
 //=========================
-// V62 PHYSICS PASS — MOVEMENT / ENCOUNTER / RAIL REFINEMENT
+// V63 PHYSICS PASS — MOVEMENT / ENCOUNTER REBALANCE / RAIL REFINEMENT
 //=========================
 // Bit archetypes remain distinct. This pass removes hidden speed-target and
 // homing behavior, strengthens momentum persistence, and makes encounters
@@ -1048,7 +1048,7 @@ orb:{
 //=========================
 // BIT PHYSICS 3.0
 //=========================
-// The bit is the primary movement component. Card stats determine how well
+// The bit remains the primary movement component. Card stats determine how well
 // the Bey uses that movement, while launch angle modifies the bit's natural
 // behavior rather than replacing it.
 const BIT_PHYSICS = {
@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V54 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V5113 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2678,6 +2678,13 @@ function newBattleLaunchState(side){
             getBattleStat({stats},"stamina")*0.08,
             0.92,1.0
         ),
+        // V63: persistent trajectory bias replaces random velocity kicks.
+        // It represents tiny changes in tip contact/precession and fades with
+        // RPM instead of becoming proportionally stronger as the Bey slows.
+        trajectoryBiasX:(Math.random()-0.5)*0.00018,
+        trajectoryBiasY:(Math.random()-0.5)*0.00018,
+        trajectoryBiasTimer:0.18+Math.random()*0.25,
+        trajectoryBiasPhase:Math.random()*Math.PI*2,
         statProfile:{
             attack:getBattleStat({stats},"attack"),
             knockback:getBattleStat({stats},"knockback"),
@@ -4394,27 +4401,19 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          V62 MOVEMENT CORE
+          V63 MOVEMENT CORE
           -----------------
-          The old speed-target system has been removed. It was useful for
-          preventing dead battles, but it also made the engine quietly steer
-          every Bey toward a prescribed speed. Real Beys do not have a target
-          speed; they have launch momentum, spin energy, friction and tip
-          contact with the stadium.
-
-          RPM now supplies the ability to sustain motion, while the existing
-          velocity remains the primary source of translation. Bits still have
-          very different identities through acceleration, friction, control,
-          precession, stability and center affinity.
+          Restore strong high-RPM bit identity without returning to a hard
+          speed target. Translation comes from launch momentum plus tip/surface
+          acceleration. Attack Bits get substantially more lateral energy and
+          can build a wide, fast orbit; control-oriented Bits get less lateral
+          energy and stronger center stability.
         */
         const speedNow=Math.hypot(s.vx,s.vy);
         const launchMomentum=
-            0.0290+
-            (stats.mobility||70)*0.000070;
+            0.0310+
+            (stats.mobility||70)*0.000075;
 
-        // Center launches begin physically centered. Give them a tiny,
-        // one-time release impulse so the first trajectory is an emergent
-        // result rather than a hidden straight-line attack.
         if(
             !s.initialMotionSeeded &&
             s.launchPlan?.technique==="Center" &&
@@ -4425,71 +4424,85 @@ function newPhysicsStep(s,dt){
                 (s.launchTilt==='Hard Tilt'?0.24:
                  s.launchTilt==='Slight Tilt'?0.11:0);
             const seedStrength=
-                0.0018+
-                0.0040*(bitAcceleration*0.55+bitPrecession*0.25)+
-                0.0015*newBattleClamp(launchMomentum/0.034,0,1.5);
+                0.0020+
+                0.0048*(bitAcceleration*0.55+bitPrecession*0.25)+
+                0.0018*newBattleClamp(launchMomentum/0.034,0,1.5);
             s.vx+=Math.cos(seedAngle)*seedStrength;
             s.vy+=Math.sin(seedAngle)*seedStrength;
             s.initialMotionSeeded=true;
         }
 
-        // Spin energy can sustain a moving Bey, but it does not drag a slow
-        // Bey toward an arbitrary target speed. This is intentionally much
-        // weaker than the old speed-target correction.
+        // Spin energy sustains the existing trajectory. It is deliberately
+        // soft: it cannot force a prescribed speed.
         if(speedNow>0.001){
             const spinSupport=
-                (0.00018+bitAcceleration*0.00042)*
-                Math.pow(rpm,0.92)*
-                (0.62+0.38*s.movementEnergy)*
+                (0.00020+bitAcceleration*0.00046)*
+                Math.pow(rpm,0.86)*
+                (0.68+0.32*s.movementEnergy)*
                 (0.70+0.30*bitStability);
             const supportScale=
-                newBattleClamp(1-speedNow/0.090,0,1);
+                newBattleClamp(1-speedNow/0.115,0,1);
             s.vx+=(s.vx/speedNow)*spinSupport*supportScale*dt*60;
             s.vy+=(s.vy/speedNow)*spinSupport*supportScale*dt*60;
         }
 
-        // A Bey with nearly no translational velocity can still begin to
-        // wander from tip contact/precession. Keep this small so stamina and
-        // defense Bits can settle instead of becoming frozen.
-        if(speedNow<0.0035 && rpm>0.18){
+        // If launch momentum is almost gone, a controlled bit can still settle
+        // from its tip contact, but this is tiny and vanishes rapidly with RPM.
+        if(speedNow<0.0030 && rpm>0.12){
             const crawl=
-                (0.00018+movement*0.00042)*
-                Math.pow(rpm,1.08)*
-                (0.62+0.38*bitPrecession);
+                (0.00006+movement*0.00016)*
+                Math.pow(rpm,1.55)*
+                (0.65+0.35*bitPrecession);
             const crawlAngle=
                 (s.motionPhase||0)+
-                Math.sin((s.motionPhase2||0)*0.73)*0.60;
+                Math.sin((s.motionPhase2||0)*0.73)*0.34;
             s.vx+=Math.cos(crawlAngle)*crawl*dt*60;
             s.vy+=Math.sin(crawlAngle)*crawl*dt*60;
         }
 
         const workRate=
-            speedNow*(0.18+bitFriction*0.34)*(0.62+0.38*rpm);
+            speedNow*(0.16+bitFriction*0.30)*(0.58+0.42*rpm);
 
         s.movementEnergy=newBattleClamp(
             (s.movementEnergy||1)-
-            workRate*0.00062*dt*60+
-            rpm*bitStability*0.00010*dt*60,
+            workRate*0.00056*dt*60+
+            rpm*bitStability*0.00011*dt*60,
             0.18,1
         );
 
         /*
-          Attack Bits are differentiated by how much lateral/precessional
-          energy they can turn into movement. They are NOT given a hidden
-          forward acceleration toward the opponent. This preserves their
-          aggressive identity without turning them into homing tops.
+          Attack identity: high RPM Attack Bits need real lateral drive.
+          This is intentionally strong enough to produce a broad, fast orbit,
+          but the direction is still generated from the Bey's current radial
+          position and a slowly changing phase. There is no opponent homing.
         */
-        if(attackBit && rpm>0.30){
-            const attackMobility=
-                (0.00006+attackStat*0.00010)*
-                Math.pow(rpm,0.78)*
-                (0.72+0.28*s.movementEnergy)*
-                bitAcceleration;
-            const phaseKick=
-                Math.sin((s.motionPhase||0)*0.83+(s.motionPhase2||0)*0.27);
-            const speedScale=newBattleClamp(1-speedNow/0.075,0,1);
-            s.vx+=(-s.vy)*attackMobility*phaseKick*speedScale*dt*60;
-            s.vy+=(s.vx)*attackMobility*0.18*phaseKick*speedScale*dt*60;
+        if(attackBit && rpm>0.18){
+            const attackEnergy=
+                (0.00048+attackStat*0.00058+bitAcceleration*0.00034)*
+                Math.pow(rpm,1.12)*
+                (0.82+0.18*s.movementEnergy);
+            const attackRadiusFactor=
+                newBattleClamp(0.58+0.42*newBattleClamp(
+                    Math.hypot(s.x,s.y)/0.72,0,1),0.58,1);
+            const attackPhase=
+                Math.sin((s.motionPhase||0)*0.62+(s.motionPhase2||0)*0.21);
+
+            // More tangential energy at the outside produces the characteristic
+            // wide attack orbit. A small radial component keeps it from becoming
+            // a perfect circle.
+            const r=Math.hypot(s.x,s.y);
+            if(r>0.018){
+                const invR=1/r;
+                const spinSign=s.spinDirection===1 ? 1 : -1;
+                const tx=s.y*invR*spinSign;
+                const ty=-s.x*invR*spinSign;
+                const rx=s.x*invR, ry=s.y*invR;
+                const radialBreath=attackPhase*0.28*attackEnergy;
+                const orbitDrive=attackEnergy*attackRadiusFactor;
+
+                s.vx+=tx*orbitDrive*dt*60+rx*radialBreath*dt*60;
+                s.vy+=ty*orbitDrive*dt*60+ry*radialBreath*dt*60;
+            }
         }
 
         const targetTilt=newBattleClamp(
@@ -4629,7 +4642,8 @@ function newPhysicsStep(s,dt){
                 const rvy=opponent.vy-s.vy;
                 const rv2=rvx*rvx+rvy*rvy;
 
-                if(d>0.17 && d<0.72 && rv2>0.000004){
+                const closingDot=dx*rvx+dy*rvy;
+                if(d>0.17 && d<0.72 && rv2>0.000004 && closingDot<0){
                     // Time until the current trajectories are closest.
                     const tClosest=newBattleClamp(
                         -(dx*rvx+dy*rvy)/rv2,
@@ -4655,8 +4669,8 @@ function newPhysicsStep(s,dt){
                         const bpControl=(bp.control||60)/100;
                         const aggression=
                             attackBit
-                                ? 0.95
-                                : (1-centerAffinity)*0.42+0.12;
+                                ? 0.72
+                                : (1-centerAffinity)*0.18+0.035;
                         const distanceFactor=
                             newBattleClamp(
                                 (contactWindow-futureD)/0.20,
@@ -4674,15 +4688,16 @@ function newPhysicsStep(s,dt){
 
                         if(readiness>0.46){
                             const assist=
-                                (0.000018+
-                                 aggression*0.000055+
-                                 (1-bpControl)*0.000018)*
+                                (0.000008+
+                                 aggression*0.000028+
+                                 (1-bpControl)*0.000008)*
                                 distanceFactor*
-                                (0.55+0.45*rpm)*
-                                (0.72+0.28*s.movementEnergy);
+                                (0.45+0.55*rpm)*
+                                (0.76+0.24*s.movementEnergy);
 
-                            // Small random phase means two otherwise similar
-                            // trajectories do not always converge identically.
+                            // Deterministic sign from each Bey's seeded phase.
+                            // This prevents invisible homing while preserving a
+                            // tiny chance of converting repeated near-misses.
                             const sign=
                                 Math.sin((s.motionPhase2||0)*1.37)>0 ? 1 : -1;
 
@@ -4750,170 +4765,144 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          Spin/precession is an acceleration, not a circular path.
-          Its influence fades smoothly with RPM.
+          V63 TIP / PRECESSION FIELD
+          --------------------------
+          The bit archetype determines how much of the spin energy becomes
+          lateral motion. Attack Bits retain a strong orbit. Stamina/Defense
+          Bits remain controlled and central. Balance Bits live between them.
+          The field is deterministic from each Bey's seeded phases, so it feels
+          physical rather than like random velocity teleportation.
         */
-        const r = Math.hypot(s.x,s.y);
+        const r=Math.hypot(s.x,s.y);
 
         if(r>0.02 && rpm>0.01){
-
             const invR=1/r;
+            const spinSign=s.spinDirection===1 ? 1 : -1;
+            const tangentX=s.y*invR*spinSign;
+            const tangentY=-s.x*invR*spinSign;
+            const radialX=s.x*invR;
+            const radialY=s.y*invR;
 
-            // Screen coordinates: +Y is down. Right-spin is CCW, so its
-            // tangent at (x,y) is (y,-x).
-            const spinSign=
-                s.spinDirection===1 ? 1 : -1;
-
-            const tangentX=
-                s.y*invR*spinSign;
-            const tangentY=
-                -s.x*invR*spinSign;
-
-            /*
-              Precession changes continuously. This is force-based
-              wandering, not a fixed orbit.
-            */
-            s.motionPhase +=
-                dt*(0.85+rpm*1.35+movement*0.55);
-
-            s.motionPhase2 +=
-                dt*(0.31+(1-rpm)*0.75);
+            s.motionPhase += dt*(0.70+rpm*1.55+movement*0.45);
+            s.motionPhase2 += dt*(0.22+(1-rpm)*0.58);
 
             const wobbleA=Math.sin(s.motionPhase);
             const wobbleB=Math.sin(s.motionPhase2+1.7);
 
-            const lowRpmAttackSuppression =
+            const lateGameGate=
+                rpm<0.48 ? 0.22+0.78*(rpm/0.48) : 1;
+
+            // Core tip drive. Attack Bits receive a much larger lateral
+            // coefficient; controlled Bits rely more on center/surface forces.
+            const attackDrive=
+                (0.00016+movement*0.00034)*
+                Math.pow(rpm,1.18)*
+                (0.72+control*0.28)*
+                (0.72+0.28*bitPrecession)*
+                (0.72+0.28*s.movementEnergy);
+
+            const nonAttackDrive=
+                (0.00006+movement*0.00018)*
+                Math.pow(rpm,1.30)*
+                lateGameGate*
+                (0.72+control*0.28)*
+                (0.72+0.28*bitPrecession);
+
+            const drive=attackBit ? attackDrive : nonAttackDrive;
+            const tangentScale=
                 attackBit
-                    ? newBattleClamp((rpm-0.22)/0.38,0,1)
-                    : 1;
+                    ? 0.88+0.12*Math.cos(wobbleA*0.70+wobbleB*0.40)
+                    : 0.74+0.26*Math.cos(wobbleA*0.80+wobbleB*0.45);
 
-            const nonAttackMovementScale=
-                attackBit
-                    ? 1.0
-                    : (0.18+0.24*(1-centerAffinity));
-
-            const lateGameMovementGate=
-                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
-            const lateralStrength=
-                (0.00010+movement*0.00030)*
-                Math.pow(rpm,1.42)*
-                lateGameMovementGate*
-                (0.52+control*0.48)*
-                (0.76+0.24*attackStat)*
-                (0.72+0.38*bitPrecession)*
-                (0.72+0.28*s.movementEnergy)*
-                nonAttackMovementScale*
-                (attackBit
-                    ? (0.68+0.82*lowRpmAttackSuppression)
-                    : 0.96);
-
-            const radialX=s.x*invR;
-            const radialY=s.y*invR;
-
-            // Direction is produced by the corrected spin tangent above.
-            // Do not add another steering correction here; collisions and
-            // walls are allowed to redirect the Bey naturally.
-
-            /*
-              The direction of the travel force breathes in/out instead of
-              remaining perfectly tangent to the bowl.
-            */
-            const radialWander=
+            // Small radial breathing changes the orbit radius without turning
+            // it into a scripted circle. It fades with RPM.
+            const radialScale=
                 Math.sin(
                     s.motionPhase*0.73+
                     s.motionPhase2+
-                    wobbleB*0.35
+                    wobbleB*0.25
                 )*
-                lateralStrength*
-                (0.30+(1-centerAffinity)*0.42+bitPrecession*0.18);
+                drive*
+                (attackBit ? 0.32 : (0.10+(1-centerAffinity)*0.18));
 
-            const tangentScale=
-                0.72+0.28*Math.cos(
-                    wobbleA*0.95+wobbleB*0.55
-                );
+            s.vx += tangentX*drive*tangentScale*dt*60 +
+                    radialX*radialScale*dt*60;
+            s.vy += tangentY*drive*tangentScale*dt*60 +
+                    radialY*radialScale*dt*60;
 
-            s.vx +=
-                tangentX*lateralStrength*tangentScale*dt*60+
-                radialX*radialWander*dt*60;
-
-            s.vy +=
-                tangentY*lateralStrength*tangentScale*dt*60+
-                radialY*radialWander*dt*60;
-
-            /*
-              Small cross-track disturbances are stronger for less
-              controlled/non-attack movement, but vanish with RPM.
-            */
-            const crossX=-tangentY;
-            const crossY=tangentX;
-
+            // Controlled Bits get only a tiny cross-track drift. It is based
+            // on a persistent phase, not fresh random velocity each frame.
             const driftForce=
-                (0.000018+(1-centerAffinity)*0.000030)*
-                Math.pow(rpm,0.85)*
-                (0.65+(1-control)*0.35);
-
-            s.vx +=
-                crossX*
-                Math.sin(s.motionPhase2*1.17)*
-                driftForce*dt*60;
-
-            s.vy +=
-                crossY*
-                Math.sin(s.motionPhase2*1.17)*
-                driftForce*dt*60;
+                (0.000006+(1-control)*0.000016)*
+                Math.pow(rpm,1.05);
+            const crossX=-tangentY, crossY=tangentX;
+            const driftPhase=Math.sin(s.motionPhase2*1.11+s.trajectoryBiasPhase);
+            s.vx+=crossX*driftForce*driftPhase*dt*60;
+            s.vy+=crossY*driftForce*driftPhase*dt*60;
         }
 
         /*
-          NON-ATTACK CENTER EQUALIZATION:
-          Stamina/Defense/Balance Bits should naturally settle toward the
-          central battle area. This is a continuous force, not a hard target
-          and not a teleport, so they can still drift and collide naturally.
+          V63 CENTER / STADIUM BIAS
+          -------------------------
+          Stamina and Defense Bits should prefer the center, but they must not
+          be glued to it. The force is modest at high RPM and grows only as the
+          Bey loses lateral energy. Attack Bits retain their wide orbit.
         */
-        if(r>0.08 && rpm>0.10){
-            const lowRpmCenterBoost=rpm<0.62 ? 1.0+((0.62-rpm)/0.62)*1.15 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.08 : (rpm<0.30 ? 0.62 : 0.24);
-            const centerStrength=(0.00018+centerAffinity*0.00036)*(0.58+0.42*rpm)*(0.78+0.22*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
+        if(r>0.08 && rpm>0.06){
+            const lowRpmCenterBoost=
+                rpm<0.52 ? 1.0+((0.52-rpm)/0.52)*0.62 : 1.0;
+            const typeCenterBoost=
+                attackBit
+                    ? (rpm<0.24 ? 0.45 : 0.10)
+                    : (1.00+centerAffinity*0.22);
+
+            const centerStrength=
+                (0.000075+centerAffinity*0.00020)*
+                (0.64+0.36*rpm)*
+                (0.82+0.18*s.movementEnergy)*
+                lowRpmCenterBoost*
+                typeCenterBoost;
+
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
-            if(!attackBit && r<0.36 && rpm<0.54){
-                const centralDamp=1-newBattleClamp(0.010+(0.54-rpm)*0.028+centerAffinity*0.006,0.010,0.038);
-                s.vx*=centralDamp; s.vy*=centralDamp;
+
+            if(!attackBit && r<0.34 && rpm<0.42){
+                const centralDamp=
+                    1-newBattleClamp(
+                        0.004+(0.42-rpm)*0.010+centerAffinity*0.003,
+                        0.004,0.016
+                    );
+                s.vx*=centralDamp;
+                s.vy*=centralDamp;
             }
         }
 
         /*
-          Surface irregularity / precession variation.
-
-          A real Bey does not follow a fixed mathematical orbit. Tiny changes
-          in contact pressure and precession alter the direction of travel.
-          This is strongest for controlled non-attack Bits in center fights,
-          but remains small enough not to become random teleporting.
+          V63 PERSISTENT TRAJECTORY BIAS
+          -------------------------------
+          Remove random velocity injections. A Bey's tiny trajectory changes
+          are represented by a slowly changing bias that becomes weaker as RPM
+          falls. This prevents Orb/Ball/Needle from wandering randomly late in
+          a battle.
         */
-        s.movementNoiseTimer-=dt;
-        if(s.movementNoiseTimer<=0){
-            const variation =
-                (0.00020+
-                 (1-movement)*0.00034+
-                 (1-centerAffinity)*0.00020) *
-                (0.42+0.58*rpm);
-
-            const noiseAngle=
-                s.motionPhase2+
-                Math.random()*Math.PI*2;
-
-            s.movementNoiseX=Math.cos(noiseAngle)*variation;
-            s.movementNoiseY=Math.sin(noiseAngle)*variation;
-            s.movementNoiseTimer=0.28+Math.random()*0.55;
+        s.trajectoryBiasTimer=(s.trajectoryBiasTimer||0)-dt;
+        if(s.trajectoryBiasTimer<=0){
+            s.trajectoryBiasPhase += 0.55+Math.random()*0.40;
+            const biasAmount=
+                (attackBit ? 0.000050 : 0.000028) *
+                (0.35+0.65*rpm) *
+                (0.60+0.40*bitPrecession);
+            const phase=s.trajectoryBiasPhase;
+            s.trajectoryBiasX=Math.cos(phase)*biasAmount;
+            s.trajectoryBiasY=Math.sin(phase)*biasAmount;
+            s.trajectoryBiasTimer=0.30+Math.random()*0.38;
         }
 
-        const noiseScale =
-            (attackBit
-                ? 0.72
-                : 1.0) *
-            (0.55+0.45*rpm);
-
-        s.vx+=s.movementNoiseX*noiseScale*dt*60;
-        s.vy+=s.movementNoiseY*noiseScale*dt*60;
+        const biasScale=
+            Math.pow(rpm,1.15)*
+            (attackBit ? 0.85 : 0.55);
+        s.vx+=(s.trajectoryBiasX||0)*biasScale*dt*60;
+        s.vy+=(s.trajectoryBiasY||0)*biasScale*dt*60;
 
         /*
           Stadium slope gently favors the center.
@@ -4923,14 +4912,8 @@ function newPhysicsStep(s,dt){
         if(r>0.015){
 
             const slopeForce =
-                (
-                    0.00014 +
-                    centerAffinity*0.00028
-                ) *
-                (
-                    0.55 +
-                    (1-rpm)*0.72
-                );
+                (0.00010+centerAffinity*0.00020)*
+                (0.62+(1-rpm)*0.48);
 
             s.vx -= s.x*slopeForce*dt*60;
             s.vy -= s.y*slopeForce*dt*60;
@@ -4978,8 +4961,8 @@ function newPhysicsStep(s,dt){
             const lateralDamp =
                 Math.pow(
                     attackBit
-                        ? 0.948+0.014*bitStability
-                        : 0.958+0.016*bitStability,
+                        ? 0.972+0.010*bitStability
+                        : 0.982+0.008*bitStability,
                     lowRpm*dt*60
                 );
 
@@ -5009,30 +4992,6 @@ function newPhysicsStep(s,dt){
                     tvy*lateralDamp;
             }
         }
-
-        /*
-          Small physical disturbance.
-
-          It is deliberately tiny. It breaks perfectly mathematical paths
-          without becoming visible RNG movement.
-        */
-        const disturbance =
-            (
-                0.000012 +
-                (1-control)*0.000025
-            ) *
-            (
-                0.35 +
-                (1-rpm)*0.65
-            );
-
-        s.vx +=
-            (Math.random()-0.5)*
-            disturbance*dt*60;
-
-        s.vy +=
-            (Math.random()-0.5)*
-            disturbance*dt*60;
 
         /*
           Outer stadium wall.
