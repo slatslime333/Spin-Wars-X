@@ -1040,6 +1040,12 @@ orb:{
 
 
 //=========================
+// V62 PHYSICS PASS — MOVEMENT / ENCOUNTER / RAIL REFINEMENT
+//=========================
+// Bit archetypes remain distinct. This pass removes hidden speed-target and
+// homing behavior, strengthens momentum persistence, and makes encounters
+// predictive rather than magnetically radial.
+//=========================
 // BIT PHYSICS 3.0
 //=========================
 // The bit is the primary movement component. Card stats determine how well
@@ -4065,7 +4071,7 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>1.90){
+    if((s.railRideTime||0)>2.40 && rpm<0.34){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -4079,8 +4085,11 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    const railDrive=(0.0023+movement*0.0032+affinity*0.0018)*(0.42+rpm*0.58);
-    const railFriction=0.00034+(1-rpm)*0.00052+tilt*0.00028;
+    // The rail should redirect momentum, not manufacture a fixed speed.
+    // A small grip term can recover energy lost to contact, but the Bey's
+    // incoming tangential velocity remains the dominant source of rail speed.
+    const railDrive=(0.00055+movement*0.00085+affinity*0.00042)*(0.42+rpm*0.58);
+    const railFriction=0.00030+(1-rpm)*0.00046+tilt*0.00022;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
     if(tangentVelocity<0.105){
@@ -4152,7 +4161,7 @@ function newXRailRailRelease(s,direction){
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
     s.railGrip=0; s.railDirection=0;
 
-    const tangential=speed*0.88, normal=Math.max(0.014,speed*0.36);
+    const tangential=speed*0.94, normal=Math.max(0.010,speed*0.24);
     const separation=0.078+s.radius*0.10;
     s.x=point.x+normalX*separation;
     s.y=point.y+normalY*separation;
@@ -4385,75 +4394,102 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          Core movement model:
-          RPM supplies available spin energy, while the launch supplies
-          translational momentum. They are related, but not identical.
-          This prevents a Bey from retaining "100% RPM movement" at low RPM.
+          V62 MOVEMENT CORE
+          -----------------
+          The old speed-target system has been removed. It was useful for
+          preventing dead battles, but it also made the engine quietly steer
+          every Bey toward a prescribed speed. Real Beys do not have a target
+          speed; they have launch momentum, spin energy, friction and tip
+          contact with the stadium.
+
+          RPM now supplies the ability to sustain motion, while the existing
+          velocity remains the primary source of translation. Bits still have
+          very different identities through acceleration, friction, control,
+          precession, stability and center affinity.
         */
-        const launchMobility=
-            0.0254+
-            (stats.mobility||70)*0.000060;
-
-        const rpmSpeedFactor=
-            0.20+
-            0.80*Math.pow(rpm,0.78);
-
-        const physicalSpeedTarget=
-            launchMobility*
-            (0.98+0.34*bitAcceleration)*
-            rpmSpeedFactor*
-            (0.86+0.24*bitStability)*
-            (attackBit
-                ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
-                : 1.11+0.08*attackStat) *
-            (rpm<0.60 ? 0.76+0.40*(rpm/0.60) : 1.0);
-
         const speedNow=Math.hypot(s.vx,s.vy);
+        const launchMomentum=
+            0.0290+
+            (stats.mobility||70)*0.000070;
 
-        if(rpm<0.60 && speedNow>physicalSpeedTarget){
-            const lowRpmBrake=(0.0014+(0.60-rpm)*0.0038)*dt*60;
-            const brakeScale=newBattleClamp(1-lowRpmBrake,0.90,1);
-            s.vx*=brakeScale;
-            s.vy*=brakeScale;
+        // Center launches begin physically centered. Give them a tiny,
+        // one-time release impulse so the first trajectory is an emergent
+        // result rather than a hidden straight-line attack.
+        if(
+            !s.initialMotionSeeded &&
+            s.launchPlan?.technique==="Center" &&
+            rpm>0.20
+        ){
+            const seedAngle=
+                (s.motionPhase||Math.random()*Math.PI*2)+
+                (s.launchTilt==='Hard Tilt'?0.24:
+                 s.launchTilt==='Slight Tilt'?0.11:0);
+            const seedStrength=
+                0.0018+
+                0.0040*(bitAcceleration*0.55+bitPrecession*0.25)+
+                0.0015*newBattleClamp(launchMomentum/0.034,0,1.5);
+            s.vx+=Math.cos(seedAngle)*seedStrength;
+            s.vy+=Math.sin(seedAngle)*seedStrength;
+            s.initialMotionSeeded=true;
         }
 
-        if(speedNow>physicalSpeedTarget*1.08){
-            const excessRatio=newBattleClamp(
-                (speedNow-physicalSpeedTarget)/
-                Math.max(speedNow,0.0001),0,0.24
-            );
-            const decay=
-                (0.0012+bitFriction*0.0018+excessRatio*0.0035)*
-                dt*60;
-            const scale=newBattleClamp(1-decay,0.90,1);
-            s.vx*=scale;
-            s.vy*=scale;
-        }else if(speedNow>0.001 && speedNow<physicalSpeedTarget){
-            const acceleration=
-                (0.00035+bitAcceleration*0.0010)*
-                (0.45+0.55*rpm)*dt*60;
-            s.vx+=(s.vx/speedNow)*acceleration;
-            s.vy+=(s.vy/speedNow)*acceleration;
+        // Spin energy can sustain a moving Bey, but it does not drag a slow
+        // Bey toward an arbitrary target speed. This is intentionally much
+        // weaker than the old speed-target correction.
+        if(speedNow>0.001){
+            const spinSupport=
+                (0.00018+bitAcceleration*0.00042)*
+                Math.pow(rpm,0.92)*
+                (0.62+0.38*s.movementEnergy)*
+                (0.70+0.30*bitStability);
+            const supportScale=
+                newBattleClamp(1-speedNow/0.090,0,1);
+            s.vx+=(s.vx/speedNow)*spinSupport*supportScale*dt*60;
+            s.vy+=(s.vy/speedNow)*spinSupport*supportScale*dt*60;
+        }
+
+        // A Bey with nearly no translational velocity can still begin to
+        // wander from tip contact/precession. Keep this small so stamina and
+        // defense Bits can settle instead of becoming frozen.
+        if(speedNow<0.0035 && rpm>0.18){
+            const crawl=
+                (0.00018+movement*0.00042)*
+                Math.pow(rpm,1.08)*
+                (0.62+0.38*bitPrecession);
+            const crawlAngle=
+                (s.motionPhase||0)+
+                Math.sin((s.motionPhase2||0)*0.73)*0.60;
+            s.vx+=Math.cos(crawlAngle)*crawl*dt*60;
+            s.vy+=Math.sin(crawlAngle)*crawl*dt*60;
         }
 
         const workRate=
-            speedNow*(0.22+bitFriction*0.40)*(0.65+0.35*rpm);
+            speedNow*(0.18+bitFriction*0.34)*(0.62+0.38*rpm);
 
         s.movementEnergy=newBattleClamp(
             (s.movementEnergy||1)-
-            workRate*0.00070*dt*60+
+            workRate*0.00062*dt*60+
             rpm*bitStability*0.00010*dt*60,
             0.18,1
         );
 
-        if(attackBit && rpm>0.38 && speedNow>0.001){
-            const attackDrive=
-                (0.00036+attackStat*0.00034)*
-                Math.pow(rpm,0.82)*
-                (0.74+0.26*s.movementEnergy)*
+        /*
+          Attack Bits are differentiated by how much lateral/precessional
+          energy they can turn into movement. They are NOT given a hidden
+          forward acceleration toward the opponent. This preserves their
+          aggressive identity without turning them into homing tops.
+        */
+        if(attackBit && rpm>0.30){
+            const attackMobility=
+                (0.00006+attackStat*0.00010)*
+                Math.pow(rpm,0.78)*
+                (0.72+0.28*s.movementEnergy)*
                 bitAcceleration;
-            s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
-            s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
+            const phaseKick=
+                Math.sin((s.motionPhase||0)*0.83+(s.motionPhase2||0)*0.27);
+            const speedScale=newBattleClamp(1-speedNow/0.075,0,1);
+            s.vx+=(-s.vy)*attackMobility*phaseKick*speedScale*dt*60;
+            s.vy+=(s.vx)*attackMobility*0.18*phaseKick*speedScale*dt*60;
         }
 
         const targetTilt=newBattleClamp(
@@ -4564,11 +4600,20 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          SOFT COMBAT ENGAGEMENT
-          ----------------------
-          This is trajectory bias only. It does not guarantee a hit and it
-          does not create a timer. Attack Bits get stronger convergence;
-          non-attack Bits get a gentler version so they actually engage.
+          V62 ENCOUNTER FIELD
+          -------------------
+          The previous radial assist was a useful emergency fix for the old
+          orbit problem, but it behaved like invisible gravity: both Beys
+          could be pulled toward one another simply because they were close.
+
+          Replace that with a predictive, very small encounter bias. We only
+          help when the two current trajectories are already likely to pass
+          near one another. The bias nudges the trajectory across the
+          predicted closest-approach line instead of steering directly at the
+          opponent.
+
+          Result: non-attack Beys still fight, but missed attacks, glancing
+          passes and separated trajectories remain possible.
         */
         {
             const opponent =
@@ -4576,129 +4621,73 @@ function newPhysicsStep(s,dt){
                     ? NEW_BATTLE.cpu
                     : NEW_BATTLE.player;
 
-            const currentAttackBit =
-                Number(bp.movement||60)>=80;
+            if(opponent && s.rpm>0.16 && opponent.rpm>0.05){
+                const dx=opponent.x-s.x;
+                const dy=opponent.y-s.y;
+                const d=Math.hypot(dx,dy);
+                const rvx=opponent.vx-s.vx;
+                const rvy=opponent.vy-s.vy;
+                const rv2=rvx*rvx+rvy*rvy;
 
-            const opponentAttackBit =
-                opponent &&
-                (
-                    opponent.bitPhysicsType==="attack" ||
-                    Number(
-                        opponent.stats &&
-                        opponent.stats.movement ||
-                        60
-                    )>=80
-                );
+                if(d>0.17 && d<0.72 && rv2>0.000004){
+                    // Time until the current trajectories are closest.
+                    const tClosest=newBattleClamp(
+                        -(dx*rvx+dy*rvy)/rv2,
+                        0.03,
+                        0.70
+                    );
 
-            const bothNonAttack =
-                !!opponent &&
-                !currentAttackBit &&
-                !opponentAttackBit;
+                    const futureX=dx+rvx*tClosest;
+                    const futureY=dy+rvy*tClosest;
+                    const futureD=Math.hypot(futureX,futureY);
+                    const contactWindow=
+                        s.radius+opponent.radius+0.10;
 
-            if(opponent){
-                const ox=Number(opponent.x);
-                const oy=Number(opponent.y);
-                const sx=Number(s.x);
-                const sy=Number(s.y);
+                    if(futureD<contactWindow){
+                        const fx=futureX/(futureD||1);
+                        const fy=futureY/(futureD||1);
+                        // Push slightly across the predicted separation
+                        // vector. This is an intercept correction, not a
+                        // direct homing force.
+                        const interceptX=-fy;
+                        const interceptY=fx;
 
-                if(
-                    Number.isFinite(ox) &&
-                    Number.isFinite(oy) &&
-                    Number.isFinite(sx) &&
-                    Number.isFinite(sy)
-                ){
-                    const dx=ox-sx;
-                    const dy=oy-sy;
-                    const d=Math.hypot(dx,dy);
-
-                    if(
-                        d>0.14 &&
-                        d<(bothNonAttack ? 0.58 : 0.43) &&
-                        s.rpm>0.20 &&
-                        opponent.rpm>0.05
-                    ){
-                        const invD=1/Math.max(d,0.001);
-                        const tx=-dy*invD;
-                        const ty=dx*invD;
-                        const ax=dx*invD;
-                        const ay=dy*invD;
-
-                        const attackStat=
-                            newBattleClamp(
-                                Number(s.stats && s.stats.attack || 70)/99,
-                                0,1
-                            );
-
-                        const kbStat=
-                            newBattleClamp(
-                                Number(s.stats && s.stats.knockback || 70)/99,
-                                0,1
-                            );
-
-                        /*
-                          The wave creates windows of engagement. It is not a
-                          countdown, so it cannot guarantee a collision.
-                        */
-                        const wave=
-                            0.5+
-                            0.5*Math.sin(
-                                (s.motionPhase||0)*0.61+
-                                (s.motionPhase2||0)*0.37
-                            );
-
+                        const bpControl=(bp.control||60)/100;
+                        const aggression=
+                            attackBit
+                                ? 0.95
+                                : (1-centerAffinity)*0.42+0.12;
                         const distanceFactor=
                             newBattleClamp(
-                                (0.43-d)/0.25,
+                                (contactWindow-futureD)/0.20,
                                 0,1
                             );
-
                         const readiness=
                             newBattleClamp(
-                                0.48+
-                                s.rpm*0.28+
-                                (1-(s.tiltLevel||0))*0.16+
-                                wave*0.16,
+                                0.45+
+                                rpm*0.28+
+                                opponent.rpm*0.10+
+                                (1-(s.tiltLevel||0))*0.10+
+                                Math.sin((s.motionPhase||0)*0.61)*0.07,
                                 0,1
                             );
 
-                        const threshold=
-                            bothNonAttack ? 0.53 : 0.47;
-
-                        if(readiness>threshold){
-
-                            const base=
-                                attackBit
-                                    ? 0.00068+
-                                      attackStat*0.00070+
-                                      kbStat*0.00026
-                                    : 0.00040+
-                                      attackStat*0.00034+
-                                      kbStat*0.00022;
-
-                            const strength=
-                                base*
-                                distanceFactor*
-                                (0.72+0.28*s.rpm)*
-                                (bothNonAttack?1.68:1.12);
-
-                            /*
-                              The old gravity/crossing system is removed.
-                              This assist is strictly radial: it only points
-                              at the opponent and never adds an orbital force.
-                            */
-                            const closeAssist=
-                                newBattleClamp(
-                                    (0.50-d)/0.28,
-                                    0,1
-                                );
-
+                        if(readiness>0.46){
                             const assist=
-                                strength*
-                                (0.34+0.48*closeAssist)*
-                                (bothNonAttack ? 1.08 : 0.92);
+                                (0.000018+
+                                 aggression*0.000055+
+                                 (1-bpControl)*0.000018)*
+                                distanceFactor*
+                                (0.55+0.45*rpm)*
+                                (0.72+0.28*s.movementEnergy);
 
-                            s.vx+=ax*assist*dt*60;
-                            s.vy+=ay*assist*dt*60;
+                            // Small random phase means two otherwise similar
+                            // trajectories do not always converge identically.
+                            const sign=
+                                Math.sin((s.motionPhase2||0)*1.37)>0 ? 1 : -1;
+
+                            s.vx+=interceptX*assist*sign*dt*60;
+                            s.vy+=interceptY*assist*sign*dt*60;
                         }
                     }
                 }
@@ -4881,13 +4870,13 @@ function newPhysicsStep(s,dt){
           and not a teleport, so they can still drift and collide naturally.
         */
         if(r>0.08 && rpm>0.10){
-            const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.30 : (rpm<0.38 ? 0.72 : 0.34);
-            const centerStrength=(0.00040+centerAffinity*0.00078)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
+            const lowRpmCenterBoost=rpm<0.62 ? 1.0+((0.62-rpm)/0.62)*1.15 : 1.0;
+            const typeCenterBoost=!attackBit ? 1.08 : (rpm<0.30 ? 0.62 : 0.24);
+            const centerStrength=(0.00018+centerAffinity*0.00036)*(0.58+0.42*rpm)*(0.78+0.22*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
-            if(!attackBit && r<0.42 && rpm<0.68){
-                const centralDamp=1-newBattleClamp(0.020+(0.68-rpm)*0.055+centerAffinity*0.014,0.020,0.075);
+            if(!attackBit && r<0.36 && rpm<0.54){
+                const centralDamp=1-newBattleClamp(0.010+(0.54-rpm)*0.028+centerAffinity*0.006,0.010,0.038);
                 s.vx*=centralDamp; s.vy*=centralDamp;
             }
         }
@@ -4935,8 +4924,8 @@ function newPhysicsStep(s,dt){
 
             const slopeForce =
                 (
-                    0.00024 +
-                    centerAffinity*0.00050
+                    0.00014 +
+                    centerAffinity*0.00028
                 ) *
                 (
                     0.55 +
@@ -4954,18 +4943,18 @@ function newPhysicsStep(s,dt){
           problem. Velocity decays independently of RPM.
         */
         const baseFriction =
-            0.984 +
-            control*0.008 -
-            movement*0.004 -
-            (attackBit ? 0.0018*rpm : 0);
+            0.987 +
+            control*0.006 -
+            movement*0.003 -
+            (attackBit ? 0.0012*rpm : 0);
 
         const rpmFrictionBonus=0.003*rpm+(1-rpm)*0.0035;
 
         const friction =
             newBattleClamp(
                 baseFriction+rpmFrictionBonus,
-                0.972,
-                0.992
+                0.975,
+                0.994
             );
 
         const frictionStep =
