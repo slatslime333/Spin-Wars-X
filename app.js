@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vnew53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vwork53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2561,7 +2561,7 @@ function newBattleLaunchState(side){
         : isDropLaunch
             ? -0.705 + placementJitter*0.06
             : isXRailLaunch
-                ? 0.60 + placementJitter*0.04
+                ? placementJitter*0.06
                 : placementJitter;
 
     const direction=(isDropLaunch || isCenterLaunch) ? 0 : launchDirection;
@@ -2597,15 +2597,18 @@ function newBattleLaunchState(side){
     }
 
     if(isXRailLaunch){
-        const railTarget=newXRailNearest(sideXSign*0.82,0.48);
+        // X-Rail launch aims at the TOP rail. The player/CPU launch from
+        // opposite left/right sides, so each one attacks its nearby upper
+        // rail entry rather than aiming at the lower bowl.
+        const railTarget=newXRailNearest(sideXSign*0.74,-0.58);
         const dx=railTarget.x-startX;
         const dy=railTarget.y-startY;
         const d=Math.hypot(dx,dy)||1;
 
         const inwardX=dx/d;
         const inwardY=dy/d;
-        // Right-spin follows the counter-clockwise rail direction on this geometry.
-        const spinDirection=-1;
+        const spinDirection=
+            combo.blade?.spin==="Left" ? 1 : -1;
         const railTangentX=railTarget.tx*spinDirection;
         const railTangentY=railTarget.ty*spinDirection;
 
@@ -4013,15 +4016,40 @@ function bitPhysics(s){
     return BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
 }
 
-function railDirection(s){
-    if(s.railDirection===1 || s.railDirection===-1){
-        return s.railDirection;
+function newXRailTangentAtPoint(point, direction, x, y){
+    // The stored spline runs from the left top endpoint around the lower
+    // stadium to the right top endpoint. Its geometric tangent is smooth,
+    // but we explicitly enforce the game's spin rule at every point:
+    // Right-spin = counter-clockwise, Left-spin = clockwise.
+    let tx=point?.tx||0;
+    let ty=point?.ty||0;
+    const len=Math.hypot(tx,ty)||1;
+    tx/=len;
+    ty/=len;
+
+    const rx=Number.isFinite(x)?x:(point?.x||0);
+    const ry=Number.isFinite(y)?y:(point?.y||0);
+    const angularSign=rx*ty-ry*tx;
+
+    // In screen coordinates a negative cross product is CCW.
+    // direction=-1 is the Right-spin/CCW rail direction.
+    const wantCCW=direction===-1;
+    const isCCW=angularSign<0;
+    if(wantCCW!==isCCW){
+        tx=-tx;
+        ty=-ty;
     }
 
-    // Stored geometry travels left -> right around the lower bowl.
-    // Right-spin is counter-clockwise, so it traverses the stored path
-    // backwards and exits from the LEFT TOP endpoint.
-    return s.spinDirection===1 ? -1 : 1;
+    return {x:tx,y:ty};
+}
+
+function railDirection(s){
+    // Never infer rail direction from the current velocity. The rail must
+    // obey the Bey's spin direction, otherwise a collision or launch vector
+    // can accidentally make a right-spin Bey ride the rail clockwise.
+    if(s?.spinDirection===1) return -1; // Right-spin = CCW
+    if(s?.spinDirection===-1) return 1; // Left-spin  = CW
+    return -1;
 }
 
 function isBottomFinishCorridor(s){
@@ -4128,8 +4156,11 @@ function tryNewXRailEngagement(s){
     const direction=railDirection(s);
 
     // Convert the stored tangent into the actual spin-correct rail tangent.
-    const tangentX=nearest.tx*direction;
-    const tangentY=nearest.ty*direction;
+    const railTangent=newXRailTangentAtPoint(
+        nearest,direction,nearest.x,nearest.y
+    );
+    const tangentX=railTangent.x;
+    const tangentY=railTangent.y;
 
     const tangent=
         s.vx*tangentX+
@@ -4351,15 +4382,15 @@ function newXRailExit(s){
     */
     const exitSpeed=newBattleClamp(
         Math.max(
-            current*1.36,
-            0.082+
-            rpm*0.046+
-            affinity*0.022+
-            movement*0.010+
-            (s.railBoost||0)*3.5
+            current*1.48,
+            0.105+
+            rpm*0.060+
+            affinity*0.030+
+            movement*0.012+
+            (s.railBoost||0)*4.0
         ),
-        0.075,
-        0.165
+        0.095,
+        0.190
     );
 
     s.x=endpoint.x+ix*0.010;
@@ -4460,8 +4491,11 @@ function applyXRailConstraint(s,dt){
     const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
 
-    const tangentX=nearest.tx*direction;
-    const tangentY=nearest.ty*direction;
+    const railTangent=newXRailTangentAtPoint(
+        nearest,direction,nearest.x,nearest.y
+    );
+    const tangentX=railTangent.x;
+    const tangentY=railTangent.y;
 
     const projected=
         s.vx*tangentX+
@@ -4482,19 +4516,19 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.095+
-        0.045*rpm+
-        0.030*affinity+
-        0.010*control,
-        0.095,
-        0.180
+        0.105+
+        0.055*rpm+
+        0.038*affinity+
+        0.012*control,
+        0.105,
+        0.190
     );
 
     const accelerator=
         (
-            0.00135+
-            0.00155*rpm+
-            0.00110*affinity
+            0.00180+
+            0.00215*rpm+
+            0.00155*affinity
         )*
         (
             0.76+
@@ -4556,10 +4590,11 @@ function applyXRailConstraint(s,dt){
         dt*60*
         direction;
 
+    const endpointTolerance=0.030;
     const reachedEndpoint=
         direction>0
-            ? railDistance>=endpointDistance-0.012
-            : railDistance<=endpointDistance+0.012;
+            ? railDistance>=endpointDistance-endpointTolerance
+            : railDistance<=endpointDistance+endpointTolerance;
 
     if(reachedEndpoint){
         s.railDistance=endpointDistance;
@@ -4603,15 +4638,12 @@ function applyXRailConstraint(s,dt){
         point.y+
         outwardY*grooveOffset;
 
-    s.vx=
-        point.tx*
-        direction*
-        railSpeed;
+    const finalTangent=newXRailTangentAtPoint(
+        point,direction,point.x,point.y
+    );
 
-    s.vy=
-        point.ty*
-        direction*
-        railSpeed;
+    s.vx=finalTangent.x*railSpeed;
+    s.vy=finalTangent.y*railSpeed;
 
     s.railSpeed=railSpeed;
     s.railDistance=railDistance;
