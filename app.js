@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">cheese · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V5nice3 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2827,6 +2827,7 @@ function startNewBattle(){
 
         NEW_BATTLE.elapsed=0;
         NEW_BATTLE.active=true;
+        NEW_BATTLE.impactErrorCount=0;
         NEW_BATTLE.last=performance.now();
 
         renderNewBattle();
@@ -3442,6 +3443,56 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
+
+function newCollisionSnapshot(s){
+    return {
+        x:s.x,y:s.y,vx:s.vx,vy:s.vy,
+        rpm:s.rpm,stability:s.stability,
+        axisStability:s.axisStability,
+        tiltLevel:s.tiltLevel,
+        railEngaged:s.railEngaged,
+        railDirection:s.railDirection,
+        railDistance:s.railDistance,
+        railSpeed:s.railSpeed,
+        railGrip:s.railGrip,
+        railContactPoint:s.railContactPoint
+            ? {x:s.railContactPoint.x,y:s.railContactPoint.y}
+            : null,
+        railExited:s.railExited,
+        railExitForce:s.railExitForce,
+        lastImpactForce:s.lastImpactForce,
+        lastImpactAt:s.lastImpactAt,
+        lastKnockback:s.lastKnockback,
+        finishRecoveryUsed:s.finishRecoveryUsed
+    };
+}
+
+function restoreCollisionSnapshot(s,snap){
+    Object.assign(s,snap);
+}
+
+function reportPhysicsError(err,phase){
+    console.error(`Spin Wars ${phase} error:`,err);
+
+    const message=err && err.message
+        ? err.message
+        : String(err);
+
+    // Keep the useful diagnostic available in DevTools without exposing a
+    // massive stack trace in the battle UI.
+    window.__SPIN_WARS_LAST_ERROR={
+        phase,
+        message,
+        stack:err && err.stack ? err.stack : "",
+        time:Date.now()
+    };
+
+    const commentary=document.getElementById("newCommentary");
+    if(commentary){
+        commentary.textContent=`Physics recovered from ${phase} error.`;
+    }
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -3474,7 +3525,57 @@ function newBattleFrame(now){
             throw new Error("Non-finite Bey physics state.");
         }
 
-        newPhysicsCollision(dt);
+        /*
+          Collision is a transaction. A rare runtime exception inside an
+          impact must not destroy the entire battle. Normal collisions are
+          completely unchanged. Only the exceptional path restores the two
+          Beys to their pre-impact state and lets the next frame continue.
+        */
+        const pBeforeCollision=newCollisionSnapshot(p);
+        const cBeforeCollision=newCollisionSnapshot(c);
+
+        try{
+            newPhysicsCollision(dt);
+        }catch(collisionError){
+            restoreCollisionSnapshot(p,pBeforeCollision);
+            restoreCollisionSnapshot(c,cBeforeCollision);
+
+            reportPhysicsError(collisionError,"impact");
+
+            NEW_BATTLE.impactErrorCount=
+                (NEW_BATTLE.impactErrorCount||0)+1;
+
+            /*
+              Separate the Beys slightly after a failed impact so the exact
+              same overlap cannot immediately retrigger the same exception.
+            */
+            const edx=c.x-p.x;
+            const edy=c.y-p.y;
+            const ed=Math.hypot(edx,edy)||1;
+            const enX=edx/ed;
+            const enY=edy/ed;
+            const sep=0.010;
+
+            p.x-=enX*sep;
+            p.y-=enY*sep;
+            c.x+=enX*sep;
+            c.y+=enY*sep;
+
+            if(NEW_BATTLE.impactErrorCount>=5){
+                /*
+                  Five exceptional impacts in one battle indicates a
+                  persistent code/state fault rather than bad luck. Stop with
+                  a useful diagnostic instead of silently freezing.
+                */
+                NEW_BATTLE.active=false;
+                const commentary=document.getElementById("newCommentary");
+                if(commentary){
+                    commentary.textContent=
+                        `Physics fault in impact: ${collisionError.message||collisionError}`;
+                }
+                return;
+            }
+        }
 
         if(
             !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -3761,10 +3862,20 @@ function newBattleFrame(now){
 
     }catch(err){
         console.error("Spin Wars battle simulation error:",err);
+
+        window.__SPIN_WARS_LAST_ERROR={
+            phase:"battle-frame",
+            message:err && err.message ? err.message : String(err),
+            stack:err && err.stack ? err.stack : "",
+            time:Date.now()
+        };
+
         const commentary=document.getElementById("newCommentary");
         if(commentary){
-            commentary.textContent="Simulation error — physics loop stopped.";
+            commentary.textContent=
+                `Physics error: ${err && err.message ? err.message : String(err)}`;
         }
+
         NEW_BATTLE.active=false;
         return;
     }
