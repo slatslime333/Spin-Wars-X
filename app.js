@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5finalk3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">weeeeeV53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2707,6 +2707,7 @@ function newBattleLaunchState(side){
         railExited:false,
         railExitRefractory:0,
         railExitRefractoryPoint:null,
+        reverseOrbitGrace:0,
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
         surfaceRecovery:0,
@@ -4562,19 +4563,19 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.105+
-        0.055*rpm+
-        0.038*affinity+
+        0.108+
+        0.062*rpm+
+        0.042*affinity+
         0.012*control,
-        0.105,
-        0.190
+        0.108,
+        0.198
     );
 
     const accelerator=
         (
-            0.00180+
-            0.00215*rpm+
-            0.00155*affinity
+            0.00200+
+            0.00235*rpm+
+            0.00170*affinity
         )*
         (
             0.76+
@@ -5102,6 +5103,34 @@ function newPhysicsStep(s,dt){
 
         applyKnockbackBoundaryOverride(s);
 
+        // A hard collision may temporarily throw a Bey across the stadium in
+        // the opposite angular direction. That is physically valid for a
+        // moment, but it must not become a new permanent orbit. The grace
+        // window is only created by an actual collision; once it expires,
+        // sustained reverse angular travel is gently removed and the Bey is
+        // returned to its original spin direction.
+        if((s.reverseOrbitGrace||0)>0){
+            s.reverseOrbitGrace=Math.max(0,s.reverseOrbitGrace-dt);
+        }else if(Math.hypot(s.x,s.y)>0.035 && s.rpm>0.16){
+            const orbitTangent=getSpinOrbitTangent(
+                s.x,s.y,s.spinDirection
+            );
+            const tangentialVelocity=
+                s.vx*orbitTangent.x+
+                s.vy*orbitTangent.y;
+
+            // Negative tangential velocity means the Bey is persistently
+            // orbiting opposite its spin direction. Preserve radial motion
+            // while damping only the wrong-way tangential component.
+            if(tangentialVelocity < -0.00035){
+                const wrongWay=Math.min(0.012,-tangentialVelocity);
+                const correction=
+                    wrongWay*(0.16+0.30*s.rpm)*dt*60;
+                s.vx-=orbitTangent.x*correction;
+                s.vy-=orbitTangent.y*correction;
+            }
+        }
+
         /*
           RAIL PRIORITY
           -------------
@@ -5384,7 +5413,7 @@ function newPhysicsStep(s,dt){
 
             const lowRpmAttackSuppression =
                 attackBit
-                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
+                    ? newBattleClamp((rpm-0.42)/0.38,0,1)
                     : 1;
 
             const nonAttackMovementScale=
@@ -6093,18 +6122,18 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.00045+contactEnergy*0.0080,
+        0.00040+contactEnergy*0.0062,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.30-cDef*0.055)
+        (0.22-cDef*0.040)
     );
     const cKnockback=Math.max(
-        0.00045+contactEnergy*0.0080,
+        0.00040+contactEnergy*0.0062,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.30-pDef*0.055)
+        (0.22-pDef*0.040)
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
@@ -6115,10 +6144,10 @@ function newPhysicsCollision(dt){
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.00018+
-        effectiveImpact*0.0019+
-        Math.abs(tangentRelative)*0.00032+
-        heavyFactor*0.00008;
+        0.00016+
+        effectiveImpact*0.00145+
+        Math.abs(tangentRelative)*0.00024+
+        heavyFactor*0.00006;
 
     const pFollow=
         followThrough*
@@ -6168,6 +6197,11 @@ function newPhysicsCollision(dt){
             rider.railContactPoint=null;
         }
     }
+
+    // Allow a genuine impact to redirect a Bey briefly. After the grace
+    // window, the global spin-direction invariant takes over again.
+    p.reverseOrbitGrace=Math.max(p.reverseOrbitGrace||0,0.16);
+    c.reverseOrbitGrace=Math.max(c.reverseOrbitGrace||0,0.16);
 
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
