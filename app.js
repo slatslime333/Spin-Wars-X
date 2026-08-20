@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V5finalk3 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
