@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">weeeeeV53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2707,7 +2707,6 @@ function newBattleLaunchState(side){
         railExited:false,
         railExitRefractory:0,
         railExitRefractoryPoint:null,
-        reverseOrbitGrace:0,
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
         surfaceRecovery:0,
@@ -4035,6 +4034,40 @@ function validatePhysicsDirectionContract(){
     return true;
 }
 
+
+/*
+ * V79 PHYSICS DIRECTION CONTRACT
+ * ------------------------------
+ * A collision may redirect a Bey's velocity, but it must NEVER create a
+ * sustained orbit opposite to the Bey's physical spin direction.
+ *
+ * This runs only at the collision event. It does NOT become a second
+ * per-frame movement controller, so it cannot fight the normal orbit physics
+ * or the X-Rail.
+ *
+ * Radial/impact velocity is preserved. Only the tangential component that
+ * would establish an opposite-direction orbit is removed.
+ */
+function enforcePostImpactSpinDirection(s){
+    if(!s || s.railEngaged) return;
+
+    const rpm=newBattleClamp(s.rpm||0,0,1);
+    if(rpm<=0.10) return;
+
+    const radius=Math.hypot(s.x,s.y);
+    if(radius<0.035) return;
+
+    const tangent=getSpinOrbitTangent(s.x,s.y,s.spinDirection);
+    const tangential=s.vx*tangent.x+s.vy*tangent.y;
+
+    if(tangential<0){
+        s.vx-=tangent.x*tangential;
+        s.vy-=tangent.y*tangential;
+    }
+
+    s.lastOrbitDirection=s.spinDirection===1 ? "CCW" : "CW";
+}
+
 function newXRailTangentAtPoint(point, direction, x, y){
     /*
       AUTHORITATIVE GAMEPLAY DIRECTION
@@ -4563,19 +4596,19 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.108+
-        0.062*rpm+
-        0.042*affinity+
+        0.105+
+        0.055*rpm+
+        0.038*affinity+
         0.012*control,
-        0.108,
-        0.198
+        0.105,
+        0.190
     );
 
     const accelerator=
         (
-            0.00200+
-            0.00235*rpm+
-            0.00170*affinity
+            0.00180+
+            0.00215*rpm+
+            0.00155*affinity
         )*
         (
             0.76+
@@ -5103,34 +5136,6 @@ function newPhysicsStep(s,dt){
 
         applyKnockbackBoundaryOverride(s);
 
-        // A hard collision may temporarily throw a Bey across the stadium in
-        // the opposite angular direction. That is physically valid for a
-        // moment, but it must not become a new permanent orbit. The grace
-        // window is only created by an actual collision; once it expires,
-        // sustained reverse angular travel is gently removed and the Bey is
-        // returned to its original spin direction.
-        if((s.reverseOrbitGrace||0)>0){
-            s.reverseOrbitGrace=Math.max(0,s.reverseOrbitGrace-dt);
-        }else if(Math.hypot(s.x,s.y)>0.035 && s.rpm>0.16){
-            const orbitTangent=getSpinOrbitTangent(
-                s.x,s.y,s.spinDirection
-            );
-            const tangentialVelocity=
-                s.vx*orbitTangent.x+
-                s.vy*orbitTangent.y;
-
-            // Negative tangential velocity means the Bey is persistently
-            // orbiting opposite its spin direction. Preserve radial motion
-            // while damping only the wrong-way tangential component.
-            if(tangentialVelocity < -0.00035){
-                const wrongWay=Math.min(0.012,-tangentialVelocity);
-                const correction=
-                    wrongWay*(0.16+0.30*s.rpm)*dt*60;
-                s.vx-=orbitTangent.x*correction;
-                s.vy-=orbitTangent.y*correction;
-            }
-        }
-
         /*
           RAIL PRIORITY
           -------------
@@ -5413,7 +5418,7 @@ function newPhysicsStep(s,dt){
 
             const lowRpmAttackSuppression =
                 attackBit
-                    ? newBattleClamp((rpm-0.42)/0.38,0,1)
+                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
                     : 1;
 
             const nonAttackMovementScale=
@@ -6122,18 +6127,18 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.00040+contactEnergy*0.0062,
+        0.00045+contactEnergy*0.0080,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.22-cDef*0.040)
+        (0.30-cDef*0.055)
     );
     const cKnockback=Math.max(
-        0.00040+contactEnergy*0.0062,
+        0.00045+contactEnergy*0.0080,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.22-pDef*0.040)
+        (0.30-pDef*0.055)
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
@@ -6144,10 +6149,10 @@ function newPhysicsCollision(dt){
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.00016+
-        effectiveImpact*0.00145+
-        Math.abs(tangentRelative)*0.00024+
-        heavyFactor*0.00006;
+        0.00018+
+        effectiveImpact*0.0019+
+        Math.abs(tangentRelative)*0.00032+
+        heavyFactor*0.00008;
 
     const pFollow=
         followThrough*
@@ -6197,11 +6202,6 @@ function newPhysicsCollision(dt){
             rider.railContactPoint=null;
         }
     }
-
-    // Allow a genuine impact to redirect a Bey briefly. After the grace
-    // window, the global spin-direction invariant takes over again.
-    p.reverseOrbitGrace=Math.max(p.reverseOrbitGrace||0,0.16);
-    c.reverseOrbitGrace=Math.max(c.reverseOrbitGrace||0,0.16);
 
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
@@ -6526,6 +6526,16 @@ function newPhysicsCollision(dt){
             Math.max(cRailBreakForce,Math.abs(c.lastKnockback||0))
         );
     }
+
+    /*
+      FINAL COLLISION DIRECTION CHECK
+      -------------------------------
+      All collision impulses are now applied. Correct only a post-impact
+      tangential reversal so a hit cannot turn a right-spin Bey into a
+      sustained clockwise orbit (or vice versa).
+    */
+    enforcePostImpactSpinDirection(p);
+    enforcePostImpactSpinDirection(c);
 }
 
 // Launch angle and technique are selected on the stadium setup view.
