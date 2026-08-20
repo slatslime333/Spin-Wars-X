@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5gay3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3855,6 +3855,7 @@ function railDirectionAtPoint(s,point){
 function tryNewXRailEngagement(s){
     if(s.railEngaged) return true;
     if((s.railExitRefractory||0)>0) return false;
+    if((s.railReengageCooldown||0)>0) return false;
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
@@ -4084,8 +4085,12 @@ function updateNewXRailRide(s,dt){
         return true;
     }
 
-    if((s.railRideTime||0)>2.40 && rpm<0.34){
+    // A real X-Rail ride is a burst of acceleration, not a second movement
+    // mode that can trap a Bey around the stadium.  Give the rail a short
+    // energy window, then force a clean exit even if RPM is still healthy.
+    if((s.railRideTime||0)>1.35 || (s.railTravelDistance||0)>g.total*0.92){
         newXRailRailRelease(s,direction);
+        s.railReengageCooldown=0.70;
         return true;
     }
 
@@ -4093,7 +4098,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.072){
+    if(tangentVelocity<0.105){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -4102,15 +4107,15 @@ function updateNewXRailRide(s,dt){
     // A small grip term can recover energy lost to contact, but the Bey's
     // incoming tangential velocity remains the dominant source of rail speed.
     const railDrive=
-        (0.00095+movement*0.00125+affinity*0.00055)*
+        (0.00080+movement*0.00100+affinity*0.00045)*
         (0.45+rpm*0.55);
     const railFriction=
-        0.00024+(1-rpm)*0.00034+tilt*0.00018;
+        0.00055+(1-rpm)*0.00085+tilt*0.00030;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
     if(tangentVelocity<0.105){
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.30;
+        s.railReengageCooldown=0.70;
         return false;
     }
 
@@ -4161,7 +4166,7 @@ function updateNewXRailRide(s,dt){
     s.vy=ty*tangentVelocity;
 
     const rpmDrainPerSecond=
-        0.0020+tangentVelocity*0.014+(1-rpm)*0.0015+tilt*0.0010;
+        0.0060+tangentVelocity*0.024+(1-rpm)*0.0030+tilt*0.0018;
     s.rpm=newBattleClamp(rpm-rpmDrainPerSecond*dt,0,1);
     s.stability=newBattleClamp(
         stability-(0.00025+tangentVelocity*0.0014)*dt,0,1
@@ -4568,6 +4573,10 @@ function newPhysicsStep(s,dt){
             }
         }
 
+        if(s.railReengageCooldown>0){
+            s.railReengageCooldown=Math.max(0,s.railReengageCooldown-dt);
+        }
+
         applyKnockbackBoundaryOverride(s);
 
         if(s.railEngaged){
@@ -4897,31 +4906,36 @@ function newPhysicsStep(s,dt){
                 // The desired speed remains tied to RPM and the Bit's
                 // mobility, but is never a hard speed target.
                 const desiredSpeed=
-                    (0.0105+0.0175*movement)*
-                    Math.pow(rpm,0.72)*
+                    (0.0135+0.0205*movement)*
+                    (0.18+0.82*Math.pow(rpm,0.72))*
                     (0.72+0.28*bitStability);
 
                 const radialWeight=
-                    0.34+0.30*centerAffinity+
-                    (r>preferredRadius ? 0.22 : 0.10);
+                    0.48+0.34*centerAffinity+
+                    (r>preferredRadius ? 0.28 : 0.14);
 
-                const desiredX=
-                    tangentX*desiredSpeed -
-                    radialX*desiredSpeed*radialCorrection*radialWeight;
-                const desiredY=
-                    tangentY*desiredSpeed -
-                    radialY*desiredSpeed*radialCorrection*radialWeight;
+                // Decompose the current velocity into radial and tangential
+                // components.  Control/stamina tips should not preserve a
+                // launch vector indefinitely; the bowl continuously turns
+                // that vector into a small path around the center.
+                const currentRadial=s.vx*radialX+s.vy*radialY;
+                const currentTangent=s.vx*tangentX+s.vy*tangentY;
+                const desiredRadial=
+                    -desiredSpeed*radialCorrection*radialWeight;
+                const radialSteer=
+                    (0.050+0.050*centerAffinity)*
+                    (0.48+0.52*Math.pow(rpm,0.45));
+                const tangentSteer=
+                    (0.060+0.045*centerAffinity)*
+                    (0.42+0.58*Math.pow(rpm,0.38));
 
-                // Gently turn the existing launch vector toward the tip's
-                // natural path. Strong enough to stop straight-line travel,
-                // weak enough that impacts and launch angle still matter.
-                const steer=
-                    (0.020+0.028*centerAffinity)*
-                    Math.pow(rpm,0.58)*
-                    (0.70+0.30*control);
+                const nextRadial=
+                    currentRadial+(desiredRadial-currentRadial)*radialSteer*dt*60;
+                const nextTangent=
+                    currentTangent+(desiredSpeed-currentTangent)*tangentSteer*dt*60;
 
-                s.vx += (desiredX-s.vx)*steer*dt*60;
-                s.vy += (desiredY-s.vy)*steer*dt*60;
+                s.vx += (radialX*nextRadial+tangentX*nextTangent)-s.vx;
+                s.vy += (radialY*nextRadial+tangentY*nextTangent)-s.vy;
 
                 // Actual bowl slope pulls toward the center. This is stronger
                 // than V63 but still proportional to the current radius.
@@ -4937,11 +4951,30 @@ function newPhysicsStep(s,dt){
                 // they should remain aggressive while they have real spin
                 // energy, but their travel radius must collapse late.
                 const lowAttackCenter=
-                    newBattleClamp((0.30-rpm)/0.24,0,1);
+                    newBattleClamp((0.52-rpm)/0.38,0,1);
                 const centerStrength=
-                    (0.00012+centerAffinity*0.00020)*lowAttackCenter;
+                    (0.00018+centerAffinity*0.00028)*lowAttackCenter;
                 s.vx-=radialX*r*centerStrength*dt*60;
                 s.vy-=radialY*r*centerStrength*dt*60;
+
+                // Keep a dying Attack Bey's trajectory curved.  Without this
+                // low-RPM attacks lose their tangential drive and collapse
+                // into a straight up/down lane.  The target speed contracts
+                // sharply with RPM, but the direction remains tangential.
+                const lowAttackSpeed=
+                    (0.0065+0.018*movement)*
+                    (0.10+0.90*Math.pow(rpm,1.15));
+                const lowAttackRadial=s.vx*radialX+s.vy*radialY;
+                const lowAttackTangent=s.vx*tangentX+s.vy*tangentY;
+                const lowAttackTangentSteer=
+                    (0.055+0.075*lowAttackCenter)*
+                    (0.35+0.65*lowAttackCenter);
+                const correctedTangent=
+                    lowAttackTangent+(lowAttackSpeed-lowAttackTangent)*lowAttackTangentSteer*dt*60;
+                const correctedRadial=
+                    lowAttackRadial*(1-0.045*lowAttackCenter*dt*60);
+                s.vx += radialX*correctedRadial+tangentX*correctedTangent-s.vx;
+                s.vy += radialY*correctedRadial+tangentY*correctedTangent-s.vy;
             }
         }
 
