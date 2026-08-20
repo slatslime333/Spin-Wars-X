@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vfianl53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2696,7 +2696,8 @@ function newBattleLaunchState(side){
         railCaptureCooldown:0,
         railCaptureCooldownPoint:null,
 
-        // Right spin = counter-clockwise; left spin = clockwise.
+        // Authoritative convention: RIGHT spin = clockwise / LEFT -> RIGHT
+        // across the TOP X-Rail. LEFT spin is the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
@@ -3352,6 +3353,36 @@ function checkForcedStadiumFinish(s){
     return null;
 }
 
+function getSpinTangentAtPosition(s){
+    const r=Math.hypot(s?.x||0,s?.y||0);
+    if(r<0.000001){
+        return {x:0,y:0};
+    }
+
+    const invR=1/r;
+
+    /*
+      AUTHORITATIVE SPIN CONVENTION
+      -----------------------------
+      The game uses screen coordinates (+Y is DOWN).
+
+      RIGHT-SPIN follows the clockwise tangent around the stadium.
+      At the TOP of the stadium that tangent points LEFT -> RIGHT.
+
+      Clockwise tangent in screen coordinates = (-y, x).
+      Counter-clockwise tangent = (y, -x).
+
+      This helper is shared by free-space spin/precession and the right-spin
+      correction so those systems cannot silently disagree about direction.
+    */
+    const spinSign=s?.spinDirection===-1 ? -1 : 1;
+
+    return {
+        x:-s.y*invR*spinSign,
+        y:s.x*invR*spinSign
+    };
+}
+
 function enforceRightSpinDirection(s){
     if(!s || s.spinDirection!==1) return;
 
@@ -3359,13 +3390,9 @@ function enforceRightSpinDirection(s){
     const speed=Math.hypot(s.vx,s.vy);
     if(r<0.08 || speed<0.009) return;
 
-    const invR=1/r;
-    // In screen coordinates (+Y down), the desired RIGHT-spin tangent is
-    // clockwise: (-y, x). This matches the rail's authored LEFT -> RIGHT
-    // travel direction and prevents free-space and rail spin conventions
-    // from fighting each other.
-    const tx=-s.y*invR;
-    const ty=s.x*invR;
+    const tangent=getSpinTangentAtPosition(s);
+    const tx=tangent.x;
+    const ty=tangent.y;
     const tv=s.vx*tx+s.vy*ty;
 
     // Right-spin cannot sustain the opposite (counter-clockwise) trajectory.
@@ -3733,7 +3760,8 @@ function getNewXRailGeometry(){
       opposite top endpoint.
 
       Stored path direction is LEFT -> RIGHT around the lower bowl.
-      Right-spin travels the stored path to the right-side X-Exit; left-spin
+      In the player's screen orientation this is the clockwise travel direction.
+      RIGHT-spin travels the stored path to the right-side X-Exit; LEFT-spin
       travels the exact reverse.
 
       There is NO wrap-around. Reaching the appropriate top endpoint launches
@@ -4029,12 +4057,12 @@ function newXRailTangentAtPoint(point, direction, x, y){
       The authored rail path is the physical track from the LEFT top
       endpoint, down around the stadium, to the RIGHT top endpoint.
 
-      For Spin Wars X, a RIGHT-spin Bey rides that authored path: LEFT ->
-      RIGHT -> TOP X-EXIT. A LEFT-spin Bey rides the exact reverse.
+      RIGHT-spin rides that authored path: LEFT -> RIGHT -> TOP X-EXIT.
+      LEFT-spin rides the exact reverse.
 
-      We intentionally do NOT infer direction from the Bey's current
-      velocity or from screen-space angular math. The track's authored
-      direction is the source of truth.
+      We intentionally do NOT infer rail direction from velocity or from
+      clockwise/counter-clockwise math. The authored path is the source of
+      truth, and its direction is fixed by railDirection().
     */
     let tx=point?.tx||0;
     let ty=point?.ty||0;
@@ -5340,15 +5368,12 @@ function newPhysicsStep(s,dt){
 
             const invR=1/r;
 
-            // Screen coordinates: +Y is down. Right-spin is CCW, so its
-            // tangent at (x,y) is (y,-x).
-            const spinSign=
-                s.spinDirection===1 ? 1 : -1;
-
-            const tangentX=
-                s.y*invR*spinSign;
-            const tangentY=
-                -s.x*invR*spinSign;
+            // Use the same authoritative spin tangent as the right-spin
+            // correction. This prevents free-space precession from orbiting
+            // opposite the rail direction.
+            const spinTangent=getSpinTangentAtPosition(s);
+            const tangentX=spinTangent.x;
+            const tangentY=spinTangent.y;
 
             /*
               Precession changes continuously. This is force-based
