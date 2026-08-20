@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5113 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V5gay3 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3947,9 +3947,14 @@ function tryNewXRailEngagement(s){
 
     const g=getNewXRailGeometry();
     const tangentialCarry=Math.max(tangentVelocity,speed*0.82);
+    // V64: the rail should capture a fast Bey, not convert it into a slow
+    // canned ride. Preserve most incoming tangential energy and add only a
+    // small rail-capture boost.
+    const captureBoost=
+        1.08+movement*0.10+rpm*0.08+affinity*0.04;
     const railSpeed=newBattleClamp(
-        tangentialCarry*(1.58+movement*0.22+rpm*0.22+affinity*0.09),
-        0.115,0.300
+        tangentialCarry*captureBoost,
+        0.145,0.320
     );
 
     s.railDirection=direction;
@@ -4046,9 +4051,10 @@ function updateNewXRailRide(s,dt){
 
     // V42: prevent awkward slow rail crawling. A rider must retain enough
     // tangential energy to stay on the rail; otherwise release cleanly.
-    if(s.railEngaged && (s.railRideTime||0)>0.18 && speedOf(s)<0.105){
+    if(s.railEngaged && (s.railRideTime||0)>0.16 && speedOf(s)<0.072){
+        // A dying rail ride should RELEASE, not crawl slowly along the rail.
         newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.30;
+        s.railReengageCooldown=0.45;
         return false;
     }
     const bp=bitPhysics(s);
@@ -4087,7 +4093,7 @@ function updateNewXRailRide(s,dt){
     // it does not create a slow canned orbit.
     let tangentVelocity=s.vx*tx0+s.vy*ty0;
 
-    if(tangentVelocity<0.102){
+    if(tangentVelocity<0.072){
         newXRailRailRelease(s,direction);
         return true;
     }
@@ -4095,8 +4101,11 @@ function updateNewXRailRide(s,dt){
     // The rail should redirect momentum, not manufacture a fixed speed.
     // A small grip term can recover energy lost to contact, but the Bey's
     // incoming tangential velocity remains the dominant source of rail speed.
-    const railDrive=(0.00055+movement*0.00085+affinity*0.00042)*(0.42+rpm*0.58);
-    const railFriction=0.00030+(1-rpm)*0.00046+tilt*0.00022;
+    const railDrive=
+        (0.00095+movement*0.00125+affinity*0.00055)*
+        (0.45+rpm*0.55);
+    const railFriction=
+        0.00024+(1-rpm)*0.00034+tilt*0.00018;
 
     tangentVelocity += (railDrive-railFriction)*dt*60;
     if(tangentVelocity<0.105){
@@ -4168,8 +4177,9 @@ function newXRailRailRelease(s,direction){
     s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
     s.railGrip=0; s.railDirection=0;
 
-    const tangential=speed*0.94, normal=Math.max(0.010,speed*0.24);
-    const separation=0.078+s.radius*0.10;
+    const tangential=Math.max(0.030,speed*0.97);
+    const normal=Math.max(0.014,speed*0.28);
+    const separation=0.082+s.radius*0.12;
     s.x=point.x+normalX*separation;
     s.y=point.y+normalY*separation;
     s.vx=tangentX*tangential+normalX*normal;
@@ -4401,7 +4411,7 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          V63 MOVEMENT CORE
+          V64 MOVEMENT CORE
           -----------------
           Restore strong high-RPM bit identity without returning to a hard
           speed target. Translation comes from launch momentum plus tip/surface
@@ -4477,9 +4487,12 @@ function newPhysicsStep(s,dt){
           position and a slowly changing phase. There is no opponent homing.
         */
         if(attackBit && rpm>0.18){
+            const attackLateGate=
+                rpm<0.55 ? Math.pow(rpm/0.55,1.55) : 1;
             const attackEnergy=
-                (0.00048+attackStat*0.00058+bitAcceleration*0.00034)*
-                Math.pow(rpm,1.12)*
+                (0.00058+attackStat*0.00066+bitAcceleration*0.00040)*
+                Math.pow(rpm,1.16)*
+                attackLateGate*
                 (0.82+0.18*s.movementEnergy);
             const attackRadiusFactor=
                 newBattleClamp(0.58+0.42*newBattleClamp(
@@ -4790,7 +4803,7 @@ function newPhysicsStep(s,dt){
             const wobbleB=Math.sin(s.motionPhase2+1.7);
 
             const lateGameGate=
-                rpm<0.48 ? 0.22+0.78*(rpm/0.48) : 1;
+                rpm<0.48 ? Math.pow(rpm/0.48,1.45) : 1;
 
             // Core tip drive. Attack Bits receive a much larger lateral
             // coefficient; controlled Bits rely more on center/surface forces.
@@ -4842,43 +4855,98 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          V63 CENTER / STADIUM BIAS
-          -------------------------
-          Stamina and Defense Bits should prefer the center, but they must not
-          be glued to it. The force is modest at high RPM and grows only as the
-          Bey loses lateral energy. Attack Bits retain their wide orbit.
+          V64 CENTER / TIP-TRACKING BIAS
+          --------------------------------
+          Non-Attack Bits were still travelling in long straight lanes because
+          their tangential drive was too weak to overcome the launch vector.
+          Real control/stamina tips do not simply point at the center; their
+          contact with the bowl continually turns the travel vector into a
+          small, controlled path around the center while slope/friction pull
+          the radius inward.
+
+          This is NOT an opponent-seeking force. It is a stadium/tip force:
+          target radius + spin tangent + radial correction.
         */
-        if(r>0.08 && rpm>0.06){
-            const lowRpmCenterBoost=
-                rpm<0.52 ? 1.0+((0.52-rpm)/0.52)*0.62 : 1.0;
-            const typeCenterBoost=
-                attackBit
-                    ? (rpm<0.24 ? 0.45 : 0.10)
-                    : (1.00+centerAffinity*0.22);
+        if(r>0.035 && rpm>0.035){
+            const spinSign=s.spinDirection===1 ? 1 : -1;
+            const invR=1/r;
+            const radialX=s.x*invR;
+            const radialY=s.y*invR;
+            const tangentX=s.y*invR*spinSign;
+            const tangentY=-s.x*invR*spinSign;
 
-            const centerStrength=
-                (0.000075+centerAffinity*0.00020)*
-                (0.64+0.36*rpm)*
-                (0.82+0.18*s.movementEnergy)*
-                lowRpmCenterBoost*
-                typeCenterBoost;
+            if(!attackBit){
+                // Higher center affinity = tighter preferred orbit.  The
+                // preferred radius shrinks as RPM falls.
+                const preferredRadius=
+                    newBattleClamp(
+                        0.105+
+                        (1-centerAffinity)*0.15+
+                        movement*0.055,
+                        0.095,0.34
+                    ) *
+                    (0.58+0.42*Math.pow(rpm,0.55));
 
-            s.vx-=s.x*centerStrength*dt*60;
-            s.vy-=s.y*centerStrength*dt*60;
-
-            if(!attackBit && r<0.34 && rpm<0.42){
-                const centralDamp=
-                    1-newBattleClamp(
-                        0.004+(0.42-rpm)*0.010+centerAffinity*0.003,
-                        0.004,0.016
+                const radiusError=r-preferredRadius;
+                const radialCorrection=
+                    newBattleClamp(
+                        radiusError/0.42,
+                        -1.15,1.15
                     );
-                s.vx*=centralDamp;
-                s.vy*=centralDamp;
+
+                // The desired speed remains tied to RPM and the Bit's
+                // mobility, but is never a hard speed target.
+                const desiredSpeed=
+                    (0.0105+0.0175*movement)*
+                    Math.pow(rpm,0.72)*
+                    (0.72+0.28*bitStability);
+
+                const radialWeight=
+                    0.34+0.30*centerAffinity+
+                    (r>preferredRadius ? 0.22 : 0.10);
+
+                const desiredX=
+                    tangentX*desiredSpeed -
+                    radialX*desiredSpeed*radialCorrection*radialWeight;
+                const desiredY=
+                    tangentY*desiredSpeed -
+                    radialY*desiredSpeed*radialCorrection*radialWeight;
+
+                // Gently turn the existing launch vector toward the tip's
+                // natural path. Strong enough to stop straight-line travel,
+                // weak enough that impacts and launch angle still matter.
+                const steer=
+                    (0.020+0.028*centerAffinity)*
+                    Math.pow(rpm,0.58)*
+                    (0.70+0.30*control);
+
+                s.vx += (desiredX-s.vx)*steer*dt*60;
+                s.vy += (desiredY-s.vy)*steer*dt*60;
+
+                // Actual bowl slope pulls toward the center. This is stronger
+                // than V63 but still proportional to the current radius.
+                const slopeStrength=
+                    (0.00070+centerAffinity*0.00085)*
+                    (0.68+0.32*rpm)*
+                    (0.82+0.18*s.movementEnergy);
+
+                s.vx-=radialX*r*slopeStrength*dt*60;
+                s.vy-=radialY*r*slopeStrength*dt*60;
+            }else{
+                // Attack Bits get only a small center pull at very low RPM;
+                // they should remain aggressive while they have real spin
+                // energy, but their travel radius must collapse late.
+                const lowAttackCenter=
+                    newBattleClamp((0.30-rpm)/0.24,0,1);
+                const centerStrength=
+                    (0.00012+centerAffinity*0.00020)*lowAttackCenter;
+                s.vx-=radialX*r*centerStrength*dt*60;
+                s.vy-=radialY*r*centerStrength*dt*60;
             }
         }
 
         /*
-          V63 PERSISTENT TRAJECTORY BIAS
+          V64 PERSISTENT TRAJECTORY BIAS
           -------------------------------
           Remove random velocity injections. A Bey's tiny trajectory changes
           are represented by a slowly changing bias that becomes weaker as RPM
@@ -4961,7 +5029,7 @@ function newPhysicsStep(s,dt){
             const lateralDamp =
                 Math.pow(
                     attackBit
-                        ? 0.972+0.010*bitStability
+                        ? 0.952+0.014*bitStability
                         : 0.982+0.008*bitStability,
                     lowRpm*dt*60
                 );
