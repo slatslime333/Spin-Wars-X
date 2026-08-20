@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">baybee munV53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">cheese · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3237,13 +3237,17 @@ function tryFinishZoneRecovery(s,zone){
     const instabilityPenalty=(1-stability)*0.10;
     const speedPenalty=Math.max(0,speed-0.95)*0.08;
 
+    const earlyRecoveryBoost=
+        0.035*Math.pow(rpm,1.65);
+
     const base=
         0.16+
         stamina*0.28+
         defense*0.07+
         balance*0.24+
         stability*0.20+
-        rpm*0.15;
+        rpm*0.15+
+        earlyRecoveryBoost;
 
     const chance=newBattleClamp(
         base-impactPenalty-tiltPenalty-instabilityPenalty-speedPenalty,
@@ -3263,7 +3267,11 @@ function tryFinishZoneRecovery(s,zone){
     const dx=centerX-s.x;
     const dy=centerY-s.y;
     const len=Math.hypot(dx,dy)||1;
-    const escapeSpeed=0.038+0.020*newBattleClamp(rpm,0,1)+0.010*balance;
+    const escapeSpeed=
+        0.038+
+        0.020*newBattleClamp(rpm,0,1)+
+        0.010*balance+
+        0.003*Math.pow(rpm,1.6);
 
     // Put the Bey just back inside the finish boundary and give it a real
     // outward-from-pocket / toward-stadium velocity instead of teleporting it.
@@ -3359,13 +3367,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.054 &&
-            alignment>=0.39;
+            speed>=0.055 &&
+            alignment>=0.395;
 
         const railQualified=
             railEntry &&
-            speed>=0.076 &&
-            alignment>=0.39;
+            speed>=0.077 &&
+            alignment>=0.395;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3403,15 +3411,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.052 &&
-            outward>=0.0057 &&
-            alignment>=0.39;
+            speed>=0.053 &&
+            outward>=0.0058 &&
+            alignment>=0.395;
 
         const railQualified=
             railEntry &&
-            speed>=0.074 &&
-            outward>=0.0053 &&
-            alignment>=0.39;
+            speed>=0.075 &&
+            outward>=0.0054 &&
+            alignment>=0.395;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -6076,6 +6084,19 @@ function newPhysicsCollision(dt){
     const p=NEW_BATTLE.player;
     const c=NEW_BATTLE.cpu;
     if(!p||!c) return;
+
+    // Collision guard: impacts are the most sensitive point in the physics
+    // pipeline. If a transient invalid value reaches this function, skip
+    // that single collision rather than propagating NaN/Infinity through
+    // velocities, RPM, damage, or finish logic.
+    const collisionValues=[
+        p.x,p.y,p.vx,p.vy,p.rpm,p.stability,
+        c.x,c.y,c.vx,c.vy,c.rpm,c.stability
+    ];
+    if(!collisionValues.every(Number.isFinite) || !Number.isFinite(dt)){
+        console.warn("Skipped invalid collision state.");
+        return;
+    }
 
     // A Bey riding the X Rail is still physically hittable. A sufficiently
     // strong impact can break its rail grip; weak contact does not.
