@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">swagmunV53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">baybee munV53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3359,13 +3359,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.056 &&
-            alignment>=0.40;
+            speed>=0.054 &&
+            alignment>=0.39;
 
         const railQualified=
             railEntry &&
-            speed>=0.078 &&
-            alignment>=0.40;
+            speed>=0.076 &&
+            alignment>=0.39;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3403,15 +3403,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.054 &&
-            outward>=0.0060 &&
-            alignment>=0.40;
+            speed>=0.052 &&
+            outward>=0.0057 &&
+            alignment>=0.39;
 
         const railQualified=
             railEntry &&
-            speed>=0.076 &&
-            outward>=0.0056 &&
-            alignment>=0.40;
+            speed>=0.074 &&
+            outward>=0.0053 &&
+            alignment>=0.39;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -4295,9 +4295,10 @@ function tryNewXRailEngagement(s){
     // style Bits should not casually lock onto the rail after they have
     // already lost most of their movement energy.
     const minimumCaptureRPM=
-        0.27+
-        (1-affinity)*0.20+
-        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.025);
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.27
+            : 0.37+
+              (1-affinity)*0.18;
 
     if(speed<0.012 || rpm<minimumCaptureRPM){
         return false;
@@ -4325,10 +4326,24 @@ function tryNewXRailEngagement(s){
     // A rail capture must be an actual approach into the rail. A Bey that is
     // merely traveling parallel inside the contact band should skim past,
     // not magnetically latch. Deliberate X-Rail launches get a small allowance.
+    const deliberateXRail=
+        s.launchPlan?.technique==="X-Rail";
+
+    const recentKnockback=
+        (performance.now()-(s.lastImpactAt||0))<=420 &&
+        (s.lastKnockback||0)>=0.010;
+
+    const physicsDrivenRailException=
+        !deliberateXRail &&
+        !attackBit &&
+        recentKnockback;
+
     const minimumApproachRatio=
-        s.launchPlan?.technique==="X-Rail"
+        deliberateXRail
             ? (0.10+0.08*(1-affinity))
-            : (0.16+0.12*(1-affinity));
+            : physicsDrivenRailException
+                ? (0.22+0.14*(1-affinity))
+                : (0.25+0.16*(1-affinity));
 
     if(approachRatio<minimumApproachRatio){
         return false;
@@ -4354,16 +4369,22 @@ function tryNewXRailEngagement(s){
       player explicitly chose the rail-seeking launch.
     */
     const minimumTangentRatio=
-        s.launchPlan?.technique==="X-Rail"
+        deliberateXRail
             ? 0.22+0.10*(1-affinity)
-            : 0.56-
-              affinity*0.24-
-              movement*0.04;
+            : physicsDrivenRailException
+                ? 0.58-
+                  affinity*0.12-
+                  movement*0.02
+                : 0.68-
+                  affinity*0.10-
+                  movement*0.02;
 
     const minimumTangentSpeed=
-        s.launchPlan?.technique==="X-Rail"
+        deliberateXRail
             ? 0.0065+0.0020*(1-affinity)
-            : 0.0080-affinity*0.0012;
+            : physicsDrivenRailException
+                ? 0.0100-affinity*0.0010
+                : 0.0115-affinity*0.0010;
 
     if(
         tangent<minimumTangentSpeed ||
@@ -4408,9 +4429,13 @@ function tryNewXRailEngagement(s){
       X-Rail launch. The variance is small and represents imperfect contact.
     */
     const baseChance=
-        s.launchPlan?.technique==="X-Rail"
+        deliberateXRail
             ? 0.68+physicalScore*0.20
-            : 0.32+physicalScore*0.42;
+            : attackBit
+                ? 0.26+physicalScore*0.38
+                : physicsDrivenRailException
+                    ? 0.10+physicalScore*0.28
+                    : 0.05+physicalScore*0.18;
 
     const captureChance=newBattleClamp(
         baseChance+
@@ -4664,20 +4689,22 @@ function applyXRailConstraint(s,dt){
       X-Rail acceleration is strongest immediately after capture and at high
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
+    const railRpmPower=Math.pow(rpm,0.82);
+
     const maxRailSpeed=newBattleClamp(
-        0.105+
-        0.055*rpm+
-        0.038*affinity+
-        0.012*control,
-        0.105,
+        0.078+
+        0.092*railRpmPower+
+        0.025*affinity+
+        0.010*control,
+        0.090,
         0.190
     );
 
     const accelerator=
         (
-            0.00180+
-            0.00215*rpm+
-            0.00155*affinity
+            0.00155+
+            0.00210*railRpmPower+
+            0.00135*affinity
         )*
         (
             0.76+
@@ -5493,7 +5520,7 @@ function newPhysicsStep(s,dt){
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.18+0.24*(1-centerAffinity));
+                    : (0.10+0.14*(1-centerAffinity));
 
             const lateGameMovementGate=
                 rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
@@ -5574,7 +5601,7 @@ function newPhysicsStep(s,dt){
         */
         if(r>0.08 && rpm>0.10){
             const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.30 : (rpm<0.42 ? 1.05 : 0.34);
+            const typeCenterBoost=!attackBit ? 1.46 : (rpm<0.42 ? 1.05 : 0.34);
             const centerStrength=(0.00040+centerAffinity*0.00078)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
@@ -5710,6 +5737,64 @@ function newPhysicsStep(s,dt){
                 s.vy =
                     iy*radialVelocity+
                     tvy*lateralDamp;
+            }
+
+            /*
+              LOW-RPM ORBIT PRESERVATION
+              ---------------------------
+              As RPM falls, the Bey should contract its orbit, not collapse
+              into a straight vertical/horizontal line. Give the preferred
+              spin tangent a small minimum amount of travel. Center-focused
+              Bits get the smallest amount and can nearly settle in place;
+              Attack/less-center Bits retain a little more curved motion.
+            */
+            if(rpm>0.025 && rNow>0.045){
+                const lowOrbitTangent=getSpinOrbitTangent(
+                    s.x,s.y,s.spinDirection
+                );
+
+                const preferredActivity=
+                    attackBit
+                        ? 0.72
+                        : newBattleClamp(
+                            0.20+
+                            (1-centerAffinity)*0.62,
+                            0.20,
+                            0.82
+                        );
+
+                const targetTangentialSpeed=
+                    (
+                        attackBit
+                            ? 0.0052+0.0115*movement
+                            : 0.0032+0.0062*movement
+                    )*
+                    Math.pow(rpm,0.92)*
+                    preferredActivity;
+
+                const currentTangential=
+                    s.vx*lowOrbitTangent.x+
+                    s.vy*lowOrbitTangent.y;
+
+                if(currentTangential<targetTangentialSpeed){
+                    const tangentCorrection=
+                        (
+                            targetTangentialSpeed-
+                            currentTangential
+                        )*
+                        (
+                            0.20+
+                            0.42*lowRpm+
+                            0.18*(1-centerAffinity)
+                        );
+
+                    s.vx+=
+                        lowOrbitTangent.x*
+                        tangentCorrection;
+                    s.vy+=
+                        lowOrbitTangent.y*
+                        tangentCorrection;
+                }
             }
         }
 
