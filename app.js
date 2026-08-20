@@ -59,8 +59,8 @@ arena:{
     playerColor:null,
     cpuColor:null,
 
-    xRail:"Bottom",
-    xExit:"Bottom",
+    xRail:"Top",
+    xExit:"Top",
 
     playerLane:null,
     cpuLane:null
@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vnew53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2858,39 +2858,38 @@ function renderNewBattle(){
               <path d="M73 82 L90 82 L90 94"
                     fill="none" stroke="#eceeef" stroke-width="1"/>
 
-              <!-- X RAIL: open physical track around the bowl.
-                   The two BOTTOM endpoints form the X Exit gap. The rail
-                   follows the upper/side bowl and does not close across the
-                   Xtreme opening. -->
+              <!-- X RAIL: TOP X-RAIL / X-EXIT.
+                   The rail is at the TOP of the stadium. Its two endpoints
+                   form the X-Exit gap. The exit launches the Bey inward
+                   toward the center; normal battle physics can then carry
+                   it toward the bottom Xtreme/Over area. -->
               <path d="
-                M 44.8 79.7
-                C 41.6 81.8 37.2 82.8 32.8 80.7
-                C 20.8 74.9 14.0 61.0 14.7 44.5
-                C 15.6 27.0 29.6 13.2 50.0 12.3
-                C 70.4 13.2 84.4 27.0 85.3 44.5
-                C 86.0 61.0 79.2 74.9 67.2 80.7
-                C 62.8 82.8 58.4 81.8 55.2 79.7"
+                M 44.8 10.3
+                C 41.6 8.2 37.2 7.2 32.8 9.3
+                C 20.8 15.1 14.0 29.0 14.7 45.5
+                C 15.6 63.0 29.6 76.8 50.0 77.7
+                C 70.4 76.8 84.4 63.0 85.3 45.5
+                C 86.0 29.0 79.2 15.1 67.2 9.3
+                C 62.8 7.2 58.4 8.2 55.2 10.3"
                 fill="none" stroke="#18a84a" stroke-width="2.1"
                 stroke-linecap="round" stroke-linejoin="round"/>
 
-              <!-- X EXIT BODY: the launcher/exit structure sits at the
-                   bottom-center opening. It is not part of the rail track. -->
+              <!-- X EXIT BODY: top-center launch structure. -->
               <path d="
-                M 44.8 79.7
-                L 50 87.5
-                L 55.2 79.7
-                L 52.3 84.8
-                L 50 91.0
-                L 47.7 84.8
+                M 44.8 10.3
+                L 50 17.5
+                L 55.2 10.3
+                L 52.3 15.2
+                L 50 21.0
+                L 47.7 15.2
                 Z"
                 fill="#18a84a"
                 stroke="#18a84a"
                 stroke-width="1.2"
                 stroke-linejoin="round"/>
 
-              <!-- X EXIT LANE: the actual path from the rail into the
-                   bottom-center Xtreme zone. -->
-              <path d="M 47.7 84.8 L 50 91.0 L 52.3 84.8"
+              <!-- X EXIT LANE: launch from the top rail into the bowl. -->
+              <path d="M 47.7 15.2 L 50 21.0 L 52.3 15.2"
                     fill="none"
                     stroke="#18a84a"
                     stroke-width="2.1"
@@ -3717,34 +3716,35 @@ function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
     /*
-      V71 X-RAIL: FINITE BOTTOM-EXIT TRACK
+      V72 X-RAIL: FINITE TOP-EXIT TRACK
       -----------------------------------
-      The BX-10 layout used by Spin Wars X has the Xtreme opening at the
-      bottom-center of the player's view. The physical rail therefore has
-      TWO endpoints at the bottom-center opening and a continuous track
-      around the upper/side bowl.
+      The Spin Wars X battle orientation places the X-Rail at the TOP of the
+      player's view. The two endpoints form the X-Exit gap. The rail runs
+      down both sides and around the lower bowl before returning to the
+      opposite top endpoint.
 
-      Stored path direction is LEFT -> RIGHT around the TOP of the bowl.
+      Stored path direction is LEFT -> RIGHT around the lower bowl.
       Right-spin travels the reverse path (CCW); left-spin travels the
       stored path (CW).
 
-      There is NO wrap-around. Reaching the appropriate endpoint launches
-      the Bey through the X-Exit toward the Xtreme/Over finish area.
+      There is NO wrap-around. Reaching the appropriate top endpoint launches
+      the Bey inward toward the center. Normal battle physics then determines
+      whether that launch later produces an Xtreme or Over finish.
     */
     const controls=[
-        {x:-0.133,y:0.790},
-        {x:-0.480,y:0.660},
-        {x:-0.760,y:0.455},
-        {x:-0.905,y:-0.010},
-        {x:-0.820,y:-0.480},
-        {x:-0.500,y:-0.735},
-        {x:0.000,y:-0.805},
-        {x:0.500,y:-0.735},
-        {x:0.820,y:-0.480},
-        {x:0.905,y:-0.010},
-        {x:0.760,y:0.455},
-        {x:0.480,y:0.660},
-        {x:0.133,y:0.790}
+        {x:-0.133,y:-0.790},
+        {x:-0.480,y:-0.660},
+        {x:-0.760,y:-0.455},
+        {x:-0.905,y:0.010},
+        {x:-0.820,y:0.480},
+        {x:-0.500,y:0.735},
+        {x:0.000,y:0.805},
+        {x:0.500,y:0.735},
+        {x:0.820,y:0.480},
+        {x:0.905,y:0.010},
+        {x:0.760,y:-0.455},
+        {x:0.480,y:-0.660},
+        {x:0.133,y:-0.790}
     ];
 
     function catmull(p0,p1,p2,p3,t){
@@ -3832,9 +3832,9 @@ function getNewXRailGeometry(){
         exitGap:{
             leftX:-0.133,
             rightX:0.133,
-            y:0.790
+            y:-0.790
         },
-        type:"bottom-open-accelerator-track-v71"
+        type:"top-open-accelerator-track-v72"
     };
 
     return NEW_BATTLE.railGeometry;
@@ -4018,9 +4018,9 @@ function railDirection(s){
         return s.railDirection;
     }
 
-    // Stored geometry travels left -> right around the top of the bowl.
+    // Stored geometry travels left -> right around the lower bowl.
     // Right-spin is counter-clockwise, so it traverses the stored path
-    // backwards and exits from the LEFT bottom endpoint.
+    // backwards and exits from the LEFT TOP endpoint.
     return s.spinDirection===1 ? -1 : 1;
 }
 
@@ -4322,13 +4322,14 @@ function newXRailExit(s){
             : g.leftExit;
 
     /*
-      The X-Exit is physically at the bottom-center opening. Both rail
-      directions therefore launch inward/downward from their respective
-      bottom endpoints.
+      The X-Exit is physically at the TOP-center opening. Both rail
+      directions launch inward/downward from their respective top endpoints.
+      The exit sends the Bey back into normal stadium physics; the eventual
+      Xtreme/Over result is still determined by the finish resolver.
     */
     const target={
         x:0,
-        y:0.96
+        y:0.04
     };
 
     const ex=target.x-endpoint.x;
