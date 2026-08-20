@@ -1149,7 +1149,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V5g5y3 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2338,7 +2338,7 @@ const NEW_STADIUM_GEOMETRY = {
     // Screen orientation is fixed: players launch from LEFT and RIGHT.
     battleZone: { cx:50, cy:45, rx:34, ry:36 },
 
-    // X Rail is a closed loop with a dedicated top exit trajectory.
+    // X Rail is a continuous open rail surface with a dedicated top X-Exit gap.
     xRail: {
         loop: "closed",
         path: "upper-inner-loop",
@@ -2706,16 +2706,12 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = clockwise.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        railEngaged:false,railProgress:0,railDistance:0,
+        railEngaged:false,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
-        railLoops:0,
         railGrip:0,
         railDirection:0,
         railContactPoint:null,
-        railExitCooldown:0,
         railExited:false,
-        railExitRefractory:0,
-        railExitRefractoryPoint:null,
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
         surfaceRecovery:0,
@@ -2791,7 +2787,7 @@ function renderNewBattle(){
     const c=NEW_BATTLE.cpu;
 
     // The game view is deliberately a top-down BX-10-style stadium:
-    // square/octagonal outer body, circular battle bowl, closed X Rail,
+    // square/octagonal outer body, circular battle bowl, open X Rail,
     // top-center X Rail exit, and three lower finish openings.
     const px=50+p.x*39;
     const py=46+p.y*39;
@@ -2872,19 +2868,19 @@ function renderNewBattle(){
               <path d="M73 82 L90 82 L90 94"
                     fill="none" stroke="#eceeef" stroke-width="1"/>
 
-              <!-- X RAIL: continuous green track around the bowl.
-                   The top section is shaped into the X exit rather than
-                   leaving awkward open/white gaps. -->
+              <!-- X RAIL: open continuous track around the bowl.
+                   The two rail ends stop at the X Exit so the physical
+                   simulator and the visible stadium use the same geometry. -->
               <path d="
-                M 14.7 44.5
-                C 14.0 31.0 20.8 18.9 32.8 13.3
-                C 37.2 11.2 41.6 11.8 44.8 14.2
-                L 50 22.5
-                L 55.2 14.2
-                C 58.4 11.8 62.8 11.2 67.2 13.3
-                C 79.2 18.9 86.0 31.0 85.3 44.5
-                C 84.4 63.0 70.4 78.8 50.0 79.7
-                C 29.6 78.8 15.6 63.0 14.7 44.5 Z"
+                M 47.7 24.5
+                C 46.4 20.0 45.5 16.2 44.8 14.2
+                C 41.6 11.8 37.2 11.2 32.8 13.3
+                C 20.8 18.9 14.0 31.0 14.7 44.5
+                C 15.6 63.0 29.6 78.8 50.0 79.7
+                C 70.4 78.8 84.4 63.0 85.3 44.5
+                C 86.0 31.0 79.2 18.9 67.2 13.3
+                C 62.8 11.2 58.4 11.8 55.2 14.2
+                C 54.5 16.2 53.6 20.0 52.3 24.5"
                 fill="none" stroke="#18a84a" stroke-width="2.1"
                 stroke-linecap="round" stroke-linejoin="round"/>
 
@@ -3683,7 +3679,7 @@ function newBattleFrame(now){
             }else if(p.railEngaged || c.railEngaged){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
-                    `${rider.blade.name} is riding the X Rail and building speed.`;
+                    `${rider.blade.name} is riding the X Rail.`;
             }else if(p.finishDebug || c.finishDebug){
                 commentary.textContent=p.finishDebug || c.finishDebug;
             }else if(NEW_BATTLE.finishPending){
@@ -3726,46 +3722,102 @@ function newBattleFrame(now){
 
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
+/*========================================================
+ X-RAIL PHYSICS 2.0
+ ------------------
+ The X Rail is a stadium surface, not a second movement engine.
+
+ The old system stored a Bey on a closed mathematical loop and directly set
+ its X/Y position every frame. That made the rail capable of becoming a slow,
+ self-sustaining ride that the normal stadium physics could not escape.
+
+ This version uses one open, continuous rail centerline with a real exit gap.
+ A Bey keeps its own velocity and spin. Rail contact only redirects the
+ existing velocity, applies contact friction, and constrains the Bey to the
+ rail surface while contact exists.
+========================================================*/
+
 function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
-    // Physical path matching the visible continuous green X Rail.
-    // Point order is clockwise; right-spin uses the reverse direction (CCW).
-    const points=[
-        [-0.905,-0.01],[-0.75,-0.50],[-0.44,-0.79],[-0.133,-0.79],
-        [0.00,-0.603], // X Exit transition point
-        [0.133,-0.79],[0.44,-0.79],[0.75,-0.50],[0.905,-0.01],
-        [0.82,0.48],[0.50,0.78],[0.00,0.865],[-0.50,0.78],[-0.82,0.48]
-    ].map(([x,y])=>({x,y}));
+    // The two endpoints are the two sides of the X-Exit. The path runs around
+    // the bowl and deliberately does NOT connect across the exit gap.
+    const control=[
+        {x:-0.059,y:-0.551},
+        {x:-0.133,y:-0.790},
+        {x:-0.440,y:-0.790},
+        {x:-0.750,y:-0.500},
+        {x:-0.905,y:-0.010},
+        {x:-0.820,y:0.480},
+        {x:-0.500,y:0.780},
+        {x:0.000,y:0.865},
+        {x:0.500,y:0.780},
+        {x:0.820,y:0.480},
+        {x:0.905,y:-0.010},
+        {x:0.750,y:-0.500},
+        {x:0.440,y:-0.790},
+        {x:0.133,y:-0.790},
+        {x:0.059,y:-0.551}
+    ];
+
+    const samples=[];
+    const samplePerSpan=24;
+    function catmull(p0,p1,p2,p3,t){
+        const t2=t*t, t3=t2*t;
+        return {
+            x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+            y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
+        };
+    }
+
+    for(let i=0;i<control.length-1;i++){
+        const p0=control[Math.max(0,i-1)];
+        const p1=control[i];
+        const p2=control[i+1];
+        const p3=control[Math.min(control.length-1,i+2)];
+        for(let j=0;j<samplePerSpan;j++){
+            samples.push(catmull(p0,p1,p2,p3,j/samplePerSpan));
+        }
+    }
+    samples.push({...control[control.length-1]});
 
     const segments=[];
     let total=0;
-    for(let i=0;i<points.length;i++){
-        const a=points[i], b=points[(i+1)%points.length];
-        const length=Math.hypot(b.x-a.x,b.y-a.y);
-        segments.push({a,b,length,start:total});
+    for(let i=0;i<samples.length-1;i++){
+        const a=samples[i], b=samples[i+1];
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const length=Math.hypot(dx,dy);
+        if(length<0.000001) continue;
+        segments.push({a,b,length,start:total,tx:dx/length,ty:dy/length});
         total+=length;
     }
 
+    const leftExit=samples[0];
+    const rightExit=samples[samples.length-1];
     NEW_BATTLE.railGeometry={
-        points,segments,total,
-        exitDistance:segments[4].start
+        control,samples,segments,total,open:true,
+        leftExit,rightExit,
+        exitCenter:{x:(leftExit.x+rightExit.x)/2,y:(leftExit.y+rightExit.y)/2},
+        exitHalfWidth:0.075
     };
     return NEW_BATTLE.railGeometry;
 }
 
 function newXRailPointAtDistance(distance){
     const g=getNewXRailGeometry();
-    const d=((distance%g.total)+g.total)%g.total;
+    const d=newBattleClamp(Number(distance)||0,0,g.total);
     for(const seg of g.segments){
         if(d<=seg.start+seg.length || seg===g.segments[g.segments.length-1]){
-            const t=seg.length ? newBattleClamp((d-seg.start)/seg.length,0,1) : 0;
-            const tx=(seg.b.x-seg.a.x)/(seg.length||1);
-            const ty=(seg.b.y-seg.a.y)/(seg.length||1);
-            return {x:seg.a.x+(seg.b.x-seg.a.x)*t,y:seg.a.y+(seg.b.y-seg.a.y)*t,tx,ty,distance:d};
+            const t=seg.length?newBattleClamp((d-seg.start)/seg.length,0,1):0;
+            return {
+                x:seg.a.x+(seg.b.x-seg.a.x)*t,
+                y:seg.a.y+(seg.b.y-seg.a.y)*t,
+                tx:seg.tx,ty:seg.ty,distance:d
+            };
         }
     }
-    return {x:0,y:0,tx:1,ty:0,distance:0};
+    const last=g.segments[g.segments.length-1];
+    return {x:last.b.x,y:last.b.y,tx:last.tx,ty:last.ty,distance:g.total};
 }
 
 function newXRailNearest(x,y){
@@ -3773,542 +3825,304 @@ function newXRailNearest(x,y){
     let best=null;
     for(const seg of g.segments){
         const abx=seg.b.x-seg.a.x, aby=seg.b.y-seg.a.y;
-        const ab2=abx*abx+aby*aby || 1;
+        const ab2=abx*abx+aby*aby||1;
         const t=newBattleClamp(((x-seg.a.x)*abx+(y-seg.a.y)*aby)/ab2,0,1);
         const px=seg.a.x+abx*t, py=seg.a.y+aby*t;
         const dx=x-px, dy=y-py, dist2=dx*dx+dy*dy;
-        if(!best || dist2<best.dist2){
-            const len=Math.sqrt(ab2);
-            best={x:px,y:py,dist2,distance:seg.start+len*t,tx:abx/len,ty:aby/len};
+        if(!best||dist2<best.dist2){
+            best={x:px,y:py,dist2,distance:seg.start+seg.length*t,tx:seg.tx,ty:seg.ty};
         }
     }
+    if(!best) return null;
+    const radial=Math.hypot(best.x,best.y)||1;
+    best.outwardX=best.x/radial;
+    best.outwardY=best.y/radial;
+    best.inwardX=-best.outwardX;
+    best.inwardY=-best.outwardY;
+    best.dist=Math.sqrt(best.dist2);
     return best;
 }
 
-function newXRailCrossedExit(previousDistance,nextDistance,direction){
-    const g=getNewXRailGeometry();
-    const exit=g.exitDistance;
-    const eps=0.018;
-    if(direction>0){
-        const e=previousDistance<=exit ? exit : exit+g.total;
-        return previousDistance<=e+eps && nextDistance>=e-eps;
-    }
-    const e=previousDistance>=exit ? exit : exit-g.total;
-    return previousDistance>=e-eps && nextDistance<=e+eps;
-}
-
-
-function speedOf(s){
-    return Math.hypot(s.vx,s.vy);
-}
-
-
-function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
-    const n=bit?.name||"";
-    const r=newBattleClamp((Number(rpm)||0)/100,0,1);
-    const s=newBattleClamp((Number(stability)||0)/100,0,1);
-    const tilt=newBattleClamp(Math.abs(Number(currentTilt)||0),0,1);
-
-    if(n==="Point"){
-        const battleTilt=newBattleClamp(tilt,0,1);
-        const aggression=newBattleClamp(0.04+Math.pow(battleTilt,1.55)*0.78+(1-s)*0.14,0,1);
-        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.27+aggression*0.55,staminaEfficiency:1-aggression*0.26};
-    }
-    if(n==="Level"){
-        const lowRpm=Math.pow(1-r,1.18);
-        const battleTilt=newBattleClamp(tilt,0,1);
-        const aggression=newBattleClamp(0.035+lowRpm*0.64+Math.pow(battleTilt,1.35)*0.34+(1-s)*0.10,0,1);
-        return {mode:aggression>0.56?"aggressive":"stable",aggression,mobility:0.28+aggression*0.60,staminaEfficiency:1-aggression*0.22};
-    }
-    return null;
-}
-
-function getBattleStat(s,key,fallback=70){
-    const value=Number(s?.stats?.[key]);
-    if(!Number.isFinite(value)) return Math.max(60,Math.min(99,fallback))/99;
-    return Math.max(60,Math.min(99,value))/99;
-}
-
-function bitPhysics(s){
-    return BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
-}
-
 function railDirection(s){
-    if(s.railDirection===1 || s.railDirection===-1) return s.railDirection;
-    // Rail geometry is clockwise; right-spin movement is CCW.
-    return s.spinDirection===1 ? -1 : 1;
-}
-function railDirectionAtPoint(s,point){
-    /*
-      The rail geometry is stored in clockwise order in screen coordinates.
-      Right-spin Beys travel counter-clockwise, so right spin follows the
-      reverse path. Left spin follows the stored path.
-
-      Do not infer direction from the local radial vector: doing that made
-      right-spin Beys select the wrong rail direction on different segments.
-    */
-    // Geometry is clockwise in screen coordinates.
-    // Right-spin (+1) MUST traverse the reverse path: -1 (CCW).
-    return s.spinDirection===1 ? -1 : 1;
+    return s.railDirection===-1?-1:1;
 }
 
-function tryNewXRailEngagement(s){
-    if(s.railEngaged) return true;
-    if((s.railExitRefractory||0)>0) return false;
-    if((s.railReengageCooldown||0)>0) return false;
-    const nearest=newXRailNearest(s.x,s.y);
+function newXRailExitGate(s,nearest){
+    if(!nearest) return false;
+    const g=getNewXRailGeometry();
+    const d=nearest.distance;
+    const direction=railDirection(s);
+    const atStart=d<=0.024;
+    const atEnd=d>=g.total-0.024;
+    if(!((atStart&&direction<0)||(atEnd&&direction>0))) return false;
+    newXRailExit(s,nearest);
+    return true;
+}
+
+function tryNewXRailEngagement(s,nearest=null){
+    if(!s||s.railEngaged||s.railExited) return !!s?.railEngaged;
+    nearest=nearest||newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
-    const bp=bitPhysics(s), speed=speedOf(s);
+    const bp=bitPhysics(s);
+    const speed=speedOf(s);
     const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
     const stability=newBattleClamp(s.stability||0,0,1);
+    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
     const control=(bp.control||60)/100;
-    const movement=(bp.movement||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
+    const technique=s.launchPlan?.technique;
 
-    const railContactDistance=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.082+s.radius*0.52
-            : 0.064+s.radius*0.44;
+    const contactBand=s.radius*0.70+0.020;
+    if(nearest.dist>contactBand) return false;
 
-    if(Math.sqrt(nearest.dist2)>railContactDistance) return false;
+    const outward=s.vx*nearest.outwardX+s.vy*nearest.outwardY;
+    const tangentRaw=s.vx*nearest.tx+s.vy*nearest.ty;
+    const tangentSpeed=Math.abs(tangentRaw);
 
-    const dx=s.x-nearest.x, dy=s.y-nearest.y;
-    const len=Math.hypot(dx,dy)||1;
-    const nx=dx/len, ny=dy/len;
-    const approachSpeed=Math.max(0,-(s.vx*nx+s.vy*ny));
+    const minimumSpeed=technique==="X-Rail"?0.038:0.052;
+    const minimumApproach=technique==="X-Rail"?0.0020:0.0035;
+    const minimumTangentRatio=0.38-(0.10*control)-(0.08*affinity);
 
-    const minimumApproach=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.0026+tilt*0.0020+(1-stability)*0.0008
-            : 0.0055+tilt*0.0042+(1-stability)*0.0017;
+    if(speed<minimumSpeed || outward<minimumApproach) return false;
+    if(tangentSpeed/Math.max(speed,0.0001)<minimumTangentRatio) return false;
 
-    if(approachSpeed<minimumApproach) return false;
+    // A tilted / unstable Bey can still touch the rail, but it should be less
+    // likely to stay attached unless it has strong tangential momentum.
+    const grip=
+        0.46+
+        affinity*0.26+
+        stability*0.18+
+        rpm*0.16-
+        tilt*0.24;
+    const requiredGrip=technique==="X-Rail"?0.36:0.48;
+    if(grip<requiredGrip) return false;
 
-    const direction=railDirectionAtPoint(s,nearest);
-    const tangentX=nearest.tx*direction, tangentY=nearest.ty*direction;
-    const tangentVelocity=s.vx*tangentX+s.vy*tangentY;
-    const tangentRatio=tangentVelocity/Math.max(speed,0.0001);
-    const approachRatio=approachSpeed/Math.max(speed,0.0001);
+    if(technique!=="X-Rail"){
+        const chance=newBattleClamp(
+            0.68+affinity*0.18+rpm*0.10+stability*0.06-tilt*0.10,
+            0.45,0.97
+        );
+        if(Math.random()>chance) return false;
+    }
 
-    const effectiveMomentum=
-        tangentVelocity*(0.80+0.20*rpm)*(1-0.22*tilt);
+    const direction=tangentRaw>=0?1:-1;
+    const tangentX=nearest.tx*direction;
+    const tangentY=nearest.ty*direction;
 
-    const minimumMomentum=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.0028+tilt*0.0017+(1-stability)*0.0010
-            : 0.0050+tilt*0.0025+(1-stability)*0.0018;
-
-    if(effectiveMomentum<minimumMomentum) return false;
-
-    const minimumTangent=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.048-control*0.026-affinity*0.021-rpm*0.046
-            : 0.18-control*0.058-affinity*0.038-rpm*0.070;
-
-    const maximumApproach=
-        0.78+control*0.08+movement*0.05;
-    if(tangentRatio<minimumTangent || approachRatio>maximumApproach) return false;
-
-    // Preserve how the Bey approached the rail. This becomes a small
-    // left/right bias at the X Exit instead of every exit shooting identically.
-    s.railExitBias=newBattleClamp(
-        (tangentRatio-0.48)*0.70+
-        (0.46-approachRatio)*0.22+
-        (0.50-tilt)*0.10,
-        -0.34,0.34
-    );
-
-    const tiltLimit=
-        0.50+stability*0.075+control*0.045+rpm*0.055;
-    if(tilt>tiltLimit) return false;
-
-    const speedQuality=newBattleClamp((effectiveMomentum-minimumMomentum)/0.045,0,1);
-    const angleQuality=newBattleClamp((tangentRatio-minimumTangent)/Math.max(0.01,1-minimumTangent),0,1);
-    const approachQuality=newBattleClamp(1-Math.abs(approachRatio-0.34)/0.34,0,1);
-    const tiltQuality=1-newBattleClamp(tilt/Math.max(0.01,tiltLimit),0,1);
-    const statusQuality=stability*0.70+rpm*0.30;
-
-    const physicalScore=
-        speedQuality*0.30+angleQuality*0.25+approachQuality*0.17+
-        tiltQuality*0.18+statusQuality*0.08+control*0.015+affinity*0.005;
-
-    const threshold=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.135-movement*0.038-affinity*0.027-rpm*0.052-stability*0.017
-            : 0.325-movement*0.065-affinity*0.043-rpm*0.055-stability*0.023;
-
-    // Deliberate X-Rail launches are player-selected. Once the Bey actually
-    // reaches the rail with the required momentum/alignment, do not roll a
-    // second RNG gate that makes it mysteriously bounce every time.
-    if(s.launchPlan?.technique!=="X-Rail" &&
-       physicalScore+(Math.random()-0.5)*0.012<threshold) return false;
-    if(s.launchPlan?.technique==="X-Rail" && physicalScore<threshold) return false;
-
-    const g=getNewXRailGeometry();
-    const tangentialCarry=Math.max(tangentVelocity,speed*0.82);
-    // V64: the rail should capture a fast Bey, not convert it into a slow
-    // canned ride. Preserve most incoming tangential energy and add only a
-    // small rail-capture boost.
-    const captureBoost=
-        1.08+movement*0.10+rpm*0.08+affinity*0.04;
-    const railSpeed=newBattleClamp(
-        tangentialCarry*captureBoost,
-        0.145,0.320
-    );
-
+    // Keep the actual incoming tangential momentum. The rail does not assign
+    // a canned ride speed.
     s.railDirection=direction;
-    s.railGrip=newBattleClamp(physicalScore,0.62,1);
     s.railEngaged=true;
-    s.railUses=(s.railUses||0)+1;
+    s.railExited=false;
+    s.railGrip=newBattleClamp(grip,0,1);
     s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
-    s.railProgress=nearest.distance/g.total;
-    s.railSpeed=railSpeed;
+    s.railSpeed=Math.max(0,tangentSpeed);
     s.railRideTime=0;
     s.railTravelDistance=0;
-    s.railLoops=0;
 
-    const normalRelease=Math.max(0.002,approachSpeed*0.12);
-    s.x=nearest.x+nx*0.006;
-    s.y=nearest.y+ny*0.006;
-    s.vx=tangentX*railSpeed+nx*normalRelease;
-    s.vy=tangentY*railSpeed+ny*normalRelease;
+    // Remove only the inward/outward component that is trying to cross the
+    // rail. Tangential momentum is preserved.
+    const normalInward=s.vx*nearest.inwardX+s.vy*nearest.inwardY;
+    if(normalInward<0){
+        // Moving outward: cancel the crossing component, don't reverse the
+        // Bey or add artificial speed.
+        s.vx-=nearest.inwardX*normalInward;
+        s.vy-=nearest.inwardY*normalInward;
+    }
     return true;
 }
-function newXRailExit(s){
-    const exit=newXRailPointAtDistance(getNewXRailGeometry().exitDistance);
-    const bp=bitPhysics(s), rpm=newBattleClamp(s.rpm,0,1);
-    const control=(bp.control||60)/100;
-    const speed=newBattleClamp(
-        Math.max(s.railSpeed||0,speedOf(s)*0.82)*(0.98+rpm*0.08),
-        0.055,0.220
-    );
-    const direction=s.railDirection||railDirectionAtPoint(s,exit);
-    const tangentX=exit.tx*direction, tangentY=exit.ty*direction;
 
-    s.railEngaged=false; s.railExited=true;
-    s.railRideTime=0; s.railProgress=0; s.railDistance=0;
-    s.railTravelDistance=0; s.railLoops=0; s.railGrip=0;
-    s.railContactPoint=null; s.railDirection=0;
-    s.railExitRefractory=0.20;
-    s.railExitRefractoryPoint={x:exit.x,y:exit.y};
-
-    const incomingSpeed=speedOf(s);
-    const approachQuality=newBattleClamp(incomingSpeed/0.18,0,1);
-    const exitBias=newBattleClamp(s.railExitBias||0,-0.34,0.34);
-
-    /*
-      X-Exit is a launch fan, not one fixed vector.
-      0° = straight down the middle.
-      Negative = lower-left.
-      Positive = lower-right.
-      High-speed / well-aligned rides can leave farther off-center;
-      imperfect rides stay closer to the center line.
-    */
-    const spread=
-        0.16+
-        rpm*0.13+
-        approachQuality*0.16;
-
-    const roll=(Math.random()-0.5)*0.14;
-    const exitAngle=newBattleClamp(
-        (exitBias*0.95+roll)*spread,
-        -0.52,0.52
-    );
-
-    const exitVX=Math.sin(exitAngle)*speed;
-    const exitVY=Math.cos(exitAngle)*speed;
-
-    s.x=exit.x;
-    s.y=exit.y+0.070;
-
-    s.vx=exitVX;
-    s.vy=Math.max(0.016,exitVY);
-
-    // A little more speed means a more forceful X-Exit launch, but never an
-    // uncontrolled teleport or giant velocity spike.
-    const exitVelocity=Math.hypot(s.vx,s.vy);
-    const maxExitVelocity=0.055+speed*1.18;
-    if(exitVelocity>maxExitVelocity){
-        const scale=maxExitVelocity/exitVelocity;
-        s.vx*=scale; s.vy*=scale;
-    }
-    s.railSafetyUntil=performance.now()+320;
-
-    s.rpm=newBattleClamp(s.rpm-(0.008+(s.railSpeed||speed)*0.025),0,1);
-    s.stability=newBattleClamp(s.stability-0.008,0,1);
-    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
-    s.surfaceRecovery=0.12;
-}
-function updateNewXRailRide(s,dt){
-    if(!s.railEngaged) return false;
-
+function newXRailExit(s,nearest=null){
     const g=getNewXRailGeometry();
-    s.railRideTime=(s.railRideTime||0)+dt;
+    const d=nearest?nearest.distance:s.railDistance;
+    const atStart=d<=g.total*0.01;
+    const point=atStart?g.leftExit:g.rightExit;
+    const inwardX=-point.x/(Math.hypot(point.x,point.y)||1);
+    const inwardY=-point.y/(Math.hypot(point.x,point.y)||1);
+    const direction=railDirection(s);
+    const tangent=atStart?g.segments[0]:g.segments[g.segments.length-1];
+    const tx=tangent.tx*direction;
+    const ty=tangent.ty*direction;
+    const currentTangent=s.vx*tx+s.vy*ty;
+    const exitSpeed=Math.max(0.028,currentTangent,speedOf(s)*0.72);
 
-    const direction=s.railDirection||railDirection(s);
+    s.railEngaged=false;
+    s.railExited=true;
+    s.railGrip=0;
+    s.railContactPoint={x:point.x,y:point.y};
+    s.railDistance=atStart?0:g.total;
+    s.railSpeed=exitSpeed;
+    s.railRideTime=0;
+    s.railTravelDistance=0;
+    s.railDirection=0;
 
-    // V42: prevent awkward slow rail crawling. A rider must retain enough
-    // tangential energy to stay on the rail; otherwise release cleanly.
-    if(s.railEngaged && (s.railRideTime||0)>0.16 && speedOf(s)<0.072){
-        // A dying rail ride should RELEASE, not crawl slowly along the rail.
-        newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.45;
-        return false;
+    // Exit through the physical X lane toward the bowl, preserving tangent
+    // momentum instead of teleporting to a fixed velocity.
+    s.x=point.x+inwardX*(s.radius*0.95+0.035);
+    s.y=point.y+inwardY*(s.radius*0.95+0.035);
+    s.vx=tx*exitSpeed+inwardX*Math.max(0.020,exitSpeed*0.32);
+    s.vy=ty*exitSpeed+inwardY*Math.max(0.020,exitSpeed*0.32);
+    s.rpm=newBattleClamp(s.rpm-(0.004+exitSpeed*0.015),0,1);
+    s.stability=newBattleClamp(s.stability-0.006,0,1);
+    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.018,0,1);
+    s.surfaceRecovery=0.10;
+}
+
+function releaseXRail(s,reason="contact-loss",outwardX=0,outwardY=0){
+    if(!s) return false;
+    const nearest=newXRailNearest(s.x,s.y);
+    const point=nearest||newXRailPointAtDistance(s.railDistance||0);
+    const speed=Math.max(0.020,speedOf(s));
+    const tangentDirection=railDirection(s);
+    const tx=point.tx*tangentDirection, ty=point.ty*tangentDirection;
+    const normalX=nearest?.outwardX || outwardX || point.x/(Math.hypot(point.x,point.y)||1);
+    const normalY=nearest?.outwardY || outwardY || point.y/(Math.hypot(point.x,point.y)||1);
+
+    // Preserve the velocity the collision/rail physics produced. Only add a
+    // tiny separation component if the Bey is still embedded in the rail.
+    const desiredOutward=0.008+(reason==="impact"?0.010:0);
+    const currentOutward=s.vx*normalX+s.vy*normalY;
+    if(currentOutward<desiredOutward){
+        const add=desiredOutward-currentOutward;
+        s.vx+=normalX*add;
+        s.vy+=normalY*add;
     }
-    const bp=bitPhysics(s);
+
+    s.railEngaged=false;
+    s.railGrip=0;
+    s.railSpeed=0;
+    s.railRideTime=0;
+    s.railTravelDistance=0;
+    s.railDirection=0;
+    s.railContactPoint={x:point.x,y:point.y};
+    s.railExited=false;
+    s.surfaceRecovery=0.08;
+    return true;
+}
+
+function applyXRailConstraint(s,dt){
+    if(!s.railEngaged) return false;
+    const g=getNewXRailGeometry();
+    const nearest=newXRailNearest(s.x,s.y);
+    if(!nearest){ releaseXRail(s,"geometry"); return false; }
+
+    if(newXRailExitGate(s,nearest)) return false;
+
+    const direction=railDirection(s);
+    const tx=nearest.tx*direction, ty=nearest.ty*direction;
+    const outwardX=nearest.outwardX, outwardY=nearest.outwardY;
+    const tangent=s.vx*tx+s.vy*ty;
+    const outward=s.vx*outwardX+s.vy*outwardY;
     const rpm=newBattleClamp(s.rpm,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const stability=newBattleClamp(s.stability||0,0,1);
-    const movement=(bp.movement||60)/100;
+    const bp=bitPhysics(s);
     const affinity=(bp.xRailAffinity||50)/100;
-    const control=(bp.control||60)/100;
-    const previousDistance=s.railDistance;
+    const stability=newBattleClamp(s.stability||0,0,1);
 
-    // Resolve the current rail tangent before any impact/ejection branch.
-    const impactPoint=newXRailPointAtDistance(s.railDistance);
-    const tx0=impactPoint.tx*direction;
-    const ty0=impactPoint.ty*direction;
+    s.railRideTime=(s.railRideTime||0)+dt;
+    s.railSpeed=Math.abs(tangent);
+    s.railTravelDistance+=(Math.abs(tangent)*dt*60);
 
-    // Hard impact always overrides rail grip.
-    const impactAge=performance.now()-(s.lastImpactAt||0);
-    if(impactAge<320 && (s.lastImpactForce||0)>=0.0055){
-        const ejectForce=newBattleClamp(
-            (s.lastImpactForce||0)*0.72,0.006,0.024
-        );
-        newXRailRailRelease(s,direction);
-        s.vx+=(-tx0)*ejectForce;
-        s.vy+=(-ty0)*ejectForce;
-        s.railExitRefractory=0.68;
-        return true;
-    }
-
-    // A real X-Rail ride is a burst of acceleration, not a second movement
-    // mode that can trap a Bey around the stadium.  Give the rail a short
-    // energy window, then force a clean exit even if RPM is still healthy.
-    if((s.railRideTime||0)>1.35 || (s.railTravelDistance||0)>g.total*0.92){
-        newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.70;
-        return true;
-    }
-
-    // The Bey remains the source of truth. The rail redirects its velocity;
-    // it does not create a slow canned orbit.
-    let tangentVelocity=s.vx*tx0+s.vy*ty0;
-
-    if(tangentVelocity<0.105){
-        newXRailRailRelease(s,direction);
-        return true;
-    }
-
-    // The rail should redirect momentum, not manufacture a fixed speed.
-    // A small grip term can recover energy lost to contact, but the Bey's
-    // incoming tangential velocity remains the dominant source of rail speed.
-    const railDrive=
-        (0.00080+movement*0.00100+affinity*0.00045)*
-        (0.45+rpm*0.55);
-    const railFriction=
-        0.00055+(1-rpm)*0.00085+tilt*0.00030;
-
-    tangentVelocity += (railDrive-railFriction)*dt*60;
-    if(tangentVelocity<0.105){
-        newXRailRailRelease(s,direction);
-        s.railReengageCooldown=0.70;
+    // Reverse-direction motion means the Bey's actual momentum has separated
+    // from the rail direction. Release instead of forcing it around the path.
+    if(tangent<0.012){
+        releaseXRail(s,"energy-loss");
         return false;
     }
 
-    const speedSupport=newBattleClamp((tangentVelocity-0.056)/0.120,0,1);
-    const rpmSupport=newBattleClamp((rpm-0.16)/0.70,0,1);
-    const tiltSupport=1-newBattleClamp((tilt-0.06)/0.34,0,1);
-    const stabilitySupport=0.45+stability*0.55;
-    const support=
-        speedSupport*0.30+rpmSupport*0.22+tiltSupport*0.28+
-        stabilitySupport*0.12+control*0.05+affinity*0.03;
-
-    s.railGrip=newBattleClamp(support,0,1);
-
-    if(support<0.31||tilt>0.44||stability<0.12||tangentVelocity<0.041){
-        newXRailRailRelease(s,direction);
-        return true;
+    // A rail is a surface. Remove outward penetration, but retain the tangent.
+    if(outward>0){
+        s.vx-=outwardX*outward;
+        s.vy-=outwardY*outward;
     }
 
-    const travel=tangentVelocity*dt*60;
-    s.railDistance+=direction*travel;
-    s.railTravelDistance+=Math.abs(travel);
+    // Contact friction is deliberately small. It scales with the rail/Bit
+    // interface and is paid from existing momentum rather than replenishing it.
+    const frictionPerFrame=
+        0.00018+
+        (1-affinity)*0.00018+
+        (1-rpm)*0.00016+
+        (1-stability)*0.00010;
+    const tangentAfter=Math.max(0,tangent-frictionPerFrame*dt*60);
+    const tangentDelta=tangentAfter-tangent;
+    s.vx+=tx*tangentDelta;
+    s.vy+=ty*tangentDelta;
 
-    if(s.railTravelDistance>g.total*0.78 &&
-       !newXRailCrossedExit(previousDistance,s.railDistance,direction)){
-        newXRailRailRelease(s,direction);
-        return true;
-    }
+    // Keep the Bey in physical contact with the rail without making the rail
+    // own its position. This is a soft constraint applied to velocity.
+    const contactOffset=s.radius*0.92+0.010;
+    const desiredX=nearest.x-outwardX*contactOffset;
+    const desiredY=nearest.y-outwardY*contactOffset;
+    const errorX=desiredX-s.x, errorY=desiredY-s.y;
+    const correctionLimit=0.018+Math.min(0.018,Math.abs(tangent)*0.08);
+    const correctionScale=newBattleClamp(dt*28,0,0.72);
+    let cx=errorX*correctionScale;
+    let cy=errorY*correctionScale;
+    const cm=Math.hypot(cx,cy);
+    if(cm>correctionLimit){ cx*=correctionLimit/cm; cy*=correctionLimit/cm; }
+    s.vx+=cx/Math.max(dt*60,0.001);
+    s.vy+=cy/Math.max(dt*60,0.001);
 
-    if(newXRailCrossedExit(previousDistance,s.railDistance,direction)&&
-       s.railTravelDistance>0.050){
-        s.railSpeed=tangentVelocity;
-        newXRailExit(s);
-        return true;
-    }
-
-    s.railProgress=(((s.railDistance%g.total)+g.total)%g.total)/g.total;
-
-    const point=newXRailPointAtDistance(s.railDistance);
-    const tx=point.tx*direction, ty=point.ty*direction;
-    const nx=-ty, ny=tx;
-    const offset=0.004+0.003*support;
-
-    s.x=point.x+nx*offset;
-    s.y=point.y+ny*offset;
-    s.railSpeed=tangentVelocity;
-
-    s.vx=tx*tangentVelocity;
-    s.vy=ty*tangentVelocity;
-
-    const rpmDrainPerSecond=
-        0.0060+tangentVelocity*0.024+(1-rpm)*0.0030+tilt*0.0018;
-    s.rpm=newBattleClamp(rpm-rpmDrainPerSecond*dt,0,1);
-    s.stability=newBattleClamp(
-        stability-(0.00025+tangentVelocity*0.0014)*dt,0,1
+    s.railGrip=newBattleClamp(
+        0.35+affinity*0.28+stability*0.20+rpm*0.12,
+        0,1
     );
     return true;
 }
-function newXRailRailRelease(s,direction){
-    const point=newXRailPointAtDistance(s.railDistance);
-    const tangentX=point.tx*direction, tangentY=point.ty*direction;
-    const normalX=-tangentY, normalY=tangentX;
-    const speed=Math.max(0.025,s.railSpeed||speedOf(s)*0.78);
 
-    s.railEngaged=false; s.railExited=false; s.railContactPoint=null;
-    s.railGrip=0; s.railDirection=0;
+function finalizeXRailContact(s){
+    if(!s.railEngaged) return false;
+    const nearest=newXRailNearest(s.x,s.y);
+    if(!nearest){ releaseXRail(s,"geometry"); return false; }
+    if(newXRailExitGate(s,nearest)) return false;
 
-    const tangential=Math.max(0.030,speed*0.97);
-    const normal=Math.max(0.014,speed*0.28);
-    const separation=0.082+s.radius*0.12;
-    s.x=point.x+normalX*separation;
-    s.y=point.y+normalY*separation;
-    s.vx=tangentX*tangential+normalX*normal;
-    s.vy=tangentY*tangential+normalY*normal;
-    enforceRightSpinDirection(s);
-
-    s.rpm=newBattleClamp(s.rpm-0.0025,0,1);
-    s.stability=newBattleClamp(s.stability-0.006,0,1);
-    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.025,0,1);
-    s.surfaceBounce=0.20; s.surfaceRecovery=0.12;
-    s.motionPhase+=0.70+Math.random()*0.55;
-    s.motionPhase2+=0.30+Math.random()*0.45;
-    s.railExitRefractory=0.70;
-    s.railExitRefractoryPoint={x:s.x,y:s.y};
+    const outwardX=nearest.outwardX, outwardY=nearest.outwardY;
+    const contactOffset=s.radius*0.92+0.010;
+    const targetX=nearest.x-outwardX*contactOffset;
+    const targetY=nearest.y-outwardY*contactOffset;
+    const dx=targetX-s.x, dy=targetY-s.y;
+    const correction=Math.min(0.030,Math.hypot(dx,dy));
+    if(correction>0){
+        const len=Math.hypot(dx,dy)||1;
+        s.x+=dx/len*correction;
+        s.y+=dy/len*correction;
+    }
+    s.railDistance=nearest.distance;
+    s.railContactPoint={x:nearest.x,y:nearest.y};
+    return true;
 }
-function enforceXRailExitBarrier(s){
 
-        if(s.railEngaged || s.railExited) return;
-
-        // A strong recent collision is allowed to carry the Bey through the
-        // exit boundary. Weak normal movement still treats it as a wall.
-        const exit =
-            newXRailPointAtDistance(
-                getNewXRailGeometry().exitDistance
-            );
-
-        const ax=Math.abs(s.x);
-
-        const halfWidth=0.133;
-        const edgeY=-0.790;
-        const apexY=exit.y;
-
-        /*
-          Only block the two physical side walls of the X Exit.
-          Do not create a blanket "you cannot approach here" zone.
-        */
-        if(ax>=halfWidth) return;
-
-        const boundaryY =
-            apexY-
-            (
-                Math.abs(edgeY-apexY)*
-                (1-ax/halfWidth)
-            );
-
-        const clearance =
-            s.radius*0.72;
-
-        if(s.y<boundaryY+clearance){
-
-            s.y=boundaryY+clearance;
-
-            if(s.vy<0){
-
-                s.vy =
-                    -s.vy*0.20;
-
-                s.surfaceRecovery=0.12;
-            }
-        }
-    };
-
-/*
-  X-RAIL SAFETY / FINISH CORRIDOR
-  --------------------------------
-  The X Rail is a physical boundary everywhere except the lower finish
-  corridor. A Bey may only cross the rail there when it is moving outward
-  toward the pocket/Xtreme area. This prevents impact displacement from
-  burying a Bey inside the rail while still allowing legitimate finishes.
-*/
 function isBottomFinishCorridor(s){
     if(!s) return false;
     return s.y>0.70;
 }
 
 function applyXRailContactSafety(s,nearest,incomingNormal){
-    if(!s || !nearest) return false;
+    // Compatibility boundary response for collision code that catches a Bey
+    // in the rail before the next physics step. This is no longer a second
+    // rail movement system; it simply resolves penetration and lets the next
+    // frame decide whether physical rail contact is possible.
+    if(!s||!nearest) return false;
+    const contactBand=s.radius*0.70+0.020;
+    if(nearest.dist>contactBand) return false;
+    if(isBottomFinishCorridor(s) && s.vy>0.006) return false;
 
-    const railDistance=Math.sqrt(Math.max(0,nearest.dist2));
-    const contactRadius=0.030+s.radius*0.24;
-    if(railDistance>contactRadius) return false;
+    const nx=nearest.outwardX, ny=nearest.outwardY;
+    const targetX=nearest.x-nx*(s.radius*0.92+0.010);
+    const targetY=nearest.y-ny*(s.radius*0.92+0.010);
+    s.x=targetX; s.y=targetY;
 
-    // Only the bottom corridor can pass through the X Rail.
-    if(isBottomFinishCorridor(s)){
-        const outwardY=s.vy;
-        if(outwardY>0.006){
-            return false; // legitimate finish-zone crossing
-        }
+    const outward=s.vx*nx+s.vy*ny;
+    if(outward>0){
+        s.vx-=nx*outward*1.12;
+        s.vy-=ny*outward*1.12;
     }
-
-    const dx=s.x-nearest.x;
-    const dy=s.y-nearest.y;
-    const len=Math.hypot(dx,dy)||1;
-    const nx=dx/len;
-    const ny=dy/len;
-
-    // Never allow a non-engaged Bey to remain buried in the rail.
-    const penetration=contactRadius-railDistance;
-    if(penetration>0){
-        s.x+=nx*(penetration+0.007);
-        s.y+=ny*(penetration+0.007);
-    }
-
-    // If it is moving into the rail, reflect only the normal component.
-    const normalVelocity=s.vx*nx+s.vy*ny;
-    if(normalVelocity<0){
-        const bounce=0.82;
-        s.vx-=nx*normalVelocity*(1+bounce);
-        s.vy-=ny*normalVelocity*(1+bounce);
-    }
-
-    // A stalled/contacting Bey gets a small outward separation impulse so
-    // it cannot self-lock against the rail.
-    const speed=Math.hypot(s.vx,s.vy);
-    if(speed<0.009){
-        s.vx+=nx*0.0065;
-        s.vy+=ny*0.0065;
-    }
-
     s.railEngaged=false;
     s.railGrip=0;
     s.railSpeed=0;
-    s.railContactPoint={x:s.x,y:s.y};
-    s.railSafetyUntil=performance.now()+360;
+    s.railContactPoint={x:nearest.x,y:nearest.y};
+    s.surfaceRecovery=0.06;
     return true;
 }
 
@@ -4551,87 +4365,37 @@ function newPhysicsStep(s,dt){
                 Math.max(0,s.surfaceBounce-dt);
         }
 
-        if(s.railSafetyUntil && performance.now()>s.railSafetyUntil){
-            s.railSafetyUntil=0;
-        }
-
-        if(s.railExitRefractory>0){
-
-            s.railExitRefractory =
-                Math.max(0,s.railExitRefractory-dt);
-
-            if(s.railExitRefractoryPoint){
-                const dx =
-                    s.x-s.railExitRefractoryPoint.x;
-                const dy =
-                    s.y-s.railExitRefractoryPoint.y;
-
-                if(Math.hypot(dx,dy)>0.12){
-                    s.railExitRefractory=0;
-                    s.railExitRefractoryPoint=null;
-                }
-            }
-        }
-
-        if(s.railReengageCooldown>0){
-            s.railReengageCooldown=Math.max(0,s.railReengageCooldown-dt);
-        }
-
         applyKnockbackBoundaryOverride(s);
 
-        if(s.railEngaged){
-            if(!Number.isFinite(s.railDistance) ||
-               !Number.isFinite(s.railSpeed) ||
-               s.railGrip<=0){
-                newXRailRailRelease(s,railDirection(s));
-            }else{
-                updateNewXRailRide(s,dt);
+        /*
+          X-RAIL CONTACT
+          ----------------
+          Contact is part of the same movement step. A Bey may become a rail
+          rider, but the rail never takes over the simulation or returns early
+          from this function. Its existing velocity remains the source of
+          truth.
+        */
+        let railNearest=newXRailNearest(s.x,s.y);
+        if(railNearest && !s.railEngaged && !s.railExited){
+            tryNewXRailEngagement(s,railNearest);
+
+            // Failed capture is a normal surface contact, not permission to
+            // tunnel through the rail. If the Bey is moving into the rail and
+            // does not have the alignment/energy to ride it, resolve the rail
+            // like a curved stadium boundary and let it continue naturally.
+            if(!s.railEngaged){
+                const outward=
+                    s.vx*railNearest.outwardX+
+                    s.vy*railNearest.outwardY;
+                const contactBand=s.radius*0.70+0.020;
+                if(railNearest.dist<contactBand && (outward>0 || railNearest.dist<contactBand*0.72)){
+                    applyXRailContactSafety(s,railNearest,outward);
+                }
             }
-            return;
         }
 
-        /*
-          Surface contact first.
-        */
-        const nearest = newXRailNearest(s.x,s.y);
-
-        if(nearest){
-            const railDistance =
-                Math.sqrt(nearest.dist2);
-
-            const contactRadius =
-                0.030+s.radius*0.24;
-
-            if(
-                railDistance<=contactRadius &&
-                !s.railExited
-            ){
-
-                const dx=s.x-nearest.x;
-                const dy=s.y-nearest.y;
-                const len=Math.hypot(dx,dy)||1;
-                const nx=dx/len;
-                const ny=dy/len;
-                const incomingNormal=s.vx*nx+s.vy*ny;
-
-                // Finish corridor is the ONLY place where normal rail
-                // collision may be bypassed.
-                const finishCorridor=
-                    isBottomFinishCorridor(s) &&
-                    s.vy>0.006;
-
-                if(
-                    !finishCorridor &&
-                    !s.railSafetyUntil &&
-                    !tryNewXRailEngagement(s)
-                ){
-                    applyXRailContactSafety(
-                        s,nearest,incomingNormal
-                    );
-                }
-
-                if(s.railEngaged) return;
-            }
+        if(s.railEngaged){
+            applyXRailConstraint(s,dt);
         }
 
         /*
@@ -4738,51 +4502,21 @@ function newPhysicsStep(s,dt){
         s.x += s.vx*dt*60;
         s.y += s.vy*dt*60;
 
-        enforceXRailExitBarrier(s);
-
-        if(s.railExited){
-            const exitPointForClear=
-                newXRailPointAtDistance(
-                    getNewXRailGeometry().exitDistance
-                );
-            if(Math.hypot(
-                s.x-exitPointForClear.x,
-                s.y-exitPointForClear.y
-            )>0.18){
-                s.railExited=false;
-            }
+        // Finish the rail constraint after movement. This corrects only the
+        // small positional error accumulated during the frame; it does not
+        // replace the Bey's trajectory with a rail path.
+        if(s.railEngaged){
+            finalizeXRailContact(s);
         }
 
-        /*
-          The X Exit is a physical opening only for a Bey that is actually
-          transitioning from the rail. Normal free movement cannot simply
-          phase through the mouth.
-        */
-        {
-            const exitPoint =
-                newXRailPointAtDistance(
-                    getNewXRailGeometry().exitDistance
-                );
-
-            const exitDx = s.x-exitPoint.x;
-            const exitDy = s.y-exitPoint.y;
-            const exitDist = Math.hypot(exitDx,exitDy);
-
-            if(
-                !s.railExited &&
-                exitDist < 0.125 &&
-                s.y < exitPoint.y+0.050 &&
-                s.vy < 0
-            ){
-                // The X Exit is not a general hole in the wall. Only a Bey
-                // that has just completed a real rail exit can pass through.
-                // Free movement hitting the mouth is redirected downward.
-                s.y = exitPoint.y+0.052;
-                s.vy = Math.max(0.006,Math.abs(s.vy)*0.34);
-                s.vx *= 0.82;
-                s.surfaceRecovery = 0.14;
-                s.rpm = newBattleClamp(s.rpm-0.0010,0,1);
-                s.railSafetyUntil=performance.now()+260;
+        if(s.railExited){
+            const g=getNewXRailGeometry();
+            if(Math.hypot(
+                s.x-g.exitCenter.x,
+                s.y-g.exitCenter.y
+            )>0.18){
+                s.railExited=false;
+                s.railContactPoint=null;
             }
         }
 
@@ -5275,54 +5009,21 @@ function newPhysicsStep(s,dt){
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s.railEngaged) return false;
 
-    // Collision has already modified s.vx/s.vy. Preserve that exact physical
-    // result when handing the Bey back to normal stadium movement.
-    const speedBefore=Math.hypot(s.vx,s.vy);
-    const impactMagnitude=Math.max(0.003,force);
-    const direction=railDirection(s);
-    const point=newXRailPointAtDistance(s.railDistance);
-    const tangentX=point.tx*direction, tangentY=point.ty*direction;
-    const normalX=-tangentY, normalY=tangentX;
+    // Collision impulses are already applied to the Bey. Releasing the rail
+    // must preserve that result instead of replacing it with a canned eject.
+    const nearest=newXRailNearest(s.x,s.y);
+    const outwardX=nearest?.outwardX || nx || 0;
+    const outwardY=nearest?.outwardY || ny || 0;
 
-    let vx=s.vx, vy=s.vy;
-    const outwardVelocity=vx*normalX+vy*normalY;
-    const minimumOutward=0.004+impactMagnitude*0.20;
-
-    if(outwardVelocity<minimumOutward){
-        const add=minimumOutward-outwardVelocity;
-        vx+=normalX*add;
-        vy+=normalY*add;
-    }
-
-    const postSpeed=Math.hypot(vx,vy);
-    if(speedBefore>0.020 && postSpeed<speedBefore*0.78){
-        const scale=(speedBefore*0.78)/Math.max(postSpeed,0.0001);
-        vx*=scale; vy*=scale;
-    }
-
-    s.railEngaged=false;
-    s.railExited=false;
-    s.railGrip=0;
-    s.railContactPoint=null;
-    s.railSafetyUntil=performance.now()+240;
-    s.railTravelDistance=0;
-    s.railRideTime=0;
-    s.railDirection=0;
-
-    s.x=point.x+normalX*0.030;
-    s.y=point.y+normalY*0.030;
-    s.vx=vx; s.vy=vy;
+    releaseXRail(s,"impact",outwardX,outwardY);
 
     s.knockbackOverrideUntil=performance.now()+280;
     s.knockbackOverrideForce=force;
     s.rpm=newBattleClamp(s.rpm-(0.0035+force*0.20),0,1);
     s.stability=newBattleClamp(s.stability-(0.008+force*0.35),0,1);
     s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.045+force*0.55,0,1);
-
     s.surfaceBounce=0.20;
     s.surfaceRecovery=0.12;
-    s.motionPhase+=1.0+Math.random()*0.7;
-    s.motionPhase2+=0.4+Math.random()*0.5;
     return true;
 }
 function newPhysicsCollision(dt){
