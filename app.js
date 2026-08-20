@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vwork53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vslime53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2608,7 +2608,7 @@ function newBattleLaunchState(side){
         const inwardX=dx/d;
         const inwardY=dy/d;
         const spinDirection=
-            combo.blade?.spin==="Left" ? 1 : -1;
+            combo.blade?.spin==="Left" ? -1 : 1;
         const railTangentX=railTarget.tx*spinDirection;
         const railTangentY=railTarget.ty*spinDirection;
 
@@ -2693,6 +2693,8 @@ function newBattleLaunchState(side){
         ),
         tiltLevel:0.08,
         railUses:0,
+        railCaptureCooldown:0,
+        railCaptureCooldownPoint:null,
 
         // Right spin = counter-clockwise; left spin = clockwise.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
@@ -4017,39 +4019,31 @@ function bitPhysics(s){
 }
 
 function newXRailTangentAtPoint(point, direction, x, y){
-    // The stored spline runs from the left top endpoint around the lower
-    // stadium to the right top endpoint. Its geometric tangent is smooth,
-    // but we explicitly enforce the game's spin rule at every point:
-    // Right-spin = counter-clockwise, Left-spin = clockwise.
+    /*
+      The authored rail path runs LEFT -> RIGHT around the lower bowl.
+      In the player's screen orientation that path is COUNTER-CLOCKWISE.
+      Right-spin uses that direction; left-spin uses the exact reverse.
+
+      Direction is determined only from spin, never from current velocity.
+      This prevents collisions or a bad launch vector from reversing a
+      rider's rail direction.
+    */
     let tx=point?.tx||0;
     let ty=point?.ty||0;
     const len=Math.hypot(tx,ty)||1;
     tx/=len;
     ty/=len;
-
-    const rx=Number.isFinite(x)?x:(point?.x||0);
-    const ry=Number.isFinite(y)?y:(point?.y||0);
-    const angularSign=rx*ty-ry*tx;
-
-    // In screen coordinates a negative cross product is CCW.
-    // direction=-1 is the Right-spin/CCW rail direction.
-    const wantCCW=direction===-1;
-    const isCCW=angularSign<0;
-    if(wantCCW!==isCCW){
-        tx=-tx;
-        ty=-ty;
-    }
-
-    return {x:tx,y:ty};
+    const dir=direction>=0 ? 1 : -1;
+    return {x:tx*dir,y:ty*dir};
 }
 
 function railDirection(s){
-    // Never infer rail direction from the current velocity. The rail must
-    // obey the Bey's spin direction, otherwise a collision or launch vector
-    // can accidentally make a right-spin Bey ride the rail clockwise.
-    if(s?.spinDirection===1) return -1; // Right-spin = CCW
-    if(s?.spinDirection===-1) return 1; // Left-spin  = CW
-    return -1;
+    // Rail geometry is authored LEFT -> RIGHT around the lower bowl.
+    // That direction is counter-clockwise in the player's screen view.
+    // Right-spin = CCW (+1); Left-spin = CW (-1).
+    if(s?.spinDirection===1) return 1;
+    if(s?.spinDirection===-1) return -1;
+    return 1;
 }
 
 function isBottomFinishCorridor(s){
@@ -4077,6 +4071,8 @@ function newXRailRelease(s,direction,reason="release"){
     s.railExitForce=0;
 
     s.railExitRefractory=0.12;
+    s.railCaptureCooldown=0.24;
+    s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={
         x:s.x,
         y:s.y
@@ -4119,7 +4115,8 @@ function tryNewXRailEngagement(s){
     if(
         !s ||
         s.railEngaged ||
-        (s.railExitRefractory||0)>0
+        (s.railExitRefractory||0)>0 ||
+        (s.railCaptureCooldown||0)>0
     ){
         return false;
     }
@@ -4188,6 +4185,16 @@ function tryNewXRailEngagement(s){
     const approachRatio=
         Math.max(0,approach)/
         Math.max(speed,0.0001);
+
+    // A rail capture must be an actual approach into the rail. A Bey that is
+    // merely traveling parallel inside the contact band should skim past,
+    // not magnetically latch. Deliberate X-Rail launches get a small allowance.
+    const minimumApproachRatio=
+        s.launchPlan?.technique==="X-Rail" ? 0.07 : 0.12;
+
+    if(approachRatio<minimumApproachRatio){
+        return false;
+    }
 
     const tangentRatio=
         Math.max(0,tangent)/
@@ -4264,14 +4271,14 @@ function tryNewXRailEngagement(s){
     */
     const baseChance=
         s.launchPlan?.technique==="X-Rail"
-            ? 0.86+physicalScore*0.12
-            : 0.48+physicalScore*0.44;
+            ? 0.82+physicalScore*0.13
+            : 0.40+physicalScore*0.48;
 
     const captureChance=newBattleClamp(
         baseChance+
-        (Math.random()-0.5)*0.08,
-        0.42,
-        0.985
+        (Math.random()-0.5)*0.10,
+        0.34,
+        0.95
     );
 
     if(Math.random()>captureChance){
@@ -4411,6 +4418,8 @@ function newXRailExit(s){
     s.railBoost=0;
 
     s.railExitRefractory=0.18;
+    s.railCaptureCooldown=0.28;
+    s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={
         x:s.x,
         y:s.y
@@ -4686,8 +4695,8 @@ function applyXRailConstraint(s,dt){
     */
     const railDrain=
         (
-            0.000065+
-            railSpeed*0.000080
+            0.000105+
+            railSpeed*0.000125
         )*
         (bp.spinDrain||1)/
         Math.max(
@@ -4707,8 +4716,8 @@ function applyXRailConstraint(s,dt){
         newBattleClamp(
             s.stability-
             (
-                0.000055+
-                railSpeed*0.000045
+                0.000075+
+                railSpeed*0.000060
             )*
             dt*60,
             0,1
@@ -5036,6 +5045,20 @@ function newPhysicsStep(s,dt){
             }
         }
 
+        if(s.railCaptureCooldown>0){
+            s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
+            if(s.railCaptureCooldownPoint){
+                const moved=Math.hypot(
+                    s.x-s.railCaptureCooldownPoint.x,
+                    s.y-s.railCaptureCooldownPoint.y
+                );
+                if(moved>0.10){
+                    s.railCaptureCooldown=0;
+                    s.railCaptureCooldownPoint=null;
+                }
+            }
+        }
+
         applyKnockbackBoundaryOverride(s);
 
         /*
@@ -5322,7 +5345,7 @@ function newPhysicsStep(s,dt){
 
             const lowRpmAttackSuppression =
                 attackBit
-                    ? newBattleClamp((rpm-0.22)/0.38,0,1)
+                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
                     : 1;
 
             const nonAttackMovementScale=
@@ -5342,7 +5365,7 @@ function newPhysicsStep(s,dt){
                 (0.72+0.28*s.movementEnergy)*
                 nonAttackMovementScale*
                 (attackBit
-                    ? (0.68+0.82*lowRpmAttackSuppression)
+                    ? (0.18+1.12*lowRpmAttackSuppression)
                     : 0.96);
 
             const radialX=s.x*invR;
@@ -5409,7 +5432,7 @@ function newPhysicsStep(s,dt){
         */
         if(r>0.08 && rpm>0.10){
             const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.30 : (rpm<0.38 ? 0.72 : 0.34);
+            const typeCenterBoost=!attackBit ? 1.30 : (rpm<0.42 ? 1.05 : 0.34);
             const centerStrength=(0.00040+centerAffinity*0.00078)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
@@ -5805,6 +5828,8 @@ function breakXRailFromImpact(s,nx,ny,force){
     s.railRideTime=0;
     s.railDirection=0;
     s.railExitRefractory=0.16;
+    s.railCaptureCooldown=0.22;
+    s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 
     s.vx=vx;
@@ -6029,18 +6054,18 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.0009+contactEnergy*0.022,
+        0.0007+contactEnergy*0.016,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.64-cDef*0.12)
+        (0.52-cDef*0.10)
     );
     const cKnockback=Math.max(
-        0.0009+contactEnergy*0.022,
+        0.0007+contactEnergy*0.016,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.64-pDef*0.12)
+        (0.52-pDef*0.10)
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
@@ -6051,10 +6076,10 @@ function newPhysicsCollision(dt){
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.00035+
-        effectiveImpact*0.0052+
-        Math.abs(tangentRelative)*0.0010+
-        heavyFactor*0.00022;
+        0.00025+
+        effectiveImpact*0.0038+
+        Math.abs(tangentRelative)*0.00070+
+        heavyFactor*0.00015;
 
     const pFollow=
         followThrough*
