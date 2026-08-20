@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53poop · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2598,20 +2598,63 @@ function newBattleLaunchState(side){
 
     if(isXRailLaunch){
         /*
-          V80 X-RAIL LAUNCH CONTRACT
+          V81 X-RAIL LAUNCH CONTRACT
           -------------------------
-          The player chooses which side of the stadium to attack the rail from.
-          The Bey begins at the LOWER corner of that side of the X-Rail, not in
-          the center and not at the exit.
+          X-Rail launches begin at the LOWER CORNER of the top rail on the
+          player's side. The launch quality determines how accurately the
+          Bey reaches that corner; a poor launch can miss the rail.
 
-          Right-spin must travel the physical counter-clockwise route toward
-          the top-center X-Exit. Left-spin is the exact reverse.
+          RIGHT spin follows the authored rail path:
+            lower-left entry -> around the stadium -> lower-right/top exit.
+
+          LEFT spin follows the exact reverse.
+
+          IMPORTANT: the launch tangent and the rider tangent use the SAME
+          railDirection() convention. No separate sign inversion is allowed.
         */
         const railEntry = sideXSign < 0
             ? {x:-0.820,y:0.480}
             : {x: 0.820,y:0.480};
 
         const railTarget=newXRailNearest(railEntry.x,railEntry.y);
+        const railRadius=Math.hypot(
+            railTarget.x,
+            railTarget.y
+        )||1;
+
+        // Spawn slightly inside the rail so the Bey approaches the corner
+        // naturally instead of appearing on the wrong lane.
+        const inwardX=-railTarget.x/railRadius;
+        const inwardY=-railTarget.y/railRadius;
+
+        const qualityMiss={
+            Horrible:0.090,
+            Bad:0.052,
+            Okay:0.028,
+            Good:0.012,
+            Perfect:0.004
+        }[plan.quality]||0.028;
+
+        const missAngle=(Math.random()*2-1)*0.55;
+        const missX=Math.cos(missAngle)*qualityMiss;
+        const missY=Math.sin(missAngle)*qualityMiss;
+
+        const entryOffset=0.045+qualityPlacement*0.42;
+
+        const actualStartX=
+            railTarget.x+
+            inwardX*entryOffset+
+            missX;
+        const actualStartY=
+            railTarget.y+
+            inwardY*entryOffset+
+            missY;
+
+        // Override the generic start position for X-Rail only.
+        // This keeps all other launch techniques untouched.
+        startX=actualStartX;
+        startY=actualStartY;
+
         const dx=railTarget.x-startX;
         const dy=railTarget.y-startY;
         const d=Math.hypot(dx,dy)||1;
@@ -2620,24 +2663,30 @@ function newBattleLaunchState(side){
         const approachY=dy/d;
 
         /*
-          Use the rail tangent in the Bey's physical spin direction. The
-          authored rail path is clockwise in screen space, so Right-spin
-          takes the reverse direction. This is deliberately the same
-          convention used by the rail rider.
+          ONE source of truth:
+          railDirection() already defines Right-spin as the authored
+          LEFT -> RIGHT path. Use that same sign here.
         */
         const spinDirection =
             combo.blade?.spin==="Left" ? -1 : 1;
-        const railTravelDirection = spinDirection===1 ? -1 : 1;
+        const railTravelDirection=spinDirection===-1 ? -1 : 1;
 
         const railTangentX=railTarget.tx*railTravelDirection;
         const railTangentY=railTarget.ty*railTravelDirection;
 
-        const tangentWeight=0.30;
-        const approachWeight=0.70;
-        const railLaunchSpeed=launchSpeed*(1.06+0.08*qualityFactor);
+        const tangentWeight=0.46;
+        const approachWeight=0.54;
+        const railLaunchSpeed=launchSpeed*(1.03+0.07*qualityFactor);
 
-        vx=(railTangentX*tangentWeight+approachX*approachWeight)*railLaunchSpeed;
-        vy=(railTangentY*tangentWeight+approachY*approachWeight)*railLaunchSpeed;
+        vx=
+            (railTangentX*tangentWeight+
+             approachX*approachWeight)*
+            railLaunchSpeed;
+
+        vy=
+            (railTangentY*tangentWeight+
+             approachY*approachWeight)*
+            railLaunchSpeed;
     }
 
     if(plan.technique==="Drop Launch"){
@@ -3276,9 +3325,9 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0078;
+    const impactEntry=recentImpact && force>=0.0069;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.078 && (force>=0.0027 || railExitForce>=0.0027);
+    const railEntry=recentRailExit && speed>=0.072 && (force>=0.0025 || railExitForce>=0.0025);
 
     // V55 FINISH QUALIFICATION
     // A Bey must actually enter the finish zone with meaningful momentum
@@ -3310,13 +3359,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.052 &&
-            alignment>=0.39;
+            speed>=0.050 &&
+            alignment>=0.35;
 
         const railQualified=
             railEntry &&
-            speed>=0.076 &&
-            alignment>=0.39;
+            speed>=0.072 &&
+            alignment>=0.35;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3354,15 +3403,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.050 &&
-            outward>=0.0055 &&
-            alignment>=0.39;
+            speed>=0.048 &&
+            outward>=0.0050 &&
+            alignment>=0.35;
 
         const railQualified=
             railEntry &&
-            speed>=0.073 &&
-            outward>=0.0050 &&
-            alignment>=0.38;
+            speed>=0.070 &&
+            outward>=0.0047 &&
+            alignment>=0.35;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -6343,6 +6392,36 @@ function newPhysicsCollision(dt){
       Truly exceptional collisions can go higher, but the cap prevents
       single impacts from melting a full-spin Bey.
     */
+    /*
+      Attacker-specific damage curve.
+
+      The old curve shared the same contactEnergy and therefore made
+      simultaneous exchanges converge on nearly identical RPM losses.
+      Each Bey now gets a modest independent contact-quality term based on
+      its own momentum, closing speed, force and geometry. This does NOT
+      randomize damage blindly; the physics still dominates.
+    */
+    const pContactShare=
+        newBattleClamp(
+            pEnergy/Math.max(pEnergy+cEnergy,0.000001),
+            0.18,0.82
+        );
+    const cContactShare=
+        newBattleClamp(
+            cEnergy/Math.max(pEnergy+cEnergy,0.000001),
+            0.18,0.82
+        );
+
+    const pContactVariance=
+        0.88+
+        pContactShare*0.22+
+        Math.random()*0.10;
+
+    const cContactVariance=
+        0.88+
+        cContactShare*0.22+
+        Math.random()*0.10;
+
     const pDamageCurve=
         0.0030+
         0.0115*Math.pow(pMomentumQuality,0.82)+
@@ -6355,12 +6434,21 @@ function newPhysicsCollision(dt){
         0.0150*Math.pow(cKnockQuality,0.88)+
         0.0100*Math.pow(cForceQuality,0.84);
 
+    const pDamageVariance=
+        pContactVariance*
+        (0.92+0.08*newBattleClamp(pClosing/0.03,0,1));
+
+    const cDamageVariance=
+        cContactVariance*
+        (0.92+0.08*newBattleClamp(cClosing/0.03,0,1));
+
     /*
       Defender still matters. Defense reduces incoming damage, but never
       reduces it to zero. This is intentionally softer than the old system.
     */
     const pToCDamageRaw=
         pDamageCurve*
+        pDamageVariance*
         pStatDamageFactor*
         pRPMQuality*
         nonAttackRPMMultiplier*
@@ -6370,6 +6458,7 @@ function newPhysicsCollision(dt){
 
     const cToPDamageRaw=
         cDamageCurve*
+        cDamageVariance*
         cStatDamageFactor*
         cRPMQuality*
         nonAttackRPMMultiplier*
