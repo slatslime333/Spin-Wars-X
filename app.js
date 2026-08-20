@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">swagmunV53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3325,9 +3325,9 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0069;
+    const impactEntry=recentImpact && force>=0.0076;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.072 && (force>=0.0025 || railExitForce>=0.0025);
+    const railEntry=recentRailExit && speed>=0.078 && (force>=0.0028 || railExitForce>=0.0028);
 
     // V55 FINISH QUALIFICATION
     // A Bey must actually enter the finish zone with meaningful momentum
@@ -3359,13 +3359,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.050 &&
-            alignment>=0.35;
+            speed>=0.056 &&
+            alignment>=0.40;
 
         const railQualified=
             railEntry &&
-            speed>=0.072 &&
-            alignment>=0.35;
+            speed>=0.078 &&
+            alignment>=0.40;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3403,15 +3403,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.048 &&
-            outward>=0.0050 &&
-            alignment>=0.35;
+            speed>=0.054 &&
+            outward>=0.0060 &&
+            alignment>=0.40;
 
         const railQualified=
             railEntry &&
-            speed>=0.070 &&
-            outward>=0.0047 &&
-            alignment>=0.35;
+            speed>=0.076 &&
+            outward>=0.0056 &&
+            alignment>=0.40;
 
         if(impactQualified||railQualified){
             s.finishDebug=
