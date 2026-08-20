@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5g4y3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V52313 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -3926,9 +3926,14 @@ function newXRailRelease(s,direction,reason="release"){
       velocity produced by the normal physics/collision solver and only give
       it a small outward separation if it is still touching the rail.
     */
+    const currentDx=s.x-point.x;
+    const currentDy=s.y-point.y;
+    const currentDistance=Math.hypot(currentDx,currentDy);
     const separation=0.018+s.radius*0.18;
-    s.x=point.x+normalX*separation;
-    s.y=point.y+normalY*separation;
+    if(currentDistance<separation){
+        s.x=point.x+normalX*separation;
+        s.y=point.y+normalY*separation;
+    }
 
     let tangent=s.vx*tangentX+s.vy*tangentY;
     let normal=s.vx*normalX+s.vy*normalY;
@@ -4095,14 +4100,11 @@ function newXRailExit(s){
 function applyXRailConstraint(s,dt){
     if(!s || !s.railEngaged) return false;
 
-    const g=getNewXRailGeometry();
     const direction=s.railDirection||railDirection(s);
-    const previousDistance=s.railDistance||0;
     const nearest=newXRailNearest(s.x,s.y);
-
     if(!nearest){
         newXRailRelease(s,direction,"no-contact");
-        return true;
+        return false;
     }
 
     const rpm=newBattleClamp(s.rpm,0,1);
@@ -4110,12 +4112,13 @@ function applyXRailConstraint(s,dt){
     const control=(bp.control||60)/100;
     const stability=newBattleClamp(s.stability||0,0,1);
     const contactDistance=Math.sqrt(nearest.dist2);
+    const supportRadius=0.050+s.radius*0.35;
 
-    /*
-      The rail is now a constraint, not a second movement engine.
-      The Bey has already integrated its normal velocity. We only resolve
-      penetration and remove the component that points through the rail.
-    */
+    if(contactDistance>supportRadius*1.25){
+        newXRailRelease(s,direction,"lost-contact");
+        return false;
+    }
+
     const dx=s.x-nearest.x;
     const dy=s.y-nearest.y;
     const len=Math.hypot(dx,dy)||1;
@@ -4124,82 +4127,92 @@ function applyXRailConstraint(s,dt){
     const tx=nearest.tx*direction;
     const ty=nearest.ty*direction;
 
-    const tangent=s.vx*tx+s.vy*ty;
+    let tangent=s.vx*tx+s.vy*ty;
     const normal=s.vx*nx+s.vy*ny;
 
-    // If the Bey has lost useful tangential energy, it is no longer riding.
-    if(tangent<0.018 || rpm<0.035 || stability<0.08){
+    // A rider must keep moving in the direction allowed by its spin. Do not
+    // manufacture a rail velocity when its real momentum has disappeared.
+    if(tangent<0.010 || rpm<0.028 || stability<0.055){
         newXRailRelease(s,direction,"lost-energy");
-        return true;
+        return false;
     }
 
-    // A rail rider must remain close enough to the rail to be physically
-    // supported. Correct only the penetration; do not teleport to the path.
-    const supportRadius=0.050+s.radius*0.35;
-    if(contactDistance>supportRadius){
-        newXRailRelease(s,direction,"lost-contact");
-        return true;
-    }
-
+    // Resolve only the velocity component pressing into the rail. Tangential
+    // momentum remains the Bey's own momentum; the rail never teleports or
+    // assigns its position.
     if(normal<0){
         s.vx-=normal*nx;
         s.vy-=normal*ny;
     }
 
-    // Small rail friction. Faster entries stay fast; the rail does not create
-    // a canned speed. Spin and control affect how well the Bey holds contact.
     const railFriction=
-        0.00010+
-        (1-control)*0.00012+
-        (1-rpm)*0.00016;
+        0.000045+
+        (1-control)*0.000055+
+        (1-rpm)*0.000060;
+    const frictionLoss=railFriction*dt*60;
+    tangent=Math.max(0,tangent-frictionLoss);
 
-    const curveStress=Math.abs(nearest.tx*ny-nearest.ty*nx);
-    const frictionLoss=
-        railFriction*(0.72+0.28*curveStress)*dt*60;
-
-    const newTangent=Math.max(0,tangent-frictionLoss);
-    s.vx=tx*newTangent;
-    s.vy=ty*newTangent;
-    s.railSpeed=newTangent;
-
-    // Keep the Bey just outside the rail surface. This is a tiny collision
-    // correction, not a path-following position assignment.
-    const desiredOffset=0.012+s.radius*0.08;
-    const correction=supportRadius-contactDistance;
-    if(correction>0 && normal<0){
-        s.x+=nx*Math.min(correction,0.012);
-        s.y+=ny*Math.min(correction,0.012);
-    }
-
-    const travel=Math.abs(newTangent)*dt*60;
-    s.railTravelDistance=(s.railTravelDistance||0)+travel;
-    s.railRideTime=(s.railRideTime||0)+dt;
-
-    const projectedDistance=nearest.distance+direction*travel;
-    s.railDistance=newBattleClamp(projectedDistance,0,g.total);
-    s.railProgress=s.railDistance/g.total;
+    s.vx=tx*tangent;
+    s.vy=ty*tangent;
+    s.railSpeed=tangent;
+    s.railDistance=nearest.distance;
+    s.railProgress=nearest.distance/(getNewXRailGeometry().total||1);
     s.railGrip=newBattleClamp(
-        0.45+control*0.20+rpm*0.22+stability*0.13,
+        0.50+control*0.18+rpm*0.22+stability*0.10,
         0,1
     );
+    s.railRideTime=(s.railRideTime||0)+dt;
 
-    if(newXRailCrossedExit(previousDistance,s.railDistance,direction)){
-        newXRailExit(s);
-        return true;
-    }
-
-    // A rail ride should naturally be brief enough to be a burst of movement,
-    // not a permanent state. This is a physical track-length limit, not a
-    // timer-based release.
-    if(s.railTravelDistance>g.total*0.94){
-        const atEnd=direction>0 ? g.total-s.railDistance<0.018 : s.railDistance<0.018;
-        if(atEnd){
-            newXRailExit(s);
-            return true;
-        }
-    }
-
+    // The important part: the Bey is allowed to integrate this velocity in
+    // the normal physics step. The old rail code returned before integration,
+    // which made a captured Bey freeze on the rail.
     return true;
+}
+
+function resolveXRailAfterIntegration(s,previousDistance){
+    if(!s || !s.railEngaged) return;
+
+    const g=getNewXRailGeometry();
+    const direction=s.railDirection||railDirection(s);
+    const nearest=newXRailNearest(s.x,s.y);
+    if(!nearest){
+        newXRailRelease(s,direction,"no-contact-after-step");
+        return;
+    }
+
+    const supportRadius=0.050+s.radius*0.35;
+    const contactDistance=Math.sqrt(nearest.dist2);
+    if(contactDistance>supportRadius*1.40){
+        newXRailRelease(s,direction,"lost-contact-after-step");
+        return;
+    }
+
+    const endpoint=direction>0
+        ? newXRailPointAtDistance(g.total)
+        : newXRailPointAtDistance(0);
+    const ex=s.x-endpoint.x;
+    const ey=s.y-endpoint.y;
+    const exitTangentX=endpoint.tx*direction;
+    const exitTangentY=endpoint.ty*direction;
+    const pastEndpoint=ex*exitTangentX+ey*exitTangentY;
+
+    // The rail is open. Once the Bey physically travels past an endpoint in
+    // the rail's tangent direction, it has left the track and normal stadium
+    // physics takes over. No ride timer or artificial distance teleport is
+    // needed.
+    if(
+        pastEndpoint>0.010 &&
+        ((direction>0 && nearest.distance>=g.total-0.012) ||
+         (direction<0 && nearest.distance<=0.012))
+    ){
+        newXRailExit(s);
+        return;
+    }
+
+    const traveled=Math.abs(nearest.distance-(previousDistance||nearest.distance));
+    s.railTravelDistance=(s.railTravelDistance||0)+traveled;
+    s.railDistance=nearest.distance;
+    s.railProgress=nearest.distance/(g.total||1);
 }
 
 function applyXRailContactSafety(s,nearest,incomingNormal){
@@ -4466,8 +4479,31 @@ function newPhysicsStep(s,dt){
         applyKnockbackBoundaryOverride(s);
 
         if(s.railEngaged){
-            applyXRailConstraint(s,dt);
-            return;
+            const previousRailDistance=s.railDistance||0;
+            const railActive=applyXRailConstraint(s,dt);
+
+            if(railActive && s.railEngaged){
+                // Rail contact is a surface constraint. Integrate the resulting
+                // velocity exactly once through the same position model used by
+                // the rest of the battle.
+                s.x += s.vx*dt*60;
+                s.y += s.vy*dt*60;
+                resolveXRailAfterIntegration(s,previousRailDistance);
+
+                // Rail contact consumes a small amount of spin/stability. It
+                // never creates energy, but a fast, controlled rider can retain
+                // most of its incoming momentum.
+                const railSpeed=Math.hypot(s.vx,s.vy);
+                const railDrain=(0.00011+railSpeed*0.00018)*
+                    (bitPhysics(s).spinDrain||1)/
+                    Math.max(0.72,0.70+getBattleStat(s,"stamina")*0.52);
+                s.rpm=newBattleClamp(s.rpm-railDrain*dt*60,0,1);
+                s.stability=newBattleClamp(
+                    s.stability-(0.00010+railSpeed*0.00010)*dt*60,
+                    0,1
+                );
+                return;
+            }
         }
 
         /*
