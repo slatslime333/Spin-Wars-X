@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vfianl53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2607,10 +2607,8 @@ function newBattleLaunchState(side){
 
         const inwardX=dx/d;
         const inwardY=dy/d;
-        // The authored rail path is clockwise in screen coordinates.
-        // Right-spin must travel counter-clockwise, so it uses -1.
         const spinDirection=
-            combo.blade?.spin==="Left" ? 1 : -1;
+            combo.blade?.spin==="Left" ? -1 : 1;
         const railTangentX=railTarget.tx*spinDirection;
         const railTangentY=railTarget.ty*spinDirection;
 
@@ -3362,22 +3360,22 @@ function enforceRightSpinDirection(s){
     if(r<0.08 || speed<0.009) return;
 
     const invR=1/r;
-    // Right-spin must be counter-clockwise in screen coordinates.
+    // In screen coordinates (+Y down), the desired RIGHT-spin tangent is
+    // clockwise: (-y, x). This matches the rail's authored LEFT -> RIGHT
+    // travel direction and prevents free-space and rail spin conventions
+    // from fighting each other.
     const tx=-s.y*invR;
     const ty=s.x*invR;
     const tv=s.vx*tx+s.vy*ty;
 
-    // Right-spin cannot sustain a clockwise trajectory.
+    // Right-spin cannot sustain the opposite (counter-clockwise) trajectory.
     if(tv < -(speed*0.28)){
         const radialX=s.x*invR;
         const radialY=s.y*invR;
         const radial=s.vx*radialX+s.vy*radialY;
-        const retainedCCW=Math.max(
-            speed*0.06,
-            Math.min(speed*0.22,-tv*0.12)
-        );
-        s.vx=radialX*radial+tx*retainedCCW;
-        s.vy=radialY*radial+ty*retainedCCW;
+        const retainedClockwise=tv*0.08;
+        s.vx=radialX*radial+tx*retainedClockwise;
+        s.vy=radialY*radial+ty*retainedClockwise;
     }
 }
 
@@ -3735,33 +3733,27 @@ function getNewXRailGeometry(){
       opposite top endpoint.
 
       Stored path direction is LEFT -> RIGHT around the lower bowl.
-      Right-spin travels the reverse path (CCW); left-spin travels the
-      stored path (CW).
+      Right-spin travels the stored path to the right-side X-Exit; left-spin
+      travels the exact reverse.
 
       There is NO wrap-around. Reaching the appropriate top endpoint launches
       the Bey inward toward the center. Normal battle physics then determines
       whether that launch later produces an Xtreme or Over finish.
     */
     const controls=[
-        // Both ends are the two sides of the TOP X-Exit.  The stored path
-        // runs LEFT -> RIGHT counter-clockwise around the stadium, so a
-        // right-spin Bey can travel left-side -> bottom -> right-side ->
-        // middle X-Exit.  Left-spin uses the exact reverse path.
-        {x:-0.180,y:-0.748},
-        {x:-0.300,y:-0.785},
-        {x:-0.585,y:-0.640},
-        {x:-0.805,y:-0.410},
+        {x:-0.133,y:-0.790},
+        {x:-0.480,y:-0.660},
+        {x:-0.760,y:-0.455},
         {x:-0.905,y:0.010},
-        {x:-0.820,y:0.475},
+        {x:-0.820,y:0.480},
         {x:-0.500,y:0.735},
         {x:0.000,y:0.805},
         {x:0.500,y:0.735},
-        {x:0.820,y:0.475},
+        {x:0.820,y:0.480},
         {x:0.905,y:0.010},
-        {x:0.805,y:-0.410},
-        {x:0.585,y:-0.640},
-        {x:0.300,y:-0.785},
-        {x:0.180,y:-0.748}
+        {x:0.760,y:-0.455},
+        {x:0.480,y:-0.660},
+        {x:0.133,y:-0.790}
     ];
 
     function catmull(p0,p1,p2,p3,t){
@@ -3847,14 +3839,11 @@ function getNewXRailGeometry(){
         leftExit:samples[0],
         rightExit:samples[samples.length-1],
         exitGap:{
-            leftX:-0.180,
-            rightX:0.180,
-            centerX:0,
-            y:-0.748,
-            targetX:0,
-            targetY:0.04
+            leftX:-0.133,
+            rightX:0.133,
+            y:-0.790
         },
-        type:"top-x-exit-finite-track-v75"
+        type:"top-open-accelerator-track-v72"
     };
 
     return NEW_BATTLE.railGeometry;
@@ -4035,45 +4024,33 @@ function bitPhysics(s){
 
 function newXRailTangentAtPoint(point, direction, x, y){
     /*
-      Rail direction is defined by spin, not by whichever way a spline was
-      authored.  In screen coordinates (+Y down):
+      AUTHORITATIVE GAMEPLAY DIRECTION
+      --------------------------------
+      The authored rail path is the physical track from the LEFT top
+      endpoint, down around the stadium, to the RIGHT top endpoint.
 
-        RIGHT spin = COUNTER-CLOCKWISE = (-y, x)
-        LEFT  spin = CLOCKWISE         = ( y,-x)
+      For Spin Wars X, a RIGHT-spin Bey rides that authored path: LEFT ->
+      RIGHT -> TOP X-EXIT. A LEFT-spin Bey rides the exact reverse.
 
-      The spline tangent is only used to keep the rider aligned with the
-      actual rail shape.  If its local tangent ever points the wrong way,
-      flip it.  This makes a clockwise right-spin ride impossible.
+      We intentionally do NOT infer direction from the Bey's current
+      velocity or from screen-space angular math. The track's authored
+      direction is the source of truth.
     */
     let tx=point?.tx||0;
     let ty=point?.ty||0;
     const len=Math.hypot(tx,ty)||1;
     tx/=len;
     ty/=len;
-
-    const px=Number.isFinite(x) ? x : (point?.x||0);
-    const py=Number.isFinite(y) ? y : (point?.y||0);
-    const r=Math.hypot(px,py)||1;
     const dir=direction>=0 ? 1 : -1;
-
-    const desiredX=(-py/r)*dir;
-    const desiredY=( px/r)*dir;
-
-    if(tx*desiredX+ty*desiredY<0){
-        tx=-tx;
-        ty=-ty;
-    }
-
-    return {x:tx,y:ty};
+    return {x:tx*dir,y:ty*dir};
 }
 
 function railDirection(s){
-    // The authored rail path runs LEFT -> RIGHT around the lower bowl.
-    // In screen coordinates that path is CLOCKWISE.  Right-spin must ride
-    // COUNTER-CLOCKWISE, so it travels the path in reverse.
-    if(s?.spinDirection===1) return -1;
-    if(s?.spinDirection===-1) return 1;
-    return -1;
+    // Concrete gameplay rule: RIGHT spin rides LEFT -> RIGHT to the
+    // top-center X-Exit. LEFT spin rides the reverse.
+    if(s?.spinDirection===1) return 1;
+    if(s?.spinDirection===-1) return -1;
+    return 1;
 }
 
 function isBottomFinishCorridor(s){
@@ -4172,9 +4149,9 @@ function tryNewXRailEngagement(s){
       much cleaner approach.
     */
     const contactRadius=
-        0.052+
-        s.radius*0.30+
-        (s.launchPlan?.technique==="X-Rail" ? 0.010 : 0);
+        0.064+
+        s.radius*0.40+
+        (s.launchPlan?.technique==="X-Rail" ? 0.016 : 0);
 
     if(Math.sqrt(nearest.dist2)>contactRadius){
         return false;
@@ -4193,7 +4170,16 @@ function tryNewXRailEngagement(s){
         s.vx*tangentX+
         s.vy*tangentY;
 
-    if(speed<0.012){
+    // Low-RPM rail capture must be earned. High-affinity Attack Bits can
+    // still catch at lower RPM than controlled Bits, but Orb/Ball/Needle-
+    // style Bits should not casually lock onto the rail after they have
+    // already lost most of their movement energy.
+    const minimumCaptureRPM=
+        0.16+
+        (1-affinity)*0.14+
+        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.025);
+
+    if(speed<0.012 || rpm<minimumCaptureRPM){
         return false;
     }
 
@@ -4219,11 +4205,8 @@ function tryNewXRailEngagement(s){
     // A rail capture must be an actual approach into the rail. A Bey that is
     // merely traveling parallel inside the contact band should skim past,
     // not magnetically latch. Deliberate X-Rail launches get a small allowance.
-    const lowRpmPenalty=1-rpm;
     const minimumApproachRatio=
-        (s.launchPlan?.technique==="X-Rail" ? 0.14 : 0.20)+
-        lowRpmPenalty*0.16+
-        (1-affinity)*0.06;
+        s.launchPlan?.technique==="X-Rail" ? 0.07 : 0.12;
 
     if(approachRatio<minimumApproachRatio){
         return false;
@@ -4249,20 +4232,16 @@ function tryNewXRailEngagement(s){
       player explicitly chose the rail-seeking launch.
     */
     const minimumTangentRatio=
-        (s.launchPlan?.technique==="X-Rail"
-            ? 0.26-
-              affinity*0.12-
-              movement*0.04
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.18
             : 0.52-
               affinity*0.30-
-              movement*0.06)+
-        lowRpmPenalty*0.14;
+              movement*0.06;
 
     const minimumTangentSpeed=
-        (s.launchPlan?.technique==="X-Rail"
-            ? 0.0090
-            : 0.0070-affinity*0.0018)+
-        lowRpmPenalty*0.0085;
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.0055
+            : 0.0070-affinity*0.0018;
 
     if(
         tangent<minimumTangentSpeed ||
@@ -4307,20 +4286,15 @@ function tryNewXRailEngagement(s){
       X-Rail launch. The variance is small and represents imperfect contact.
     */
     const baseChance=
-        (s.launchPlan?.technique==="X-Rail"
-            ? 0.30+
-              affinity*0.30+
-              physicalScore*0.28
-            : 0.24+
-              affinity*0.24+
-              physicalScore*0.34) *
-        (0.58+0.42*rpm);
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.68+physicalScore*0.20
+            : 0.32+physicalScore*0.42;
 
     const captureChance=newBattleClamp(
         baseChance+
         (Math.random()-0.5)*0.08,
-        0.12,
-        0.86
+        0.18,
+        0.90
     );
 
     if(Math.random()>captureChance){
@@ -4567,19 +4541,19 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.032+
-        0.112*rpm+
-        0.040*affinity+
+        0.105+
+        0.055*rpm+
+        0.038*affinity+
         0.012*control,
-        0.032,
+        0.105,
         0.190
     );
 
     const accelerator=
         (
-            0.00045+
-            0.00255*rpm+
-            0.00110*affinity
+            0.00180+
+            0.00215*rpm+
+            0.00155*affinity
         )*
         (
             0.76+
@@ -4619,9 +4593,12 @@ function applyXRailConstraint(s,dt){
       A rider that loses nearly all tangential momentum can fall off, but a
       healthy rider is never released simply because a timer expired.
     */
+    const lowEnergyRPMThreshold=
+        0.18+
+        (1-affinity)*0.10;
+
     if(
-        (railSpeed<0.010 && rpm<0.30) ||
-        (rpm<0.18 && railSpeed<0.026) ||
+        (railSpeed<0.009 && rpm<lowEnergyRPMThreshold) ||
         rpm<0.10
     ){
         newXRailRelease(
@@ -4738,15 +4715,14 @@ function applyXRailConstraint(s,dt){
     */
     const railDrain=
         (
-            0.00030+
-            railSpeed*0.00032+
-            (1-rpm)*0.00018
+            0.000105+
+            railSpeed*0.000125
         )*
         (bp.spinDrain||1)/
         Math.max(
-            0.78,
-            0.82+
-            getBattleStat(s,"stamina")*0.42
+            0.72,
+            0.70+
+            getBattleStat(s,"stamina")*0.52
         );
 
     s.rpm=
@@ -5365,14 +5341,14 @@ function newPhysicsStep(s,dt){
             const invR=1/r;
 
             // Screen coordinates: +Y is down. Right-spin is CCW, so its
-            // tangent at (x,y) is (-y, x).  Left-spin is the reverse.
+            // tangent at (x,y) is (y,-x).
             const spinSign=
                 s.spinDirection===1 ? 1 : -1;
 
             const tangentX=
-                -s.y*invR*spinSign;
+                s.y*invR*spinSign;
             const tangentY=
-                s.x*invR*spinSign;
+                -s.x*invR*spinSign;
 
             /*
               Precession changes continuously. This is force-based
@@ -6098,18 +6074,18 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.00045+contactEnergy*0.009,
+        0.00055+contactEnergy*0.011,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.32-cDef*0.07)
+        (0.40-cDef*0.07)
     );
     const cKnockback=Math.max(
-        0.00045+contactEnergy*0.009,
+        0.00055+contactEnergy*0.011,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.32-pDef*0.07)
+        (0.40-pDef*0.07)
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
@@ -6120,8 +6096,8 @@ function newPhysicsCollision(dt){
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
-        0.00018+
-        effectiveImpact*0.0024+
+        0.00025+
+        effectiveImpact*0.0026+
         Math.abs(tangentRelative)*0.00045+
         heavyFactor*0.00010;
 
