@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V111111153 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2597,27 +2597,47 @@ function newBattleLaunchState(side){
     }
 
     if(isXRailLaunch){
-        // X-Rail launch aims at the TOP rail. The player/CPU launch from
-        // opposite left/right sides, so each one attacks its nearby upper
-        // rail entry rather than aiming at the lower bowl.
-        const railTarget=newXRailNearest(sideXSign*0.74,-0.58);
+        /*
+          V80 X-RAIL LAUNCH CONTRACT
+          -------------------------
+          The player chooses which side of the stadium to attack the rail from.
+          The Bey begins at the LOWER corner of that side of the X-Rail, not in
+          the center and not at the exit.
+
+          Right-spin must travel the physical counter-clockwise route toward
+          the top-center X-Exit. Left-spin is the exact reverse.
+        */
+        const railEntry = sideXSign < 0
+            ? {x:-0.820,y:0.480}
+            : {x: 0.820,y:0.480};
+
+        const railTarget=newXRailNearest(railEntry.x,railEntry.y);
         const dx=railTarget.x-startX;
         const dy=railTarget.y-startY;
         const d=Math.hypot(dx,dy)||1;
 
-        const inwardX=dx/d;
-        const inwardY=dy/d;
-        const spinDirection=
+        const approachX=dx/d;
+        const approachY=dy/d;
+
+        /*
+          Use the rail tangent in the Bey's physical spin direction. The
+          authored rail path is clockwise in screen space, so Right-spin
+          takes the reverse direction. This is deliberately the same
+          convention used by the rail rider.
+        */
+        const spinDirection =
             combo.blade?.spin==="Left" ? -1 : 1;
-        const railTangentX=railTarget.tx*spinDirection;
-        const railTangentY=railTarget.ty*spinDirection;
+        const railTravelDirection = spinDirection===1 ? -1 : 1;
 
-        const tangentWeight=0.42;
-        const approachWeight=0.58;
-        const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
+        const railTangentX=railTarget.tx*railTravelDirection;
+        const railTangentY=railTarget.ty*railTravelDirection;
 
-        vx=(railTangentX*tangentWeight+inwardX*approachWeight)*railLaunchSpeed;
-        vy=(railTangentY*tangentWeight+inwardY*approachWeight)*railLaunchSpeed;
+        const tangentWeight=0.30;
+        const approachWeight=0.70;
+        const railLaunchSpeed=launchSpeed*(1.06+0.08*qualityFactor);
+
+        vx=(railTangentX*tangentWeight+approachX*approachWeight)*railLaunchSpeed;
+        vy=(railTangentY*tangentWeight+approachY*approachWeight)*railLaunchSpeed;
     }
 
     if(plan.technique==="Drop Launch"){
@@ -3290,13 +3310,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.055 &&
-            alignment>=0.43;
+            speed>=0.052 &&
+            alignment>=0.39;
 
         const railQualified=
             railEntry &&
-            speed>=0.081 &&
-            alignment>=0.43;
+            speed>=0.076 &&
+            alignment>=0.39;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -3334,15 +3354,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.053 &&
-            outward>=0.0060 &&
-            alignment>=0.42;
+            speed>=0.050 &&
+            outward>=0.0055 &&
+            alignment>=0.39;
 
         const railQualified=
             railEntry &&
-            speed>=0.077 &&
-            outward>=0.0055 &&
-            alignment>=0.41;
+            speed>=0.073 &&
+            outward>=0.0050 &&
+            alignment>=0.38;
 
         if(impactQualified||railQualified){
             s.finishDebug=
@@ -4226,9 +4246,9 @@ function tryNewXRailEngagement(s){
     // style Bits should not casually lock onto the rail after they have
     // already lost most of their movement energy.
     const minimumCaptureRPM=
-        0.34+
-        (1-affinity)*0.22+
-        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.015);
+        0.27+
+        (1-affinity)*0.20+
+        (s.launchPlan?.technique==="X-Rail" ? 0 : 0.025);
 
     if(speed<0.012 || rpm<minimumCaptureRPM){
         return false;
@@ -4343,16 +4363,10 @@ function tryNewXRailEngagement(s){
             ? 0.68+physicalScore*0.20
             : 0.32+physicalScore*0.42;
 
-    const rpmCaptureFactor=newBattleClamp(
-        0.20+
-        0.80*Math.pow(rpm,1.65),
-        0.20,1
-    );
-
     const captureChance=newBattleClamp(
-        baseChance*rpmCaptureFactor+
-        (Math.random()-0.5)*0.06,
-        0.08,
+        baseChance+
+        (Math.random()-0.5)*0.08,
+        0.18,
         0.90
     );
 
@@ -4602,24 +4616,19 @@ function applyXRailConstraint(s,dt){
       RPM. It tapers as the rider approaches its rail-speed ceiling.
     */
     const maxRailSpeed=newBattleClamp(
-        0.055+
-        0.090*rpm+
-        0.030*affinity+
-        0.010*control,
-        0.060,
+        0.105+
+        0.055*rpm+
+        0.038*affinity+
+        0.012*control,
+        0.105,
         0.190
     );
 
-    /*
-      Rail acceleration remains a real boost, but its strength follows RPM.
-      A 50% RPM rider should not receive anything close to the 100% RPM
-      rail velocity simply because it has high rail affinity.
-    */
     const accelerator=
         (
-            0.00070+
-            0.00290*rpm+
-            0.00110*affinity
+            0.00180+
+            0.00215*rpm+
+            0.00155*affinity
         )*
         (
             0.76+
@@ -4644,9 +4653,9 @@ function applyXRailConstraint(s,dt){
     */
     const frictionRate=
         (
-            0.000012+
-            (1-control)*0.000010+
-            (1-rpm)*0.000018
+            0.000010+
+            (1-control)*0.000008+
+            (1-rpm)*0.000010
         )*
         dt*60;
 
@@ -5429,7 +5438,7 @@ function newPhysicsStep(s,dt){
 
             const lowRpmAttackSuppression =
                 attackBit
-                    ? newBattleClamp((rpm-0.42)/0.34,0,1)
+                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
                     : 1;
 
             const nonAttackMovementScale=
@@ -5438,7 +5447,7 @@ function newPhysicsStep(s,dt){
                     : (0.18+0.24*(1-centerAffinity));
 
             const lateGameMovementGate=
-                rpm<0.48 ? 0.26+0.74*(rpm/0.48) : 1.0;
+                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
             const lateralStrength=
                 (0.00010+movement*0.00030)*
                 Math.pow(rpm,1.42)*
@@ -6138,49 +6147,33 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.max(
-        0.00030+contactEnergy*0.0048,
+        0.00045+contactEnergy*0.0087,
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.22-cDef*0.040)
+        (0.33-cDef*0.055)*
+        (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
     );
     const cKnockback=Math.max(
-        0.00030+contactEnergy*0.0048,
+        0.00045+contactEnergy*0.0087,
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.22-pDef*0.040)
+        (0.33-pDef*0.055)*
+        (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
     );
-
-    /*
-      V80 IMPACT SCALE:
-      Keep the existing impact calculation and damage inputs intact, but
-      reduce ordinary physical displacement. Big hits can still be big;
-      routine contacts should not launch a Bey across the stadium.
-    */
-    const finalKnockbackScale=
-        newBattleClamp(
-            0.68+
-            heavyFactor*0.06+
-            directness*0.04,
-            0.66,0.78
-        );
-
-    const pKnockbackFinal=pKnockback*finalKnockbackScale;
-    const cKnockbackFinal=cKnockback*finalKnockbackScale;
-
-    c.vx+=nx*pKnockbackFinal; c.vy+=ny*pKnockbackFinal;
-    p.vx-=nx*cKnockbackFinal; p.vy-=ny*cKnockbackFinal;
-    const recoilP=pKnockbackFinal*(0.06+0.08*pDef);
-    const recoilC=cKnockbackFinal*(0.06+0.08*cDef);
+    c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
+    p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
+    const recoilP=pKnockback*(0.08+0.10*pDef);
+    const recoilC=cKnockback*(0.08+0.10*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
     // Glancing/recoil component. Stronger hits change trajectory more.
     const followThrough=
         0.00018+
-        effectiveImpact*0.00135+
-        Math.abs(tangentRelative)*0.00024+
+        effectiveImpact*0.0021+
+        Math.abs(tangentRelative)*0.00032+
         heavyFactor*0.00008;
 
     const pFollow=
