@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53poop · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -2546,7 +2546,7 @@ function newBattleLaunchState(side){
       upper rail rather than at the normal center-entry lane, then let the
       physical rail-capture test decide whether the Bey actually latches.
     */
-    const startX=isCenterLaunch
+    let startX=isCenterLaunch
         ? 0
         : isDropLaunch
             ? sideXSign*(0.105 + placementJitter*0.14)
@@ -2556,7 +2556,7 @@ function newBattleLaunchState(side){
 
     // Drop Launch stays high near the player's side of the X Exit.
     // X-Rail Launch starts slightly off the rail so it must approach it.
-    const startY=isCenterLaunch
+    let startY=isCenterLaunch
         ? 0
         : isDropLaunch
             ? -0.705 + placementJitter*0.06
