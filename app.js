@@ -1,4 +1,4 @@
-/* V105d - X-Rail Phases A embedded in app.js */
+/* V105d - X-Rail Phase A embedded in app.js */
 (function () {
     "use strict";
 
@@ -73,14 +73,18 @@
         );
 
         var baseChance = deliberate
-            ? 0.78 + score * 0.16
+            ? 0.90 + score * 0.08
             : attackBit
-                ? 0.34 + score * 0.48
+                ? 0.62 + score * 0.30
                 : recentKnockback
-                    ? 0.20 + score * 0.40
-                    : 0.16 + score * 0.42;
+                    ? 0.55 + score * 0.30
+                    : 0.48 + score * 0.34;
 
-        var chance = clamp(baseChance + (Math.random() - 0.5) * 0.06, 0.16, 0.94);
+        var chance = clamp(
+            baseChance + (Math.random() - 0.5) * 0.04,
+            0.45,
+            0.98
+        );
 
         if (Math.random() > chance) {
             return { capture:false, reason:"contact-not-caught", score:score };
@@ -4398,6 +4402,10 @@ function tryNewXRailEngagement(s){
         return false;
     }
 
+    if(!window.SpinWarsXRailEngine){
+        throw new Error("X-Rail Phase A engine failed to load");
+    }
+
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
@@ -4408,27 +4416,19 @@ function tryNewXRailEngagement(s){
     const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
     const movement=(bp.movement||60)/100;
-
-    /*
-      Keep the Attack-Bit classification identical to newPhysicsStep.
-      attackBit is local to each physics function; it cannot be referenced
-      across function scopes.
-    */
     const attackBit=movement>=0.80;
 
-    /*
-      X-Rail capture is intentionally easier than ordinary wall contact,
-      but it still requires the Bey to actually be moving along the rail.
+    const deliberateXRail=
+        s.launchPlan?.technique==="X-Rail";
 
-      Attack Bits have the highest capture affinity because their flat/
-      rush-style contact behavior is what naturally produces X-Rail riding.
-      Low-affinity stamina/defense Bits can still latch, but they need a
-      much cleaner approach.
+    /*
+      The contact band is intentionally a little wider than the old system,
+      but it is still a physical contact test rather than a magnetic pull.
     */
     const contactRadius=
-        0.064+
-        s.radius*0.40+
-        (s.launchPlan?.technique==="X-Rail" ? 0.016 : 0);
+        0.072+
+        s.radius*0.48+
+        (deliberateXRail ? 0.020 : 0);
 
     if(Math.sqrt(nearest.dist2)>contactRadius){
         return false;
@@ -4436,56 +4436,19 @@ function tryNewXRailEngagement(s){
 
     const direction=railDirection(s);
 
-    // Convert the stored tangent into the actual spin-correct rail tangent.
     const railTangent=newXRailTangentAtPoint(
         nearest,direction,nearest.x,nearest.y
     );
-    const tangentX=railTangent.x;
-    const tangentY=railTangent.y;
 
     const tangent=
-        s.vx*tangentX+
-        s.vy*tangentY;
-
-    // Low-RPM rail capture must be earned. High-affinity Attack Bits can
-    // still catch at lower RPM than controlled Bits, but Orb/Ball/Needle-
-    // style Bits should not casually lock onto the rail after they have
-    // already lost most of their movement energy.
-    const attackNaturalRailFloor=
-        attackBit ? 0.46 : 0;
-
-    const minimumCaptureRPM=
-        s.launchPlan?.technique==="X-Rail"
-            ? 0.27
-            : Math.max(
-                0.37+
-                (1-affinity)*0.18,
-                attackNaturalRailFloor
-            );
+        s.vx*railTangent.x+
+        s.vy*railTangent.y;
 
     /*
-      High RPM plus a clean rail angle can overcome modest translational
-      speed. RPM alone never captures; approach/tangent tests still decide.
+      Use local radial direction only to measure how the Bey approaches the
+      rail. It is NOT required to point directly at the rail.
     */
-    const highRPMRailApproach=
-        rpm>=0.72 &&
-        speed>=0.0085;
-
-    if(
-        (!highRPMRailApproach && speed<0.012) ||
-        rpm<minimumCaptureRPM
-    ){
-        return false;
-    }
-
-    /*
-      The approach component is measured against the local radial outward
-      direction. It does NOT have to be huge; a glancing rail contact is
-      exactly how many real captures happen.
-    */
-    const radialLen=
-        Math.hypot(nearest.x,nearest.y)||1;
-
+    const radialLen=Math.hypot(nearest.x,nearest.y)||1;
     const radialX=nearest.x/radialLen;
     const radialY=nearest.y/radialLen;
 
@@ -4497,197 +4460,76 @@ function tryNewXRailEngagement(s){
         Math.max(0,approach)/
         Math.max(speed,0.0001);
 
-    // A rail capture must be an actual approach into the rail. A Bey that is
-    // merely traveling parallel inside the contact band should skim past,
-    // not magnetically latch. Deliberate X-Rail launches get a small allowance.
-    const deliberateXRail=
-        s.launchPlan?.technique==="X-Rail";
+    const tangentRatio=
+        Math.max(0,tangent)/
+        Math.max(speed,0.0001);
 
     const recentKnockback=
         (performance.now()-(s.lastImpactAt||0))<=420 &&
         (s.lastKnockback||0)>=0.010;
 
-    const physicsDrivenRailException=
-        !deliberateXRail &&
-        !attackBit &&
-        recentKnockback;
-
-    const minimumApproachRatio=
-        deliberateXRail
-            ? (0.10+0.08*(1-affinity))
-            : physicsDrivenRailException
-                ? (0.22+0.14*(1-affinity))
-                : (0.25+0.16*(1-affinity));
-
-    if(approachRatio<minimumApproachRatio){
-        return false;
-    }
-
-    const tangentRatio=
-        Math.max(0,tangent)/
-        Math.max(speed,0.0001);
-
     /*
-      Capture thresholds scale with the actual Bit.
-
-      High-affinity Attack Bits:
-        ~0.22 tangent ratio is enough.
-
-      Controlled Bits:
-        ~0.38.
-
-      Very poor rail Bits:
-        ~0.52.
-
-      A deliberate X-Rail launch receives a lower threshold because the
-      player explicitly chose the rail-seeking launch.
+      Phase A.1:
+      A good tangential glancing hit can catch the rail. We no longer require
+      the Bey to be strongly travelling into the rail.
     */
-    const minimumTangentRatio=
-        deliberateXRail
-            ? 0.22+0.10*(1-affinity)
-            : physicsDrivenRailException
-                ? 0.58-
-                  affinity*0.12-
-                  movement*0.02
-                : 0.68-
-                  affinity*0.10-
-                  movement*0.02;
+    const decision=window.SpinWarsXRailEngine.capture({
+        speed:speed,
+        rpm:rpm,
+        approachRatio:approachRatio,
+        tangentRatio:tangentRatio,
+        tangentSpeed:tangent,
+        affinity:affinity,
+        stability:stability,
+        deliberate:deliberateXRail,
+        attackBit:attackBit,
+        recentKnockback:recentKnockback
+    });
 
-    const minimumTangentSpeed=
-        deliberateXRail
-            ? 0.0065+0.0020*(1-affinity)
-            : physicsDrivenRailException
-                ? 0.0100-affinity*0.0010
-                : 0.0115-affinity*0.0010;
-
-    if(
-        tangent<minimumTangentSpeed ||
-        tangentRatio<minimumTangentRatio
-    ){
+    if(!decision.capture){
         return false;
     }
 
     /*
-      Approach quality rewards a real rail approach without requiring the
-      Bey to slam directly into the rail. Very shallow glances can still
-      capture if the Bit has strong X-Rail affinity.
-    */
-    const approachQuality=newBattleClamp(
-        approachRatio/0.42,
-        0,1
-    );
-
-    const tangentQuality=newBattleClamp(
-        (tangentRatio-minimumTangentRatio)/
-        Math.max(0.01,1-minimumTangentRatio),
-        0,1
-    );
-
-    const speedQuality=newBattleClamp(
-        (speed-0.012)/0.050,
-        0,1
-    );
-
-    const highRPMAlignmentBonus=
-        newBattleClamp((rpm-0.70)/0.30,0,1)*
-        newBattleClamp(tangentRatio/0.72,0,1)*
-        newBattleClamp(approachRatio/0.42,0,1);
-
-    const physicalScore=newBattleClamp(
-        affinity*0.30+
-        tangentQuality*0.27+
-        approachQuality*0.16+
-        speedQuality*0.08+
-        rpm*0.08+
-        stability*0.05+
-        highRPMAlignmentBonus*0.06,
-        0,1
-    );
-
-    /*
-      Keep RNG, but do not let RNG erase a physically excellent deliberate
-      X-Rail launch. The variance is small and represents imperfect contact.
-    */
-    const baseChance=
-        deliberateXRail
-            ? 0.68+physicalScore*0.20
-            : attackBit
-                ? 0.26+physicalScore*0.38
-                : physicsDrivenRailException
-                    ? 0.10+physicalScore*0.28
-                    : 0.05+physicalScore*0.18;
-
-    const captureChance=newBattleClamp(
-        baseChance+
-        (Math.random()-0.5)*0.08,
-        0.18,
-        0.90
-    );
-
-    if(Math.random()>captureChance){
-        return false;
-    }
-
-    /*
-      Remove only the outward component. Tangential momentum is preserved.
-      This is the actual physical "catch" rather than a teleport to a canned
-      rail speed.
+      Only remove a small amount of radial velocity. The old correction could
+      erase too much of a shallow catch's useful tangential momentum.
     */
     if(approach>0){
-        s.vx-=radialX*approach;
-        s.vy-=radialY*approach;
+        const radialCorrection=Math.min(approach,0.018);
+        s.vx-=radialX*radialCorrection;
+        s.vy-=radialY*radialCorrection;
     }
 
     const tangentAfter=
-        s.vx*tangentX+
-        s.vy*tangentY;
-
-    /*
-      Initial X-Rail acceleration. Attack Bits with high affinity receive
-      the strongest first kick; controlled Bits receive less.
-    */
-    const initialBoost=
-        0.010+
-        affinity*0.014+
-        rpm*0.008+
-        physicalScore*0.010;
+        s.vx*railTangent.x+
+        s.vy*railTangent.y;
 
     const capturedSpeed=
-        Math.max(
-            tangentAfter,
-            0.012
-        )+
-        initialBoost;
+        Math.max(tangentAfter,0.012)+
+        decision.initialBoost;
 
-    s.vx=tangentX*capturedSpeed;
-    s.vy=tangentY*capturedSpeed;
+    s.vx=railTangent.x*capturedSpeed;
+    s.vy=railTangent.y*capturedSpeed;
 
     s.railEngaged=true;
     s.railDirection=direction;
-    s.railDirectionName=direction>0 ? "RIGHT_SPIN_CCW_PATH" : "LEFT_SPIN_CW_PATH";
-    s.railGrip=newBattleClamp(
-        0.66+
-        affinity*0.18+
-        physicalScore*0.16,
-        0,1
-    );
-    s.railContactPoint={
-        x:nearest.x,
-        y:nearest.y
-    };
+    s.railDirectionName=
+        direction>0
+            ? "RIGHT_SPIN_CCW_PATH"
+            : "LEFT_SPIN_CW_PATH";
+
+    s.railGrip=decision.grip;
+    s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
     s.railTravelDistance=0;
     s.railRideTime=0;
     s.railSpeed=capturedSpeed;
-    s.railBoost=initialBoost;
+    s.railBoost=decision.initialBoost;
     s.railUses=(s.railUses||0)+1;
     s.railChainCount=(s.railChainCount||0)+1;
 
-    /*
-      Put the Bey just outside the rail surface. This prevents the first
-      constrained frame from immediately treating the Bey as penetrating.
-    */
     const separation=0.006+s.radius*0.045;
+
     s.x=nearest.x+radialX*separation;
     s.y=nearest.y+radialY*separation;
 
