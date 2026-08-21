@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V5ssssssa3 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -5678,6 +5678,23 @@ function newPhysicsStep(s,dt){
         }
 
         if(!attackBit && rpm>0.01){
+
+            /*
+              A fresh collision owns the trajectory first. As the impact state
+              decays, the Bit's normal orbital physics gradually takes over.
+            */
+            s.impactMomentumState=
+                newBattleClamp(
+                    (s.impactMomentumState||0)-
+                    dt*2.75,
+                    0,1
+                );
+
+            const orbitSteeringAvailability=
+                1-
+                0.88*
+                s.impactMomentumState;
+
             const orbitRadius=
                 0.20+
                 (1-centerAffinity)*0.24+
@@ -5763,6 +5780,7 @@ function newPhysicsStep(s,dt){
                     tangentialVelocity
                 )*
                 tangentResponse*
+                orbitSteeringAvailability*
                 dt*60;
 
             s.vx+=tangentX*tangentCorrection;
@@ -5789,8 +5807,16 @@ function newPhysicsStep(s,dt){
                 )*
                 (0.58+0.42*rpm);
 
-            s.vx-=radialX*centripetal*dt*60;
-            s.vy-=radialY*centripetal*dt*60;
+            s.vx-=
+                radialX*
+                centripetal*
+                orbitSteeringAvailability*
+                dt*60;
+            s.vy-=
+                radialY*
+                centripetal*
+                orbitSteeringAvailability*
+                dt*60;
 
             /*
               Weak radius spring. It prevents the Bey from slowly drifting
@@ -5808,8 +5834,16 @@ function newPhysicsStep(s,dt){
                 (0.55+0.45*rpm)*
                 (0.70+0.30*s.movementEnergy);
 
-            s.vx+=radialX*radiusSpring*dt*60;
-            s.vy+=radialY*radiusSpring*dt*60;
+            s.vx+=
+                radialX*
+                radiusSpring*
+                orbitSteeringAvailability*
+                dt*60;
+            s.vy+=
+                radialY*
+                radiusSpring*
+                orbitSteeringAvailability*
+                dt*60;
 
             /*
               Low RPM contracts the orbit smoothly instead of switching to
@@ -6355,7 +6389,10 @@ function newPhysicsCollision(dt){
         pForce*pBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.33-cDef*0.055)*
+        (
+            0.62+
+            (1-cDef)*0.16
+        )*
         (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
     );
     const cKnockback=Math.max(
@@ -6363,11 +6400,53 @@ function newPhysicsCollision(dt){
         cForce*cBitKnockbackMultiplier*
         nonAttackImpactMultiplier*
         attackVsAttackImpactMultiplier*
-        (0.33-pDef*0.055)*
+        (
+            0.62+
+            (1-pDef)*0.16
+        )*
         (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
+
+    /*
+      PHASE A — IMPACT MOMENTUM OWNERSHIP
+      -----------------------------------
+      The collision impulse is now allowed to control the trajectory for a
+      short physical recovery window. The non-Attack orbit model must not
+      immediately overwrite a genuine knockback event with its preferred
+      stadium-centered curvature.
+
+      This is not a teleport, scripted path, or finish override. It is simply
+      a temporary reduction in orbital steering after a real collision.
+    */
+    const pImpactMomentumState=
+        newBattleClamp(
+            Math.max(
+                pKnockback/0.0085,
+                effectiveImpact/0.026
+            ),
+            0,1
+        );
+
+    const cImpactMomentumState=
+        newBattleClamp(
+            Math.max(
+                cKnockback/0.0085,
+                effectiveImpact/0.026
+            ),
+            0,1
+        );
+
+    p.impactMomentumState=Math.max(
+        p.impactMomentumState||0,
+        pImpactMomentumState
+    );
+    c.impactMomentumState=Math.max(
+        c.impactMomentumState||0,
+        cImpactMomentumState
+    );
+
     const recoilP=pKnockback*(0.08+0.10*pDef);
     const recoilC=cKnockback*(0.08+0.10*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
