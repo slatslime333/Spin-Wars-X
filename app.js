@@ -5626,36 +5626,63 @@ function newPhysicsStep(s,dt){
         const isAttackMovement =
             movement>=0.80;
 
+        /*
+          V99.3 — STRONGER, MORE VISIBLE RPM TIGHTENING
+          -----------------------------------------------
+          V99.2 was directionally correct, but the radius difference was not
+          large enough to be obvious during gameplay.
+
+          We now deliberately use different contraction profiles:
+
+          ATTACK:
+            100% = full wide orbit
+             90% = clearly tighter
+             80% = substantially tighter, but still wide/aggressive
+             70% = tight aggressive orbit
+             60% = considerably tighter again
+
+          NON-ATTACK:
+            100% = normal controlled orbit
+             90% = noticeably tighter
+             80% = strongly centered
+             70% = very close to center
+             60% = essentially stable-center movement
+
+          The curve is still continuous. There is no hard RPM switch.
+        */
         const rpmTightenStart =
             isAttackMovement
-                ? 0.72   // Attack: retain aggression a little longer.
-                : 0.84;  // Non-Attack: stabilize much earlier.
+                ? 0.92   // Attack begins visibly tightening earlier.
+                : 0.96;  // Non-Attack begins tightening almost immediately.
 
         const rpmTightenFloor =
             isAttackMovement
-                ? 0.42   // Still a meaningful wide/aggressive orbit.
-                : 0.30;  // Non-Attack settles much closer to center.
+                ? 0.28   // Attack keeps some aggressive width at low RPM.
+                : 0.12;  // Non-Attack becomes strongly center-stable.
 
-        const rpmRadiusT=
+        const rpmTightenPower =
+            isAttackMovement
+                ? 1.55
+                : 1.30;
+
+        const rpmTightenT=
             newBattleClamp(
-                (rpm-rpmTightenStart)/
-                (1-rpmTightenStart),
+                (rpm-rpmTightenFloor)/
+                (1-rpmTightenFloor),
                 0,
                 1
             );
 
         /*
-          Smoothstep gives us:
-            high RPM = full natural radius
-            threshold = rapid but continuous tightening
-            low RPM = Bit-specific tight orbit
+          Unlike V99.2, this curve does not wait for a late threshold.
+          RPM itself continuously controls how much of the Bit's natural
+          orbit remains.
         */
         const rpmRadiusCurve=
-            rpmRadiusT*rpmRadiusT*(3-2*rpmRadiusT);
+            Math.pow(rpmTightenT,rpmTightenPower);
 
         const rpmRadiusFactor=
-            rpmTightenFloor+
-            (1-rpmTightenFloor)*rpmRadiusCurve;
+            rpmRadiusCurve;
 
         const preferredRadius=
             newBattleClamp(
