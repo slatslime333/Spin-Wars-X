@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vswagmun53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4266,7 +4266,6 @@ function tryNewXRailEngagement(s){
     const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
     const movement=(bp.movement||60)/100;
-    const attackBit=movement>=0.80;
 
     /*
       Keep the Attack-Bit classification identical to newPhysicsStep.
