@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vswahg53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4132,14 +4132,25 @@ function enforcePostImpactSpinDirection(s){
     if(rpm<=0.10) return;
 
     const radius=Math.hypot(s.x,s.y);
-    if(radius<0.035) return;
+    if(radius<0.018) return;
 
     const tangent=getSpinOrbitTangent(s.x,s.y,s.spinDirection);
     const tangential=s.vx*tangent.x+s.vy*tangent.y;
 
     if(tangential<0){
+        /*
+          Preserve the radial impact impulse, but do not allow the collision
+          to establish an opposite-spin orbital component.
+        */
         s.vx-=tangent.x*tangential;
         s.vy-=tangent.y*tangential;
+
+        /*
+          One short post-impact guard window handles the next physics frame.
+          This is not a second orbit controller: it only removes an
+          opposite-direction tangential component created by the impact.
+        */
+        s.postImpactDirectionLock=0.42;
     }
 
     s.lastOrbitDirection=s.spinDirection===1 ? "CCW" : "CW";
@@ -4414,9 +4425,11 @@ function tryNewXRailEngagement(s){
     const minimumTangentSpeed=
         deliberateXRail
             ? 0.0065+0.0020*(1-affinity)
-            : physicsDrivenRailException
-                ? 0.0100-affinity*0.0010
-                : 0.0115-affinity*0.0010;
+            : highRPMRailApproach
+                ? 0.0080-affinity*0.0006
+                : physicsDrivenRailException
+                    ? 0.0100-affinity*0.0010
+                    : 0.0115-affinity*0.0010;
 
     if(
         tangent<minimumTangentSpeed ||
@@ -4470,7 +4483,9 @@ function tryNewXRailEngagement(s){
         deliberateXRail
             ? 0.68+physicalScore*0.20
             : attackBit
-                ? 0.26+physicalScore*0.38
+                ? 0.26+
+                  physicalScore*0.38+
+                  highRPMAlignmentBonus*0.10
                 : physicsDrivenRailException
                     ? 0.10+physicalScore*0.28
                     : 0.05+physicalScore*0.18;
@@ -4786,12 +4801,17 @@ function applyXRailConstraint(s,dt){
     */
     const lowEnergyRPMThreshold=
         attackBit
-            ? 0.34
+            ? 0.36
             : 0.24+
               (1-affinity)*0.16;
 
+    const lowRpmRailRelease=
+        rpm<lowEnergyRPMThreshold &&
+        (s.railRideTime||0)>0.18;
+
     if(
         (railSpeed<0.011 && rpm<lowEnergyRPMThreshold) ||
+        lowRpmRailRelease ||
         rpm<0.14
     ){
         newXRailRelease(
@@ -4906,11 +4926,20 @@ function applyXRailConstraint(s,dt){
       Riding the X-Rail costs spin, but the cost is modest enough that a
       healthy Attack Bit can actually complete a rail ride.
     */
+    const lowRpmRailDrain=
+        1+
+        newBattleClamp(
+            (0.55-rpm)/0.55,
+            0,1
+        )*
+        1.40;
+
     const railDrain=
         (
-            0.000105+
-            railSpeed*0.000125
+            0.00032+
+            railSpeed*0.00026
         )*
+        lowRpmRailDrain*
         (bp.spinDrain||1)/
         Math.max(
             0.72,
@@ -5054,6 +5083,12 @@ function newPhysicsStep(s,dt){
         const bp = bitPhysics(s);
 
         const rpm = newBattleClamp(s.rpm,0,1);
+
+        if(s.postImpactDirectionLock>0){
+            s.postImpactDirectionLock=
+                Math.max(0,s.postImpactDirectionLock-dt);
+        }
+
         const mobility = getBattleStat(s,"mobility");
         const balance = getBattleStat(s,"balance");
         const stamina = getBattleStat(s,"stamina");
@@ -5576,7 +5611,21 @@ function newPhysicsStep(s,dt){
                     : (0.10+0.14*(1-centerAffinity));
 
             const lateGameMovementGate=
-                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
+                attackBit
+                    ? (
+                        rpm<0.52
+                            ? 0.22+
+                              0.78*Math.pow(
+                                  rpm/0.52,
+                                  1.65
+                              )
+                            : 1.0
+                      )
+                    : (
+                        rpm<0.48
+                            ? 0.34+0.66*(rpm/0.48)
+                            : 1.0
+                      );
             const lateralStrength=
                 (0.00010+movement*0.00030)*
                 Math.pow(rpm,1.42)*
@@ -5808,7 +5857,15 @@ function newPhysicsStep(s,dt){
 
                 const preferredActivity=
                     attackBit
-                        ? 0.72
+                        ? (
+                            0.72*
+                            (
+                                rpm<0.50
+                                    ? 0.42+
+                                      0.58*Math.pow(rpm/0.50,1.25)
+                                    : 1.0
+                            )
+                          )
                         : newBattleClamp(
                             0.20+
                             (1-centerAffinity)*0.62,
@@ -5847,6 +5904,36 @@ function newPhysicsStep(s,dt){
                     s.vy+=
                         lowOrbitTangent.y*
                         tangentCorrection;
+                }
+            }
+        }
+
+        /*
+          POST-IMPACT DIRECTION INVARIANT
+          --------------------------------
+          A hard hit may temporarily destroy an orbit, but it must not leave
+          a right-spin Bey with a sustained clockwise tangential component.
+          Only the short impact lock can use this guard; normal movement is
+          still entirely force/velocity driven.
+        */
+        if(
+            s.postImpactDirectionLock>0 &&
+            rpm>0.10
+        ){
+            const guardRadius=Math.hypot(s.x,s.y);
+
+            if(guardRadius>0.018){
+                const guardTangent=getSpinOrbitTangent(
+                    s.x,s.y,s.spinDirection
+                );
+
+                const guardTangential=
+                    s.vx*guardTangent.x+
+                    s.vy*guardTangent.y;
+
+                if(guardTangential<0){
+                    s.vx-=guardTangent.x*guardTangential;
+                    s.vy-=guardTangent.y*guardTangential;
                 }
             }
         }
