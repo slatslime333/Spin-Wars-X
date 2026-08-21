@@ -5058,10 +5058,11 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
 
 function newPhysicsStep(s,dt){
         /*
-          V101.2 X-RAIL ENGINE BRIDGE
-          The new engine owns rail engagement and rail riding while enabled.
+          V101 X-RAIL ENGINE BRIDGE
+          New X-Rail engine owns rail engagement/riding while enabled.
         */
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
+        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE &&
+           window.SpinWarsXRailEngine){
             const xrailAPI={
                 nearest:newXRailNearest,
                 geometry:getNewXRailGeometry,
@@ -5071,12 +5072,10 @@ function newPhysicsStep(s,dt){
             };
 
             if(s.railEngaged){
-                if(window.SpinWarsXRailEngine &&
-                   window.SpinWarsXRailEngine.ride(s,xrailAPI,dt)){
+                if(window.SpinWarsXRailEngine.ride(s,xrailAPI,dt)){
                     return;
                 }
-            }else if(window.SpinWarsXRailEngine &&
-                     window.SpinWarsXRailEngine.tryEngage(s,xrailAPI,dt)){
+            }else if(window.SpinWarsXRailEngine.tryEngage(s,xrailAPI,dt)){
                 window.SpinWarsXRailEngine.ride(s,xrailAPI,dt);
                 return;
             }
