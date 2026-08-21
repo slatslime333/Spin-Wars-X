@@ -1,27 +1,193 @@
+/* =========================================================
+   SPIN WAR X — POLISHED UI SYSTEM
+   Built only from the user's current app.js + style.css upload.
+========================================================= */
 
-:root{--bg:#080b10;--panel:#121821;--panel2:#171e28;--line:rgba(255,255,255,.09);--text:#f4f7fb;--muted:#8995a6;--blue:#4aa9ff;--red:#ff5050;--gold:#f0bd35;--green:#42d98a}
+:root{
+    --bg:#080b10;--bg2:#0d121a;--panel:#121821;--panel2:#171e28;
+    --line:rgba(255,255,255,.09);--lineHi:rgba(255,255,255,.17);
+    --text:#f4f7fb;--muted:#8995a6;--mutedHi:#b8c1ce;
+    --blue:#4aa9ff;--red:#ff5050;--gold:#f0bd35;--green:#42d98a;
+    --radius:9px;--shadow:0 18px 42px rgba(0,0,0,.28)
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{width:100%;min-height:100%;background:var(--bg)}
-body{color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;overflow-x:hidden}
-button,input,select,textarea{font:inherit}button{cursor:pointer;color:inherit}
+body{
+ color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+ overflow-x:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility
+}
+button,input,select,textarea{font:inherit}button{-webkit-tap-highlight-color:transparent}
+button:disabled{opacity:.38;cursor:not-allowed!important;transform:none!important}
 #app{width:100%;min-height:100vh}
-.background{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 50% -18%,rgba(63,91,139,.25),transparent 46%),linear-gradient(180deg,#090c12,#0a0e14 55%,#080b10)}
-.menu{width:min(100%,760px);margin:0 auto;padding:18px 14px 28px;display:flex;flex-direction:column;gap:12px}
-.menu-card{width:100%;padding:16px;background:linear-gradient(180deg,rgba(20,26,35,.97),rgba(12,16,23,.98));border:1px solid var(--line);border-radius:9px;box-shadow:0 18px 42px rgba(0,0,0,.28);overflow:hidden}
-.menu-card h1{font-size:20px;line-height:1.1}.menu-card h2{font-size:18px}.menu-card p{font-size:12px;line-height:1.4;color:#d2d8e1}
-.logo{text-align:center;margin:12px 0}.logo h1{font-size:30px}.logo p{font-size:10px;color:var(--muted)}
-.menu-btn,.back-btn{position:relative;width:100%;min-height:42px;padding:10px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:#202733;color:#fff;font-size:12px;font-weight:800}
-.menu-btn{background:#202733}.bronze{background:linear-gradient(180deg,#8f5b3d,#673d29)}.silver{background:linear-gradient(180deg,#657284,#4c5868)}.gold{background:linear-gradient(180deg,#f0c43f,#bd8c17);color:#101217}.custom{background:linear-gradient(180deg,#347fc9,#23589b)}
-.blade-card{width:100%;min-height:76px;padding:11px 12px;background:linear-gradient(180deg,#1a222d,#141a23);border:1px solid var(--line);border-radius:9px;cursor:pointer;color:#fff}
-.loading{height:7px;margin:4px 0 7px;background:#1a202a;border-radius:99px;overflow:hidden}.loading-fill{height:100%;background:#378df0}
-.stadium{position:relative;width:min(100%,520px);aspect-ratio:1;margin:0 auto}.stadium-svg{display:block;width:100%;height:100%;overflow:visible}
-.rail-track{fill:none;stroke:#535860;stroke-width:30;stroke-linecap:round;stroke-linejoin:round}.rail-exit-line{display:none}
-.x-exit-gate{fill:#ffd43b;stroke:#fff0a5;stroke-width:3}.battleOuter{fill:#44484e;stroke:#858990;stroke-width:8}.battleInner{fill:#11151b}.overZone{fill:#08090b;stroke:#70757c;stroke-width:4}.xtremeZone{fill:#cf2429}.xExit{fill:#ffd43d}
-.stadium-zone-label{fill:#cbd1da;font-size:12px;font-weight:800;letter-spacing:1px}.xtreme-label{fill:#fff}
-.bey{position:absolute;width:20px;height:20px;border-radius:50%;z-index:8}.player{background:var(--blue);box-shadow:0 0 12px rgba(74,169,255,.72)}.cpu{background:var(--red);box-shadow:0 0 12px rgba(255,80,80,.68)}
-.stat-row{margin:5px 0}.stat-label{font-size:9px}.stat-bar{height:5px;background:#1a2029;border-radius:99px;overflow:hidden}.stat-fill{height:100%;background:#42d98a}
-.tactical-choice-btn{display:flex;align-items:center;gap:10px;min-height:54px;text-align:left;margin-top:6px;padding:8px 10px;background:#202733;border:1px solid rgba(255,255,255,.1);border-radius:8px}
-.decision-number{width:25px;height:25px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.22);border-radius:6px}.decision-copy{display:flex;flex-direction:column;gap:3px}
+.background{
+ position:fixed;inset:0;pointer-events:none;z-index:-1;
+ background:radial-gradient(ellipse at 50% -18%,rgba(63,91,139,.25),transparent 46%),
+ radial-gradient(ellipse at 50% 110%,rgba(100,57,30,.12),transparent 42%),
+ linear-gradient(180deg,#090c12,#0a0e14 55%,#080b10)
+}
+.background:after{
+ content:"";position:absolute;inset:0;opacity:.18;
+ background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+ background-size:36px 36px;mask-image:linear-gradient(to bottom,transparent,#000 18%,#000 82%,transparent)
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* SHELL */
+.menu{
+ width:min(100%,760px)!important;max-width:760px!important;margin:0 auto!important;
+ padding:18px 14px 28px!important;display:flex;flex-direction:column;gap:12px!important;
+ animation:fadeIn .2s ease-out
+}
+.menu-card{
+ width:100%!important;max-width:none!important;padding:16px!important;
+ background:linear-gradient(180deg,rgba(20,26,35,.97),rgba(12,16,23,.98))!important;
+ border:1px solid var(--line)!important;border-radius:var(--radius)!important;
+ box-shadow:var(--shadow)!important;overflow:hidden;gap:9px!important
+}
+.menu-card h1{font-size:20px!important;line-height:1.05;font-weight:900;letter-spacing:.3px}
+.menu-card h2{font-size:19px!important;line-height:1.1;font-weight:850}
+.menu-card h3{font-size:13px!important;color:var(--mutedHi);letter-spacing:.2px}
+.menu-card p{font-size:12px!important;line-height:1.4!important;color:#d2d8e1}
+.menu-card hr{border:0!important;border-top:1px solid var(--line)!important;margin:3px 0!important}
+.logo{text-align:center;margin:12px 0 8px!important}
+.logo-icon{font-size:30px!important;line-height:1}
+.logo h1{margin:5px 0 3px!important;font-size:30px!important;letter-spacing:1.3px;font-weight:950}
+.logo p{font-size:10px!important;color:var(--muted)}
+.section-title{font-size:11px!important;color:var(--mutedHi);letter-spacing:.8px;text-transform:uppercase}
+
+/* BUTTONS */
+.menu-btn,.back-btn{
+ position:relative;width:100%;min-height:42px!important;padding:10px 13px!important;
+ border-radius:8px!important;border:1px solid rgba(255,255,255,.10)!important;
+ color:#fff;font-size:12px!important;font-weight:850!important;letter-spacing:.15px;cursor:pointer;
+ transition:transform .12s ease,filter .15s ease,border-color .15s ease,background .15s ease;
+ box-shadow:0 5px 16px rgba(0,0,0,.16)
+}
+.menu-btn:after{
+ content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:8px 0 0 8px;background:rgba(255,255,255,.16)
+}
+.menu-btn:hover,.back-btn:hover{filter:brightness(1.07);transform:translateY(-1px);border-color:var(--lineHi)!important}
+.menu-btn:active,.back-btn:active{transform:scale(.987)}
+.back-btn{background:#202733!important;color:#e9edf4!important}
+.bronze{background:linear-gradient(180deg,#8f5b3d,#673d29)!important}
+.silver{background:linear-gradient(180deg,#657284,#4c5868)!important}
+.gold{background:linear-gradient(180deg,#f0c43f,#bd8c17)!important;color:#101217!important;border-color:rgba(255,220,100,.36)!important}
+.custom{background:linear-gradient(180deg,#347fc9,#23589b)!important}
 footer{font-size:.68rem;color:#687486}
-button:disabled{opacity:.38;cursor:not-allowed}
-@media(max-width:760px){.menu{padding:10px 9px 18px}.menu-card{padding:11px}.logo h1{font-size:25px}.stadium{width:min(100%,410px)}}
+
+/* SELECTION */
+.loading{height:7px!important;margin:4px 0 7px!important;background:#1a202a;border-radius:99px;overflow:hidden}
+.loading-fill{height:100%;background:linear-gradient(90deg,#378df0,#75c5ff)}
+.blade-card{
+ width:100%;min-height:76px;padding:11px 12px!important;
+ background:linear-gradient(180deg,#1a222d,#141a23)!important;border:1px solid var(--line)!important;
+ border-radius:9px!important;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;
+ gap:9px;align-items:center;transition:transform .12s ease,border-color .12s ease,background .12s ease
+}
+.blade-card:hover{transform:translateY(-1px)!important;border-color:rgba(74,169,255,.55)!important;background:linear-gradient(180deg,#1d2733,#151c26)!important;box-shadow:0 9px 20px rgba(0,0,0,.22)}
+.blade-card strong{font-size:14px!important}.blade-card hr{border-top:1px solid var(--line)!important;margin:5px 0!important}
+.blade-card div{font-size:10px!important;line-height:1.35!important;color:#aeb8c6}
+.stat-row{margin:5px 0!important}.stat-label{font-size:9px!important;margin-bottom:3px}
+.stat-bar{height:5px!important;background:#1a2029;border-radius:99px;overflow:hidden}
+.stat-fill{height:100%;background:linear-gradient(90deg,#3ecb7c,#d9bd43,#dc5d5d)}
+
+/* STADIUM */
+.stadium{position:relative;width:min(100%,520px)!important;max-width:520px!important;aspect-ratio:1/1;margin:0 auto!important}
+.stadium-svg{display:block;width:100%;height:100%;overflow:visible}
+.rail-track{fill:none;stroke:#535860;stroke-width:30;stroke-linecap:round;stroke-linejoin:round}
+.rail-exit-line{display:none}
+.x-exit-gate{fill:#ffd43b;stroke:#fff0a5;stroke-width:3;filter:drop-shadow(0 3px 7px rgba(255,212,59,.22))}
+.battleOuter{fill:#44484e;stroke:#858990;stroke-width:8}.battleInner{fill:#11151b}
+.overZone{fill:#08090b;stroke:#70757c;stroke-width:4}.xtremeZone{fill:#cf2429}.xExit{fill:#ffd43d}
+.stadium-zone-label{fill:#cbd1da;font-size:12px;font-weight:800;letter-spacing:1px;opacity:.65}
+.xtreme-label{fill:#fff;opacity:.9}
+.bey{position:absolute;width:20px;height:20px;border-radius:50%;transition:.35s;z-index:8}
+.player{background:var(--blue);box-shadow:0 0 12px rgba(74,169,255,.72)}
+.cpu{background:var(--red);box-shadow:0 0 12px rgba(255,80,80,.68)}
+
+/* BATTLE */
+main.menu:has(#replaySequence),main.menu:has(#continueBattle),main.menu:has(.tactical-choice-btn){
+ width:min(100%,1180px)!important;max-width:1180px!important;padding:10px 12px 18px!important
+}
+main.menu:has(#replaySequence) .menu-card,main.menu:has(#continueBattle) .menu-card,main.menu:has(.tactical-choice-btn) .menu-card{
+ width:100%!important;max-width:none!important;padding:12px!important
+}
+main.menu:has(#replaySequence) .menu-card{
+ display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.7fr);grid-template-rows:auto auto 1fr auto;
+ column-gap:14px;align-items:start
+}
+main.menu:has(#replaySequence) .menu-card>.stadium{
+ grid-column:1;grid-row:3/span 3;width:min(100%,620px)!important;justify-self:center
+}
+main.menu:has(#replaySequence) .menu-card>div[style*="COMMENTARY"]{
+ grid-column:2;margin:0!important;padding:10px!important;border:1px solid var(--line)!important;
+ border-radius:8px!important;background:#151b24!important
+}
+main.menu:has(#replaySequence) .menu-card>div[style*="COMMENTARY"] div:last-child{font-size:11px!important;line-height:1.45!important}
+main.menu:has(#replaySequence) .menu-card>div[style*="grid-template-columns"]{grid-column:2;gap:6px!important;margin:6px 0!important}
+main.menu:has(#replaySequence) .menu-card>div[style*="overflow:hidden"]{grid-column:2;overflow-x:auto!important;scrollbar-width:none}
+main.menu:has(#replaySequence) .menu-card>div[style*="overflow:hidden"]::-webkit-scrollbar{display:none}
+main.menu:has(#replaySequence) .menu-card>div[style*="justify-content:space-between"]{grid-column:2}
+main.menu:has(#replaySequence) .menu-card>div[style*="margin-top:7px"]{grid-column:2}
+main.menu:has(#replaySequence) .menu-card>div:first-child,main.menu:has(#replaySequence) .menu-card>div:nth-child(2){grid-column:1/-1}
+main.menu:has(#replaySequence) #replaySequence{min-width:150px;min-height:38px!important}
+main.menu:has(#replaySequence) .menu-card>div[style*="grid-template-columns"]>div{background:#171e28!important;border:1px solid var(--line)!important;border-radius:8px!important}
+main.menu:has(#replaySequence) .menu-card>div[style*="margin-top:7px"]{color:#aeb8c6!important}
+
+/* TACTICAL */
+main.menu:has(.tactical-choice-btn) .menu-card{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.7fr);column-gap:16px;align-items:start}
+main.menu:has(.tactical-choice-btn) .menu-card>h1,main.menu:has(.tactical-choice-btn) .menu-card>hr,main.menu:has(.tactical-choice-btn) .menu-card>.stadium{grid-column:1}
+main.menu:has(.tactical-choice-btn) .battle-decision{
+ grid-column:2;grid-row:1/span 5;padding:12px!important;border:1px solid var(--line)!important;
+ border-radius:9px!important;background:#151b24!important
+}
+main.menu:has(.tactical-choice-btn) .battle-decision h2{font-size:18px!important;text-align:left!important}
+main.menu:has(.tactical-choice-btn) .battle-decision p{
+ padding:9px!important;border-left:2px solid rgba(240,189,53,.65);background:rgba(240,189,53,.04);border-radius:0 7px 7px 0;white-space:pre-line
+}
+.tactical-choice-btn{display:flex!important;align-items:center;gap:10px;min-height:54px!important;text-align:left!important;margin-top:6px!important;padding:8px 10px!important}
+.decision-number{width:25px;height:25px;display:grid;place-items:center;flex:0 0 25px;border:1px solid rgba(255,255,255,.22);border-radius:6px;font-size:11px}
+.decision-copy{display:flex;flex-direction:column;gap:3px}.decision-copy strong{font-size:12px}.decision-copy small{font-size:8px;opacity:.65;letter-spacing:.4px}
+
+/* LAUNCH */
+main.menu:has(#flatLaunch),main.menu:has(#centerLaunch),main.menu:has(#qualityBtn),main.menu:has(#skipButton){
+ width:min(100%,820px)!important;max-width:820px!important
+}
+main.menu:has(#flatLaunch) .menu-card,main.menu:has(#centerLaunch) .menu-card,main.menu:has(#qualityBtn) .menu-card{max-width:820px!important}
+main.menu:has(#flatLaunch) .stadium,main.menu:has(#centerLaunch) .stadium,main.menu:has(#qualityBtn) .stadium{width:min(100%,470px)!important}
+
+/* PART PAGES */
+main.menu:has(.blade-card) .menu-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px!important}
+main.menu:has(.blade-card) .menu-card>h1,main.menu:has(.blade-card) .menu-card>h2,main.menu:has(.blade-card) .menu-card>p,
+main.menu:has(.blade-card) .menu-card>hr,main.menu:has(.blade-card) .menu-card>.loading,
+main.menu:has(.blade-card) .menu-card>.back-btn,main.menu:has(.blade-card) .menu-card>button:not(.blade-card){grid-column:1/-1}
+
+/* ACCESSIBILITY */
+button:focus-visible{outline:2px solid #8bd1ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* RESPONSIVE */
+@media(max-width:760px){
+ .menu{padding:10px 9px 18px!important}.menu-card{padding:11px!important}.logo{margin:7px 0 5px!important}
+ .logo h1{font-size:25px!important}.menu-card h1{font-size:18px!important}
+ main.menu:has(#replaySequence) .menu-card,main.menu:has(.tactical-choice-btn) .menu-card{display:flex!important;flex-direction:column!important}
+ main.menu:has(#replaySequence) .menu-card>.stadium,main.menu:has(#replaySequence) .menu-card>div[style*="COMMENTARY"],
+ main.menu:has(#replaySequence) .menu-card>div[style*="grid-template-columns"],main.menu:has(#replaySequence) .menu-card>div[style*="overflow:hidden"],
+ main.menu:has(#replaySequence) .menu-card>div[style*="justify-content:space-between"],main.menu:has(#replaySequence) .menu-card>div[style*="margin-top:7px"]{width:100%}
+ main.menu:has(#replaySequence) .stadium{width:min(100%,420px)!important}
+ main.menu:has(.tactical-choice-btn) .battle-decision{width:100%}
+ main.menu:has(.blade-card) .menu-card{display:grid!important;grid-template-columns:1fr!important}
+ main.menu:has(.blade-card) .menu-card>*{grid-column:1!important}
+ .stadium{width:min(100%,410px)!important}
+}
+@media(max-width:430px){
+ .menu{padding:7px 7px 14px!important}.menu-card{padding:9px!important;border-radius:8px!important}
+ .menu-btn,.back-btn{min-height:39px!important;padding:8px 10px!important}.blade-card{min-height:70px;padding:9px!important}
+ .stadium{width:min(100%,360px)!important}.stadium-zone-label{font-size:10px}
+ main.menu:has(#replaySequence) .menu-card>div[style*="COMMENTARY"] div:last-child{font-size:10px!important}
+ main.menu:has(#replaySequence) #replaySequence{min-width:112px}
+}
+@media(min-width:1100px){
+ .menu{padding-top:24px!important}
+ main.menu:has(#replaySequence) .menu-card{min-height:calc(100vh - 48px)}
+}
