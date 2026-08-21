@@ -5588,9 +5588,40 @@ function newPhysicsStep(s,dt){
             (movement*0.055)+
             ((1-bitStability)*0.025);
 
+        /*
+          RPM ORBIT TIGHTENING — V99.1
+          -----------------------------
+          V99's orbit model is working; the remaining issue is that the
+          preferred radius stayed too wide for too long.
+
+          We deliberately make the radius contraction noticeable around
+          80% RPM rather than waiting until the Bey is nearly dying.
+
+          100 RPM  -> full natural radius
+          90 RPM   -> slight but visible contraction
+          80 RPM   -> clear contraction
+          70 RPM   -> much tighter
+          50 RPM   -> strongly centered
+
+          Attack Bits still remain wider because their BASE radius is larger.
+          Non-Attack Bits therefore tighten sooner visually without needing
+          a separate movement engine.
+        */
+        const rpmRadiusT=
+            newBattleClamp(
+                (rpm-0.55)/(1.0-0.55),
+                0,
+                1
+            );
+
+        /* Smoothstep keeps the transition gradual instead of creating a
+           visible radius "snap" at a particular RPM. */
+        const rpmRadiusCurve=
+            rpmRadiusT*rpmRadiusT*(3-2*rpmRadiusT);
+
         const rpmRadiusFactor=
-            0.36+
-            0.64*Math.pow(rpm,0.68);
+            0.38+
+            0.62*rpmRadiusCurve;
 
         const preferredRadius=
             newBattleClamp(
