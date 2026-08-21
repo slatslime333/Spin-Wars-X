@@ -5693,16 +5693,36 @@ function newPhysicsStep(s,dt){
               NON-ATTACK — V99.4
               Much stronger contraction around the 80% RPM region.
             */
+            /*
+              V99.5 — stronger Non-Attack stabilization.
+
+              The previous curve was still leaving too much lateral orbit at
+              ~80 RPM. We want the transition to center to be unmistakable
+              while preserving the normal high-RPM orbit.
+
+              Approximate remaining radius:
+                100 RPM = 100%
+                 90 RPM = ~70%
+                 85 RPM = ~55%
+                 80 RPM = ~40%
+                 75 RPM = ~30%
+                 70 RPM = ~23%
+                 60 RPM = ~16%
+
+              This does NOT change the actual velocity model; it only changes
+              the natural orbit-radius target used by the existing movement
+              response.
+            */
             const nonAttackT=
                 newBattleClamp(
-                    (rpm-0.58)/(1-0.58),
+                    (rpm-0.55)/(1-0.55),
                     0,
                     1
                 );
 
             rpmRadiusFactor=
-                0.14+
-                0.86*Math.pow(nonAttackT,2.35);
+                0.12+
+                0.88*Math.pow(nonAttackT,3.10);
         }
 
         const preferredRadius=
