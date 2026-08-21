@@ -1,180 +1,104 @@
-/* =========================================================
-   SPIN WARS X — X-RAIL ENGINE / PHASE A
-   ---------------------------------------------------------
-   Phase A owns the physical decision-making for:
-   - whether contact is a real rail catch
-   - the quality of the catch
-   - the initial rail grip/speed
-   - rail ride acceleration / friction
-   - release thresholds
+/* Spin Wars X - X-Rail Engine
+   Phase A: physical rail-capture decision. */
 
-   It does NOT move the Bey by itself. app.js remains the physics
-   integrator for V105 so this can be introduced without replacing
-   the stable V104 movement system all at once.
-========================================================= */
+(function () {
+    "use strict";
 
-(function(global){
-  "use strict";
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
 
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const finite=(v,f)=>Number.isFinite(v)?v:f;
+    function capture(input) {
+        input = input || {};
 
-  function captureDecision(input){
-    const {
-      speed=0,
-      rpm=0,
-      stability=.6,
-      control=.6,
-      affinity=.5,
-      movement=.6,
-      approachRatio=0,
-      tangentRatio=0,
-      tangentSpeed=0,
-      deliberate=false,
-      recentKnockback=false
-    }=input||{};
+        var speed = Number(input.speed) || 0;
+        var rpm = clamp(Number(input.rpm) || 0, 0, 1);
+        var approach = clamp(Number(input.approachRatio) || 0, 0, 1);
+        var tangent = clamp(Number(input.tangentRatio) || 0, 0, 1);
+        var tangentSpeed = Number(input.tangentSpeed) || 0;
+        var affinity = clamp(Number(input.affinity) || 0, 0, 1);
+        var stability = clamp(Number(input.stability) || 0, 0, 1);
+        var deliberate = input.deliberate === true;
+        var attackBit = input.attackBit === true;
+        var recentKnockback = input.recentKnockback === true;
 
-    const attackBit=movement>=.80;
+        var rpmFloor = deliberate ? 0.27 : (attackBit ? 0.46 : 0.52);
+        if (rpm < rpmFloor) return { capture:false, reason:"low-rpm" };
 
-    // Phase A principle:
-    // contact alone never captures. A real catch needs BOTH a useful
-    // inward approach and meaningful tangential momentum.
-    const minimumRPM=deliberate
-      ? .27
-      : Math.max(.37+(1-affinity)*.18, attackBit?.46:0);
+        if (speed < (deliberate ? 0.008 : 0.012)) {
+            return { capture:false, reason:"low-speed" };
+        }
 
-    if(rpm<minimumRPM) return {capture:false,reason:"low-rpm"};
+        var approachFloor = deliberate
+            ? 0.10 + 0.08 * (1 - affinity)
+            : (recentKnockback ? 0.22 + 0.14 * (1 - affinity)
+                               : 0.25 + 0.16 * (1 - affinity));
 
-    const highRPMApproach=rpm>=.72 && speed>=.0085;
-    if(!highRPMApproach && speed<.012)
-      return {capture:false,reason:"low-speed"};
+        if (approach < approachFloor) {
+            return { capture:false, reason:"poor-approach" };
+        }
 
-    const physicsException=!deliberate && !attackBit && recentKnockback;
+        var tangentFloor = deliberate
+            ? 0.22 + 0.10 * (1 - affinity)
+            : (recentKnockback
+                ? 0.58 - affinity * 0.12 - (attackBit ? 0.02 : 0)
+                : (attackBit ? 0.60 : 0.68) - affinity * 0.10);
 
-    const minApproach=deliberate
-      ? .10+.08*(1-affinity)
-      : physicsException
-        ? .22+.14*(1-affinity)
-        : .25+.16*(1-affinity);
+        var tangentSpeedFloor = deliberate
+            ? 0.0065 + 0.002 * (1 - affinity)
+            : (recentKnockback ? 0.010 - affinity * 0.001
+                               : 0.0115 - affinity * 0.001);
 
-    if(approachRatio<minApproach)
-      return {capture:false,reason:"poor-approach"};
+        if (tangent < tangentFloor || tangentSpeed < tangentSpeedFloor) {
+            return { capture:false, reason:"poor-tangent" };
+        }
 
-    const minTangent=deliberate
-      ? .22+.10*(1-affinity)
-      : physicsException
-        ? .58-affinity*.12-movement*.02
-        : .68-affinity*.10-movement*.02;
+        var approachQuality = clamp(approach / 0.42, 0, 1);
+        var tangentQuality = clamp(
+            (tangent - tangentFloor) / Math.max(0.01, 1 - tangentFloor),
+            0, 1
+        );
+        var speedQuality = clamp((speed - 0.012) / 0.050, 0, 1);
+        var alignment = clamp((rpm - 0.70) / 0.30, 0, 1) *
+                        clamp(tangent / 0.72, 0, 1) *
+                        clamp(approach / 0.42, 0, 1);
 
-    const minTangentSpeed=deliberate
-      ? .0065+.002*(1-affinity)
-      : physicsException
-        ? .0100-affinity*.001
-        : .0115-affinity*.001;
+        var score = clamp(
+            affinity * 0.30 +
+            tangentQuality * 0.27 +
+            approachQuality * 0.16 +
+            speedQuality * 0.08 +
+            rpm * 0.08 +
+            stability * 0.05 +
+            alignment * 0.06,
+            0, 1
+        );
 
-    if(tangentSpeed<minTangentSpeed || tangentRatio<minTangent)
-      return {capture:false,reason:"poor-tangent"};
+        var baseChance = deliberate
+            ? 0.68 + score * 0.20
+            : attackBit
+                ? 0.26 + score * 0.38
+                : recentKnockback
+                    ? 0.10 + score * 0.28
+                    : 0.05 + score * 0.18;
 
-    const approachQuality=clamp(approachRatio/.42,0,1);
-    const tangentQuality=clamp(
-      (tangentRatio-minTangent)/Math.max(.01,1-minTangent),0,1
-    );
-    const speedQuality=clamp((speed-.012)/.050,0,1);
+        var chance = clamp(baseChance + (Math.random() - 0.5) * 0.08, 0.18, 0.90);
 
-    const alignmentBonus=
-      clamp((rpm-.70)/.30,0,1)*
-      clamp(tangentRatio/.72,0,1)*
-      clamp(approachRatio/.42,0,1);
+        if (Math.random() > chance) {
+            return { capture:false, reason:"contact-not-caught", score:score };
+        }
 
-    const physicalScore=clamp(
-      affinity*.30+
-      tangentQuality*.27+
-      approachQuality*.16+
-      speedQuality*.08+
-      rpm*.08+
-      stability*.05+
-      alignmentBonus*.06,
-      0,1
-    );
+        return {
+            capture:true,
+            score:score,
+            chance:chance,
+            grip:clamp(0.66 + affinity * 0.18 + score * 0.16, 0, 1),
+            initialBoost:0.010 + affinity * 0.014 + rpm * 0.008 + score * 0.010
+        };
+    }
 
-    const baseChance=deliberate
-      ? .68+physicalScore*.20
-      : attackBit
-        ? .26+physicalScore*.38
-        : physicsException
-          ? .10+physicalScore*.28
-          : .05+physicalScore*.18;
-
-    const captureChance=clamp(
-      baseChance+(Math.random()-.5)*.08,
-      .18,.90
-    );
-
-    if(Math.random()>captureChance)
-      return {capture:false,reason:"contact-not-caught",physicalScore,captureChance};
-
-    const initialBoost=
-      .010+
-      affinity*.014+
-      rpm*.008+
-      physicalScore*.010;
-
-    return {
-      capture:true,
-      physicalScore,
-      captureChance,
-      initialBoost,
-      grip:clamp(.66+affinity*.18+physicalScore*.16,0,1)
+    window.SpinWarsXRailEngine = {
+        version:"phase-a-clean",
+        capture:capture
     };
-  }
-
-  function rideParams(input){
-    const {
-      rpm=0,
-      control=.6,
-      affinity=.5,
-      movement=.6,
-      grip=.7
-    }=input||{};
-
-    const attackBit=movement>=.80;
-    const railRpmPower=Math.pow(clamp(rpm,0,1),.82);
-
-    const maxSpeed=clamp(
-      .078+
-      .092*railRpmPower+
-      .025*affinity+
-      .010*control,
-      .090,.190
-    );
-
-    const acceleration=
-      (
-        .00155+
-        .00210*railRpmPower+
-        .00135*affinity
-      )*
-      (.76+.24*clamp(grip,0,1));
-
-    // Slightly more drain than normal free spin, but deliberately modest.
-    const friction=
-      (
-        .000010+
-        (1-control)*.000008+
-        (1-rpm)*.000010
-      );
-
-    const releaseRPM=attackBit
-      ? .34
-      : .24+(1-affinity)*.16;
-
-    return {maxSpeed,acceleration,friction,releaseRPM};
-  }
-
-  global.SpinWarsXRailEngine={
-    version:"phase-a",
-    captureDecision,
-    rideParams
-  };
-
-})(window);
+}());
