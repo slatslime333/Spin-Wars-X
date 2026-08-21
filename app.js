@@ -5742,10 +5742,46 @@ function newPhysicsStep(s,dt){
             0.24*movement+
             0.10*(1-centerAffinity);
 
+        /*
+          V99.6 — ROOT FIX FOR NON-ATTACK ORBIT WIDTH
+          --------------------------------------------
+          The previous versions changed preferredRadius, but the Bey was
+          still being given nearly the same tangential target speed.
+
+          That is why the visual orbit barely changed.
+
+          An orbital path is approximately:
+              radius ≈ tangential speed / turning rate
+
+          So changing ONLY the radius target is not enough. Non-Attack Bits
+          must also lose tangential travel speed as their RPM falls.
+
+          Attack remains untouched.
+
+          At 100% RPM the factor is 1.0.
+          As Non-Attack preferred radius contracts, its tangential target
+          speed contracts with it. This makes the orbit physically converge
+          instead of merely telling the radial controller where the Bey
+          should be.
+        */
+        let orbitSpeedTightness=1.0;
+
+        if(movement<0.80){
+            /*
+              Keep a small amount of movement at low RPM so the Bey does not
+              become a frozen dot. The majority of the contraction comes from
+              the same radius factor already used above.
+            */
+            orbitSpeedTightness=
+                0.34+
+                0.66*rpmRadiusFactor;
+        }
+
         const targetOrbitSpeed=
             physicalSpeedTarget*
             orbitSpeedFraction*
-            (0.72+0.28*s.movementEnergy);
+            (0.72+0.28*s.movementEnergy)*
+            orbitSpeedTightness;
 
         /*
           Authoritative direction convention:
