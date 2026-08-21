@@ -5056,12 +5056,10 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
     return true;
 }
 
-        /* V101 XRail Engine Bridge */
+function newPhysicsStep(s,dt){
         /*
-          The new X-Rail engine owns rail engagement/ride only when enabled.
-          It is deliberately isolated behind a single flag during this
-          migration pass so the old rail system remains available for
-          rollback while the new state machine is validated.
+          V101.2 X-RAIL ENGINE BRIDGE
+          The new engine owns rail engagement and rail riding while enabled.
         */
         if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
             const xrailAPI={
@@ -5073,14 +5071,17 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
             };
 
             if(s.railEngaged){
-                if(SpinWarsXRailEngine.ride(s,xrailAPI,dt)) return;
-            }else if(SpinWarsXRailEngine.tryEngage(s,xrailAPI,dt)){
-                SpinWarsXRailEngine.ride(s,xrailAPI,dt);
+                if(window.SpinWarsXRailEngine &&
+                   window.SpinWarsXRailEngine.ride(s,xrailAPI,dt)){
+                    return;
+                }
+            }else if(window.SpinWarsXRailEngine &&
+                     window.SpinWarsXRailEngine.tryEngage(s,xrailAPI,dt)){
+                window.SpinWarsXRailEngine.ride(s,xrailAPI,dt);
                 return;
             }
         }
 
-function newPhysicsStep(s,dt){
 
         const stats = s.stats || {};
         const bp = bitPhysics(s);
@@ -5938,35 +5939,11 @@ function newPhysicsCollision(dt){
     c.vy-=ty*cFollow;
 
     if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
-            SpinWarsXRailEngine.breakFromImpact(
-                p,cRailBreakForce,{
-                    nearest:newXRailNearest,
-                    geometry:getNewXRailGeometry,
-                    pointAtDistance:newXRailPointAtDistance,
-                    bitPhysics,
-                    stamina:s=>getBattleStat(s,"stamina")
-                }
-            );
-        }else{
-            breakXRailFromImpact(p,nx,ny,cRailBreakForce);
-        }
+        breakXRailFromImpact(p,nx,ny,cRailBreakForce);
     }
 
     if(c.railEngaged && pRailBreakForce>=railBreakThreshold){
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
-            SpinWarsXRailEngine.breakFromImpact(
-                c,pRailBreakForce,{
-                    nearest:newXRailNearest,
-                    geometry:getNewXRailGeometry,
-                    pointAtDistance:newXRailPointAtDistance,
-                    bitPhysics,
-                    stamina:s=>getBattleStat(s,"stamina")
-                }
-            );
-        }else{
-            breakXRailFromImpact(c,-nx,-ny,pRailBreakForce);
-        }
+        breakXRailFromImpact(c,-nx,-ny,pRailBreakForce);
     }
 
     /*
@@ -6344,45 +6321,17 @@ function newPhysicsCollision(dt){
 
     if(pWasOnRail &&
        Math.max(pRailBreakForce,Math.abs(p.lastKnockback||0))>=railCollisionBreakThreshold){
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
-            SpinWarsXRailEngine.breakFromImpact(
-                p,
-                Math.max(pRailBreakForce,Math.abs(p.lastKnockback||0)),
-                {
-                    nearest:newXRailNearest,
-                    geometry:getNewXRailGeometry,
-                    pointAtDistance:newXRailPointAtDistance,
-                    bitPhysics,
-                    stamina:s=>getBattleStat(s,"stamina")
-                }
-            );
-        }else{
-            breakXRailFromImpact(
-                p,nx,ny,
-                Math.max(pRailBreakForce,Math.abs(p.lastKnockback||0))
-            );
-        }
+        breakXRailFromImpact(
+            p,nx,ny,
+            Math.max(pRailBreakForce,Math.abs(p.lastKnockback||0))
+        );
     }
     if(cWasOnRail &&
        Math.max(cRailBreakForce,Math.abs(c.lastKnockback||0))>=railCollisionBreakThreshold){
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
-            SpinWarsXRailEngine.breakFromImpact(
-                c,
-                Math.max(cRailBreakForce,Math.abs(c.lastKnockback||0)),
-                {
-                    nearest:newXRailNearest,
-                    geometry:getNewXRailGeometry,
-                    pointAtDistance:newXRailPointAtDistance,
-                    bitPhysics,
-                    stamina:s=>getBattleStat(s,"stamina")
-                }
-            );
-        }else{
-            breakXRailFromImpact(
-                c,-nx,-ny,
-                Math.max(cRailBreakForce,Math.abs(c.lastKnockback||0))
-            );
-        }
+        breakXRailFromImpact(
+            c,-nx,-ny,
+            Math.max(cRailBreakForce,Math.abs(c.lastKnockback||0))
+        );
     }
 
     /*
