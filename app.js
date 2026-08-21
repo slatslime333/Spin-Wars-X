@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Veeeeeeeeeee53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4373,10 +4373,24 @@ function tryNewXRailEngagement(s){
         (performance.now()-(s.lastImpactAt||0))<=420 &&
         (s.lastKnockback||0)>=0.010;
 
+    /*
+      Phase 2 — Center-launch rail rule:
+      A Stamina/Defense/Balance-style Bit launched from the center should not
+      naturally turn its controlled center orbit into an X-Rail ride. A real
+      knockback can still create a rare physics-driven rail capture.
+    */
+    const centerLaunchNonAttack=
+        s.launchPlan?.technique==="Center" &&
+        !attackBit;
+
     const physicsDrivenRailException=
         !deliberateXRail &&
         !attackBit &&
         recentKnockback;
+
+    if(centerLaunchNonAttack && !physicsDrivenRailException){
+        return false;
+    }
 
     const minimumApproachRatio=
         deliberateXRail
@@ -4480,7 +4494,7 @@ function tryNewXRailEngagement(s){
             : attackBit
                 ? 0.26+physicalScore*0.38
                 : physicsDrivenRailException
-                    ? 0.10+physicalScore*0.28
+                    ? 0.075+physicalScore*0.225
                     : 0.05+physicalScore*0.18;
 
     const captureChance=newBattleClamp(
@@ -4532,9 +4546,15 @@ function tryNewXRailEngagement(s){
     s.railDirection=direction;
     s.railDirectionName=direction>0 ? "RIGHT_SPIN_CCW_PATH" : "LEFT_SPIN_CW_PATH";
     s.railGrip=newBattleClamp(
-        0.66+
-        affinity*0.18+
-        physicalScore*0.16,
+        (
+            attackBit
+                ? 0.66+
+                  affinity*0.18+
+                  physicalScore*0.16
+                : 0.56+
+                  affinity*0.14+
+                  physicalScore*0.12
+        ),
         0,1
     );
     s.railContactPoint={
@@ -5578,10 +5598,17 @@ function newPhysicsStep(s,dt){
                     ? newBattleClamp((rpm-0.34)/0.30,0,1)
                     : 1;
 
+            /*
+              Phase 2 — Non-Attack movement:
+              Center-oriented Bits should not receive enough artificial
+              tangential drive to build a huge stadium-wide orbit. They can
+              still drift and orbit, but the Bit's centerAffinity now directly
+              limits how much of that orbit is self-sustained.
+            */
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.10+0.14*(1-centerAffinity));
+                    : (0.34+0.66*(1-centerAffinity));
 
             const lateGameMovementGate=
                 rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
