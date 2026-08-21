@@ -5713,9 +5713,9 @@ function newPhysicsStep(s,dt){
               faster than the Bey's actual movement.
             */
             const orbitSpeedFraction=
-                0.48+
-                (1-centerAffinity)*0.16+
-                bitPrecession*0.08;
+                0.30+
+                (1-centerAffinity)*0.09+
+                bitPrecession*0.035;
 
             const targetOrbitSpeed=
                 physicalSpeedTarget*
@@ -5768,11 +5768,11 @@ function newPhysicsStep(s,dt){
             */
             const tangentResponse=
                 (
-                    0.060+
-                    control*0.035+
-                    bitPrecession*0.015
+                    0.034+
+                    control*0.020+
+                    bitPrecession*0.008
                 )*
-                (0.55+0.45*rpm);
+                (0.52+0.48*rpm);
 
             const tangentCorrection=
                 (
@@ -5801,9 +5801,9 @@ function newPhysicsStep(s,dt){
                     safeRadius
                 )*
                 (
-                    0.50+
-                    0.22*centerAffinity+
-                    0.10*control
+                    0.34+
+                    0.14*centerAffinity+
+                    0.06*control
                 )*
                 (0.58+0.42*rpm);
 
@@ -5828,11 +5828,11 @@ function newPhysicsStep(s,dt){
             const radiusSpring=
                 radiusError*
                 (
-                    0.00070+
-                    centerAffinity*0.00050
+                    0.00050+
+                    centerAffinity*0.00036
                 )*
                 (0.55+0.45*rpm)*
-                (0.70+0.30*s.movementEnergy);
+                (0.72+0.28*s.movementEnergy);
 
             s.vx+=
                 radialX*
@@ -5854,9 +5854,9 @@ function newPhysicsStep(s,dt){
                     newBattleClamp(
                         1-
                         (
-                            0.006+
-                            (0.48-rpm)*0.020+
-                            centerAffinity*0.004
+                            0.005+
+                            (0.48-rpm)*0.016+
+                            centerAffinity*0.003
                         )*
                         dt*60,
                         0.94,
