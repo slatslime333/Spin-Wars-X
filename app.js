@@ -1,4 +1,4 @@
-/* V105d - X-Rail Phase A embedded in app.js */
+/* V105d - X-Rail Phases A embedded in app.js */
 (function () {
     "use strict";
 
