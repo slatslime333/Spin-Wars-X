@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Veeeeeeeeeee53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53@@@@@@ · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4129,7 +4129,7 @@ function enforcePostImpactSpinDirection(s){
     if(!s || s.railEngaged) return;
 
     const rpm=newBattleClamp(s.rpm||0,0,1);
-    if(rpm<=0.10) return;
+    if(rpm<=0.01) return;
 
     const radius=Math.hypot(s.x,s.y);
     if(radius<0.035) return;
@@ -4142,9 +4142,34 @@ function enforcePostImpactSpinDirection(s){
     const tangential=s.vx*tangent.x+s.vy*tangent.y;
 
     /*
+      DIRECTION CONTRACT:
       Remove ONLY an opposite-spin tangential component. Valid same-spin
       tangential momentum and radial impact momentum remain untouched.
     */
+    if(tangential<0){
+        s.vx-=tangent.x*tangential;
+        s.vy-=tangent.y*tangential;
+    }
+
+    s.lastOrbitDirection=s.spinDirection===1 ? "CCW" : "CW";
+}
+
+function enforceFreeSpaceSpinDirection(s){
+    if(!s || s.railEngaged) return;
+
+    const rpm=newBattleClamp(s.rpm||0,0,1);
+    if(rpm<=0.01) return;
+
+    const radius=Math.hypot(s.x,s.y);
+    if(radius<0.035) return;
+
+    const tangent=getSpinOrbitTangent(
+        s.x,
+        s.y,
+        s.spinDirection
+    );
+    const tangential=s.vx*tangent.x+s.vy*tangent.y;
+
     if(tangential<0){
         s.vx-=tangent.x*tangential;
         s.vy-=tangent.y*tangential;
@@ -5513,6 +5538,17 @@ function newPhysicsStep(s,dt){
         }
 
         /*
+          FINAL FREE-SPACE DIRECTION CONTRACT
+          ----------------------------------
+          All free-space forces have now been applied. Remove any opposite-spin
+          tangential component before integrating position.
+
+          This is a projection constraint, not steering: it never adds
+          tangential speed and never changes radial/impact momentum.
+        */
+        enforceFreeSpaceSpinDirection(s);
+
+        /*
           Existing velocity moves the Bey.
           We intentionally DO NOT inject a permanent orbital speed.
         */
@@ -5605,10 +5641,15 @@ function newPhysicsStep(s,dt){
               still drift and orbit, but the Bit's centerAffinity now directly
               limits how much of that orbit is self-sustained.
             */
+            /*
+              Non-Attack Bits remain center-oriented. They retain a small
+              natural orbit, but center affinity now strongly suppresses
+              self-generated stadium-wide travel.
+            */
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.34+0.66*(1-centerAffinity));
+                    : (0.045+0.18*(1-centerAffinity));
 
             const lateGameMovementGate=
                 rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
