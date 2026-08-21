@@ -2141,8 +2141,6 @@ function showLetItRip(){
     const card=document.querySelector("#newStadium")?.parentElement;
     if(!card) return;
 
-    document.getElementById("launchControls")?.remove();
-
     const controls=document.createElement("div");
     controls.id="launchControls";
     controls.style.cssText=
@@ -2253,8 +2251,7 @@ function showLetItRip(){
     };
 
     if(stage==="quality"){
-        const fixedQualityBtn=document.getElementById("fixedQualityBtn");
-        if(fixedQualityBtn) fixedQualityBtn.onclick=()=>{
+        document.getElementById("fixedQualityBtn").onclick=()=>{
             Game.player.launch.quality=Game.player.launch.fixedQualityPreview || rollRandomLaunchQuality();
             Game.cpu.launch=Game.cpu.launch||{};
             Game.cpu.launch.quality=rollRandomLaunchQuality();
@@ -2263,8 +2260,7 @@ function showLetItRip(){
             showLetItRip();
         };
 
-        const rollQualityBtn=document.getElementById("rollQualityBtn");
-        if(rollQualityBtn) rollQualityBtn.onclick=()=>{
+        document.getElementById("rollQualityBtn").onclick=()=>{
             rollLaunchQuality("player");
             Game.cpu.launch=Game.cpu.launch||{};
             Game.cpu.launch.quality=rollRandomLaunchQuality();
@@ -2272,36 +2268,30 @@ function showLetItRip(){
             showLetItRip();
         };
 
-        const backToVS=document.getElementById("backToVS");
-        if(backToVS) backToVS.onclick=showVS;
+        document.getElementById("backToVS").onclick=showVS;
         return;
     }
 
-    const bindLaunch=(id,fn)=>{
-        const el=document.getElementById(id);
-        if(el) el.onclick=fn;
-    };
+    document.getElementById("launchFlat").onclick=()=>
+        rebuildAngleTechnique("Flat",Game.player.launch.technique);
 
-    bindLaunch("launchFlat",()=>
-        rebuildAngleTechnique("Flat",Game.player.launch.technique));
+    document.getElementById("launchSlight").onclick=()=>
+        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique);
 
-    bindLaunch("launchSlight",()=>
-        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique));
+    document.getElementById("launchHard").onclick=()=>
+        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique);
 
-    bindLaunch("launchHard",()=>
-        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique));
+    document.getElementById("launchCenter").onclick=()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Center");
 
-    bindLaunch("launchCenter",()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Center"));
+    document.getElementById("launchRail").onclick=()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail");
 
-    bindLaunch("launchRail",()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail"));
+    document.getElementById("launchClash").onclick=()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash");
 
-    bindLaunch("launchClash",()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash"));
-
-    bindLaunch("launchDrop",()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch"));
+    document.getElementById("launchDrop").onclick=()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch");
 
     const startButton=document.getElementById("startBattleNow");
     if(startButton){
@@ -5067,30 +5057,6 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
 }
 
 function newPhysicsStep(s,dt){
-        /*
-          V101 X-RAIL ENGINE BRIDGE
-          New X-Rail engine owns rail engagement/riding while enabled.
-        */
-        if(window.SPIN_WARS_USE_NEW_XRAIL_ENGINE &&
-           window.SpinWarsXRailEngine){
-            const xrailAPI={
-                nearest:newXRailNearest,
-                geometry:getNewXRailGeometry,
-                pointAtDistance:newXRailPointAtDistance,
-                bitPhysics,
-                stamina:s=>getBattleStat(s,"stamina")
-            };
-
-            if(s.railEngaged){
-                if(window.SpinWarsXRailEngine.ride(s,xrailAPI,dt)){
-                    return;
-                }
-            }else if(window.SpinWarsXRailEngine.tryEngage(s,xrailAPI,dt)){
-                window.SpinWarsXRailEngine.ride(s,xrailAPI,dt);
-                return;
-            }
-        }
-
 
         const stats = s.stats || {};
         const bp = bitPhysics(s);
@@ -5324,7 +5290,7 @@ function newPhysicsStep(s,dt){
 
           This was a major source of contradictory behavior in V70.
         */
-        if(s.railEngaged && !window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
+        if(s.railEngaged){
             const railActive=applyXRailConstraint(s,dt);
             if(railActive) return;
         }
@@ -5359,18 +5325,16 @@ function newPhysicsStep(s,dt){
                     isBottomFinishCorridor(s) &&
                     s.vy>0.006;
 
-                if(!window.SPIN_WARS_USE_NEW_XRAIL_ENGINE){
-                    if(
-                        !finishCorridor &&
-                        !tryNewXRailEngagement(s)
-                    ){
-                        applyXRailContactSafety(
-                            s,nearest,incomingNormal
-                        );
-                    }
-
-                    if(s.railEngaged) return;
+                if(
+                    !finishCorridor &&
+                    !tryNewXRailEngagement(s)
+                ){
+                    applyXRailContactSafety(
+                        s,nearest,incomingNormal
+                    );
                 }
+
+                if(s.railEngaged) return;
             }
         }
 
@@ -5573,12 +5537,7 @@ function newPhysicsStep(s,dt){
           movement-engine.js. app.js handles battle/rail/collision orchestration
           and delegates free-space movement here.
         */
-        return SpinWarsMovementEngine.step(s,dt,{
-            bp, rpm, mobility, balance, stamina, control, centerAffinity, movement,
-            bitStability, attackStat, bitAcceleration, bitFriction, bitPrecession,
-            physicalSpeedTarget,
-            staminaEfficiency
-        });
+        return SpinWarsMovementEngine.step(s,dt);
     };
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s?.railEngaged) return false;
@@ -6363,4 +6322,3 @@ function newPhysicsCollision(dt){
 // The selected launch state is passed directly into the physical engine.
 
 window.addEventListener("DOMContentLoaded",()=>hookMenuButtons());
-window.SPIN_WARS_USE_NEW_XRAIL_ENGINE=true;
