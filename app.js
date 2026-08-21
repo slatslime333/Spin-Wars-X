@@ -5563,7 +5563,12 @@ function newPhysicsStep(s,dt){
           movement-engine.js. app.js handles battle/rail/collision orchestration
           and delegates free-space movement here.
         */
-        return SpinWarsMovementEngine.step(s,dt);
+        return SpinWarsMovementEngine.step(s,dt,{
+            bp, rpm, mobility, balance, stamina, control, centerAffinity, movement,
+            bitStability, attackStat, bitAcceleration, bitFriction, bitPrecession,
+            physicalSpeedTarget,
+            staminaEfficiency
+        });
     };
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s?.railEngaged) return false;
