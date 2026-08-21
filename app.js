@@ -1,187 +1,158 @@
 
-/* V107 STEP 2 — X-RAIL DEBUG MONITOR
-   Diagnostic only. Does not modify Bey movement, velocity, rail capture,
-   rail riding, collision, or exit behavior.
+/* V107 STEP 2B — X-RAIL DEBUG MONITOR
+   Diagnostic only. Reads the authoritative NEW_BATTLE states and records
+   actual rail events. It does not alter physics.
 */
 (function(){
     const DEBUG_ID="xrail-debug-monitor";
-    const DEBUG_HISTORY=8;
-    const previousStates=new WeakMap();
+    const MAX_EVENTS=18;
 
     function fmt(n){
-        return Number.isFinite(n) ? Number(n).toFixed(3) : "—";
+        return Number.isFinite(Number(n)) ? Number(n).toFixed(3) : "—";
     }
-
-    function getState(s){
+    function stateOf(s){
         if(!s) return "NO STATE";
         if(s.railEngaged) return "RIDING";
-        if(s.railContactPoint) return "CONTACT";
         if(s.railExitRefractory>0 || s.railCaptureCooldown>0) return "EXIT/COOLDOWN";
         return "NORMAL";
     }
-
     function ensurePanel(){
         let panel=document.getElementById(DEBUG_ID);
         if(panel) return panel;
-
         panel=document.createElement("div");
         panel.id=DEBUG_ID;
         panel.style.cssText=[
-            "position:fixed",
-            "left:8px",
-            "bottom:8px",
-            "z-index:99999",
-            "width:min(420px,calc(100vw - 16px))",
-            "max-height:42vh",
-            "overflow:auto",
-            "padding:8px",
-            "background:rgba(0,0,0,.86)",
-            "color:#fff",
-            "font:11px/1.35 monospace",
+            "position:fixed","left:8px","bottom:8px","z-index:99999",
+            "width:min(650px,calc(100vw - 16px))","max-height:48vh",
+            "overflow:auto","padding:9px","background:rgba(0,0,0,.90)",
+            "color:#fff","font:11px/1.35 monospace",
             "border:1px solid rgba(255,255,255,.35)",
-            "border-radius:6px",
-            "pointer-events:none",
-            "display:none"
+            "border-radius:6px","pointer-events:none"
         ].join(";");
-
-        const title=document.createElement("div");
-        title.textContent="X-RAIL DEBUG — STEP 2";
-        title.style.fontWeight="700";
-        title.style.marginBottom="5px";
-        panel.appendChild(title);
-
         document.body.appendChild(panel);
         return panel;
     }
 
-    function snapshot(s){
-        if(!s) return null;
-        const vx=Number(s.vx)||0;
-        const vy=Number(s.vy)||0;
-        return {
-            state:getState(s),
-            x:fmt(s.x),
-            y:fmt(s.y),
-            vx:fmt(vx),
-            vy:fmt(vy),
-            speed:fmt(Math.hypot(vx,vy)),
-            rpm:fmt(s.rpm),
-            railDistance:fmt(s.railDistance),
-            railSpeed:fmt(s.railSpeed),
-            rideTime:fmt(s.railRideTime),
-            travel:fmt(s.railTravelDistance),
-            chain:s.railChainCount ?? 0,
-            lock:fmt(s.railChainLock),
-            refractory:fmt(s.railExitRefractory),
-            cooldown:fmt(s.railCaptureCooldown)
-        };
-    }
-
     window.SpinWarsXRailDebug={
         enabled:false,
-        history:[],
+        events:[],
         toggle(){
             this.enabled=!this.enabled;
-            const panel=ensurePanel();
-            panel.style.display=this.enabled?"block":"none";
+            ensurePanel().style.display=this.enabled?"block":"none";
             return this.enabled;
         },
-        inspect(s){
-            return snapshot(s);
-        },
         clear(){
-            this.history=[];
+            this.events.length=0;
             return "cleared";
+        },
+        record(type,s,extra){
+            if(!this.enabled) return;
+            const e={
+                t:(performance.now()/1000).toFixed(2),
+                type,
+                side:s?.side||"?",
+                state:stateOf(s),
+                x:fmt(s?.x),y:fmt(s?.y),
+                vx:fmt(s?.vx),vy:fmt(s?.vy),
+                speed:fmt(s?Math.hypot(s.vx||0,s.vy||0):NaN),
+                rpm:fmt(s?.rpm),
+                railD:fmt(s?.railDistance),
+                railV:fmt(s?.railSpeed),
+                ride:fmt(s?.railRideTime),
+                travel:fmt(s?.railTravelDistance),
+                reason:extra?.reason||"",
+                dist:fmt(extra?.distance),
+                tangent:fmt(extra?.tangent),
+                approach:fmt(extra?.approach),
+                chance:fmt(extra?.chance)
+            };
+            this.events.unshift(e);
+            if(this.events.length>MAX_EVENTS) this.events.length=MAX_EVENTS;
+        },
+        snapshot(){
+            const b=(typeof NEW_BATTLE!=="undefined") ? NEW_BATTLE : null;
+            if(!b) return [];
+            return [b.player,b.cpu].filter(Boolean).map(s=>({
+                side:s.side||"?",
+                state:stateOf(s),
+                x:fmt(s.x),y:fmt(s.y),
+                vx:fmt(s.vx),vy:fmt(s.vy),
+                speed:fmt(Math.hypot(s.vx||0,s.vy||0)),
+                rpm:fmt(s.rpm),
+                railD:fmt(s.railDistance),
+                railV:fmt(s.railSpeed),
+                ride:fmt(s.railRideTime),
+                travel:fmt(s.railTravelDistance),
+                chain:s.railChainCount||0,
+                lock:fmt(s.railChainLock),
+                cooldown:fmt(s.railCaptureCooldown),
+                refractory:fmt(s.railExitRefractory)
+            }));
         }
     };
 
-    function watch(){
+    function render(){
         if(!window.SpinWarsXRailDebug.enabled) return;
-
         const panel=ensurePanel();
-
-        // Discover common Bey state holders without changing them.
-        const candidates=[];
-        for(const key of ["playerState","cpuState","battleState","state"]){
-            if(window[key] && typeof window[key]==="object") candidates.push([key,window[key]]);
-        }
-
-        const rows=[];
-        for(const [name,s] of candidates){
-            const snap=snapshot(s);
-            if(!snap) continue;
-
-            const old=previousStates.get(s);
-            if(!old || old.state!==snap.state){
-                window.SpinWarsXRailDebug.history.unshift({
-                    t:performance.now(),
-                    name,
-                    from:old?.state||"—",
-                    to:snap.state,
-                    x:snap.x,y:snap.y,
-                    vx:snap.vx,vy:snap.vy,
-                    railDistance:snap.railDistance
-                });
-                window.SpinWarsXRailDebug.history=
-                    window.SpinWarsXRailDebug.history.slice(0,DEBUG_HISTORY);
-            }
-            previousStates.set(s,snap);
-
-            rows.push(
-                name+"  STATE="+snap.state+
-                "  pos=("+snap.x+","+snap.y+")"+
-                "  v=("+snap.vx+","+snap.vy+")"+
-                "  |v|="+snap.speed+
-                "  rpm="+snap.rpm+
-                "  railD="+snap.railDistance+
-                "  railV="+snap.railSpeed+
-                "  ride="+snap.rideTime+
-                "  travel="+snap.travel+
-                "  chain="+snap.chain+
-                "  lock="+snap.lock
-            );
-        }
-
+        const rows=window.SpinWarsXRailDebug.snapshot();
         panel.innerHTML="";
+
         const title=document.createElement("div");
-        title.textContent="X-RAIL DEBUG — STEP 2";
+        title.textContent="X-RAIL DEBUG — STEP 2B (AUTHORITATIVE STATE)";
         title.style.fontWeight="700";
-        title.style.marginBottom="5px";
+        title.style.marginBottom="6px";
         panel.appendChild(title);
 
-        for(const row of rows){
-            const el=document.createElement("div");
-            el.textContent=row;
-            el.style.marginBottom="5px";
-            panel.appendChild(el);
+        if(!rows.length){
+            const d=document.createElement("div");
+            d.textContent="NEW_BATTLE not initialized yet.";
+            panel.appendChild(d);
+        }
+
+        for(const r of rows){
+            const d=document.createElement("div");
+            d.textContent=
+                r.side+"  "+r.state+
+                "  pos=("+r.x+","+r.y+")"+
+                "  v=("+r.vx+","+r.vy+") |v|="+r.speed+
+                " rpm="+r.rpm+
+                " railD="+r.railD+
+                " railV="+r.railV+
+                " ride="+r.ride+
+                " travel="+r.travel+
+                " chain="+r.chain+
+                " lock="+r.lock;
+            d.style.marginBottom="5px";
+            panel.appendChild(d);
         }
 
         const h=document.createElement("div");
-        h.style.marginTop="6px";
-        h.textContent="Transitions:";
+        h.textContent="Recent rail events:";
         h.style.fontWeight="700";
+        h.style.marginTop="6px";
         panel.appendChild(h);
 
-        for(const item of window.SpinWarsXRailDebug.history){
-            const el=document.createElement("div");
-            el.textContent=
-                item.name+"  "+item.from+" → "+item.to+
-                "  pos=("+item.x+","+item.y+")"+
-                "  v=("+item.vx+","+item.vy+")"+
-                "  railD="+item.railDistance;
-            panel.appendChild(el);
+        for(const e of window.SpinWarsXRailDebug.events){
+            const d=document.createElement("div");
+            d.textContent=
+                e.t+" "+e.side+" "+e.type+
+                (e.reason?(" reason="+e.reason):"")+
+                " dist="+e.dist+
+                " app="+e.approach+
+                " tan="+e.tangent+
+                " chance="+e.chance;
+            panel.appendChild(d);
         }
 
-        requestAnimationFrame(watch);
+        requestAnimationFrame(render);
     }
 
-    // Expose a console command; monitor remains OFF by default.
     console.log(
-        "%cX-Rail Step 2 debug loaded. Run SpinWarsXRailDebug.toggle() to enable.",
+        "%cX-Rail Step 2B loaded. Run SpinWarsXRailDebug.toggle()",
         "font-weight:bold"
     );
-    window.SpinWarsXRailDebug._start=watch;
 })();
+
 
 /* V105d - X-Rail Phase A embedded in app.js */
 (function () {
@@ -4623,6 +4594,12 @@ function tryNewXRailEngagement(s){
         return false;
     }
 
+    window.SpinWarsXRailDebug?.record("CONTACT",s,{
+        distance,
+        tangent,
+        approach:approachSpeed
+    });
+
     const direction=railDirection(s);
 
     const railTangent=newXRailTangentAtPoint(
@@ -4672,8 +4649,22 @@ function tryNewXRailEngagement(s){
     });
 
     if(!decision.capture){
+        window.SpinWarsXRailDebug?.record("REJECT",s,{
+            reason:decision.reason,
+            distance,
+            tangent,
+            approach:approachSpeed,
+            chance:decision.chance
+        });
         return false;
     }
+
+    window.SpinWarsXRailDebug?.record("CAPTURE",s,{
+        distance,
+        tangent,
+        approach:approachSpeed,
+        chance:decision.chance
+    });
 
     /*
       Convert only the inward component into rail-aligned momentum.
@@ -4732,6 +4723,7 @@ function tryNewXRailEngagement(s){
 
 function newXRailExit(s){
     if(!s) return false;
+    window.SpinWarsXRailDebug?.record("EXIT",s);
 
     const g=getNewXRailGeometry();
     const direction=s.railDirection||railDirection(s);
@@ -5749,6 +5741,7 @@ function newPhysicsStep(s,dt){
     };
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s?.railEngaged) return false;
+    window.SpinWarsXRailDebug?.record("IMPACT_BREAK",s,{reason:"impact"});
 
     const impactMagnitude=Math.max(0.003,force);
     const point=newXRailNearest(s.x,s.y);
