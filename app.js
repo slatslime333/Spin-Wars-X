@@ -2141,6 +2141,11 @@ function showLetItRip(){
     const card=document.querySelector("#newStadium")?.parentElement;
     if(!card) return;
 
+    // Re-rendering launch setup must replace the previous controls.
+    // Keeping stale controls created duplicate IDs and could make the
+    // document lookup return an element from the wrong stage.
+    document.getElementById("launchControls")?.remove();
+
     const controls=document.createElement("div");
     controls.id="launchControls";
     controls.style.cssText=
@@ -2251,49 +2256,64 @@ function showLetItRip(){
     };
 
     if(stage==="quality"){
-        document.getElementById("fixedQualityBtn").onclick=()=>{
-            Game.player.launch.quality=Game.player.launch.fixedQualityPreview || rollRandomLaunchQuality();
-            Game.cpu.launch=Game.cpu.launch||{};
-            Game.cpu.launch.quality=rollRandomLaunchQuality();
-            Game.player.launch.qualityMode="Fixed";
-            Game.player.launch.setupStage="qualityReveal";
-            showLetItRip();
-        };
+        const fixedQualityBtn=controls.querySelector("#fixedQualityBtn");
+        const rollQualityBtn=controls.querySelector("#rollQualityBtn");
+        const backToVS=controls.querySelector("#backToVS");
 
-        document.getElementById("rollQualityBtn").onclick=()=>{
-            rollLaunchQuality("player");
-            Game.cpu.launch=Game.cpu.launch||{};
-            Game.cpu.launch.quality=rollRandomLaunchQuality();
-            Game.player.launch.setupStage="qualityReveal";
-            showLetItRip();
-        };
+        if(fixedQualityBtn){
+            fixedQualityBtn.onclick=()=>{
+                Game.player.launch.quality=
+                    Game.player.launch.fixedQualityPreview ||
+                    rollRandomLaunchQuality();
+                Game.cpu.launch=Game.cpu.launch||{};
+                Game.cpu.launch.quality=rollRandomLaunchQuality();
+                Game.player.launch.qualityMode="Fixed";
+                Game.player.launch.setupStage="qualityReveal";
+                showLetItRip();
+            };
+        }
 
-        document.getElementById("backToVS").onclick=showVS;
+        if(rollQualityBtn){
+            rollQualityBtn.onclick=()=>{
+                rollLaunchQuality("player");
+                Game.cpu.launch=Game.cpu.launch||{};
+                Game.cpu.launch.quality=rollRandomLaunchQuality();
+                Game.player.launch.setupStage="qualityReveal";
+                showLetItRip();
+            };
+        }
+
+        if(backToVS) backToVS.onclick=showVS;
         return;
     }
 
-    document.getElementById("launchFlat").onclick=()=>
-        rebuildAngleTechnique("Flat",Game.player.launch.technique);
+    const bindLaunchButton=(id,fn)=>{
+        const button=controls.querySelector("#"+id);
+        if(button) button.onclick=fn;
+    };
 
-    document.getElementById("launchSlight").onclick=()=>
-        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique);
+    bindLaunchButton("launchFlat",()=>
+        rebuildAngleTechnique("Flat",Game.player.launch.technique));
 
-    document.getElementById("launchHard").onclick=()=>
-        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique);
+    bindLaunchButton("launchSlight",()=>
+        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique));
 
-    document.getElementById("launchCenter").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Center");
+    bindLaunchButton("launchHard",()=>
+        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique));
 
-    document.getElementById("launchRail").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail");
+    bindLaunchButton("launchCenter",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Center"));
 
-    document.getElementById("launchClash").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash");
+    bindLaunchButton("launchRail",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail"));
 
-    document.getElementById("launchDrop").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch");
+    bindLaunchButton("launchClash",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash"));
 
-    const startButton=document.getElementById("startBattleNow");
+    bindLaunchButton("launchDrop",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch"));
+
+    const startButton=controls.querySelector("#startBattleNow");
     if(startButton){
         startButton.onclick=(event)=>{
             event?.preventDefault?.();
@@ -2304,10 +2324,13 @@ function showLetItRip(){
         };
     }
 
-    document.getElementById("backToQuality").onclick=()=>{
-        Game.player.launch.setupStage="quality";
-        showLetItRip();
-    };
+    const backToQuality=controls.querySelector("#backToQuality");
+    if(backToQuality){
+        backToQuality.onclick=()=>{
+            Game.player.launch.setupStage="quality";
+            showLetItRip();
+        };
+    }
 }
 
 /*========================================================
