@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vqqqqqqqq53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -5539,6 +5539,30 @@ function newPhysicsStep(s,dt){
 
 
         /*
+          MOVEMENT MODEL
+          --------------
+          Attack Bits keep their established movement engine.
+
+          Non-Attack Bits use a separate physical orbital model. The previous
+          system stacked tangent acceleration, radial wander, center
+          attraction, low-RPM orbit preservation, low-RPM damping and an
+          orbit envelope. Those controllers fought over the same vx/vy state.
+
+          A non-Attack Bit now has ONE coherent free-space model:
+            1. natural orbit radius from Bit centerAffinity
+            2. spin-direction tangential velocity target
+            3. radial restoration toward that radius
+            4. RPM-dependent contraction
+            5. small precession wobble
+
+          Collisions can still change velocity and knock the Bey away. The
+          controller restores the orbit over time instead of forcing a path.
+        */
+
+        const r=Math.hypot(s.x,s.y);
+
+        if(attackBit){
+        /*
           Spin/precession is an acceleration, not a circular path.
           Its influence fades smoothly with RPM.
         */
@@ -5574,23 +5598,6 @@ function newPhysicsStep(s,dt){
                     ? newBattleClamp((rpm-0.34)/0.30,0,1)
                     : 1;
 
-            /*
-              Phase 2 — Non-Attack movement:
-              Center-oriented Bits should not receive enough artificial
-              tangential drive to build a huge stadium-wide orbit. They can
-              still drift and orbit, but the Bit's centerAffinity now directly
-              limits how much of that orbit is self-sustained.
-            */
-            /*
-              Non-Attack Bits remain center-oriented. They retain a small
-              natural orbit, but center affinity now strongly suppresses
-              self-generated stadium-wide travel.
-            */
-            const nonAttackMovementScale=
-                attackBit
-                    ? 1.0
-                    : (0.15+0.24*(1-centerAffinity));
-
             const lateGameMovementGate=
                 rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
             const lateralStrength=
@@ -5601,7 +5608,6 @@ function newPhysicsStep(s,dt){
                 (0.76+0.24*attackStat)*
                 (0.72+0.38*bitPrecession)*
                 (0.72+0.28*s.movementEnergy)*
-                nonAttackMovementScale*
                 (attackBit
                     ? (0.18+1.12*lowRpmAttackSuppression)
                     : 0.96);
@@ -5662,328 +5668,184 @@ function newPhysicsStep(s,dt){
                 driftForce*dt*60;
         }
 
-        /*
-          NON-ATTACK CENTER EQUALIZATION:
-          Stamina/Defense/Balance Bits should naturally settle toward the
-          central battle area. This is a continuous force, not a hard target
-          and not a teleport, so they can still drift and collide naturally.
-        */
-        if(r>0.08 && rpm>0.10){
-            const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.08 : (rpm<0.42 ? 1.05 : 0.34);
-            const centerStrength=(0.00030+centerAffinity*0.00052)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
-            s.vx-=s.x*centerStrength*dt*60;
-            s.vy-=s.y*centerStrength*dt*60;
-            if(!attackBit && r<0.42 && rpm<0.48){
-                const centralDamp=1-newBattleClamp(0.010+(0.48-rpm)*0.035+centerAffinity*0.008,0.010,0.045);
-                s.vx*=centralDamp; s.vy*=centralDamp;
+        }
+
+        if(!attackBit && rpm>0.01){
+
+            const baseOrbitRadius=
+                0.17+
+                (1-centerAffinity)*0.22+
+                movement*0.025;
+
+            const rpmOrbitScale=
+                0.42+
+                0.58*Math.pow(rpm,0.72);
+
+            const targetRadius=
+                baseOrbitRadius*rpmOrbitScale;
+
+            let orbitAngle=Math.atan2(s.y,s.x);
+
+            if(r<0.055){
+                s.nonAttackOrbitAngle=
+                    Number.isFinite(s.nonAttackOrbitAngle)
+                        ? s.nonAttackOrbitAngle
+                        : s.motionPhase;
+
+                orbitAngle=s.nonAttackOrbitAngle;
+            }else{
+                s.nonAttackOrbitAngle=orbitAngle;
             }
-        }
 
-        /*
-          Surface irregularity / precession variation.
+            const cosA=Math.cos(orbitAngle);
+            const sinA=Math.sin(orbitAngle);
+            const radialX=cosA;
+            const radialY=sinA;
 
-          A real Bey does not follow a fixed mathematical orbit. Tiny changes
-          in contact pressure and precession alter the direction of travel.
-          This is strongest for controlled non-attack Bits in center fights,
-          but remains small enough not to become random teleporting.
-        */
-        s.movementNoiseTimer-=dt;
-        if(s.movementNoiseTimer<=0){
-            const variation =
-                (0.00020+
-                 (1-movement)*0.00034+
-                 (1-centerAffinity)*0.00020) *
-                (0.42+0.58*rpm);
+            const spinSign=s.spinDirection===1 ? 1 : -1;
 
-            const noiseAngle=
-                s.motionPhase2+
-                Math.random()*Math.PI*2;
+            const tangentX=-sinA*spinSign;
+            const tangentY=cosA*spinSign;
 
-            s.movementNoiseX=Math.cos(noiseAngle)*variation;
-            s.movementNoiseY=Math.sin(noiseAngle)*variation;
-            s.movementNoiseTimer=0.28+Math.random()*0.55;
-        }
+            const currentRadial=
+                s.vx*radialX+
+                s.vy*radialY;
 
-        const noiseScale =
-            (attackBit
-                ? 0.72
-                : 1.0) *
-            (0.55+0.45*rpm);
-
-        s.vx+=s.movementNoiseX*noiseScale*dt*60;
-        s.vy+=s.movementNoiseY*noiseScale*dt*60;
-
-        /*
-          Stadium slope gently favors the center.
-          It becomes more relevant as spin falls because the Bey has less
-          self-generated lateral movement.
-        */
-        if(r>0.015){
-
-            const slopeForce =
-                (
-                    0.00024 +
-                    centerAffinity*0.00050
-                ) *
-                (
-                    0.55 +
-                    (1-rpm)*0.72
-                );
-
-            s.vx -= s.x*slopeForce*dt*60;
-            s.vy -= s.y*slopeForce*dt*60;
-        }
-
-        /*
-          Physical friction.
-
-          This is the major correction for the "too much momentum forever"
-          problem. Velocity decays independently of RPM.
-        */
-        const baseFriction =
-            0.984 +
-            control*0.008 -
-            movement*0.004 -
-            (attackBit ? 0.0018*rpm : 0);
-
-        const rpmFrictionBonus=0.003*rpm+(1-rpm)*0.0035;
-
-        const friction =
-            newBattleClamp(
-                baseFriction+rpmFrictionBonus,
-                0.972,
-                0.992
-            );
-
-        const frictionStep =
-            Math.pow(
-                friction,
-                dt*60
-            );
-
-        s.vx *= frictionStep;
-        s.vy *= frictionStep;
-
-        /*
-          Low RPM reduces movement amplitude rather than changing spin
-          direction. No reverse-spin behavior is possible.
-        */
-        const lowRpm =
-            newBattleClamp((0.58-rpm)/0.58,0,1);
-
-        if(lowRpm>0){
-
-            const lateralDamp =
-                Math.pow(
-                    attackBit
-                        ? 0.948+0.014*bitStability
-                        : 0.958+0.016*bitStability,
-                    lowRpm*dt*60
-                );
-
-            const rNow =
-                Math.hypot(s.x,s.y);
-
-            if(rNow>0.08){
-
-                const ix=s.x/rNow;
-                const iy=s.y/rNow;
-
-                const radialVelocity =
-                    s.vx*ix+s.vy*iy;
-
-                const tvx =
-                    s.vx-ix*radialVelocity;
-
-                const tvy =
-                    s.vy-iy*radialVelocity;
-
-                s.vx =
-                    ix*radialVelocity+
-                    tvx*lateralDamp;
-
-                s.vy =
-                    iy*radialVelocity+
-                    tvy*lateralDamp;
-            }
+            const currentTangential=
+                s.vx*tangentX+
+                s.vy*tangentY;
 
             /*
-              LOW-RPM ORBIT PRESERVATION
-              ---------------------------
-              As RPM falls, the Bey should contract its orbit, not collapse
-              into a straight vertical/horizontal line. Give the preferred
-              spin tangent a small minimum amount of travel. Center-focused
-              Bits get the smallest amount and can nearly settle in place;
-              Attack/less-center Bits retain a little more curved motion.
+              Real orbital speed. It is deliberately modest compared with
+              Attack movement, but strong enough to curve a Bey instead of
+              letting its launch velocity carry it in a straight line.
             */
-            if(
-                rpm>0.025 &&
-                rNow>0.045 &&
+            const targetTangentialSpeed=
                 (
-                    attackBit ||
-                    rpm<0.58
-                )
-            ){
-                const lowOrbitTangent=getSpinOrbitTangent(
-                    s.x,s.y,s.spinDirection
+                    0.0058+
+                    movement*0.0046+
+                    (1-centerAffinity)*0.0028
+                )*
+                Math.pow(rpm,0.88);
+
+            const tangentialResponse=
+                (
+                    0.030+
+                    control*0.025+
+                    bitPrecession*0.010
+                )*
+                (0.55+0.45*rpm);
+
+            const tangentAcceleration=
+                (
+                    targetTangentialSpeed-
+                    currentTangential
+                )*
+                tangentialResponse*
+                dt*60;
+
+            s.vx+=tangentX*tangentAcceleration;
+            s.vy+=tangentY*tangentAcceleration;
+
+            /*
+              Target a small orbit radius instead of continuously targeting
+              the exact center. This is what gives non-Attack Bits their
+              natural "settle and orbit" behavior.
+            */
+            const radiusError=targetRadius-r;
+
+            const radialResponse=
+                (
+                    0.00070+
+                    centerAffinity*0.00048+
+                    control*0.00020
+                )*
+                (0.48+0.52*rpm)*
+                (0.72+0.28*s.movementEnergy);
+
+            const radialAcceleration=
+                radiusError*
+                radialResponse*
+                dt*60;
+
+            s.vx+=radialX*radialAcceleration;
+            s.vy+=radialY*radialAcceleration;
+
+            const radialDamping=
+                newBattleClamp(
+                    1-
+                    (
+                        0.030+
+                        control*0.018+
+                        (1-rpm)*0.018
+                    )*
+                    dt*60,
+                    0.80,
+                    1
                 );
 
-                const preferredActivity=
-                    attackBit
-                        ? 0.72
-                        : newBattleClamp(
-                            0.20+
-                            (1-centerAffinity)*0.62,
-                            0.20,
-                            0.82
-                        );
+            s.vx-=
+                radialX*
+                currentRadial*
+                (1-radialDamping);
 
-                const targetTangentialSpeed=
-                    (
-                        attackBit
-                            ? 0.0052+0.0115*movement
-                            : 0.0032+0.0062*movement
-                    )*
-                    Math.pow(rpm,0.92)*
-                    preferredActivity;
+            s.vy-=
+                radialY*
+                currentRadial*
+                (1-radialDamping);
 
-                const currentTangential=
-                    s.vx*lowOrbitTangent.x+
-                    s.vy*lowOrbitTangent.y;
+            /*
+              Slow precession changes the orbit shape without turning it into
+              random wandering or a scripted circle.
+            */
+            s.nonAttackOrbitPhase=
+                (s.nonAttackOrbitPhase||0)+
+                dt*
+                (
+                    0.35+
+                    rpm*0.75+
+                    bitPrecession*0.45
+                );
 
-                if(currentTangential<targetTangentialSpeed){
-                    const tangentCorrection=
-                        (
-                            targetTangentialSpeed-
-                            currentTangential
-                        )*
-                        (
-                            0.20+
-                            0.42*lowRpm+
-                            0.18*(1-centerAffinity)
-                        );
+            const orbitWobble=
+                Math.sin(s.nonAttackOrbitPhase)*
+                (
+                    0.000018+
+                    (1-centerAffinity)*0.000030
+                )*
+                Math.pow(rpm,0.75);
 
-                    s.vx+=
-                        lowOrbitTangent.x*
-                        tangentCorrection;
-                    s.vy+=
-                        lowOrbitTangent.y*
-                        tangentCorrection;
-                }
-            }
+            s.vx+=tangentX*orbitWobble*dt*60;
+            s.vy+=tangentY*orbitWobble*dt*60;
         }
 
         /*
-          NON-ATTACK ORBIT ENVELOPE
-          -------------------------
-          The previous system reduced the *force* that creates an orbit, but
-          it did not control momentum that had already accumulated. A
-          center-oriented Bit could therefore keep a large tangential velocity
-          and continue orbiting all the way to the X-Rail.
-
-          This is the core correction:
-            - no position clamp
-            - no teleport
-            - no forced circular path
-            - collisions can still push the Bey outward
-            - excess outer tangential momentum is gradually damped
-            - a smooth center restoring force pulls it back
-
-          CenterAffinity determines the natural envelope:
-            high affinity -> tight center behavior
-            lower affinity -> wider, but still controlled, orbit
+          Non-Attack Bits are no longer processed by the old center-attraction,
+          low-RPM orbit-preservation, or orbit-envelope controllers. The
+          coherent model above owns their orbital behavior.
         */
-        if(!attackBit && r>0.08){
-            const centerLaunch=
-                s.launchPlan?.technique==="Center";
 
-            const naturalOrbitRadius=
-                0.24+
-                (1-centerAffinity)*0.30;
+        if(attackBit && r>0.08 && rpm>0.10){
+            const lowRpmCenterBoost=
+                rpm<0.70
+                    ? 1.0+
+                      ((0.70-rpm)/0.70)*3.0
+                    : 1.0;
 
-            const excessRadius=
-                Math.max(
-                    0,
-                    r-naturalOrbitRadius
-                );
+            const typeCenterBoost=
+                rpm<0.42
+                    ? 1.05
+                    : 0.34;
 
-            if(excessRadius>0){
-                const excessRatio=
-                    newBattleClamp(
-                        excessRadius/
-                        Math.max(
-                            0.28,
-                            0.93-naturalOrbitRadius
-                        ),
-                        0,1
-                    );
+            const centerStrength=
+                (0.00030+centerAffinity*0.00052)*
+                (0.56+0.44*rpm)*
+                (0.74+0.26*s.movementEnergy)*
+                lowRpmCenterBoost*
+                typeCenterBoost;
 
-                const radialX=s.x/r;
-                const radialY=s.y/r;
-
-                /*
-                  Tangential damping is the important part. A non-Attack Bey
-                  that has already reached the outer bowl should not keep
-                  circling simply because it entered with momentum.
-                */
-                const orbitDamp=
-                    1-
-                    newBattleClamp(
-                        (
-                            0.035+
-                            centerAffinity*0.055+
-                            (centerLaunch?0.028:0)
-                        )*
-                        (0.55+0.45*rpm)*
-                        (0.45+0.55*excessRatio)*
-                        dt*60,
-                        0,
-                        0.12
-                    );
-
-                const radialVelocity=
-                    s.vx*radialX+
-                    s.vy*radialY;
-
-                const tangentialX=
-                    s.vx-radialX*radialVelocity;
-                const tangentialY=
-                    s.vy-radialY*radialVelocity;
-
-                s.vx=
-                    radialX*radialVelocity+
-                    tangentialX*orbitDamp;
-
-                s.vy=
-                    radialY*radialVelocity+
-                    tangentialY*orbitDamp;
-
-                /*
-                  Smooth restoring force. Center launches get a little more
-                  help because their intended behavior is neutral/central.
-                */
-                const returnStrength=
-                    (
-                        0.00022+
-                        centerAffinity*0.00030+
-                        (centerLaunch?0.00012:0)
-                    )*
-                    (0.55+0.45*rpm)*
-                    (0.45+0.55*excessRatio);
-
-                s.vx-=
-                    radialX*
-                    returnStrength*
-                    excessRadius*
-                    dt*60;
-
-                s.vy-=
-                    radialY*
-                    returnStrength*
-                    excessRadius*
-                    dt*60;
-            }
+            s.vx-=s.x*centerStrength*dt*60;
+            s.vy-=s.y*centerStrength*dt*60;
         }
 
         /*
