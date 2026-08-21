@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53@@@@@@ · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -5537,66 +5537,6 @@ function newPhysicsStep(s,dt){
             }
         }
 
-        /*
-          FINAL FREE-SPACE DIRECTION CONTRACT
-          ----------------------------------
-          All free-space forces have now been applied. Remove any opposite-spin
-          tangential component before integrating position.
-
-          This is a projection constraint, not steering: it never adds
-          tangential speed and never changes radial/impact momentum.
-        */
-        enforceFreeSpaceSpinDirection(s);
-
-        /*
-          Existing velocity moves the Bey.
-          We intentionally DO NOT inject a permanent orbital speed.
-        */
-        s.x += s.vx*dt*60;
-        s.y += s.vy*dt*60;
-
-        if(s.railExited && s.railExitRefractoryPoint){
-            if(Math.hypot(
-                s.x-s.railExitRefractoryPoint.x,
-                s.y-s.railExitRefractoryPoint.y
-            )>0.18){
-                s.railExited=false;
-                s.railExitRefractoryPoint=null;
-            }
-        }
-
-        /*
-          X-EXIT MOUTH
-          -------------
-          The top notch is open to a genuine rail exit, but normal bowl
-          movement cannot simply phase through the mouth. A Bey that was not
-          released from the rail is redirected back into the bowl.
-        */
-        {
-            const halfWidth=0.133;
-            const edgeY=-0.790;
-            const apexY=-0.603;
-            const clearance=s.radius*0.72;
-
-            if(
-                !s.railExited &&
-                Math.abs(s.x)<halfWidth &&
-                s.y<apexY+clearance
-            ){
-                const boundaryY=
-                    apexY-
-                    Math.abs(edgeY-apexY)*
-                    (1-Math.abs(s.x)/halfWidth);
-
-                if(s.y<boundaryY+clearance && s.vy<0){
-                    s.y=boundaryY+clearance;
-                    s.vy=Math.abs(s.vy)*0.34;
-                    s.vx*=0.82;
-                    s.surfaceRecovery=0.14;
-                    s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
-                }
-            }
-        }
 
         /*
           Spin/precession is an acceleration, not a circular path.
@@ -5877,7 +5817,14 @@ function newPhysicsStep(s,dt){
               Bits get the smallest amount and can nearly settle in place;
               Attack/less-center Bits retain a little more curved motion.
             */
-            if(rpm>0.025 && rNow>0.045){
+            if(
+                rpm>0.025 &&
+                rNow>0.045 &&
+                (
+                    attackBit ||
+                    rpm<0.58
+                )
+            ){
                 const lowOrbitTangent=getSpinOrbitTangent(
                     s.x,s.y,s.spinDirection
                 );
@@ -5928,6 +5875,118 @@ function newPhysicsStep(s,dt){
         }
 
         /*
+          NON-ATTACK ORBIT ENVELOPE
+          -------------------------
+          The previous system reduced the *force* that creates an orbit, but
+          it did not control momentum that had already accumulated. A
+          center-oriented Bit could therefore keep a large tangential velocity
+          and continue orbiting all the way to the X-Rail.
+
+          This is the core correction:
+            - no position clamp
+            - no teleport
+            - no forced circular path
+            - collisions can still push the Bey outward
+            - excess outer tangential momentum is gradually damped
+            - a smooth center restoring force pulls it back
+
+          CenterAffinity determines the natural envelope:
+            high affinity -> tight center behavior
+            lower affinity -> wider, but still controlled, orbit
+        */
+        if(!attackBit && r>0.08){
+            const centerLaunch=
+                s.launchPlan?.technique==="Center";
+
+            const naturalOrbitRadius=
+                0.18+
+                (1-centerAffinity)*0.42;
+
+            const excessRadius=
+                Math.max(
+                    0,
+                    r-naturalOrbitRadius
+                );
+
+            if(excessRadius>0){
+                const excessRatio=
+                    newBattleClamp(
+                        excessRadius/
+                        Math.max(
+                            0.28,
+                            0.93-naturalOrbitRadius
+                        ),
+                        0,1
+                    );
+
+                const radialX=s.x/r;
+                const radialY=s.y/r;
+
+                /*
+                  Tangential damping is the important part. A non-Attack Bey
+                  that has already reached the outer bowl should not keep
+                  circling simply because it entered with momentum.
+                */
+                const orbitDamp=
+                    1-
+                    newBattleClamp(
+                        (
+                            0.035+
+                            centerAffinity*0.055+
+                            (centerLaunch?0.028:0)
+                        )*
+                        (0.55+0.45*rpm)*
+                        (0.45+0.55*excessRatio)*
+                        dt*60,
+                        0,
+                        0.12
+                    );
+
+                const radialVelocity=
+                    s.vx*radialX+
+                    s.vy*radialY;
+
+                const tangentialX=
+                    s.vx-radialX*radialVelocity;
+                const tangentialY=
+                    s.vy-radialY*radialVelocity;
+
+                s.vx=
+                    radialX*radialVelocity+
+                    tangentialX*orbitDamp;
+
+                s.vy=
+                    radialY*radialVelocity+
+                    tangentialY*orbitDamp;
+
+                /*
+                  Smooth restoring force. Center launches get a little more
+                  help because their intended behavior is neutral/central.
+                */
+                const returnStrength=
+                    (
+                        0.00022+
+                        centerAffinity*0.00030+
+                        (centerLaunch?0.00012:0)
+                    )*
+                    (0.55+0.45*rpm)*
+                    (0.45+0.55*excessRatio);
+
+                s.vx-=
+                    radialX*
+                    returnStrength*
+                    excessRadius*
+                    dt*60;
+
+                s.vy-=
+                    radialY*
+                    returnStrength*
+                    excessRadius*
+                    dt*60;
+            }
+        }
+
+        /*
           Small physical disturbance.
 
           It is deliberately tiny. It breaks perfectly mathematical paths
@@ -5950,6 +6009,72 @@ function newPhysicsStep(s,dt){
         s.vy +=
             (Math.random()-0.5)*
             disturbance*dt*60;
+
+        /*
+          FINAL FREE-SPACE DIRECTION CONTRACT
+          ----------------------------------
+          All free-space forces are now complete: precession, center return,
+          friction, low-RPM behavior, orbit-envelope damping and RNG
+          disturbance have all had their say.
+
+          NOW project velocity onto the valid spin direction before movement.
+          This is the only correct place for the invariant: a later force
+          cannot recreate the opposite-spin tangential component before the
+          position is integrated.
+
+          It removes ONLY opposite-spin tangential velocity. It never adds
+          orbit speed or deletes radial/impact momentum.
+        */
+        enforceFreeSpaceSpinDirection(s);
+
+        /*
+          Integrate position exactly once, after all free-space forces.
+        */
+        s.x += s.vx*dt*60;
+        s.y += s.vy*dt*60;
+
+        if(s.railExited && s.railExitRefractoryPoint){
+            if(Math.hypot(
+                s.x-s.railExitRefractoryPoint.x,
+                s.y-s.railExitRefractoryPoint.y
+            )>0.18){
+                s.railExited=false;
+                s.railExitRefractoryPoint=null;
+            }
+        }
+
+        /*
+          X-EXIT MOUTH
+          -------------
+          The top notch is open to a genuine rail exit, but normal bowl
+          movement cannot simply phase through the mouth. A Bey that was not
+          released from the rail is redirected back into the bowl.
+        */
+        {
+            const halfWidth=0.133;
+            const edgeY=-0.790;
+            const apexY=-0.603;
+            const clearance=s.radius*0.72;
+
+            if(
+                !s.railExited &&
+                Math.abs(s.x)<halfWidth &&
+                s.y<apexY+clearance
+            ){
+                const boundaryY=
+                    apexY-
+                    Math.abs(edgeY-apexY)*
+                    (1-Math.abs(s.x)/halfWidth);
+
+                if(s.y<boundaryY+clearance && s.vy<0){
+                    s.y=boundaryY+clearance;
+                    s.vy=Math.abs(s.vy)*0.34;
+                    s.vx*=0.82;
+                    s.surfaceRecovery=0.14;
+                    s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
+                }
+            }
+        }
 
         /*
           Outer stadium wall.
