@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vdddd99 · MOVEMENT CORE REBUILD</div>
+            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
         </section>
     </main>`;
 }
@@ -4336,10 +4336,59 @@ function tryNewXRailEngagement(s){
         s.vx*tangentX+
         s.vy*tangentY;
 
-    if(!window.SpinWarsXRailEngine){
-        throw new Error("X-Rail engine failed to load");
+    // Low-RPM rail capture must be earned. High-affinity Attack Bits can
+    // still catch at lower RPM than controlled Bits, but Orb/Ball/Needle-
+    // style Bits should not casually lock onto the rail after they have
+    // already lost most of their movement energy.
+    const attackNaturalRailFloor=
+        attackBit ? 0.46 : 0;
+
+    const minimumCaptureRPM=
+        s.launchPlan?.technique==="X-Rail"
+            ? 0.27
+            : Math.max(
+                0.37+
+                (1-affinity)*0.18,
+                attackNaturalRailFloor
+            );
+
+    /*
+      High RPM plus a clean rail angle can overcome modest translational
+      speed. RPM alone never captures; approach/tangent tests still decide.
+    */
+    const highRPMRailApproach=
+        rpm>=0.72 &&
+        speed>=0.0085;
+
+    if(
+        (!highRPMRailApproach && speed<0.012) ||
+        rpm<minimumCaptureRPM
+    ){
+        return false;
     }
 
+    /*
+      The approach component is measured against the local radial outward
+      direction. It does NOT have to be huge; a glancing rail contact is
+      exactly how many real captures happen.
+    */
+    const radialLen=
+        Math.hypot(nearest.x,nearest.y)||1;
+
+    const radialX=nearest.x/radialLen;
+    const radialY=nearest.y/radialLen;
+
+    const approach=
+        s.vx*radialX+
+        s.vy*radialY;
+
+    const approachRatio=
+        Math.max(0,approach)/
+        Math.max(speed,0.0001);
+
+    // A rail capture must be an actual approach into the rail. A Bey that is
+    // merely traveling parallel inside the contact band should skim past,
+    // not magnetically latch. Deliberate X-Rail launches get a small allowance.
     const deliberateXRail=
         s.launchPlan?.technique==="X-Rail";
 
@@ -4347,35 +4396,126 @@ function tryNewXRailEngagement(s){
         (performance.now()-(s.lastImpactAt||0))<=420 &&
         (s.lastKnockback||0)>=0.010;
 
-    const approachRatio=
-        Math.max(0,approach)/
-        Math.max(speed,0.0001);
+    const physicsDrivenRailException=
+        !deliberateXRail &&
+        !attackBit &&
+        recentKnockback;
+
+    const minimumApproachRatio=
+        deliberateXRail
+            ? (0.10+0.08*(1-affinity))
+            : physicsDrivenRailException
+                ? (0.22+0.14*(1-affinity))
+                : (0.25+0.16*(1-affinity));
+
+    if(approachRatio<minimumApproachRatio){
+        return false;
+    }
 
     const tangentRatio=
         Math.max(0,tangent)/
         Math.max(speed,0.0001);
 
-    const decision=
-        window.SpinWarsXRailEngine.captureDecision({
-            speed,
-            rpm,
-            stability,
-            control,
-            affinity,
-            movement,
-            approachRatio,
-            tangentRatio,
-            tangentSpeed:tangent,
-            deliberate:deliberateXRail,
-            recentKnockback
-        });
+    /*
+      Capture thresholds scale with the actual Bit.
 
-    if(!decision.capture){
+      High-affinity Attack Bits:
+        ~0.22 tangent ratio is enough.
+
+      Controlled Bits:
+        ~0.38.
+
+      Very poor rail Bits:
+        ~0.52.
+
+      A deliberate X-Rail launch receives a lower threshold because the
+      player explicitly chose the rail-seeking launch.
+    */
+    const minimumTangentRatio=
+        deliberateXRail
+            ? 0.22+0.10*(1-affinity)
+            : physicsDrivenRailException
+                ? 0.58-
+                  affinity*0.12-
+                  movement*0.02
+                : 0.68-
+                  affinity*0.10-
+                  movement*0.02;
+
+    const minimumTangentSpeed=
+        deliberateXRail
+            ? 0.0065+0.0020*(1-affinity)
+            : physicsDrivenRailException
+                ? 0.0100-affinity*0.0010
+                : 0.0115-affinity*0.0010;
+
+    if(
+        tangent<minimumTangentSpeed ||
+        tangentRatio<minimumTangentRatio
+    ){
         return false;
     }
 
-    const physicalScore=decision.physicalScore;
-    const initialBoost=decision.initialBoost;
+    /*
+      Approach quality rewards a real rail approach without requiring the
+      Bey to slam directly into the rail. Very shallow glances can still
+      capture if the Bit has strong X-Rail affinity.
+    */
+    const approachQuality=newBattleClamp(
+        approachRatio/0.42,
+        0,1
+    );
+
+    const tangentQuality=newBattleClamp(
+        (tangentRatio-minimumTangentRatio)/
+        Math.max(0.01,1-minimumTangentRatio),
+        0,1
+    );
+
+    const speedQuality=newBattleClamp(
+        (speed-0.012)/0.050,
+        0,1
+    );
+
+    const highRPMAlignmentBonus=
+        newBattleClamp((rpm-0.70)/0.30,0,1)*
+        newBattleClamp(tangentRatio/0.72,0,1)*
+        newBattleClamp(approachRatio/0.42,0,1);
+
+    const physicalScore=newBattleClamp(
+        affinity*0.30+
+        tangentQuality*0.27+
+        approachQuality*0.16+
+        speedQuality*0.08+
+        rpm*0.08+
+        stability*0.05+
+        highRPMAlignmentBonus*0.06,
+        0,1
+    );
+
+    /*
+      Keep RNG, but do not let RNG erase a physically excellent deliberate
+      X-Rail launch. The variance is small and represents imperfect contact.
+    */
+    const baseChance=
+        deliberateXRail
+            ? 0.68+physicalScore*0.20
+            : attackBit
+                ? 0.26+physicalScore*0.38
+                : physicsDrivenRailException
+                    ? 0.10+physicalScore*0.28
+                    : 0.05+physicalScore*0.18;
+
+    const captureChance=newBattleClamp(
+        baseChance+
+        (Math.random()-0.5)*0.08,
+        0.18,
+        0.90
+    );
+
+    if(Math.random()>captureChance){
+        return false;
+    }
 
     /*
       Remove only the outward component. Tangential momentum is preserved.
@@ -4616,29 +4756,36 @@ function applyXRailConstraint(s,dt){
         (s.railSpeed||0)*0.96
     );
 
-    const ride=
-        window.SpinWarsXRailEngine
-          ? window.SpinWarsXRailEngine.rideParams({
-              rpm,
-              control,
-              affinity,
-              movement,
-              grip:s.railGrip||.70
-            })
-          : {
-              maxSpeed:.12,
-              acceleration:.002,
-              friction:.00002,
-              releaseRPM:.24
-            };
+    /*
+      X-Rail acceleration is strongest immediately after capture and at high
+      RPM. It tapers as the rider approaches its rail-speed ceiling.
+    */
+    const railRpmPower=Math.pow(rpm,0.82);
 
-    const maxRailSpeed=ride.maxSpeed;
-    const accelerator=ride.acceleration;
+    const maxRailSpeed=newBattleClamp(
+        0.078+
+        0.092*railRpmPower+
+        0.025*affinity+
+        0.010*control,
+        0.090,
+        0.190
+    );
+
+    const accelerator=
+        (
+            0.00155+
+            0.00210*railRpmPower+
+            0.00135*affinity
+        )*
+        (
+            0.76+
+            0.24*(s.railGrip||0.70)
+        );
 
     const speedRoom=
         newBattleClamp(
             (maxRailSpeed-railSpeed)/
-            Math.max(maxRailSpeed,.001),
+            Math.max(maxRailSpeed,0.001),
             0,1
         );
 
@@ -4647,8 +4794,16 @@ function applyXRailConstraint(s,dt){
         speedRoom*
         dt*60;
 
+    /*
+      Very small friction. The rail should be a high-speed surface, not a
+      second stamina bit.
+    */
     const frictionRate=
-        ride.friction*
+        (
+            0.000010+
+            (1-control)*0.000008+
+            (1-rpm)*0.000010
+        )*
         dt*60;
 
     railSpeed=Math.max(
@@ -4656,9 +4811,19 @@ function applyXRailConstraint(s,dt){
         railSpeed-frictionRate
     );
 
+    /*
+      A rider that loses nearly all tangential momentum can fall off, but a
+      healthy rider is never released simply because a timer expired.
+    */
+    const lowEnergyRPMThreshold=
+        attackBit
+            ? 0.34
+            : 0.24+
+              (1-affinity)*0.16;
+
     if(
-        (railSpeed<.011 && rpm<ride.releaseRPM) ||
-        rpm<.14
+        (railSpeed<0.011 && rpm<lowEnergyRPMThreshold) ||
+        rpm<0.14
     ){
         newXRailRelease(
             s,
