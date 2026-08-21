@@ -20,55 +20,48 @@
         var attackBit = input.attackBit === true;
         var recentKnockback = input.recentKnockback === true;
 
-        var rpmFloor = deliberate ? 0.27 : (attackBit ? 0.40 : 0.46);
+        var rpmFloor = deliberate ? 0.22 : (attackBit ? 0.34 : 0.38);
         if (rpm < rpmFloor) return { capture:false, reason:"low-rpm" };
 
-        if (speed < (deliberate ? 0.008 : 0.012)) {
+        if (speed < (deliberate ? 0.006 : 0.008)) {
             return { capture:false, reason:"low-speed" };
         }
 
         var approachFloor = deliberate
-            ? 0.10 + 0.08 * (1 - affinity)
-            : (recentKnockback ? 0.22 + 0.14 * (1 - affinity)
-                               : 0.25 + 0.16 * (1 - affinity));
+            ? 0.04
+            : (recentKnockback ? 0.06 : 0.08);
 
-        if (approach < approachFloor) {
-            return { capture:false, reason:"poor-approach" };
+        if (approach < approachFloor && tangent < 0.42) {
+            return { capture:false, reason:"insufficient-contact-motion" };
         }
 
         var tangentFloor = deliberate
-            ? 0.22 + 0.10 * (1 - affinity)
-            : (recentKnockback
-                ? 0.48 - affinity * 0.10
-                : (attackBit ? 0.52 : 0.58) - affinity * 0.08);
+            ? 0.16
+            : (attackBit ? 0.28 : 0.34);
 
         var tangentSpeedFloor = deliberate
-            ? 0.0060 + 0.002 * (1 - affinity)
-            : (recentKnockback ? 0.0090 - affinity * 0.001
-                               : 0.0100 - affinity * 0.001);
+            ? 0.0045
+            : (attackBit ? 0.0060 : 0.0070);
 
         if (tangent < tangentFloor || tangentSpeed < tangentSpeedFloor) {
-            return { capture:false, reason:"poor-tangent" };
+            return { capture:false, reason:"insufficient-tangent" };
         }
 
-        var approachQuality = clamp(approach / 0.42, 0, 1);
+        var approachQuality = clamp(approach / 0.32, 0, 1);
         var tangentQuality = clamp(
-            (tangent - tangentFloor) / Math.max(0.01, 1 - tangentFloor),
+            (tangent - tangentFloor) /
+            Math.max(0.01, 1 - tangentFloor),
             0, 1
         );
-        var speedQuality = clamp((speed - 0.012) / 0.050, 0, 1);
-        var alignment = clamp((rpm - 0.70) / 0.30, 0, 1) *
-                        clamp(tangent / 0.72, 0, 1) *
-                        clamp(approach / 0.42, 0, 1);
+        var speedQuality = clamp((speed - 0.008) / 0.045, 0, 1);
 
         var score = clamp(
-            affinity * 0.30 +
-            tangentQuality * 0.27 +
-            approachQuality * 0.16 +
-            speedQuality * 0.08 +
-            rpm * 0.08 +
-            stability * 0.05 +
-            alignment * 0.06,
+            rpm * 0.25 +
+            approachQuality * 0.10 +
+            tangentQuality * 0.35 +
+            speedQuality * 0.10 +
+            affinity * 0.10 +
+            stability * 0.10,
             0, 1
         );
 
@@ -87,15 +80,20 @@
         );
 
         if (Math.random() > chance) {
-            return { capture:false, reason:"contact-not-caught", score:score };
+            return {
+                capture:false,
+                reason:"marginal-contact",
+                score:score,
+                chance:chance
+            };
         }
 
         return {
             capture:true,
             score:score,
             chance:chance,
-            grip:clamp(0.66 + affinity * 0.18 + score * 0.16, 0, 1),
-            initialBoost:0.010 + affinity * 0.014 + rpm * 0.008 + score * 0.010
+            grip:clamp(0.64 + affinity * 0.16 + score * 0.20, 0, 1),
+            initialBoost:0.008 + affinity * 0.010 + rpm * 0.006 + score * 0.008
         };
     }
 
@@ -4512,6 +4510,8 @@ function tryNewXRailEngagement(s){
     s.vy=railTangent.y*capturedSpeed;
 
     s.railEngaged=true;
+    s.railExited=false;
+    s.railExitRefractory=0;
     s.railDirection=direction;
     s.railDirectionName=
         direction>0
@@ -4587,8 +4587,8 @@ function newXRailExit(s){
         0.190
     );
 
-    s.x=endpoint.x+ix*0.010;
-    s.y=endpoint.y+iy*0.010;
+    s.x=endpoint.x+ix*0.032;
+    s.y=endpoint.y+iy*0.032;
 
     s.vx=ix*exitSpeed;
     s.vy=iy*exitSpeed;
@@ -4605,8 +4605,8 @@ function newXRailExit(s){
     s.railRideTime=0;
     s.railBoost=0;
 
-    s.railExitRefractory=0.18;
-    s.railCaptureCooldown=0.28;
+    s.railExitRefractory=0.28;
+    s.railCaptureCooldown=0.42;
     s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={
         x:s.x,
@@ -4677,6 +4677,34 @@ function applyXRailConstraint(s,dt){
         newXRailRelease(s,direction,"no-contact");
         return false;
     }
+    /*
+      FINITE TRACK SAFETY:
+      The authored X-Rail is a one-way finite track. It can never wrap into
+      another lap. Endpoint contact and pathological over-travel resolve
+      through the authoritative X-Exit.
+    */
+    const endpointEpsilon=0.055;
+    const atEndpoint=
+        direction>0
+            ? railDistance>=g.total-endpointEpsilon
+            : railDistance<=endpointEpsilon;
+
+    if(atEndpoint){
+        s.railDistance=endpointDistance;
+        s.railSpeed=Math.max(0.012,s.railSpeed||speedOf(s));
+        newXRailExit(s);
+        return true;
+    }
+
+    if(
+        (s.railTravelDistance||0)>g.total*1.05 ||
+        (s.railRideTime||0)>1.55
+    ){
+        s.railDistance=endpointDistance;
+        newXRailExit(s);
+        return true;
+    }
+
 
     /*
       Once captured, the rail is a finite one-dimensional track.
@@ -5303,7 +5331,8 @@ function newPhysicsStep(s,dt){
                 Math.sqrt(nearest.dist2);
 
             const contactRadius =
-                0.040+s.radius*0.30;
+                0.072+
+                s.radius*0.48;
 
             if(
                 railDistance<=contactRadius &&
