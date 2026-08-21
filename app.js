@@ -1,21 +1,38 @@
-
-/* V107 STEP 2C — X-RAIL DEBUG MONITOR
-   Diagnostic only. Does not instrument or modify any X-Rail physics function.
+/* V107 STEP 2D — X-RAIL AUTO DIAGNOSTIC
+   Diagnostic only. Automatically records rail state transitions so the
+   player does not need to type commands during a fast rail interaction.
 */
 (function(){
     const ID="xrail-debug-monitor";
+    const MAX_EVENTS=30;
+    const seen=new WeakMap();
 
     function fmt(n){
         return Number.isFinite(Number(n)) ? Number(n).toFixed(3) : "—";
     }
-
     function state(s){
         if(!s) return "NO STATE";
         if(s.railEngaged) return "RIDING";
-        if(s.railExitRefractory>0 || s.railCaptureCooldown>0) return "EXIT/COOLDOWN";
+        if(s.railExitRefractory>0) return "EXIT/COOLDOWN";
         return "NORMAL";
     }
-
+    function snap(s){
+        if(!s) return null;
+        return {
+            side:s.side||"?",
+            state:state(s),
+            x:fmt(s.x), y:fmt(s.y),
+            vx:fmt(s.vx), vy:fmt(s.vy),
+            speed:fmt(Math.hypot(s.vx||0,s.vy||0)),
+            rpm:fmt(s.rpm),
+            railD:fmt(s.railDistance),
+            railV:fmt(s.railSpeed),
+            ride:fmt(s.railRideTime),
+            travel:fmt(s.railTravelDistance),
+            chain:s.railChainCount||0,
+            lock:fmt(s.railChainLock)
+        };
+    }
     function panel(){
         let p=document.getElementById(ID);
         if(p) return p;
@@ -23,17 +40,22 @@
         p.id=ID;
         p.style.cssText=
             "position:fixed;left:8px;bottom:8px;z-index:99999;"+
-            "width:min(620px,calc(100vw - 16px));max-height:45vh;"+
-            "overflow:auto;padding:9px;background:rgba(0,0,0,.9);"+
+            "width:min(700px,calc(100vw - 16px));max-height:50vh;"+
+            "overflow:auto;padding:9px;background:rgba(0,0,0,.92);"+
             "color:#fff;font:11px/1.35 monospace;"+
             "border:1px solid rgba(255,255,255,.35);border-radius:6px;"+
-            "pointer-events:none;display:none;";
+            "pointer-events:none;";
         document.body.appendChild(p);
         return p;
     }
 
     window.SpinWarsXRailDebug={
-        enabled:false,
+        enabled:true,
+        events:[],
+        clear(){
+            this.events.length=0;
+            return "cleared";
+        },
         toggle(){
             this.enabled=!this.enabled;
             panel().style.display=this.enabled?"block":"none";
@@ -41,49 +63,106 @@
         }
     };
 
-    function draw(){
+    function recordTransition(s,oldState,newState){
         if(!window.SpinWarsXRailDebug.enabled) return;
-
-        const p=panel();
-        const b=(typeof NEW_BATTLE!=="undefined") ? NEW_BATTLE : null;
-
-        p.innerHTML="";
-        const h=document.createElement("div");
-        h.textContent="X-RAIL DEBUG — STEP 2C";
-        h.style.fontWeight="700";
-        h.style.marginBottom="7px";
-        p.appendChild(h);
-
-        if(!b){
-            p.appendChild(document.createTextNode("NEW_BATTLE not active"));
-            requestAnimationFrame(draw);
-            return;
+        const item={
+            time:new Date().toLocaleTimeString(),
+            side:s.side||"?",
+            from:oldState,
+            to:newState,
+            snap:snap(s)
+        };
+        window.SpinWarsXRailDebug.events.unshift(item);
+        if(window.SpinWarsXRailDebug.events.length>MAX_EVENTS){
+            window.SpinWarsXRailDebug.events.length=MAX_EVENTS;
         }
 
-        [b.player,b.cpu].filter(Boolean).forEach(s=>{
-            const d=document.createElement("div");
-            d.style.marginBottom="7px";
-            d.textContent=
-                (s.side||"?")+
-                " | STATE="+state(s)+
-                " | pos=("+fmt(s.x)+","+fmt(s.y)+")"+
-                " | vel=("+fmt(s.vx)+","+fmt(s.vy)+")"+
-                " | speed="+fmt(Math.hypot(s.vx||0,s.vy||0))+
-                " | RPM="+fmt(s.rpm)+
-                " | railD="+fmt(s.railDistance)+
-                " | railV="+fmt(s.railSpeed)+
-                " | ride="+fmt(s.railRideTime)+
-                " | travel="+fmt(s.railTravelDistance)+
-                " | chain="+(s.railChainCount||0)+
-                " | lock="+fmt(s.railChainLock);
-            p.appendChild(d);
-        });
-
-        requestAnimationFrame(draw);
+        // Also print a compact permanent console record.
+        console.log(
+            "[XRAIL]",
+            item.time,
+            item.side,
+            oldState+" -> "+newState,
+            item.snap
+        );
     }
 
-    console.log("%cX-Rail Step 2C loaded. Run SpinWarsXRailDebug.toggle()","font-weight:bold");
-    requestAnimationFrame(draw);
+    function poll(){
+        try{
+            const b=(typeof NEW_BATTLE!=="undefined") ? NEW_BATTLE : null;
+            if(b){
+                [b.player,b.cpu].filter(Boolean).forEach(s=>{
+                    const current=state(s);
+                    const previous=seen.get(s);
+
+                    if(previous===undefined){
+                        seen.set(s,current);
+                    }else if(previous!==current){
+                        recordTransition(s,previous,current);
+                        seen.set(s,current);
+                    }
+                });
+
+                if(window.SpinWarsXRailDebug.enabled){
+                    const p=panel();
+                    p.innerHTML="";
+
+                    const title=document.createElement("div");
+                    title.textContent="X-RAIL DEBUG — AUTO LOG";
+                    title.style.fontWeight="700";
+                    title.style.marginBottom="7px";
+                    p.appendChild(title);
+
+                    [b.player,b.cpu].filter(Boolean).forEach(s=>{
+                        const r=snap(s);
+                        const d=document.createElement("div");
+                        d.style.marginBottom="7px";
+                        d.textContent=
+                            r.side+
+                            " | "+r.state+
+                            " | pos=("+r.x+","+r.y+")"+
+                            " | vel=("+r.vx+","+r.vy+")"+
+                            " | speed="+r.speed+
+                            " | RPM="+r.rpm+
+                            " | railD="+r.railD+
+                            " | railV="+r.railV+
+                            " | ride="+r.ride+
+                            " | travel="+r.travel+
+                            " | chain="+r.chain;
+                        p.appendChild(d);
+                    });
+
+                    const h=document.createElement("div");
+                    h.textContent="AUTOMATIC STATE TRANSITIONS";
+                    h.style.fontWeight="700";
+                    h.style.marginTop="7px";
+                    p.appendChild(h);
+
+                    window.SpinWarsXRailDebug.events.forEach(e=>{
+                        const d=document.createElement("div");
+                        d.textContent=
+                            e.time+"  "+e.side+"  "+
+                            e.from+" -> "+e.to+
+                            "  railD="+e.snap.railD+
+                            " speed="+e.snap.speed+
+                            " rpm="+e.snap.rpm;
+                        p.appendChild(d);
+                    });
+                }
+            }
+        }catch(err){
+            // Diagnostics must never stop the physics loop.
+            console.warn("[XRAIL DEBUG]",err);
+        }
+
+        requestAnimationFrame(poll);
+    }
+
+    console.log(
+        "%cX-Rail Step 2D auto-log loaded. No command needed.",
+        "font-weight:bold"
+    );
+    requestAnimationFrame(poll);
 })();
 
 /* V105d - X-Rail Phase A embedded in app.js */
