@@ -5607,21 +5607,55 @@ function newPhysicsStep(s,dt){
           Non-Attack Bits therefore tighten sooner visually without needing
           a separate movement engine.
         */
+        /*
+          BIT-SPECIFIC RPM TIGHTENING — V99.2
+          ----------------------------------
+          V99.1 correctly made the orbit tighten earlier, but it still used
+          one RPM curve for every Bit.
+
+          That is not how the movement should feel.
+
+          Non-Attack Bits have a strong center preference, so their orbit
+          should start collapsing toward center earlier in the spin-down.
+
+          Attack Bits retain a wider aggressive orbit longer, but they should
+          ALSO visibly tighten before they get very low on RPM.
+
+          These are continuous curves, not "at 80% switch" rules.
+        */
+        const isAttackMovement =
+            movement>=0.80;
+
+        const rpmTightenStart =
+            isAttackMovement
+                ? 0.72   // Attack: retain aggression a little longer.
+                : 0.84;  // Non-Attack: stabilize much earlier.
+
+        const rpmTightenFloor =
+            isAttackMovement
+                ? 0.42   // Still a meaningful wide/aggressive orbit.
+                : 0.30;  // Non-Attack settles much closer to center.
+
         const rpmRadiusT=
             newBattleClamp(
-                (rpm-0.55)/(1.0-0.55),
+                (rpm-rpmTightenStart)/
+                (1-rpmTightenStart),
                 0,
                 1
             );
 
-        /* Smoothstep keeps the transition gradual instead of creating a
-           visible radius "snap" at a particular RPM. */
+        /*
+          Smoothstep gives us:
+            high RPM = full natural radius
+            threshold = rapid but continuous tightening
+            low RPM = Bit-specific tight orbit
+        */
         const rpmRadiusCurve=
             rpmRadiusT*rpmRadiusT*(3-2*rpmRadiusT);
 
         const rpmRadiusFactor=
-            0.38+
-            0.62*rpmRadiusCurve;
+            rpmTightenFloor+
+            (1-rpmTightenFloor)*rpmRadiusCurve;
 
         const preferredRadius=
             newBattleClamp(
