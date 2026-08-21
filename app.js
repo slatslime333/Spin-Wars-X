@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">Vsssss53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vswagmun53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -4266,6 +4266,7 @@ function tryNewXRailEngagement(s){
     const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
     const movement=(bp.movement||60)/100;
+    const attackBit=movement>=0.80;
 
     /*
       Keep the Attack-Bit classification identical to newPhysicsStep.
@@ -4309,13 +4310,30 @@ function tryNewXRailEngagement(s){
     // still catch at lower RPM than controlled Bits, but Orb/Ball/Needle-
     // style Bits should not casually lock onto the rail after they have
     // already lost most of their movement energy.
+    const attackNaturalRailFloor=
+        attackBit ? 0.46 : 0;
+
     const minimumCaptureRPM=
         s.launchPlan?.technique==="X-Rail"
             ? 0.27
-            : 0.37+
-              (1-affinity)*0.18;
+            : Math.max(
+                0.37+
+                (1-affinity)*0.18,
+                attackNaturalRailFloor
+            );
 
-    if(speed<0.012 || rpm<minimumCaptureRPM){
+    /*
+      High RPM plus a clean rail angle can overcome modest translational
+      speed. RPM alone never captures; approach/tangent tests still decide.
+    */
+    const highRPMRailApproach=
+        rpm>=0.72 &&
+        speed>=0.0085;
+
+    if(
+        (!highRPMRailApproach && speed<0.012) ||
+        rpm<minimumCaptureRPM
+    ){
         return false;
     }
 
@@ -4429,13 +4447,19 @@ function tryNewXRailEngagement(s){
         0,1
     );
 
+    const highRPMAlignmentBonus=
+        newBattleClamp((rpm-0.70)/0.30,0,1)*
+        newBattleClamp(tangentRatio/0.72,0,1)*
+        newBattleClamp(approachRatio/0.42,0,1);
+
     const physicalScore=newBattleClamp(
-        affinity*0.34+
-        tangentQuality*0.26+
+        affinity*0.30+
+        tangentQuality*0.27+
         approachQuality*0.16+
-        speedQuality*0.10+
+        speedQuality*0.08+
         rpm*0.08+
-        stability*0.06,
+        stability*0.05+
+        highRPMAlignmentBonus*0.06,
         0,1
     );
 
@@ -4679,6 +4703,8 @@ function applyXRailConstraint(s,dt){
     const stability=newBattleClamp(s.stability||0,0,1);
     const control=(bp.control||60)/100;
     const affinity=(bp.xRailAffinity||50)/100;
+    const movement=(bp.movement||60)/100;
+    const attackBit=movement>=0.80;
 
     const railTangent=newXRailTangentAtPoint(
         nearest,direction,nearest.x,nearest.y
@@ -4760,8 +4786,10 @@ function applyXRailConstraint(s,dt){
       healthy rider is never released simply because a timer expired.
     */
     const lowEnergyRPMThreshold=
-        0.24+
-        (1-affinity)*0.16;
+        attackBit
+            ? 0.34
+            : 0.24+
+              (1-affinity)*0.16;
 
     if(
         (railSpeed<0.011 && rpm<lowEnergyRPMThreshold) ||
@@ -4985,17 +5013,28 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
         s.vy*ny;
 
     if(normalVelocity>0){
-        const restitution=0.10;
+        const bp=bitPhysics(s);
+        const movement=(bp.movement||60)/100;
+        const attackBit=movement>=0.80;
+        const lowRpmAttack=attackBit && s.rpm<0.46;
 
-        s.vx-=
-            nx*
-            normalVelocity*
-            (1+restitution);
+        if(lowRpmAttack){
+            // Low-RPM Attack contact is a skim, not a trampoline.
+            s.vx-=nx*normalVelocity;
+            s.vy-=ny*normalVelocity;
+        }else{
+            const restitution=0.10;
 
-        s.vy-=
-            ny*
-            normalVelocity*
-            (1+restitution);
+            s.vx-=
+                nx*
+                normalVelocity*
+                (1+restitution);
+
+            s.vy-=
+                ny*
+                normalVelocity*
+                (1+restitution);
+        }
     }
 
     s.railEngaged=false;
