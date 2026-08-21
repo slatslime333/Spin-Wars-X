@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 0.7.1
+ Version 0.7.2 — V99 MOVEMENT CORE REBUILD
 ==================================*/
 
 //=========================
@@ -9,7 +9,7 @@
 
 const Game = {
 
-    version:"0.7.1",
+    version:"0.7.2",
 
     screen:"menu",
 
@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
         </section>
     </main>`;
 }
@@ -5178,9 +5178,7 @@ function newPhysicsStep(s,dt){
             (0.98+0.34*bitAcceleration)*
             rpmSpeedFactor*
             (0.86+0.24*bitStability)*
-            (attackBit
-                ? 1.34+0.20*attackStat+0.12*Math.pow(rpm,0.70)
-                : 1.11+0.08*attackStat) *
+            (1.04+0.30*movement+0.08*attackStat) *
             (rpm<0.60 ? 0.76+0.40*(rpm/0.60) : 1.0);
 
         const speedNow=Math.hypot(s.vx,s.vy);
@@ -5220,16 +5218,6 @@ function newPhysicsStep(s,dt){
             rpm*bitStability*0.00010*dt*60,
             0.18,1
         );
-
-        if(attackBit && rpm>0.38 && speedNow>0.001){
-            const attackDrive=
-                (0.00036+attackStat*0.00034)*
-                Math.pow(rpm,0.82)*
-                (0.74+0.26*s.movementEnergy)*
-                bitAcceleration;
-            s.vx+=(s.vx/speedNow)*attackDrive*dt*60;
-            s.vy+=(s.vy/speedNow)*attackDrive*dt*60;
-        }
 
         const targetTilt=newBattleClamp(
             (1-s.stability)*0.48+
@@ -5297,8 +5285,8 @@ function newPhysicsStep(s,dt){
           RAIL PRIORITY
           -------------
           The X-Rail is a separate constrained surface. Once a Bey is
-          captured, the free-space speed governor, attack drive and orbit
-          forces must NOT run first and fight the rail constraint.
+          captured, the free-space movement response must NOT run first and
+          fight the rail constraint.
 
           This was a major source of contradictory behavior in V70.
         */
@@ -5543,336 +5531,239 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          MOVEMENT MODEL
-          --------------
-          Attack movement stays on the established V90 system.
+          MOVEMENT CORE — V99 REBUILD
+          ----------------------------
+          ONE free-space movement model for every Bit.
 
-          Non-Attack movement is rebuilt around one physical idea:
-          PRECESSION = the Bey's travel direction is continuously curved by
-          its spin toward a modest orbit around the stadium center.
+          The previous V98 movement stack had several independent systems
+          writing to vx/vy: attack drive, precession force, non-attack orbit,
+          center equalization and low-RPM damping. Those systems could fight
+          each other in the same frame.
 
-          The old non-Attack stack mixed tangent force, radial wander, center
-          attraction and low-RPM preservation. Those forces fought over vx/vy.
+          V99 reduces this to one physical response:
 
-          This model instead uses:
-            1. a preferred orbit radius
-            2. a tangential velocity target derived from the ACTUAL physical
-               speed target for the Bit
-            3. a centripetal force based on current speed (v²/r)
-            4. weak radial restoration
-            5. RPM-dependent contraction
+            current momentum
+                 +
+            Bit/stadium movement tendency
+                 -> desired local velocity
+                 -> gradual velocity response
+                 -> position integration
 
-          This is intentionally not a position/path script. Collision and
-          launch momentum still control the Bey's trajectory.
+          The orbit is therefore the RESULT of the Bey carrying velocity
+          around the stadium. No position is placed on a circle and no
+          separate Attack/Non-Attack movement engine exists.
         */
 
-        const r=Math.hypot(s.x,s.y);
-
-        if(attackBit){
         /*
-          Spin/precession is an acceleration, not a circular path.
-          Its influence fades smoothly with RPM.
+          A real collision owns the Bey's trajectory briefly. Orbit response
+          fades back in as the impact momentum dissipates.
         */
-        const r = Math.hypot(s.x,s.y);
-
-        if(r>0.02 && rpm>0.01){
-
-            const invR=1/r;
-
-            // The same authoritative tangent is used everywhere: free
-            // movement, rail direction and launch direction.
-            const spinTangent=getSpinOrbitTangent(
-                s.x,s.y,s.spinDirection
+        s.impactMomentumState=
+            newBattleClamp(
+                (s.impactMomentumState||0)-dt*2.75,
+                0,1
             );
-            const tangentX=spinTangent.x;
-            const tangentY=spinTangent.y;
 
+        const orbitSteeringAvailability=
+            1-0.78*s.impactMomentumState;
+
+        const rNow=Math.hypot(s.x,s.y);
+        const mobilityResponse=
+            0.55+0.45*newBattleClamp(mobility,0,1);
+
+        /*
+          Natural orbit radius.
+
+          CenterAffinity is a physical Bit property:
+            Ball / Orb / Needle / Hexa -> tight
+            Flat / Rush / Kick          -> wider
+
+          Attack Bits receive only a continuous movement contribution from
+          their Bit movement value. There is no separate attack controller.
+          RPM contracts the radius smoothly as spin energy falls.
+        */
+        const baseOrbitRadius=
+            0.155+
+            (1-centerAffinity)*0.39+
+            (movement*0.055)+
+            ((1-bitStability)*0.025);
+
+        const rpmRadiusFactor=
+            0.36+
+            0.64*Math.pow(rpm,0.68);
+
+        const preferredRadius=
+            newBattleClamp(
+                baseOrbitRadius*rpmRadiusFactor,
+                0.145,
+                0.58
+            );
+
+        /*
+          The Bit's natural travel speed comes from the physical speed target
+          already established above. Mobility changes how quickly the Bey can
+          respond to the movement tendency; it is not a second speed source.
+        */
+        const orbitSpeedFraction=
+            0.42+
+            0.24*movement+
+            0.10*(1-centerAffinity);
+
+        const targetOrbitSpeed=
+            physicalSpeedTarget*
+            orbitSpeedFraction*
+            (0.72+0.28*s.movementEnergy);
+
+        /*
+          Authoritative direction convention:
+          RIGHT spin = counter-clockwise.
+          LEFT spin  = clockwise.
+
+          This is the same helper used by X-Rail and post-impact direction
+          protection. No other CW/CCW calculation is permitted here.
+        */
+        let radialX,radialY;
+
+        if(rNow>0.045){
+            radialX=s.x/rNow;
+            radialY=s.y/rNow;
+        }else{
             /*
-              Precession changes continuously. This is force-based
-              wandering, not a fixed orbit.
+              At exact center there is no usable position vector. The Bey's
+              persistent phase only chooses the initial contact direction.
+              Once it leaves center, the real position becomes authoritative.
             */
-            s.motionPhase +=
-                dt*(0.85+rpm*1.35+movement*0.55);
+            const seedAngle=
+                Number.isFinite(s.nonAttackOrbitAngle)
+                    ? s.nonAttackOrbitAngle
+                    : (s.motionPhase||0);
 
-            s.motionPhase2 +=
-                dt*(0.31+(1-rpm)*0.75);
-
-            const wobbleA=Math.sin(s.motionPhase);
-            const wobbleB=Math.sin(s.motionPhase2+1.7);
-
-            const lowRpmAttackSuppression =
-                attackBit
-                    ? newBattleClamp((rpm-0.34)/0.30,0,1)
-                    : 1;
-
-            const lateGameMovementGate=
-                rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
-            const lateralStrength=
-                (0.00010+movement*0.00030)*
-                Math.pow(rpm,1.42)*
-                lateGameMovementGate*
-                (0.52+control*0.48)*
-                (0.76+0.24*attackStat)*
-                (0.72+0.38*bitPrecession)*
-                (0.72+0.28*s.movementEnergy)*
-                (attackBit
-                    ? (0.18+1.12*lowRpmAttackSuppression)
-                    : 0.96);
-
-            const radialX=s.x*invR;
-            const radialY=s.y*invR;
-
-            // Direction is produced by the corrected spin tangent above.
-            // Do not add another steering correction here; collisions and
-            // walls are allowed to redirect the Bey naturally.
-
-            /*
-              The direction of the travel force breathes in/out instead of
-              remaining perfectly tangent to the bowl.
-            */
-            const radialWander=
-                Math.sin(
-                    s.motionPhase*0.73+
-                    s.motionPhase2+
-                    wobbleB*0.35
-                )*
-                lateralStrength*
-                (0.30+(1-centerAffinity)*0.42+bitPrecession*0.18);
-
-            const tangentScale=
-                0.72+0.28*Math.cos(
-                    wobbleA*0.95+wobbleB*0.55
-                );
-
-            s.vx +=
-                tangentX*lateralStrength*tangentScale*dt*60+
-                radialX*radialWander*dt*60;
-
-            s.vy +=
-                tangentY*lateralStrength*tangentScale*dt*60+
-                radialY*radialWander*dt*60;
-
-            /*
-              Small cross-track disturbances are stronger for less
-              controlled/non-attack movement, but vanish with RPM.
-            */
-            const crossX=-tangentY;
-            const crossY=tangentX;
-
-            const driftForce=
-                (0.000018+(1-centerAffinity)*0.000030)*
-                Math.pow(rpm,0.85)*
-                (0.65+(1-control)*0.35);
-
-            s.vx +=
-                crossX*
-                Math.sin(s.motionPhase2*1.17)*
-                driftForce*dt*60;
-
-            s.vy +=
-                crossY*
-                Math.sin(s.motionPhase2*1.17)*
-                driftForce*dt*60;
+            radialX=Math.cos(seedAngle);
+            radialY=Math.sin(seedAngle);
         }
 
+        const spinTangent=
+            getSpinOrbitTangent(
+                radialX,
+                radialY,
+                s.spinDirection
+            );
+
+        const tangentX=spinTangent.x;
+        const tangentY=spinTangent.y;
+
+        /*
+          CENTER-LAUNCH START
+          -------------------
+          A Center launch begins with almost no translational velocity. A
+          Bit/stadium contact response must therefore establish a small
+          initial velocity. This changes velocity only; position remains
+          untouched.
+        */
+        if(
+            Math.hypot(s.vx,s.vy)<0.0028 &&
+            rpm>0.22 &&
+            !s.railEngaged &&
+            !(s.surfaceRecovery>0 && s.lastImpactForce>0.006)
+        ){
+            const seedStrength=
+                targetOrbitSpeed*
+                0.70*
+                mobilityResponse;
+
+            s.vx+=tangentX*seedStrength;
+            s.vy+=tangentY*seedStrength;
         }
 
-        if(!attackBit && rpm>0.01){
+        /*
+          LOCAL VELOCITY RESPONSE
+          ------------------------
+          Instead of adding a permanent tangent acceleration, calculate the
+          local velocity a healthy Bit wants from its current radius and spin.
 
-            /*
-              A fresh collision owns the trajectory first. As the impact state
-              decays, the Bit's normal orbital physics gradually takes over.
-            */
-            s.impactMomentumState=
+          Radial velocity is derived from the radius error. Tangential velocity
+          comes from the Bit's natural movement speed. We then blend the CURRENT
+          velocity toward that local physical response.
+
+          This gives us a real curved trajectory while preserving momentum and
+          allowing collisions to take control immediately after impact.
+        */
+        const desiredRadialSpeed=
+            newBattleClamp(
+                (preferredRadius-rNow)*0.42,
+                -0.028,
+                0.028
+            );
+
+        const desiredVX=
+            tangentX*targetOrbitSpeed+
+            radialX*desiredRadialSpeed;
+
+        const desiredVY=
+            tangentY*targetOrbitSpeed+
+            radialY*desiredRadialSpeed;
+
+        const responseRate=
+            (
+                0.055+
+                control*0.030+
+                bitPrecession*0.010+
+                movement*0.008
+            )*
+            (0.45+0.55*rpm)*
+            mobilityResponse;
+
+        const responseAmount=newBattleClamp(
+            responseRate*dt*60*orbitSteeringAvailability,
+            0,
+            0.13
+        );
+
+        s.vx+=(desiredVX-s.vx)*responseAmount;
+        s.vy+=(desiredVY-s.vy)*responseAmount;
+
+        /*
+          LOW RPM
+          -------
+          No hard "stop orbiting" switch. As RPM falls, target speed and
+          preferred radius have already contracted. A small additional
+          lateral damping prevents a dying Bey from retaining an attack-like
+          sweep while preserving radial momentum after impacts.
+        */
+        if(rpm<0.52){
+            const lowRpm=
                 newBattleClamp(
-                    (s.impactMomentumState||0)-
-                    dt*2.75,
-                    0,1
+                    (0.52-rpm)/0.52,
+                    0,
+                    1
                 );
 
-            const orbitSteeringAvailability=
-                1-
-                0.88*
-                s.impactMomentumState;
+            const lateralDamp=Math.pow(
+                0.972-0.008*bitStability,
+                lowRpm*dt*60
+            );
 
-            const orbitRadius=
-                0.20+
-                (1-centerAffinity)*0.24+
-                (1-bitStability)*0.035;
+            const currentR=Math.hypot(s.x,s.y);
+            if(currentR>0.045){
+                const ix=s.x/currentR;
+                const iy=s.y/currentR;
+                const rv=s.vx*ix+s.vy*iy;
+                const tvx=s.vx-ix*rv;
+                const tvy=s.vy-iy*rv;
 
-            const rpmOrbitFactor=
-                0.46+
-                0.54*Math.pow(rpm,0.70);
-
-            const preferredRadius=
-                orbitRadius*rpmOrbitFactor;
-
-            /*
-              Work from the existing physical speed target. This prevents the
-              orbit controller from being either almost stationary or vastly
-              faster than the Bey's actual movement.
-            */
-            const orbitSpeedFraction=
-                0.30+
-                (1-centerAffinity)*0.09+
-                bitPrecession*0.035;
-
-            const targetOrbitSpeed=
-                physicalSpeedTarget*
-                orbitSpeedFraction*
-                (0.72+0.28*s.movementEnergy);
-
-            let angle=Math.atan2(s.y,s.x);
-
-            if(r<0.055){
-                s.nonAttackOrbitAngle=
-                    Number.isFinite(s.nonAttackOrbitAngle)
-                        ? s.nonAttackOrbitAngle
-                        : s.motionPhase;
-
-                angle=s.nonAttackOrbitAngle;
-            }else{
-                s.nonAttackOrbitAngle=angle;
-            }
-
-            const radialX=Math.cos(angle);
-            const radialY=Math.sin(angle);
-
-            /*
-              getSpinOrbitTangent() is the single source of truth for orbital
-              direction. No separate CW/CCW convention is introduced here.
-            */
-            const spinTangent=
-                getSpinOrbitTangent(
-                    radialX,
-                    radialY,
-                    s.spinDirection
-                );
-
-            const tangentX=spinTangent.x;
-            const tangentY=spinTangent.y;
-
-            const radialVelocity=
-                s.vx*radialX+
-                s.vy*radialY;
-
-            const tangentialVelocity=
-                s.vx*tangentX+
-                s.vy*tangentY;
-
-            /*
-              Tangential steering: enough to make the Bey visibly curve,
-              but capped below Attack movement. This is proportional to the
-              actual speed target, unlike the old tiny absolute 0.003-0.01
-              target.
-            */
-            const tangentResponse=
-                (
-                    0.034+
-                    control*0.020+
-                    bitPrecession*0.008
-                )*
-                (0.52+0.48*rpm);
-
-            const tangentCorrection=
-                (
-                    targetOrbitSpeed-
-                    tangentialVelocity
-                )*
-                tangentResponse*
-                orbitSteeringAvailability*
-                dt*60;
-
-            s.vx+=tangentX*tangentCorrection;
-            s.vy+=tangentY*tangentCorrection;
-
-            /*
-              Centripetal component. For a moving top, turning is a force;
-              it is not accomplished by teleporting the position onto a
-              circle. Use v²/R, softened by RPM and stability.
-            */
-            const currentSpeed=Math.hypot(s.vx,s.vy);
-            const safeRadius=Math.max(preferredRadius,0.16);
-
-            const centripetal=
-                (
-                    currentSpeed*
-                    currentSpeed/
-                    safeRadius
-                )*
-                (
-                    0.34+
-                    0.14*centerAffinity+
-                    0.06*control
-                )*
-                (0.58+0.42*rpm);
-
-            s.vx-=
-                radialX*
-                centripetal*
-                orbitSteeringAvailability*
-                dt*60;
-            s.vy-=
-                radialY*
-                centripetal*
-                orbitSteeringAvailability*
-                dt*60;
-
-            /*
-              Weak radius spring. It prevents the Bey from slowly drifting
-              to the X-Rail without forcing it to the exact center.
-            */
-            const radiusError=
-                preferredRadius-r;
-
-            const radiusSpring=
-                radiusError*
-                (
-                    0.00050+
-                    centerAffinity*0.00036
-                )*
-                (0.55+0.45*rpm)*
-                (0.72+0.28*s.movementEnergy);
-
-            s.vx+=
-                radialX*
-                radiusSpring*
-                orbitSteeringAvailability*
-                dt*60;
-            s.vy+=
-                radialY*
-                radiusSpring*
-                orbitSteeringAvailability*
-                dt*60;
-
-            /*
-              Low RPM contracts the orbit smoothly instead of switching to
-              straight-line travel.
-            */
-            if(rpm<0.48){
-                const lowRpmOrbitDamp=
-                    newBattleClamp(
-                        1-
-                        (
-                            0.005+
-                            (0.48-rpm)*0.016+
-                            centerAffinity*0.003
-                        )*
-                        dt*60,
-                        0.94,
-                        1
-                    );
-
-                s.vx*=lowRpmOrbitDamp;
-                s.vy*=lowRpmOrbitDamp;
+                s.vx=ix*rv+tvx*lateralDamp;
+                s.vy=iy*rv+tvy*lateralDamp;
             }
         }
 
         /*
-          The old non-Attack center equalization and orbit-preservation
-          controllers are intentionally NOT run. One controller owns
-          non-Attack orbit behavior.
-        }
+          Phase is only a tiny contact/precession state. It does not define
+          the Bey's position or path.
+        */
+        s.motionPhase +=
+            dt*(0.72+rpm*1.20+movement*0.42);
+        s.motionPhase2 +=
+            dt*(0.28+(1-rpm)*0.62);
 
         /*
           Small physical disturbance.
@@ -6413,9 +6304,9 @@ function newPhysicsCollision(dt){
       PHASE A — IMPACT MOMENTUM OWNERSHIP
       -----------------------------------
       The collision impulse is now allowed to control the trajectory for a
-      short physical recovery window. The non-Attack orbit model must not
+      short physical recovery window. The normal movement response must not
       immediately overwrite a genuine knockback event with its preferred
-      stadium-centered curvature.
+      stadium curvature.
 
       This is not a teleport, scripted path, or finish override. It is simply
       a temporary reduction in orbital steering after a real collision.
