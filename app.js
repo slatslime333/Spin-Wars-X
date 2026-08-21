@@ -1,3 +1,106 @@
+/* V105d - X-Rail Phase A embedded in app.js */
+(function () {
+    "use strict";
+
+    function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
+    function capture(input) {
+        input = input || {};
+
+        var speed = Number(input.speed) || 0;
+        var rpm = clamp(Number(input.rpm) || 0, 0, 1);
+        var approach = clamp(Number(input.approachRatio) || 0, 0, 1);
+        var tangent = clamp(Number(input.tangentRatio) || 0, 0, 1);
+        var tangentSpeed = Number(input.tangentSpeed) || 0;
+        var affinity = clamp(Number(input.affinity) || 0, 0, 1);
+        var stability = clamp(Number(input.stability) || 0, 0, 1);
+        var deliberate = input.deliberate === true;
+        var attackBit = input.attackBit === true;
+        var recentKnockback = input.recentKnockback === true;
+
+        var rpmFloor = deliberate ? 0.27 : (attackBit ? 0.40 : 0.46);
+        if (rpm < rpmFloor) return { capture:false, reason:"low-rpm" };
+
+        if (speed < (deliberate ? 0.008 : 0.012)) {
+            return { capture:false, reason:"low-speed" };
+        }
+
+        var approachFloor = deliberate
+            ? 0.10 + 0.08 * (1 - affinity)
+            : (recentKnockback ? 0.22 + 0.14 * (1 - affinity)
+                               : 0.25 + 0.16 * (1 - affinity));
+
+        if (approach < approachFloor) {
+            return { capture:false, reason:"poor-approach" };
+        }
+
+        var tangentFloor = deliberate
+            ? 0.22 + 0.10 * (1 - affinity)
+            : (recentKnockback
+                ? 0.48 - affinity * 0.10
+                : (attackBit ? 0.52 : 0.58) - affinity * 0.08);
+
+        var tangentSpeedFloor = deliberate
+            ? 0.0060 + 0.002 * (1 - affinity)
+            : (recentKnockback ? 0.0090 - affinity * 0.001
+                               : 0.0100 - affinity * 0.001);
+
+        if (tangent < tangentFloor || tangentSpeed < tangentSpeedFloor) {
+            return { capture:false, reason:"poor-tangent" };
+        }
+
+        var approachQuality = clamp(approach / 0.42, 0, 1);
+        var tangentQuality = clamp(
+            (tangent - tangentFloor) / Math.max(0.01, 1 - tangentFloor),
+            0, 1
+        );
+        var speedQuality = clamp((speed - 0.012) / 0.050, 0, 1);
+        var alignment = clamp((rpm - 0.70) / 0.30, 0, 1) *
+                        clamp(tangent / 0.72, 0, 1) *
+                        clamp(approach / 0.42, 0, 1);
+
+        var score = clamp(
+            affinity * 0.30 +
+            tangentQuality * 0.27 +
+            approachQuality * 0.16 +
+            speedQuality * 0.08 +
+            rpm * 0.08 +
+            stability * 0.05 +
+            alignment * 0.06,
+            0, 1
+        );
+
+        var baseChance = deliberate
+            ? 0.78 + score * 0.16
+            : attackBit
+                ? 0.34 + score * 0.48
+                : recentKnockback
+                    ? 0.20 + score * 0.40
+                    : 0.16 + score * 0.42;
+
+        var chance = clamp(baseChance + (Math.random() - 0.5) * 0.06, 0.16, 0.94);
+
+        if (Math.random() > chance) {
+            return { capture:false, reason:"contact-not-caught", score:score };
+        }
+
+        return {
+            capture:true,
+            score:score,
+            chance:chance,
+            grip:clamp(0.66 + affinity * 0.18 + score * 0.16, 0, 1),
+            initialBoost:0.010 + affinity * 0.014 + rpm * 0.008 + score * 0.010
+        };
+    }
+
+    window.SpinWarsXRailEngine = {
+        version:"phase-a-clean",
+        capture:capture
+    };
+}())
+
 /*==================================
  SPIN WAR X
  Version 0.7.2 — V99 MOVEMENT CORE REBUILD
@@ -1143,7 +1246,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V9WWWWW9 · MOVEMENT CORE REBUILD</div>
+            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
         </section>
     </main>`;
 }
@@ -2787,6 +2890,9 @@ function newBattleLaunchState(side){
         railUses:0,
         railCaptureCooldown:0,
         railCaptureCooldownPoint:null,
+        railChainLock:0,
+        railChainCount:0,
+        railAwayTime:0,
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
@@ -4236,8 +4342,12 @@ function newXRailRelease(s,direction,reason="release"){
     s.railExited=false;
     s.railExitForce=0;
 
-    s.railExitRefractory=0.12;
-    s.railCaptureCooldown=0.24;
+    s.railExitRefractory=0.18;
+
+    // Prevent immediate X-rail -> X-exit -> X-rail loops.
+    const chainCount=Math.max(1,s.railChainCount||1);
+    s.railChainLock=Math.min(2.20,0.70+0.45*(chainCount-1));
+    s.railCaptureCooldown=Math.max(0.42,s.railChainLock);
     s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={
         x:s.x,
@@ -4282,7 +4392,8 @@ function tryNewXRailEngagement(s){
         !s ||
         s.railEngaged ||
         (s.railExitRefractory||0)>0 ||
-        (s.railCaptureCooldown||0)>0
+        (s.railCaptureCooldown||0)>0 ||
+        (s.railChainLock||0)>0
     ){
         return false;
     }
@@ -4570,6 +4681,7 @@ function tryNewXRailEngagement(s){
     s.railSpeed=capturedSpeed;
     s.railBoost=initialBoost;
     s.railUses=(s.railUses||0)+1;
+    s.railChainCount=(s.railChainCount||0)+1;
 
     /*
       Put the Bey just outside the rail surface. This prevents the first
@@ -5299,6 +5411,27 @@ function newPhysicsStep(s,dt){
                     s.railCaptureCooldown=0;
                     s.railCaptureCooldownPoint=null;
                 }
+            }
+        }
+
+        if(s.railChainLock>0){
+            s.railChainLock=Math.max(0,s.railChainLock-dt);
+        }
+
+        if(!s.railEngaged){
+            const railNear=newXRailNearest(s.x,s.y);
+            const railAwayDistance=railNear
+                ? Math.sqrt(railNear.dist2)
+                : 1;
+
+            if(railAwayDistance>0.22){
+                s.railAwayTime=(s.railAwayTime||0)+dt;
+                if(s.railAwayTime>0.55){
+                    s.railChainCount=0;
+                    s.railAwayTime=0;
+                }
+            }else{
+                s.railAwayTime=0;
             }
         }
 
