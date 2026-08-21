@@ -12,7 +12,45 @@ collisions, damage, finishes, and decisions.
 (function(global){
 "use strict";
 
-function step(s,dt){
+function step(s,dt,ctx){
+/*
+  MODULE BOUNDARY:
+  movement-engine.js has its own scope. Every value originating in
+  app.js is supplied through ctx. It must never read an app.js local.
+*/
+ctx=ctx||{};
+const clamp=ctx.clamp;
+const getSpinTangent=ctx.getSpinOrbitTangent;
+const enforceDirection=ctx.enforcePostImpactSpinDirection;
+
+if(
+  typeof clamp!=="function" ||
+  typeof getSpinTangent!=="function" ||
+  typeof enforceDirection!=="function"
+){
+  throw new Error("Movement engine missing physics context");
+}
+
+const rpm=Number.isFinite(ctx.rpm) ? ctx.rpm : newBattleClampLocal(s.rpm,0,1);
+const centerAffinity=Number.isFinite(ctx.centerAffinity) ? ctx.centerAffinity : 0.60;
+const movement=Number.isFinite(ctx.movement) ? ctx.movement : 0.60;
+const bitStability=Number.isFinite(ctx.bitStability) ? ctx.bitStability : 0.60;
+const balance=Number.isFinite(ctx.balance) ? ctx.balance : 0.70;
+const control=Number.isFinite(ctx.control) ? ctx.control : 0.60;
+const stamina=Number.isFinite(ctx.stamina) ? ctx.stamina : 0.70;
+const bitPrecession=Number.isFinite(ctx.bitPrecession) ? ctx.bitPrecession : 0.50;
+const bitFriction=Number.isFinite(ctx.bitFriction) ? ctx.bitFriction : 0.60;
+const bp=ctx.bp||{};
+const physicalSpeedTarget=Number.isFinite(ctx.physicalSpeedTarget)
+  ? ctx.physicalSpeedTarget
+  : 0.025;
+
+const staminaEfficiency=Number.isFinite(ctx.staminaEfficiency)
+  ? ctx.staminaEfficiency
+  : 1;
+
+function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
+
 
 /*
   MOVEMENT CORE — V99 REBUILD
@@ -43,7 +81,7 @@ function step(s,dt){
   fades back in as the impact momentum dissipates.
 */
 s.impactMomentumState=
-    newBattleClamp(
+    clamp(
         (s.impactMomentumState||0)-dt*2.75,
         0,1
     );
@@ -69,7 +107,7 @@ const mobilityStat=
     );
 
 const mobilityResponse=
-    0.55+0.45*newBattleClamp(mobilityStat/100,0,1);
+    0.55+0.45*clamp(mobilityStat/100,0,1);
 
 /*
   Natural orbit radius.
@@ -179,7 +217,7 @@ if(movement>=0.80){
     const rpmTightenPower=1.55;
 
     const rpmTightenT=
-        newBattleClamp(
+        clamp(
             (rpm-rpmTightenFloor)/
             (1-rpmTightenFloor),
             0,
@@ -214,7 +252,7 @@ if(movement>=0.80){
       response.
     */
     const nonAttackT=
-        newBattleClamp(
+        clamp(
             (rpm-0.55)/(1-0.55),
             0,
             1
@@ -226,7 +264,7 @@ if(movement>=0.80){
 }
 
 const preferredRadius=
-    newBattleClamp(
+    clamp(
         baseOrbitRadius*rpmRadiusFactor,
         0.145,
         0.58
@@ -312,7 +350,7 @@ if(rNow>0.045){
 }
 
 const spinTangent=
-    getSpinOrbitTangent(
+    getSpinTangent(
         radialX,
         radialY,
         s.spinDirection
@@ -358,7 +396,7 @@ if(
   allowing collisions to take control immediately after impact.
 */
 const desiredRadialSpeed=
-    newBattleClamp(
+    clamp(
         (preferredRadius-rNow)*0.42,
         -0.028,
         0.028
@@ -382,7 +420,7 @@ const responseRate=
     (0.45+0.55*rpm)*
     mobilityResponse;
 
-const responseAmount=newBattleClamp(
+const responseAmount=clamp(
     responseRate*dt*60*orbitSteeringAvailability,
     0,
     0.13
@@ -401,7 +439,7 @@ s.vy+=(desiredVY-s.vy)*responseAmount;
 */
 if(rpm<0.52){
     const lowRpm=
-        newBattleClamp(
+        clamp(
             (0.52-rpm)/0.52,
             0,
             1
@@ -463,7 +501,7 @@ s.vy +=
   All free-space forces are complete. This removes ONLY an
   opposite-spin tangential component; it does not add orbit speed.
 */
-enforcePostImpactSpinDirection(s);
+enforceDirection(s);
 
 /*
   Outer stadium wall.
@@ -496,7 +534,7 @@ if(radius>wall){
           after a wall impact.
         */
         const spinTangent=
-            getSpinOrbitTangent(
+            getSpinTangent(
                 s.x,
                 s.y,
                 s.spinDirection
@@ -519,10 +557,10 @@ if(radius>wall){
           - create a recovery state
         */
         const wallImpactQuality=
-            newBattleClamp(outward/0.045,0,2.2);
+            clamp(outward/0.045,0,2.2);
 
         const restitution=
-            newBattleClamp(
+            clamp(
                 0.12+
                 balance*0.10+
                 control*0.045+
@@ -534,7 +572,7 @@ if(radius>wall){
         // Wall friction makes the impact feel planted instead of
         // turning a hard strike into a long floating glide.
         const tangentRetention =
-            newBattleClamp(
+            clamp(
                 0.38+
                 control*0.12,
                 0.38,
@@ -553,31 +591,31 @@ if(radius>wall){
             tangentY*tangent*tangentRetention;
 
         s.surfaceRecovery=0.20;
-        s.tiltLevel=newBattleClamp(
+        s.tiltLevel=clamp(
             (s.tiltLevel||0)+0.06+outward*0.25,
             0,1
         );
         s.motionPhase+=0.45+Math.random()*0.40;
 
-        s.rpm=newBattleClamp(
+        s.rpm=clamp(
             s.rpm-
             (0.002+
              outward*0.025),
             0,1
         );
 
-        s.stability=newBattleClamp(
+        s.stability=clamp(
             s.stability-
             (0.004+
              outward*0.040),
             0,1
         );
-        s.axisStability=newBattleClamp(
+        s.axisStability=clamp(
             (s.axisStability||0.70)-
             (0.015+outward*0.08),
             0.15,1
         );
-        s.movementEnergy=newBattleClamp(
+        s.movementEnergy=clamp(
             (s.movementEnergy||1)-
             (0.018+outward*0.18),
             0.18,1
@@ -587,7 +625,7 @@ if(radius>wall){
           Apply the existing one-shot direction contract immediately
           after a wall impact. This is not a per-frame controller.
         */
-        enforcePostImpactSpinDirection(s);
+        enforceDirection(s);
     }
 }
 
@@ -614,7 +652,7 @@ const tiltDrain =
     s.launchRpmLossMultiplier||1;
 
 s.rpm =
-    newBattleClamp(
+    clamp(
         s.rpm-
         (
             movementDrain*
@@ -636,7 +674,7 @@ const recovery =
 const staminaRecovery=0.78+stamina*0.34;
 
 s.stability =
-    newBattleClamp(
+    clamp(
         s.stability+
         0.00024*
         recovery*
@@ -653,7 +691,7 @@ s.stability =
     );
 
 s.axisStability=
-    newBattleClamp(
+    clamp(
         (s.axisStability||0.70)+
         (
             bitStability*0.00020*rpm*recovery -
