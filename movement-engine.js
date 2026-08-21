@@ -52,8 +52,24 @@ const orbitSteeringAvailability=
     1-0.78*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
+
+/*
+  MOVEMENT ENGINE OWNERSHIP:
+  mobility belongs to the Bey state/stat sheet. It is NOT a local
+  variable from app.js, because this file runs in its own function
+  scope. Reading it directly used to cause:
+      ReferenceError: mobility is not defined
+  on the first physics frame.
+*/
+const mobilityStat=
+    Number(
+        s.mobility ??
+        (s.stats && s.stats.mobility) ??
+        70
+    );
+
 const mobilityResponse=
-    0.55+0.45*newBattleClamp(mobility,0,1);
+    0.55+0.45*newBattleClamp(mobilityStat/100,0,1);
 
 /*
   Natural orbit radius.
