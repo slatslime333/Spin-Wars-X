@@ -4630,6 +4630,72 @@ function newXRailExit(s,reason){
 }
 
 
+function applyXRailContactSafety(s,nearest,incomingNormal){
+    if(!s || !nearest) return false;
+
+    const distance=Math.sqrt(
+        Math.max(0,nearest.dist2)
+    );
+
+    const contactRadius=
+        0.072+
+        s.radius*0.48;
+
+    if(distance>contactRadius){
+        return false;
+    }
+
+    /*
+      Use the actual contact normal, not the stadium-center radial vector.
+      This is essential on the curved sides and bottom of the rail.
+    */
+    const dx=s.x-nearest.x;
+    const dy=s.y-nearest.y;
+    const len=Math.hypot(dx,dy)||1;
+    const nx=dx/len;
+    const ny=dy/len;
+
+    const offset=
+        (s.x-nearest.x)*nx+
+        (s.y-nearest.y)*ny;
+
+    if(offset<0){
+        const push=Math.min(
+            0.018,
+            -offset+0.002
+        );
+        s.x+=nx*push;
+        s.y+=ny*push;
+    }
+
+    /*
+      Only remove velocity INTO the rail. Tangential momentum survives.
+    */
+    const normalVelocity=
+        s.vx*nx+
+        s.vy*ny;
+
+    if(normalVelocity<0){
+        s.vx-=nx*normalVelocity;
+        s.vy-=ny*normalVelocity;
+    }
+
+    /*
+      A failed capture is a normal wall skim. It is NOT a rail ride.
+    */
+    s.railEngaged=false;
+    s.railGrip=0;
+    s.railSpeed=0;
+    s.railBoost=0;
+    s.railContactPoint={
+        x:nearest.x,
+        y:nearest.y
+    };
+
+    return true;
+}
+
+
 function applyXRailConstraint(s,dt){
     if(!s?.railEngaged) return false;
 
