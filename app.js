@@ -5650,39 +5650,60 @@ function newPhysicsStep(s,dt){
 
           The curve is still continuous. There is no hard RPM switch.
         */
-        const rpmTightenStart =
-            isAttackMovement
-                ? 0.92   // Attack begins visibly tightening earlier.
-                : 0.96;  // Non-Attack begins tightening almost immediately.
-
-        const rpmTightenFloor =
-            isAttackMovement
-                ? 0.28   // Attack keeps some aggressive width at low RPM.
-                : 0.12;  // Non-Attack becomes strongly center-stable.
-
-        const rpmTightenPower =
-            isAttackMovement
-                ? 1.55
-                : 1.30;
-
-        const rpmTightenT=
-            newBattleClamp(
-                (rpm-rpmTightenFloor)/
-                (1-rpmTightenFloor),
-                0,
-                1
-            );
-
         /*
-          Unlike V99.2, this curve does not wait for a late threshold.
-          RPM itself continuously controls how much of the Bit's natural
-          orbit remains.
-        */
-        const rpmRadiusCurve=
-            Math.pow(rpmTightenT,rpmTightenPower);
+          V99.4 — NON-ATTACK LOW-RPM CENTER STABILIZATION
+          ------------------------------------------------
+          Attack movement is now considered good and is left unchanged.
 
-        const rpmRadiusFactor=
-            rpmRadiusCurve;
+          Non-Attack Bits were still visibly too wide around ~80 RPM. Their
+          orbit now contracts much more aggressively through the 90→75 RPM
+          region while 100 RPM remains unchanged.
+
+          Target feel:
+            100% = normal natural orbit
+             90% = beginning to tighten
+             80% = MUCH tighter / strongly center-stable
+             70% = very tight
+             60% = near-center stability
+
+          This remains continuous; there is no hard 80-RPM switch.
+        */
+        let rpmRadiusFactor;
+
+        if(movement>=0.80){
+            /*
+              ATTACK — V99.3 LOCKED
+              Do not alter attack movement in this pass.
+            */
+            const rpmTightenFloor=0.28;
+            const rpmTightenPower=1.55;
+
+            const rpmTightenT=
+                newBattleClamp(
+                    (rpm-rpmTightenFloor)/
+                    (1-rpmTightenFloor),
+                    0,
+                    1
+                );
+
+            rpmRadiusFactor=
+                Math.pow(rpmTightenT,rpmTightenPower);
+        }else{
+            /*
+              NON-ATTACK — V99.4
+              Much stronger contraction around the 80% RPM region.
+            */
+            const nonAttackT=
+                newBattleClamp(
+                    (rpm-0.58)/(1-0.58),
+                    0,
+                    1
+                );
+
+            rpmRadiusFactor=
+                0.14+
+                0.86*Math.pow(nonAttackT,2.35);
+        }
 
         const preferredRadius=
             newBattleClamp(
