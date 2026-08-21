@@ -22,7 +22,7 @@
         var attackBit = input.attackBit === true;
         var recentKnockback = input.recentKnockback === true;
 
-        var rpmFloor = deliberate ? 0.27 : (attackBit ? 0.46 : 0.52);
+        var rpmFloor = deliberate ? 0.27 : (attackBit ? 0.40 : 0.46);
         if (rpm < rpmFloor) return { capture:false, reason:"low-rpm" };
 
         if (speed < (deliberate ? 0.008 : 0.012)) {
@@ -41,13 +41,13 @@
         var tangentFloor = deliberate
             ? 0.22 + 0.10 * (1 - affinity)
             : (recentKnockback
-                ? 0.58 - affinity * 0.12 - (attackBit ? 0.02 : 0)
-                : (attackBit ? 0.60 : 0.68) - affinity * 0.10);
+                ? 0.48 - affinity * 0.10
+                : (attackBit ? 0.52 : 0.58) - affinity * 0.08);
 
         var tangentSpeedFloor = deliberate
-            ? 0.0065 + 0.002 * (1 - affinity)
-            : (recentKnockback ? 0.010 - affinity * 0.001
-                               : 0.0115 - affinity * 0.001);
+            ? 0.0060 + 0.002 * (1 - affinity)
+            : (recentKnockback ? 0.0090 - affinity * 0.001
+                               : 0.0100 - affinity * 0.001);
 
         if (tangent < tangentFloor || tangentSpeed < tangentSpeedFloor) {
             return { capture:false, reason:"poor-tangent" };
@@ -75,14 +75,14 @@
         );
 
         var baseChance = deliberate
-            ? 0.68 + score * 0.20
+            ? 0.78 + score * 0.16
             : attackBit
-                ? 0.26 + score * 0.38
+                ? 0.34 + score * 0.48
                 : recentKnockback
-                    ? 0.10 + score * 0.28
-                    : 0.05 + score * 0.18;
+                    ? 0.20 + score * 0.40
+                    : 0.16 + score * 0.42;
 
-        var chance = clamp(baseChance + (Math.random() - 0.5) * 0.08, 0.18, 0.90);
+        var chance = clamp(baseChance + (Math.random() - 0.5) * 0.06, 0.16, 0.94);
 
         if (Math.random() > chance) {
             return { capture:false, reason:"contact-not-caught", score:score };
