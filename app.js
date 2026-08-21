@@ -2141,6 +2141,8 @@ function showLetItRip(){
     const card=document.querySelector("#newStadium")?.parentElement;
     if(!card) return;
 
+    document.getElementById("launchControls")?.remove();
+
     const controls=document.createElement("div");
     controls.id="launchControls";
     controls.style.cssText=
@@ -2251,7 +2253,8 @@ function showLetItRip(){
     };
 
     if(stage==="quality"){
-        document.getElementById("fixedQualityBtn").onclick=()=>{
+        const fixedQualityBtn=document.getElementById("fixedQualityBtn");
+        if(fixedQualityBtn) fixedQualityBtn.onclick=()=>{
             Game.player.launch.quality=Game.player.launch.fixedQualityPreview || rollRandomLaunchQuality();
             Game.cpu.launch=Game.cpu.launch||{};
             Game.cpu.launch.quality=rollRandomLaunchQuality();
@@ -2260,7 +2263,8 @@ function showLetItRip(){
             showLetItRip();
         };
 
-        document.getElementById("rollQualityBtn").onclick=()=>{
+        const rollQualityBtn=document.getElementById("rollQualityBtn");
+        if(rollQualityBtn) rollQualityBtn.onclick=()=>{
             rollLaunchQuality("player");
             Game.cpu.launch=Game.cpu.launch||{};
             Game.cpu.launch.quality=rollRandomLaunchQuality();
@@ -2268,30 +2272,36 @@ function showLetItRip(){
             showLetItRip();
         };
 
-        document.getElementById("backToVS").onclick=showVS;
+        const backToVS=document.getElementById("backToVS");
+        if(backToVS) backToVS.onclick=showVS;
         return;
     }
 
-    document.getElementById("launchFlat").onclick=()=>
-        rebuildAngleTechnique("Flat",Game.player.launch.technique);
+    const bindLaunch=(id,fn)=>{
+        const el=document.getElementById(id);
+        if(el) el.onclick=fn;
+    };
 
-    document.getElementById("launchSlight").onclick=()=>
-        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique);
+    bindLaunch("launchFlat",()=>
+        rebuildAngleTechnique("Flat",Game.player.launch.technique));
 
-    document.getElementById("launchHard").onclick=()=>
-        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique);
+    bindLaunch("launchSlight",()=>
+        rebuildAngleTechnique("Slight Tilt",Game.player.launch.technique));
 
-    document.getElementById("launchCenter").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Center");
+    bindLaunch("launchHard",()=>
+        rebuildAngleTechnique("Hard Tilt",Game.player.launch.technique));
 
-    document.getElementById("launchRail").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail");
+    bindLaunch("launchCenter",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Center"));
 
-    document.getElementById("launchClash").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash");
+    bindLaunch("launchRail",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"X-Rail"));
 
-    document.getElementById("launchDrop").onclick=()=>
-        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch");
+    bindLaunch("launchClash",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Direct Clash"));
+
+    bindLaunch("launchDrop",()=>
+        rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch"));
 
     const startButton=document.getElementById("startBattleNow");
     if(startButton){
