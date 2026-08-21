@@ -1,3 +1,188 @@
+
+/* V107 STEP 2 — X-RAIL DEBUG MONITOR
+   Diagnostic only. Does not modify Bey movement, velocity, rail capture,
+   rail riding, collision, or exit behavior.
+*/
+(function(){
+    const DEBUG_ID="xrail-debug-monitor";
+    const DEBUG_HISTORY=8;
+    const previousStates=new WeakMap();
+
+    function fmt(n){
+        return Number.isFinite(n) ? Number(n).toFixed(3) : "—";
+    }
+
+    function getState(s){
+        if(!s) return "NO STATE";
+        if(s.railEngaged) return "RIDING";
+        if(s.railContactPoint) return "CONTACT";
+        if(s.railExitRefractory>0 || s.railCaptureCooldown>0) return "EXIT/COOLDOWN";
+        return "NORMAL";
+    }
+
+    function ensurePanel(){
+        let panel=document.getElementById(DEBUG_ID);
+        if(panel) return panel;
+
+        panel=document.createElement("div");
+        panel.id=DEBUG_ID;
+        panel.style.cssText=[
+            "position:fixed",
+            "left:8px",
+            "bottom:8px",
+            "z-index:99999",
+            "width:min(420px,calc(100vw - 16px))",
+            "max-height:42vh",
+            "overflow:auto",
+            "padding:8px",
+            "background:rgba(0,0,0,.86)",
+            "color:#fff",
+            "font:11px/1.35 monospace",
+            "border:1px solid rgba(255,255,255,.35)",
+            "border-radius:6px",
+            "pointer-events:none",
+            "display:none"
+        ].join(";");
+
+        const title=document.createElement("div");
+        title.textContent="X-RAIL DEBUG — STEP 2";
+        title.style.fontWeight="700";
+        title.style.marginBottom="5px";
+        panel.appendChild(title);
+
+        document.body.appendChild(panel);
+        return panel;
+    }
+
+    function snapshot(s){
+        if(!s) return null;
+        const vx=Number(s.vx)||0;
+        const vy=Number(s.vy)||0;
+        return {
+            state:getState(s),
+            x:fmt(s.x),
+            y:fmt(s.y),
+            vx:fmt(vx),
+            vy:fmt(vy),
+            speed:fmt(Math.hypot(vx,vy)),
+            rpm:fmt(s.rpm),
+            railDistance:fmt(s.railDistance),
+            railSpeed:fmt(s.railSpeed),
+            rideTime:fmt(s.railRideTime),
+            travel:fmt(s.railTravelDistance),
+            chain:s.railChainCount ?? 0,
+            lock:fmt(s.railChainLock),
+            refractory:fmt(s.railExitRefractory),
+            cooldown:fmt(s.railCaptureCooldown)
+        };
+    }
+
+    window.SpinWarsXRailDebug={
+        enabled:false,
+        history:[],
+        toggle(){
+            this.enabled=!this.enabled;
+            const panel=ensurePanel();
+            panel.style.display=this.enabled?"block":"none";
+            return this.enabled;
+        },
+        inspect(s){
+            return snapshot(s);
+        },
+        clear(){
+            this.history=[];
+            return "cleared";
+        }
+    };
+
+    function watch(){
+        if(!window.SpinWarsXRailDebug.enabled) return;
+
+        const panel=ensurePanel();
+
+        // Discover common Bey state holders without changing them.
+        const candidates=[];
+        for(const key of ["playerState","cpuState","battleState","state"]){
+            if(window[key] && typeof window[key]==="object") candidates.push([key,window[key]]);
+        }
+
+        const rows=[];
+        for(const [name,s] of candidates){
+            const snap=snapshot(s);
+            if(!snap) continue;
+
+            const old=previousStates.get(s);
+            if(!old || old.state!==snap.state){
+                window.SpinWarsXRailDebug.history.unshift({
+                    t:performance.now(),
+                    name,
+                    from:old?.state||"—",
+                    to:snap.state,
+                    x:snap.x,y:snap.y,
+                    vx:snap.vx,vy:snap.vy,
+                    railDistance:snap.railDistance
+                });
+                window.SpinWarsXRailDebug.history=
+                    window.SpinWarsXRailDebug.history.slice(0,DEBUG_HISTORY);
+            }
+            previousStates.set(s,snap);
+
+            rows.push(
+                name+"  STATE="+snap.state+
+                "  pos=("+snap.x+","+snap.y+")"+
+                "  v=("+snap.vx+","+snap.vy+")"+
+                "  |v|="+snap.speed+
+                "  rpm="+snap.rpm+
+                "  railD="+snap.railDistance+
+                "  railV="+snap.railSpeed+
+                "  ride="+snap.rideTime+
+                "  travel="+snap.travel+
+                "  chain="+snap.chain+
+                "  lock="+snap.lock
+            );
+        }
+
+        panel.innerHTML="";
+        const title=document.createElement("div");
+        title.textContent="X-RAIL DEBUG — STEP 2";
+        title.style.fontWeight="700";
+        title.style.marginBottom="5px";
+        panel.appendChild(title);
+
+        for(const row of rows){
+            const el=document.createElement("div");
+            el.textContent=row;
+            el.style.marginBottom="5px";
+            panel.appendChild(el);
+        }
+
+        const h=document.createElement("div");
+        h.style.marginTop="6px";
+        h.textContent="Transitions:";
+        h.style.fontWeight="700";
+        panel.appendChild(h);
+
+        for(const item of window.SpinWarsXRailDebug.history){
+            const el=document.createElement("div");
+            el.textContent=
+                item.name+"  "+item.from+" → "+item.to+
+                "  pos=("+item.x+","+item.y+")"+
+                "  v=("+item.vx+","+item.vy+")"+
+                "  railD="+item.railDistance;
+            panel.appendChild(el);
+        }
+
+        requestAnimationFrame(watch);
+    }
+
+    // Expose a console command; monitor remains OFF by default.
+    console.log(
+        "%cX-Rail Step 2 debug loaded. Run SpinWarsXRailDebug.toggle() to enable.",
+        "font-weight:bold"
+    );
+    window.SpinWarsXRailDebug._start=watch;
+})();
+
 /* V105d - X-Rail Phase A embedded in app.js */
 (function () {
     "use strict";
