@@ -1143,7 +1143,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V53 · STAT &amp; SYSTEM CLEANUP</div>
+            <div class="menu-version">Vqqqqqqqq53 · STAT &amp; SYSTEM CLEANUP</div>
         </section>
     </main>`;
 }
@@ -5589,7 +5589,7 @@ function newPhysicsStep(s,dt){
             const nonAttackMovementScale=
                 attackBit
                     ? 1.0
-                    : (0.045+0.18*(1-centerAffinity));
+                    : (0.15+0.24*(1-centerAffinity));
 
             const lateGameMovementGate=
                 rpm<0.48 ? 0.34+0.66*(rpm/0.48) : 1.0;
@@ -5670,12 +5670,12 @@ function newPhysicsStep(s,dt){
         */
         if(r>0.08 && rpm>0.10){
             const lowRpmCenterBoost=rpm<0.70 ? 1.0+((0.70-rpm)/0.70)*3.0 : 1.0;
-            const typeCenterBoost=!attackBit ? 1.46 : (rpm<0.42 ? 1.05 : 0.34);
-            const centerStrength=(0.00040+centerAffinity*0.00078)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
+            const typeCenterBoost=!attackBit ? 1.08 : (rpm<0.42 ? 1.05 : 0.34);
+            const centerStrength=(0.00030+centerAffinity*0.00052)*(0.56+0.44*rpm)*(0.74+0.26*s.movementEnergy)*lowRpmCenterBoost*typeCenterBoost;
             s.vx-=s.x*centerStrength*dt*60;
             s.vy-=s.y*centerStrength*dt*60;
-            if(!attackBit && r<0.42 && rpm<0.68){
-                const centralDamp=1-newBattleClamp(0.020+(0.68-rpm)*0.055+centerAffinity*0.014,0.020,0.075);
+            if(!attackBit && r<0.42 && rpm<0.48){
+                const centralDamp=1-newBattleClamp(0.010+(0.48-rpm)*0.035+centerAffinity*0.008,0.010,0.045);
                 s.vx*=centralDamp; s.vy*=centralDamp;
             }
         }
@@ -5899,8 +5899,8 @@ function newPhysicsStep(s,dt){
                 s.launchPlan?.technique==="Center";
 
             const naturalOrbitRadius=
-                0.18+
-                (1-centerAffinity)*0.42;
+                0.24+
+                (1-centerAffinity)*0.30;
 
             const excessRadius=
                 Math.max(
