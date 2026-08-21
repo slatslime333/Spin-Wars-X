@@ -109,14 +109,14 @@
 
 
     window.SpinWarsXRailEngine = {
-        version:"phase-a-clean",
+        version:"v1-physical-rail",
         capture:capture
     };
 }())
 
 /*==================================
  SPIN WAR X
- Version 0.7.2 — V99 MOVEMENT CORE REBUILD
+ Version 1.0 — PHYSICAL RAIL / IMPACT STABILITY FIX
 ==================================*/
 
 //=========================
@@ -125,7 +125,7 @@
 
 const Game = {
 
-    version:"0.7.2",
+    version:"1.0",
 
     screen:"menu",
 
@@ -1259,7 +1259,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
+            <div class="menu-version">V1 · PHYSICAL RAIL / IMPACT STABILITY FIX</div>
         </section>
     </main>`;
 }
@@ -3584,6 +3584,29 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
+function assertFinitePhysicsState(s,label="Bey"){
+    if(!s) throw new Error(`Physics state missing: ${label}`);
+
+    const fields=[
+        "x","y","vx","vy","rpm","radius","mass",
+        "stability","axisStability","tiltLevel","movementEnergy",
+        "motionPhase","motionPhase2","impactMomentumState"
+    ];
+
+    for(const key of fields){
+        if(s[key] !== undefined && !Number.isFinite(Number(s[key]))){
+            throw new Error(`Non-finite ${label}.${key}: ${String(s[key])}`);
+        }
+    }
+
+    if(!(Number(s.radius)>0)){
+        throw new Error(`Invalid ${label}.radius: ${String(s.radius)}`);
+    }
+    if(!(Number(s.mass)>0)){
+        throw new Error(`Invalid ${label}.mass: ${String(s.mass)}`);
+    }
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -3607,25 +3630,13 @@ function newBattleFrame(now){
         newPhysicsStep(p,dt);
         newPhysicsStep(c,dt);
 
-        if(
-            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
-            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
-            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
-            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
-        ){
-            throw new Error("Non-finite Bey physics state.");
-        }
+        assertFinitePhysicsState(p,"PLAYER");
+        assertFinitePhysicsState(c,"CPU");
 
         newPhysicsCollision(dt);
 
-        if(
-            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
-            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
-            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
-            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
-        ){
-            throw new Error("Non-finite collision result.");
-        }
+        assertFinitePhysicsState(p,"PLAYER after collision");
+        assertFinitePhysicsState(c,"CPU after collision");
 
         const pe=document.getElementById("newPlayerBey");
         const ce=document.getElementById("newCpuBey");
@@ -4559,7 +4570,7 @@ function tryNewXRailEngagement(s){
 function newXRailExit(s,reason){
     if(!s) return false;
 
-    const g=getXRailGeometry();
+    const g=getNewXRailGeometry();
     const direction=railDirection(s);
     const endpoint=direction>0 ? g.rightExit : g.leftExit;
 
@@ -4569,11 +4580,12 @@ function newXRailExit(s,reason){
 
     const speed=Math.hypot(vx,vy);
     if(speed<0.003){
-        const t=newXRailTangentAtPoint(
-            newXRailNearest(endpoint.x,endpoint.y)
-        );
-        vx=t.x*direction*0.012;
-        vy=t.y*direction*0.012;
+        const endpointRail=newXRailNearest(endpoint.x,endpoint.y);
+        const t=endpointRail
+            ? newXRailTangentAtPoint(endpointRail,direction,endpoint.x,endpoint.y)
+            : {x:direction,y:0};
+        vx=t.x*0.012;
+        vy=t.y*0.012;
     }
 
     /*
@@ -4699,7 +4711,7 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
 function applyXRailConstraint(s,dt){
     if(!s?.railEngaged) return false;
 
-    const g=getXRailGeometry();
+    const g=getNewXRailGeometry();
     const nearest=newXRailNearest(s.x,s.y);
     if(!nearest) return false;
 
@@ -4720,9 +4732,9 @@ function applyXRailConstraint(s,dt){
         return false;
     }
 
-    const tangent=newXRailTangentAtPoint(nearest);
-    const tx=tangent.x*direction;
-    const ty=tangent.y*direction;
+    const tangent=newXRailTangentAtPoint(nearest,direction,s.x,s.y);
+    const tx=tangent.x;
+    const ty=tangent.y;
 
     // Rail normal points from rail toward the Bey.
     let nx=s.x-nearest.x;
@@ -4757,8 +4769,8 @@ function applyXRailConstraint(s,dt){
       Remove velocity into the rail while preserving velocity along it.
       A small amount of surface friction is applied.
     */
-    const friction=clamp(
-        0.020 + (1-clamp((Number(s.rpm)||0)/100,0,1))*0.018,
+    const friction=newBattleClamp(
+        0.020 + (1-newBattleClamp((Number(s.rpm)||0),0,1))*0.018,
         0.018,
         0.038
     );
@@ -4774,16 +4786,16 @@ function applyXRailConstraint(s,dt){
       rail interaction provide more acceleration. Acceleration falls as the
       Bey approaches its current rail-speed ceiling.
     */
-    const rpmN=clamp((Number(s.rpm)||0)/100,0,1);
-    const affinity=clamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
+    const rpmN=newBattleClamp((Number(s.rpm)||0),0,1);
+    const affinity=newBattleClamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
 
-    const contactQuality=clamp(
+    const contactQuality=newBattleClamp(
         1-(railDist/contactLimit),
         0,
         1
     );
 
-    const grip=clamp(
+    const grip=newBattleClamp(
         0.62+
         affinity*0.16+
         contactQuality*0.12+
@@ -4827,7 +4839,7 @@ function applyXRailConstraint(s,dt){
     railSpeed+=acceleration*dt;
 
     // Never reverse or exceed the physically selected ceiling.
-    railSpeed=clamp(
+    railSpeed=newBattleClamp(
         railSpeed,
         0.004,
         railCeiling
@@ -5513,6 +5525,9 @@ function newPhysicsCollision(dt){
     const c=NEW_BATTLE.cpu;
     if(!p||!c) return;
 
+    assertFinitePhysicsState(p,"PLAYER before collision");
+    assertFinitePhysicsState(c,"CPU before collision");
+
     // A Bey riding the X Rail is still physically hittable. A sufficiently
     // strong impact can break its rail grip; weak contact does not.
     const pWasOnRail=!!p.railEngaged;
@@ -5815,6 +5830,9 @@ function newPhysicsCollision(dt){
     if(c.railEngaged && pRailBreakForce>=railBreakThreshold){
         breakXRailFromImpact(c,-nx,-ny,pRailBreakForce);
     }
+
+    assertFinitePhysicsState(p,"PLAYER after impact impulse");
+    assertFinitePhysicsState(c,"CPU after impact impulse");
 
     /*
       Hard-impact rail ejector. Once a rider loses grip, give it a real
