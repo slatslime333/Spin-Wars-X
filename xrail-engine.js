@@ -392,7 +392,248 @@
 
     function contactSafety(s,p){ return bounce(s,p); }
 
+    /*
+     * X-RAIL EXIT RAMP
+     * ----------------
+     * The real purpose of the X-Rail is not to dump a Bey at the center.
+     * The rail mouth behaves like a short launch slope: the Bey leaves the
+     * rail, gets redirected toward the stadium interior, and keeps whatever
+     * lateral bias its approach/energy produced.
+     *
+     * We therefore do NOT choose a fixed exit coordinate.
+     * Instead we choose an exit heading and let the Bey travel through a
+     * short physical ramp. The heading is influenced by:
+     *   - rail approach / contact quality
+     *   - rail speed
+     *   - tilt
+     *   - RPM / energy
+     *   - the Bey's current lateral position at the mouth
+     *   - a small deterministic variation so repeated catches are not clones
+     */
+    function clamp01(v){ return clamp(Number(v)||0,0,1); }
+
+    function hashString(value){
+        const str=String(value||"");
+        let h=2166136261;
+        for(let i=0;i<str.length;i++){
+            h^=str.charCodeAt(i);
+            h=Math.imul(h,16777619);
+        }
+        return (h>>>0)/4294967295;
+    }
+
+    function optionalStat(s,names,def){
+        for(const name of names){
+            const v=Number(s?.[name]);
+            if(Number.isFinite(v)) return clamp01(v/99);
+        }
+        return def;
+    }
+
+    function chooseExitHeading(s,p){
+        const speed=Math.hypot(s.vx,s.vy);
+        const railSpeed=Number(s.railSpeed)||speed;
+        const rpm=clamp01(s.rpm);
+        const tilt=clamp(Math.abs(Number(s.tiltLevel)||0),0,1);
+        const grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
+
+        /* Optional combo stats. Missing stats simply contribute their neutral value. */
+        const balance=optionalStat(s,["balance","balanceStat"],0.70);
+        const attack=optionalStat(s,["attack","attackStat"],0.70);
+        const knockback=optionalStat(s,["knockback","knockbackStat"],0.70);
+
+        /*
+         * The endpoint sits slightly right of stadium center. Correct that
+         * naturally rather than forcing every exit to x=0.
+         */
+        const centerX=-p.x;
+        const centerY=-p.y;
+        const centerLen=Math.hypot(centerX,centerY)||1;
+        const centerDir={x:centerX/centerLen,y:centerY/centerLen};
+
+        /* The true rail tangent is the incoming direction at the mouth. */
+        const tangent={x:p.tx,y:p.ty};
+
+        /* Rotate the tangent toward the stadium interior. */
+        const interiorWeight=clamp(
+            0.68+
+            rpm*0.10+
+            grip*0.10+
+            balance*0.08+
+            Math.min(railSpeed/0.075,1)*0.06-
+            tilt*0.16,
+            0.56,0.92
+        );
+
+        let dx=tangent.x*(1-interiorWeight)+centerDir.x*interiorWeight;
+        let dy=tangent.y*(1-interiorWeight)+centerDir.y*interiorWeight;
+
+        /*
+         * Lateral exit bias.
+         *
+         * Higher tilt / weaker grip = less clean slope alignment, so the
+         * Bey can leave left or right of center. Attack/knockback combos are
+         * allowed a little more lateral spread because they retain more
+         * aggressive exit energy.
+         */
+        const quality=clamp(
+            0.45*grip+
+            0.25*balance+
+            0.20*rpm+
+            0.10*(1-tilt),
+            0,1
+        );
+
+        const spread=
+            0.22+
+            (1-quality)*0.38+
+            (attack*0.5+knockback*0.5)*0.12+
+            tilt*0.18;
+
+        /* Deterministic per-combo/per-ride variation. */
+        const seedBase=(
+            hashString(s.name||s.comboName||s.id||s.beyName||"xrail")+
+            hashString(`${Math.round(railSpeed*10000)}:${Math.round((s.railUses||0)+1)}`)*0.71
+        )%1;
+        /* Use a centered deterministic wave so left and right exits are both possible. */
+        const randomBias=Math.sin(seedBase*Math.PI*2*3.17+0.91);
+
+        /* Current mouth offset contributes a small real positional bias. */
+        const mouthOffset=clamp(
+            (s.x-p.x)*2.2,
+            -1,1
+        );
+
+        /* Perpendicular to the center direction = left/right across the stadium. */
+        const lateral={x:-centerDir.y,y:centerDir.x};
+        const lateralAmount=clamp(
+            randomBias*spread+
+            mouthOffset*0.18+
+            (tangent.x*centerDir.y-tangent.y*centerDir.x)*0.08,
+            -0.68,0.68
+        );
+
+        dx+=lateral.x*lateralAmount;
+        dy+=lateral.y*lateralAmount;
+
+        /* Keep the slope aimed into the stadium. */
+        const len=Math.hypot(dx,dy)||1;
+        dx/=len; dy/=len;
+        if(dy<0.08){
+            dx*=0.82;
+            dy=Math.abs(dy)+0.22;
+            const l=Math.hypot(dx,dy)||1;
+            dx/=l;dy/=l;
+        }
+
+        return {
+            x:dx,
+            y:dy,
+            speed:Math.max(
+                0.018,
+                railSpeed*(
+                    1.04+
+                    rpm*0.06+
+                    attack*0.035+
+                    knockback*0.025-
+                    tilt*0.05
+                )
+            ),
+            lateralAmount,
+            quality,
+            spread,
+            seed:seedBase
+        };
+    }
+
+    function beginExitRamp(s,p){
+        if(s.xrailExitRampActive) return true;
+
+        const heading=chooseExitHeading(s,p);
+        const speed=Math.hypot(s.vx,s.vy);
+        const rampTime=clamp(
+            0.105+
+            (1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.065+
+            Math.abs(Number(s.tiltLevel)||0)*0.025,
+            0.10,0.20
+        );
+
+        s.xrailExitRampActive=true;
+        s.xrailExitRampTime=0;
+        s.xrailExitRampDuration=rampTime;
+        s.xrailExitRampStart={x:s.x,y:s.y};
+        s.xrailExitRampHeading=heading;
+        s.xrailExitRampStartSpeed=Math.max(0.004,speed);
+        s.xrailExitRampSpeed=heading.speed;
+        s.xrailExitTarget={
+            x:s.x+heading.x*heading.speed*rampTime*1.8,
+            y:s.y+heading.y*heading.speed*rampTime*1.8
+        };
+        s.xrailExitTargetBias=heading.lateralAmount;
+        s.lastXRailResult="x-exit-ramp";
+        s.railExitForce=heading.speed;
+        return true;
+    }
+
+    function exitRampStep(s,dt){
+        const heading=s.xrailExitRampHeading;
+        if(!heading){
+            s.xrailExitRampActive=false;
+            release(s,"x-exit");
+            return false;
+        }
+
+        const duration=Math.max(0.08,Number(s.xrailExitRampDuration)||0.14);
+        s.xrailExitRampTime=(s.xrailExitRampTime||0)+dt;
+        const t=clamp(s.xrailExitRampTime/duration,0,1);
+
+        /* Smooth slope: tangent -> interior heading, without teleporting. */
+        const startSpeed=Math.max(0.004,Number(s.xrailExitRampStartSpeed)||0.004);
+        const targetSpeed=Math.max(startSpeed,Number(s.xrailExitRampSpeed)||startSpeed);
+        const smooth=t*t*(3-2*t);
+
+        let vx0=s.vx,vy0=s.vy;
+        const v0=Math.hypot(vx0,vy0)||startSpeed;
+        vx0/=v0; vy0/=v0;
+
+        let dx=vx0*(1-smooth)+heading.x*smooth;
+        let dy=vy0*(1-smooth)+heading.y*smooth;
+        const dlen=Math.hypot(dx,dy)||1;
+        dx/=dlen; dy/=dlen;
+
+        const speed=startSpeed+(targetSpeed-startSpeed)*smooth;
+        s.vx=dx*speed;
+        s.vy=dy*speed;
+        s.x+=s.vx*dt*60;
+        s.y+=s.vy*dt*60;
+
+        s.railSpeed=speed;
+        s.lastXRailResult="x-exit-ramp";
+
+        if(t>=1){
+            /* One final inward push gives the mouth a genuine downward slope. */
+            s.vx=heading.x*targetSpeed;
+            s.vy=heading.y*targetSpeed;
+            s.xrailExitRampActive=false;
+            s.lastXRailResult="x-exit";
+            release(s,"x-exit");
+            s.vx=heading.x*targetSpeed;
+            s.vy=heading.y*targetSpeed;
+            s.railExitForce=targetSpeed;
+            s.railExitVector={x:heading.x,y:heading.y};
+            s.railExitBias=heading.lateralAmount;
+            s.railExitRampCompleted=true;
+            return false;
+        }
+
+        return true;
+    }
+
     function riderStep(s,dt){
+        if(s.xrailExitRampActive){
+            return exitRampStep(s,dt);
+        }
+
         const g=buildGeometry();
         const p=nearest(s.x,s.y);
         if(!p){release(s,"no-geometry");return false;}
@@ -422,9 +663,8 @@
         const centerDot=(s.vx*(centerX/centerLen)+s.vy*(centerY/centerLen))/Math.max(speed,0.0001);
 
         if(nearExit&&endpointDistance<=0.28&&exitForward>0.004&&centerDot>0.25){
-            release(s,"x-exit");
-            s.lastXRailResult="x-exit";
-            return false;
+            beginExitRamp(s,exitPoint);
+            return true;
         }
 
         const tx=p.tx,ty=p.ty;
@@ -563,7 +803,7 @@
     }
 
     global.SpinWarsXRailEngine={
-        version:"4.1-svg-contact-path",
+        version:"4.2-physical-exit-ramp",
         geometry:buildGeometry,
         nearest,
         tangentAt,
