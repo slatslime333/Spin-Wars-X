@@ -2520,6 +2520,35 @@ function railClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
 }
 
+
+/*
+ * V109 X-RAIL DIAGNOSTIC 2
+ * Diagnostic only. No physics values are repaired or clamped here.
+ * This identifies whether corruption exists before X-Rail or is created
+ * by a specific rail calculation.
+ */
+function diagnoseXRailValue(s,stage,values){
+    for(const [key,value] of Object.entries(values||{})){
+        if(typeof value==="number" && !Number.isFinite(value)){
+            const snapshot={
+                x:s?.x,y:s?.y,vx:s?.vx,vy:s?.vy,rpm:s?.rpm,
+                railEngaged:s?.railEngaged,
+                railDistance:s?.railDistance,
+                railSpeed:s?.railSpeed,
+                railGrip:s?.railGrip,
+                railDirection:s?.railDirection,
+                dt:values?.dt
+            };
+            throw new Error(
+                `V109 X-RAIL DIAGNOSTIC 2 | ${s?.side||"unknown"} | `+
+                `stage=${stage} | field=${key} | value=${String(value)} | `+
+                `snapshot=${JSON.stringify(snapshot)} | `+
+                `values=${JSON.stringify(values)}`
+            );
+        }
+    }
+}
+
 const V109_DIAGNOSTIC_FIELDS = [
     "x","y","vx","vy","rpm","stability","axisStability",
     "tiltLevel","movementEnergy","radius","mass",
@@ -4759,6 +4788,11 @@ function applyXRailConstraint(s,dt){
     const radius=Number(s.radius)||0.020;
     const contactLimit=0.070+radius*0.60;
 
+    diagnoseXRailValue(s,"before-rail-constraint",{
+        dt,x:s.x,y:s.y,vx:s.vx,vy:s.vy,rpm:s.rpm,
+        railDist,radius,contactLimit
+    });
+
     /*
       PHYSICAL RAIL CONSTRAINT
 
@@ -4772,8 +4806,15 @@ function applyXRailConstraint(s,dt){
     }
 
     const tangent=newXRailTangentAtPoint(nearest,direction,s.x,s.y);
+
+    diagnoseXRailValue(s,"rail-tangent",{
+        tangentX:tangent?.x,tangentY:tangent?.y,direction
+    });
+
     const tx=tangent.x*direction;
     const ty=tangent.y*direction;
+
+    diagnoseXRailValue(s,"directed-tangent",{tx,ty});
 
     // Rail normal points from rail toward the Bey.
     let nx=s.x-nearest.x;
@@ -4789,11 +4830,20 @@ function applyXRailConstraint(s,dt){
         ny/=nl;
     }
 
+    diagnoseXRailValue(s,"rail-normal",{nx,ny,nl});
+    diagnoseXRailValue(s,"rail-raw-velocity",{rawVx:s.vx,rawVy:s.vy});
+
     let vx=Number(s.vx)||0;
     let vy=Number(s.vy)||0;
 
+    diagnoseXRailValue(s,"rail-local-velocity",{vx,vy});
+
     const tangentialSpeed=vx*tx+vy*ty;
     const normalSpeed=vx*nx+vy*ny;
+
+    diagnoseXRailValue(s,"rail-velocity-projection",{
+        tangentialSpeed,normalSpeed
+    });
 
     /*
       A rail only helps a Bey that is genuinely moving with the track.
@@ -4814,8 +4864,12 @@ function applyXRailConstraint(s,dt){
         0.038
     );
 
+    diagnoseXRailValue(s,"rail-friction",{friction});
+
     let railSpeed=tangentialSpeed;
     railSpeed*=Math.max(0,1-friction*dt*60);
+
+    diagnoseXRailValue(s,"rail-speed-after-friction",{railSpeed});
 
     /*
       REALISTIC RAIL ACCELERATION
@@ -4827,6 +4881,8 @@ function applyXRailConstraint(s,dt){
     */
     const rpmN=railClamp((Number(s.rpm)||0),0,1);
     const affinity=railClamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
+
+    diagnoseXRailValue(s,"rail-inputs",{rpmN,affinity});
 
     const contactQuality=railClamp(
         1-(railDist/contactLimit),
@@ -4842,6 +4898,8 @@ function applyXRailConstraint(s,dt){
         0.55,
         0.98
     );
+
+    diagnoseXRailValue(s,"rail-grip",{contactQuality,grip});
 
     const bitType=String(
         s.bitType||
@@ -4868,6 +4926,8 @@ function applyXRailConstraint(s,dt){
 
     const speedRoom=Math.max(0,railCeiling-railSpeed);
 
+    diagnoseXRailValue(s,"rail-ceiling",{railCeiling,speedRoom});
+
     const acceleration=
         accelerationBase*
         (0.55+grip*0.45)*
@@ -4875,7 +4935,11 @@ function applyXRailConstraint(s,dt){
         (0.35+contactQuality*0.65)*
         (0.35+Math.min(1,speedRoom/0.040)*0.65);
 
+    diagnoseXRailValue(s,"rail-acceleration",{acceleration});
+
     railSpeed+=acceleration*dt;
+
+    diagnoseXRailValue(s,"rail-speed-after-acceleration",{railSpeed});
 
     // Never reverse or exceed the physically selected ceiling.
     railSpeed=railClamp(
@@ -4884,7 +4948,9 @@ function applyXRailConstraint(s,dt){
         railCeiling
     );
 
-    /*
+    
+    diagnoseXRailValue(s,"rail-speed-after-clamp",{railSpeed});
+/*
       Convert the rail speed back into velocity. The rail controls the
       tangent, but does not teleport the Bey to a spline point.
     */
