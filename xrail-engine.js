@@ -13,179 +13,146 @@
 "use strict";
 
 function capture(input) {
-        input=input||{};
+    input=input||{};
 
-        const speed=Number(input.speed)||0;
-        const rpm=clamp(Number(input.rpm)||0,0,1);
-        const approach=clamp(Number(input.approachRatio)||0,0,1);
-        const tangent=clamp(Number(input.tangentRatio)||0,0,1);
-        const tangentSpeed=Number(input.tangentSpeed)||0;
-        const normalSpeed=Math.max(0,Number(input.normalSpeed)||0);
-        const normalRatio=clamp(Number(input.normalRatio)||0,0,1);
-        const outwardSpeed=Math.max(0,Number(input.outwardSpeed)||0);
-        const affinity=clamp(Number(input.affinity)||0,0,1);
-        const stability=clamp(Number(input.stability)||0,0,1);
-        const deliberate=input.deliberate===true;
-        const attackBit=input.attackBit===true;
-        const recentKnockback=input.recentKnockback===true;
-        const impactForce=Math.max(0,Number(input.impactForce)||0);
+    const speed=Number(input.speed)||0;
+    const rpm=clamp(Number(input.rpm)||0,0,1);
+    const approach=clamp(Number(input.approachRatio)||0,0,1);
+    const tangent=clamp(Number(input.tangentRatio)||0,0,1);
+    const tangentSpeed=Number(input.tangentSpeed)||0;
+    const normalRatio=clamp(Number(input.normalRatio)||0,0,1);
+    const affinity=clamp(Number(input.affinity)||0,0,1);
+    const stability=clamp(Number(input.stability)||0,0,1);
+    const tilt=clamp(Math.abs(Number(input.tiltLevel)||0),0,1);
+    const deliberate=input.deliberate===true;
+    const attackBit=input.attackBit===true;
 
-        const rpmFloor=deliberate?0.22:(attackBit?0.34:0.38);
-        if(rpm<rpmFloor) return {capture:false,reason:"low-rpm"};
+    /*
+      X-Rail capture is a physical opportunity, not a "near rail" state.
 
-        const speedFloor=deliberate?0.008:(attackBit?0.014:0.016);
-        if(speed<speedFloor) return {capture:false,reason:"low-speed"};
+      Requirements:
+        1. Right spin / CCW only.
+        2. Real inward approach.
+        3. Useful forward tangential momentum.
+        4. Impact cannot be too square.
+        5. Tilt must be within the catchable range.
 
-        /*
-          X-RAIL IS A SURFACE, NOT A TRACK.
-          A Bey must actually enter the rail from the outside with useful
-          tangential momentum. Simply travelling alongside the rail is a
-          graze and must remain a graze.
-        */
-        const tangentFloor=
-            deliberate ? 0.24 :
-            (attackBit ? 0.40 : 0.46);
+      Low/no tilt is the most favorable state. Heavy lean is rejected rather
+      than merely receiving a small probability penalty.
+    */
+    if(input.spinDirection!==1){
+        return {capture:false,reason:"wrong-spin-direction"};
+    }
 
-        const tangentSpeedFloor=
-            deliberate ? 0.0050 :
-            (attackBit ? 0.009 : 0.011);
+    const rpmFloor=deliberate?0.18:(attackBit?0.24:0.30);
+    const speedFloor=deliberate?0.007:(attackBit?0.010:0.013);
 
-        if(tangent<tangentFloor || tangentSpeed<tangentSpeedFloor){
-            return {capture:false,reason:"insufficient-tangent"};
-        }
+    if(rpm<rpmFloor) return {capture:false,reason:"low-rpm"};
+    if(speed<speedFloor) return {capture:false,reason:"low-speed"};
 
-        /*
-          A successful capture needs a real inward contact impulse. This is
-          the key distinction between a physical rail catch and a Bey that
-          merely happens to orbit near the green rail.
-        */
-        const minimumApproachRatio=deliberate?0.10:0.16;
-        const minimumApproachSpeed=deliberate?0.0045:0.0065;
+    /*
+      Capture envelope for tilt.
+      0.00-0.10 = very favorable
+      0.10-0.24 = usable
+      0.24-0.34 = marginal
+      >0.34       = too leaned to reliably catch
+    */
+    if(tilt>0.34){
+        return {capture:false,reason:"tilt-too-high"};
+    }
 
-        if(
-            approach<minimumApproachRatio ||
-            Number(input.approachSpeed||0)<minimumApproachSpeed
-        ){
-            return {capture:false,reason:"no-real-rail-approach"};
-        }
+    const tiltFactor =
+        tilt<=0.10 ? 1 :
+        tilt<=0.24 ? 1-(tilt-0.10)/0.14*0.35 :
+        0.65-(tilt-0.24)/0.10*0.65;
 
-        /*
-          Moving away from the rail cannot create a capture.
-        */
-        if(outwardSpeed>0.0035){
-            return {capture:false,reason:"moving-away-from-rail"};
-        }
+    if(tiltFactor<=0) return {capture:false,reason:"tilt-too-high"};
 
-        /*
-          Too much normal energy is a wall hit, not a rail catch.
-          A very shallow, highly tangential high-speed contact is allowed;
-          a square/high-energy hit rebounds through the surface-contact path.
-        */
-        const maxNormalRatio=deliberate?0.56:0.48;
+    const tangentFloor=deliberate ? 0.22 : (attackBit ? 0.34 : 0.40);
+    const tangentSpeedFloor=deliberate ? 0.0045 : (attackBit ? 0.007 : 0.009);
 
-        if(normalRatio>maxNormalRatio){
-            return {capture:false,reason:"too-much-normal-impact"};
-        }
+    if(tangent<tangentFloor || tangentSpeed<tangentSpeedFloor){
+        return {capture:false,reason:"insufficient-tangent"};
+    }
 
-        const highEnergyContact=
-            speed>0.040 &&
-            normalRatio>0.34 &&
-            tangent<0.78;
+    const minimumApproachRatio=deliberate?0.08:0.13;
+    const minimumApproachSpeed=deliberate?0.0035:0.0055;
 
-        if(highEnergyContact){
-            return {capture:false,reason:"high-energy-bounce"};
-        }
+    if(
+        approach<minimumApproachRatio ||
+        Number(input.approachSpeed||0)<minimumApproachSpeed
+    ){
+        return {capture:false,reason:"no-real-rail-approach"};
+    }
 
-        /*
-          A fresh Bey-to-Bey impact gets an additional physical rejection
-          test before RNG. A hard impact cannot magically become a rail ride.
-        */
-        if(
-            recentKnockback &&
-            (
-                normalRatio>0.42 ||
-                normalSpeed>0.009 ||
-                impactForce>0.0060
-            ) &&
-            tangent<0.74
-        ){
-            return {capture:false,reason:"hard-impact-no-catch"};
-        }
+    if(normalRatio>0.70){
+        return {capture:false,reason:"too-direct"};
+    }
 
-        const approachQuality=clamp(
-            (approach-minimumApproachRatio)/
-            Math.max(0.01,1-minimumApproachRatio),
-            0,1
-        );
+    /*
+      Very high normal impact is a bounce. A shallow/medium contact is what
+      gives the rail something to catch.
+    */
+    const contactQuality=clamp(
+        1-Math.abs(normalRatio-0.36)/0.36,
+        0,1
+    );
 
-        const tangentQuality=clamp(
-            (tangent-tangentFloor)/
-            Math.max(0.01,1-tangentFloor),
-            0,1
-        );
+    const approachQuality=clamp(
+        (approach-minimumApproachRatio)/
+        Math.max(0.01,1-minimumApproachRatio),
+        0,1
+    );
 
-        const speedQuality=clamp(
-            (speed-speedFloor)/0.045,
-            0,
-            1
-        );
+    const tangentQuality=clamp(
+        (tangent-tangentFloor)/
+        Math.max(0.01,1-tangentFloor),
+        0,1
+    );
 
-        const normalQuality=1-clamp(
-            normalRatio/maxNormalRatio,
-            0,
-            1
-        );
+    const score=
+        0.34*tiltFactor+
+        0.23*tangentQuality+
+        0.18*approachQuality+
+        0.14*contactQuality+
+        0.05*affinity+
+        0.04*stability+
+        0.02*rpm;
 
-        const score=clamp(
-            approachQuality*0.22+
-            tangentQuality*0.34+
-            speedQuality*0.13+
-            normalQuality*0.17+
-            affinity*0.06+
-            stability*0.05+
-            rpm*0.03,
-            0,1
-        );
+    /*
+      RNG is deliberately small. Physics decides whether capture is
+      plausible; RNG only handles the edge of the envelope.
+    */
+    const chance=clamp(
+        0.46+score*0.34,
+        deliberate?0.60:0.05,
+        deliberate?0.86:0.78
+    );
 
-        /*
-          RNG is a small uncertainty around a physical result, not the
-          mechanism that creates the rail ride.
-        */
-        const baseChance=deliberate
-            ? 0.55+score*0.25
-            : 0.05+
-              score*0.55+
-              (attackBit?0.04:0);
-
-        const chance=clamp(
-            baseChance+(Math.random()-0.5)*0.025,
-            0.05,
-            0.82
-        );
-
-        if(Math.random()>chance){
-            return {
-                capture:false,
-                reason:"marginal-contact",
-                score,
-                chance
-            };
-        }
-
+    if(Math.random()>chance){
         return {
-            capture:true,
+            capture:false,
+            reason:"marginal-contact",
             score,
-            chance,
-            grip:clamp(
-                0.52+
-                affinity*0.14+
-                score*0.24+
-                rpm*0.04,
-                0.46,
-                0.92
-            )
+            chance
         };
     }
+
+    return {
+        capture:true,
+        score,
+        chance,
+        grip:clamp(
+            0.52+
+            tiltFactor*0.18+
+            contactQuality*0.12+
+            affinity*0.10+
+            rpm*0.05,
+            0.50,
+            0.94
+        )
+    };
+}
 
 function railClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
@@ -395,19 +362,15 @@ function newXRailTangentAtPoint(point, direction, x, y){
 
 function railDirection(s){
     /*
-      The authored rail path is LEFT endpoint -> down the left side ->
-      around the lower bowl -> up the right side -> RIGHT endpoint.
-
-      That path is the game's counter-clockwise orbit in screen coordinates.
-
-      RIGHT spin MUST use +1 (left endpoint to right endpoint).
-      LEFT spin MUST use -1 (the exact reverse).
+      X-Rail is CCW-only.
+      Right-spin is the only spin allowed to lock onto the rail.
+      Left-spin may contact the surface, but it cannot ride it in reverse.
     */
-    return s?.spinDirection===-1 ? -1 : 1;
+    return 1;
 }
 
 function isBottomFinishCorridor(s){
-    return !!s && s.y>0.70;
+    return false;
 }
 
 function newXRailRelease(s,direction,reason="release"){
@@ -586,7 +549,9 @@ function tryNewXRailEngagement(s){
         deliberate:deliberateXRail,
         attackBit,
         recentKnockback,
-        impactForce:Number(s.lastImpactForce)||0
+        impactForce:Number(s.lastImpactForce)||0,
+        tiltLevel:Number(s.tiltLevel)||0,
+        spinDirection:Number(s.spinDirection)||1
     });
 
     if(!decision.capture){
@@ -645,6 +610,7 @@ function tryNewXRailEngagement(s){
     s.railGrip=Number.isFinite(decision.grip)
         ? decision.grip
         : 0.50;
+    s.lastXRailResult="capture";
     s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
     s.railTravelDistance=0;
@@ -1179,3 +1145,20 @@ global.SpinWarsXRailEngine={
 };
 
 })(window);
+
+/* Developer inspection hook. Does not affect simulation. */
+global.SpinWarsXRailEngine.inspect=function(s){
+    if(!s) return null;
+    const p=newXRailNearest(s.x,s.y);
+    return {
+        engaged:!!s.railEngaged,
+        lastResult:s.lastXRailResult||null,
+        distance:p?Math.sqrt(p.dist2):null,
+        tilt:Number(s.tiltLevel)||0,
+        speed:Math.hypot(Number(s.vx)||0,Number(s.vy)||0),
+        vx:Number(s.vx)||0,
+        vy:Number(s.vy)||0,
+        rpm:Number(s.rpm)||0,
+        spinDirection:Number(s.spinDirection)||1
+    };
+};
