@@ -117,75 +117,246 @@
         return true;
     }
 
+    /*
+     * PHYSICAL CONTACT
+     * ----------------
+     * The SVG rail is drawn as a 2.1-unit stroke in the 100x100 stadium.
+     * Its half-width in game coordinates is approximately 0.027.
+     *
+     * Bey radius + rail half-width is the physical contact envelope.
+     * This is NOT a capture magnet: contact still requires a swept impact.
+     */
+    const RAIL_HALF_WIDTH_GAME=0.027;
+    const CONTACT_EPSILON=0.003;
+
+    function contactRadius(s){
+        const radius=Number(s?.radius)||0.124;
+        return radius+RAIL_HALF_WIDTH_GAME+CONTACT_EPSILON;
+    }
+
     function getContact(s,p){
         const distance=Math.sqrt(Math.max(0,p.dist2));
-        if(distance<1e-8) return null;
-        const nx=(s.x-p.x)/distance, ny=(s.y-p.y)/distance;
+        if(!Number.isFinite(distance)) return null;
+
+        let nx=s.x-p.x, ny=s.y-p.y;
+        const nlen=Math.hypot(nx,ny);
+
+        if(nlen<1e-8){
+            nx=-p.ty;
+            ny=p.tx;
+        }else{
+            nx/=nlen;
+            ny/=nlen;
+        }
+
         const speed=Math.hypot(s.vx,s.vy);
         const normal=s.vx*nx+s.vy*ny;
         const inward=-normal;
         const tangential=s.vx*p.tx+s.vy*p.ty;
+
         return {
-            distance,nx,ny,speed,normal,inward,tangential,
+            distance,
+            nx,ny,
+            speed,
+            normal,
+            inward,
+            tangential,
             approachRatio:inward/Math.max(speed,0.0001),
             tangentRatio:tangential/Math.max(speed,0.0001),
             tilt:Math.abs(Number(s.tiltLevel)||0)
         };
     }
 
-    function captureDecision(s,p,previousDistance){
+    /*
+     * Find whether the Bey's actual frame-to-frame movement crossed the
+     * physical rail envelope.
+     *
+     * We sample the swept segment at fixed points. This is intentionally
+     * simple and deterministic; it prevents a fast Bey from tunneling
+     * through the thin rail between animation frames.
+     */
+    function sweptRailContact(s){
+        if(!s) return null;
+
+        const x0=Number.isFinite(s._xrailPrevX)?s._xrailPrevX:s.x;
+        const y0=Number.isFinite(s._xrailPrevY)?s._xrailPrevY:s.y;
+        const x1=s.x, y1=s.y;
+
+        const dx=x1-x0, dy=y1-y0;
+        const travel=Math.hypot(dx,dy);
+        const samples=Math.max(
+            2,
+            Math.min(12,Math.ceil(travel/0.010))
+        );
+
+        let best=null;
+        const g=buildGeometry();
+        const radius=contactRadius(s);
+
+        for(let i=0;i<=samples;i++){
+            const u=i/samples;
+            const x=x0+dx*u;
+            const y=y0+dy*u;
+            const p=nearest(x,y);
+            if(!p) continue;
+
+            const distance=Math.sqrt(Math.max(0,p.dist2));
+            if(distance>radius) continue;
+
+            if(!best || distance<best.distance){
+                best={
+                    ...p,
+                    distance,
+                    u,
+                    crossed:
+                        distance<=radius &&
+                        (
+                            i>0 ||
+                            Math.hypot(x0-p.x,y0-p.y)>radius
+                        )
+                };
+            }
+        }
+
+        if(!best) return null;
+
+        /*
+         * A Bey that starts inside the shell but is moving away is not
+         * making a new rail impact. A new impact requires either:
+         *   - entering the shell during this frame, or
+         *   - an actual inward velocity at the contact point.
+         */
+        const nx=best.x;
+        const ny=best.y;
+        let rx=s.x-best.x, ry=s.y-best.y;
+        const rl=Math.hypot(rx,ry);
+
+        if(rl<1e-8){
+            rx=-best.ty;
+            ry=best.tx;
+        }else{
+            rx/=rl;
+            ry/=rl;
+        }
+
+        const inward=-(s.vx*rx+s.vy*ry);
+
+        const previousDistance=Number.isFinite(s._xrailPrevDistance)
+            ? s._xrailPrevDistance
+            : Infinity;
+
+        const entering=
+            previousDistance>radius+CONTACT_EPSILON &&
+            best.distance<=radius+CONTACT_EPSILON;
+
+        const movingInto=inward>0.0025;
+
+        if(!entering && !movingInto){
+            return {
+                ...best,
+                impact:false,
+                entering:false,
+                inward,
+                previousDistance
+            };
+        }
+
+        return {
+            ...best,
+            impact:true,
+            entering,
+            inward,
+            previousDistance
+        };
+    }
+
+    function captureDecision(s,p,contact){
         const c=getContact(s,p);
-        if(!c||c.speed<0.008) return {ok:false,reason:"low-speed",contact:c};
-        if(s.spinDirection!==1) return {ok:false,reason:"wrong-spin",contact:c};
+        if(!c||c.speed<0.008){
+            return {ok:false,reason:"low-speed",contact:c};
+        }
 
-        /* The Bey must actually be entering the rail, not merely orbiting beside it. */
-        const crossedSinceLastFrame=
-            Number.isFinite(previousDistance) &&
-            previousDistance-c.distance>=0.0035;
+        if(s.spinDirection!==1){
+            return {ok:false,reason:"wrong-spin",contact:c};
+        }
 
-        if(c.inward<0.0090 && !crossedSinceLastFrame){
+        /*
+         * The swept test is the capture gate. Being near the rail is not.
+         */
+        if(!contact?.impact){
             return {ok:false,reason:"no-rail-impact",contact:c};
         }
-        if(c.inward<0.0070){
+
+        /*
+         * The Bey must have meaningful inward momentum. This is what
+         * distinguishes an impact from an attack orbit that merely skims
+         * alongside the rail.
+         */
+        if(c.inward<0.0065){
             return {ok:false,reason:"weak-impact",contact:c};
         }
-        if(c.tangential<0.0080 || c.tangentRatio<0.30){
+
+        /*
+         * Tangential momentum must be CCW and substantial enough to carry
+         * the Bey along the rail after the impact.
+         */
+        if(c.tangential<0.0070 || c.tangentRatio<0.28){
             return {ok:false,reason:"insufficient-ccw-momentum",contact:c};
         }
-        if(c.approachRatio>0.82){
+
+        /*
+         * A near-square hit is more likely to rebound than lock.
+         */
+        if(c.approachRatio>0.86){
             return {ok:false,reason:"too-direct",contact:c};
         }
+
+        /*
+         * Tilt is a physical capture gate, not a small scoring modifier.
+         */
         if(c.tilt>0.30){
             return {ok:false,reason:"tilt-too-high",contact:c};
         }
 
         return {
-            ok:true,contact:c,
-            grip:clamp(0.70+(1-c.tilt)*0.16+c.tangentRatio*0.10,0.70,0.96)
+            ok:true,
+            contact:c,
+            grip:clamp(
+                0.68+
+                (1-c.tilt)*0.18+
+                c.tangentRatio*0.10,
+                0.68,0.96
+            )
         };
     }
 
-    function engage(s,previousDistance){
-        if(!s||s.railEngaged) return false;
-        if((s.railExitRefractory||0)>0 || (s.railCaptureCooldown||0)>0) return false;
+    function engage(s,contact){
+        if(!s||s.railEngaged||!contact?.impact) return false;
 
-        const p=nearest(s.x,s.y);
-        if(!p) return false;
-        const radius=Number(s.radius)||0.124;
-        const contactRadius=radius+0.010; // rail centerline + thin physical rail
-        if(Math.sqrt(p.dist2)>contactRadius) return false;
+        if((s.railExitRefractory||0)>0 ||
+           (s.railCaptureCooldown||0)>0){
+            return false;
+        }
 
-        const decision=captureDecision(s,p,previousDistance);
+        const p=contact;
+        const decision=captureDecision(s,p,contact);
         s.lastXRailResult=decision.reason;
+
         if(!decision.ok) return false;
 
-        /* Remove only inward normal velocity. Never manufacture a path velocity. */
         const c=decision.contact;
+
+        /*
+         * Remove only velocity directed INTO the rail. Tangential momentum
+         * remains the Bey's own momentum.
+         */
         if(c.normal<0){
             s.vx-=c.nx*c.normal;
             s.vy-=c.ny*c.normal;
         }
+
         const tangential=s.vx*p.tx+s.vy*p.ty;
+
         if(!Number.isFinite(tangential)||tangential<=0.004){
             s.lastXRailResult="capture-lost-tangent";
             return false;
@@ -201,35 +372,83 @@
         s.railRideTime=0;
         s.railTravelDistance=0;
         s._xrailLastDistance=p.distance;
+        s._xrailPrevDistance=p.distance;
         s.railUses=(s.railUses||0)+1;
         s.lastXRailResult="capture";
+
+        /*
+         * Resolve only actual overlap with the physical rail surface.
+         * This prevents a captured Bey from visually sitting inside the rail.
+         */
+        const gap=contactRadius(s);
+        if(p.distance<gap){
+            const nx=s.x-p.x;
+            const ny=s.y-p.y;
+            const len=Math.hypot(nx,ny);
+
+            if(len>1e-8){
+                const push=gap-p.distance;
+                s.x+=(nx/len)*push;
+                s.y+=(ny/len)*push;
+            }
+        }
+
         return true;
     }
 
     function bounce(s,p){
         if(!s||!p) return false;
+
         let nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
-        if(len<1e-9){nx=-p.ty;ny=p.tx;len=1;}
-        nx/=len;ny/=len;
+
+        if(len<1e-9){
+            nx=-p.ty;
+            ny=p.tx;
+            len=1;
+        }
+
+        nx/=len;
+        ny/=len;
+
         const normal=s.vx*nx+s.vy*ny;
+
+        /*
+         * Only reflect velocity if the Bey is actually moving INTO the rail.
+         * A Bey that is merely near the rail is left alone.
+         */
         if(normal<0){
             const restitution=0.46;
             const reflected=-normal*restitution;
-            s.vx-=nx*normal; s.vy-=ny*normal;
-            s.vx+=nx*reflected; s.vy+=ny*reflected;
+
+            s.vx-=nx*normal;
+            s.vy-=ny*normal;
+            s.vx+=nx*reflected;
+            s.vy+=ny*reflected;
+
+            const gap=contactRadius(s);
+            const d=Math.sqrt(p.dist2);
+
+            if(d<gap){
+                const push=gap-d;
+                s.x+=nx*push;
+                s.y+=ny*push;
+            }
+
+            s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);
+            s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
+            s.railCaptureCooldown=0.10;
+            s.railCaptureCooldownPoint={x:s.x,y:s.y};
+            s.lastXRailResult="bounce";
+            return true;
         }
-        const d=Math.sqrt(p.dist2);
-        const gap=(Number(s.radius)||0.124)+0.006;
-        if(d<gap){const push=gap-d;s.x+=nx*push;s.y+=ny*push;}
-        s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);
-        s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
-        s.railCaptureCooldown=0.10;
-        s.railCaptureCooldownPoint={x:s.x,y:s.y};
-        s.lastXRailResult="bounce";
-        return true;
+
+        s.lastXRailResult="near-rail-no-impact";
+        return false;
     }
 
-    function contactSafety(s,p){return bounce(s,p);}
+    function contactSafety(s,p){
+        return bounce(s,p);
+    }
 
     function riderStep(s,dt){
         const g=buildGeometry();
@@ -326,50 +545,119 @@
 
     function step(s,dt){
         if(!s) return {active:false,state:"none"};
-        if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||!Number.isFinite(s.vx)||!Number.isFinite(s.vy)){
+
+        if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||
+           !Number.isFinite(s.vx)||!Number.isFinite(s.vy)){
             throw new Error("X-Rail received non-finite Bey state.");
         }
 
+        /*
+         * Existing riders have rail authority for the frame. Free Beys are
+         * tested against the swept path after normal movement.
+         */
         if(s.railEngaged){
-            return {active:riderStep(s,dt),state:s.railEngaged?"riding":"release"};
+            const railResult=riderStep(s,dt);
+
+            s._xrailPrevX=s.x;
+            s._xrailPrevY=s.y;
+            s._xrailPrevDistance=Number.isFinite(s.railDistance)
+                ? s.railDistance
+                : s._xrailPrevDistance;
+
+            return {
+                active:railResult,
+                state:s.railEngaged?"riding":"release"
+            };
         }
 
-        if((s.railExitRefractory||0)>0) s.railExitRefractory=Math.max(0,s.railExitRefractory-dt);
-        if((s.railCaptureCooldown||0)>0) s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
+        if((s.railExitRefractory||0)>0){
+            s.railExitRefractory=Math.max(0,s.railExitRefractory-dt);
+        }
+
+        if((s.railCaptureCooldown||0)>0){
+            s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
+        }
+
+        /*
+         * First invocation establishes the previous physical position.
+         * Subsequent calls can sweep the actual movement segment.
+         */
+        if(!Number.isFinite(s._xrailPrevX)){
+            s._xrailPrevX=s.x;
+            s._xrailPrevY=s.y;
+        }
+
+        const previousX=s._xrailPrevX;
+        const previousY=s._xrailPrevY;
+
+        const swept=sweptRailContact(s);
+
+        /*
+         * Do not turn proximity into a bounce. Only an actual swept impact
+         * gets a bounce/capture decision.
+         */
+        if(swept?.impact){
+            if(s.railExited||s.railExitRefractory>0||
+               s.railCaptureCooldown>0){
+                bounce(s,swept);
+            }else if(engage(s,swept)){
+                /*
+                 * Capture happens at the actual contact point. Keep the
+                 * current physical velocity; riderStep owns the next frame.
+                 */
+            }else{
+                bounce(s,swept);
+            }
+        }
+
+        /*
+         * Save the physical position AFTER this engine pass. app.js calls
+         * us before and after movement, so the second call sees the complete
+         * movement segment from the previous frame to the current frame.
+         */
+        s._xrailPrevX=s.x;
+        s._xrailPrevY=s.y;
 
         const p=nearest(s.x,s.y);
-        if(!p){s._xrailLastDistance=null;return {active:false,state:"none"};}
-        const distance=Math.sqrt(p.dist2);
-        const radius=Number(s.radius)||0.124;
-        const contactRadius=radius+0.010;
+        s._xrailPrevDistance=p
+            ? Math.sqrt(Math.max(0,p.dist2))
+            : Infinity;
 
-        if(!Number.isFinite(s._xrailLastDistance)) s._xrailLastDistance=distance;
-        const previousDistance=s._xrailLastDistance;
-        s._xrailLastDistance=distance;
-
-        if(distance>contactRadius) return {active:false,state:"none"};
-
-        if(s.railExited||s.railExitRefractory>0||s.railCaptureCooldown>0){
-            bounce(s,p);
-            return {active:false,state:"bounce"};
-        }
-
-        if(engage(s,previousDistance)) return {active:false,state:"capture"};
-        bounce(s,p);
-        return {active:false,state:"bounce"};
+        return {
+            active:false,
+            state:s.railEngaged?"capture":"free",
+            previousX,
+            previousY
+        };
     }
 
     function inspect(s){
         if(!s) return null;
-        const p=nearest(s.x,s.y); if(!p) return null;
+
+        const p=nearest(s.x,s.y);
+        if(!p) return null;
+
         const c=getContact(s,p);
+        const swept=sweptRailContact(s);
+
         return c?{
-            distance:c.distance,speed:c.speed,normal:c.normal,inward:c.inward,
-            tangential:c.tangential,approachRatio:c.approachRatio,
-            tangentRatio:c.tangentRatio,tilt:c.tilt,
-            previousDistance:s._xrailLastDistance??null,
-            progress:p.distance,total:buildGeometry().total,
-            engaged:!!s.railEngaged,result:s.lastXRailResult||null
+            distance:c.distance,
+            contactRadius:contactRadius(s),
+            speed:c.speed,
+            normal:c.normal,
+            inward:c.inward,
+            tangential:c.tangential,
+            approachRatio:c.approachRatio,
+            tangentRatio:c.tangentRatio,
+            tilt:c.tilt,
+            previousDistance:s._xrailPrevDistance??null,
+            sweptImpact:!!swept?.impact,
+            sweptEntering:!!swept?.entering,
+            sweptDistance:swept?.distance??null,
+            progress:p.distance,
+            total:buildGeometry().total,
+            engaged:!!s.railEngaged,
+            result:s.lastXRailResult||null
         }:null;
     }
 
