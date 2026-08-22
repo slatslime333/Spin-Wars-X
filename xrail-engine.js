@@ -1,6 +1,6 @@
 /*
  * SPIN WARS X — X-RAIL ENGINE
- * Version 3.0 — single physical rail model
+ * Version 3.1 — finite rail + physical X-Exit
  *
  * This file is the ONLY owner of X-Rail physics.
  *
@@ -230,24 +230,32 @@
         const tangentRatio=tangential/speed;
         const tilt=Math.abs(Number(s.tiltLevel)||0);
 
-        if(inward<=0.0010){
-            return {ok:false,reason:"not-entering-rail"};
+        /*
+         * A Bey merely orbiting beside the rail must NOT be able to capture.
+         * Require a real inward component and a meaningful CCW component.
+         * These are absolute momentum gates, not proximity gates.
+         */
+        if(inward<0.0045){
+            return {ok:false,reason:"weak-rail-approach"};
         }
 
-        if(tangential<=0.0035||tangentRatio<0.18){
+        if(tangential<0.0065||tangentRatio<0.35){
             return {ok:false,reason:"insufficient-ccw-momentum"};
         }
 
-        /* A nearly square hit should rebound instead of locking on. */
-        if(approachRatio>0.86){
+        /*
+         * A very square impact should rebound. A useful catch has both
+         * inward and tangential momentum rather than hitting the rail head-on.
+         */
+        if(approachRatio>0.72){
             return {ok:false,reason:"too-direct"};
         }
 
         /*
          * Flat/low tilt is the natural capture region. A heavy lean makes
-         * the Bey strike the rail rather than settle onto it.
+         * the Bey strike/skip the rail rather than settle onto it.
          */
-        if(tilt>0.40){
+        if(tilt>0.32){
             return {ok:false,reason:"tilt-too-high"};
         }
 
@@ -280,7 +288,7 @@
         if(!point) return false;
 
         const radius=Number(s.radius)||0.124;
-        const contactRadius=0.055+radius;
+        const contactRadius=0.018+radius;
         if(Math.sqrt(point.dist2)>contactRadius){
             return false;
         }
@@ -463,38 +471,65 @@
         s.railTravelDistance=(s.railTravelDistance||0)+railSpeed*dt;
         s.railDistance=point.distance;
         s.railContactPoint={x:point.x,y:point.y};
+        s.railExitApproachDistance=Math.hypot(
+            s.x-g.rightExit.x,
+            s.y-g.rightExit.y
+        );
 
+        /*
+         * X-EXIT
+         * -------
+         * The rail is finite. The final section is an opening, not another
+         * track segment and not a scripted launch path.
+         *
+         * Once the rider reaches the final exit throat, rail authority ends.
+         * We preserve the Bey's ACTUAL position and speed, then add only a
+         * modest centerward bias. Normal movement owns the next frame.
+         *
+         * There is deliberately NO:
+         *   - x/y placement onto a canned exit point
+         *   - spline/path continuation
+         *   - fixed exit speed
+         *   - forced exit trajectory
+         */
         const endpoint=g.rightExit;
-        const exitDistance=Math.hypot(
+        const endpointDistance=Math.hypot(
             s.x-endpoint.x,
             s.y-endpoint.y
         );
 
+        const exitProgressWindow=0.16;
+        const exitThroatDistance=0.135+radius*0.35;
+
         if(
-            exitDistance<=0.11+radius*0.5 ||
-            point.distance>=g.total-0.035
+            point.distance>=g.total-exitProgressWindow ||
+            endpointDistance<=exitThroatDistance
         ){
-            const inwardX=-endpoint.x;
-            const inwardY=-endpoint.y;
-            const inwardLength=Math.hypot(inwardX,inwardY)||1;
-            const ix=inwardX/inwardLength;
-            const iy=inwardY/inwardLength;
-            const speed=Math.max(0.012,Math.hypot(s.vx,s.vy));
+            const centerX=-s.x;
+            const centerY=-s.y;
+            const centerLength=Math.hypot(centerX,centerY)||1;
+            const cx=centerX/centerLength;
+            const cy=centerY/centerLength;
 
-            /* Preserve most of the rider's momentum and angle it through exit. */
-            const blend=0.28;
-            let vx=(s.vx/speed)*(1-blend)+ix*blend;
-            let vy=(s.vy/speed)*(1-blend)+iy*blend;
+            const speed=Math.max(0.010,Math.hypot(s.vx,s.vy));
+            const currentX=s.vx/speed;
+            const currentY=s.vy/speed;
+
+            /*
+             * Preserve the actual outgoing direction. The centerward blend
+             * represents the physical opening/guide geometry, not a path.
+             */
+            const blend=0.34;
+            let vx=currentX*(1-blend)+cx*blend;
+            let vy=currentY*(1-blend)+cy*blend;
             const len=Math.hypot(vx,vy)||1;
-            vx/=len;
-            vy/=len;
 
-            s.vx=vx*speed;
-            s.vy=vy*speed;
-            s.x=endpoint.x+ix*(radius+0.018);
-            s.y=endpoint.y+iy*(radius+0.018);
+            s.vx=(vx/len)*speed;
+            s.vy=(vy/len)*speed;
 
+            /* IMPORTANT: leave s.x/s.y exactly where physics put the Bey. */
             release(s,"x-exit");
+            s.lastXRailResult="x-exit";
             return false;
         }
 
@@ -529,7 +564,7 @@
         if(!point) return {active:false,state:"none"};
 
         const radius=Number(s.radius)||0.124;
-        const contactRadius=0.055+radius;
+        const contactRadius=0.018+radius;
         if(Math.sqrt(point.dist2)>contactRadius){
             return {active:false,state:"none"};
         }
@@ -574,7 +609,7 @@
     }
 
     global.SpinWarsXRailEngine={
-        version:"3.0-single-physical-model",
+        version:"3.1-finite-rail-physical-exit",
         geometry:buildGeometry,
         nearest,
         release,
