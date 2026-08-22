@@ -4246,9 +4246,13 @@ function newPhysicsStep(s,dt){
             const railDistance =
                 Math.sqrt(nearest.dist2);
 
+            // X-Rail contact is based on the actual rendered rail centerline
+            // plus the Bey radius. Keep this threshold in the same physical
+            // space as xrail-engine.js; the old 0.072+radius*0.48 threshold
+            // was too small to reach the rail's true contact shell.
             const contactRadius =
-                0.072+
-                s.radius*0.48;
+                0.055+
+                s.radius;
 
             if(
                 railDistance<=contactRadius &&
@@ -4503,7 +4507,7 @@ function breakXRailFromImpact(s,nx,ny,force){
             s.vy+=ry*add;
         }
 
-        const contactRadius=0.072+s.radius*0.48;
+        const contactRadius=0.055+s.radius;
         const distance=Math.sqrt(point.dist2);
 
         if(distance<contactRadius){
