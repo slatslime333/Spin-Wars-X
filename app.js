@@ -4978,4 +4978,24 @@ function newPhysicsCollision(dt){
 // Launch angle and technique are selected on the stadium setup view.
 // The selected launch state is passed directly into the physical engine.
 
-window.addEventListener("DOMContentLoaded",()=>hookMenuButtons());
+/*
+  BOOTSTRAP FIX
+  -------------
+  index.html loads app.js with a cache-busting dynamic script so future
+  app.js revisions do not require editing index.html. A dynamically
+  injected script can execute after DOMContentLoaded has already fired.
+  In that case the old listener would never run and the game would remain
+  blank. Boot immediately when the DOM is already ready; otherwise wait
+  for DOMContentLoaded.
+*/
+function bootSpinWars(){
+    if(window.__spinWarsBooted) return;
+    window.__spinWarsBooted=true;
+    hookMenuButtons();
+}
+
+if(document.readyState==="loading"){
+    window.addEventListener("DOMContentLoaded",bootSpinWars,{once:true});
+}else{
+    bootSpinWars();
+}
