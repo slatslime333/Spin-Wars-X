@@ -116,7 +116,7 @@
 
 /*==================================
  SPIN WAR X
- Version 0.7.2 — V99 MOVEMENT CORE REBUILD
+ Version 1.0 — X-RAIL ROOT REPAIR
 ==================================*/
 
 //=========================
@@ -125,7 +125,7 @@
 
 const Game = {
 
-    version:"0.7.2",
+    version:"1.0",
 
     screen:"menu",
 
@@ -2520,64 +2520,6 @@ function railClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
 }
 
-
-/*
- * V109 X-RAIL DIAGNOSTIC 2
- * Diagnostic only. No physics values are repaired or clamped here.
- * This identifies whether corruption exists before X-Rail or is created
- * by a specific rail calculation.
- */
-function diagnoseXRailValue(s,stage,values){
-    for(const [key,value] of Object.entries(values||{})){
-        if(typeof value==="number" && !Number.isFinite(value)){
-            const snapshot={
-                x:s?.x,y:s?.y,vx:s?.vx,vy:s?.vy,rpm:s?.rpm,
-                railEngaged:s?.railEngaged,
-                railDistance:s?.railDistance,
-                railSpeed:s?.railSpeed,
-                railGrip:s?.railGrip,
-                railDirection:s?.railDirection,
-                dt:values?.dt
-            };
-            throw new Error(
-                `V109 X-RAIL DIAGNOSTIC 2 | ${s?.side||"unknown"} | `+
-                `stage=${stage} | field=${key} | value=${String(value)} | `+
-                `snapshot=${JSON.stringify(snapshot)} | `+
-                `values=${JSON.stringify(values)}`
-            );
-        }
-    }
-}
-
-const V109_DIAGNOSTIC_FIELDS = [
-    "x","y","vx","vy","rpm","stability","axisStability",
-    "tiltLevel","movementEnergy","radius","mass",
-    "railEngaged","railDistance","railSpeed","railRideTime",
-    "railTravelDistance","railGrip","railDirection",
-    "impactMomentumState","lastImpactForce","lastKnockback"
-];
-
-function diagnosePhysicsState(s,label){
-    if(!s) throw new Error(`V109 diagnostic: missing state at ${label}`);
-
-    for(const field of V109_DIAGNOSTIC_FIELDS){
-        const value=s[field];
-        if(value===undefined || value===null) continue;
-        if(typeof value==="number" && !Number.isFinite(value)){
-            const snapshot={};
-            for(const key of V109_DIAGNOSTIC_FIELDS){
-                snapshot[key]=s[key];
-            }
-            throw new Error(
-                `V109 PHYSICS CORRUPTION | ${s.side||"UNKNOWN"} | `+
-                `stage=${label} | field=${field} | value=${String(value)} | `+
-                `snapshot=${JSON.stringify(snapshot)}`
-            );
-        }
-    }
-}
-
-
 /*========================================================
  LAUNCH QUALITY — CANONICAL
 ========================================================*/
@@ -3672,14 +3614,8 @@ function newBattleFrame(now){
             Game.battle.phase="Battle";
         }
 
-        diagnosePhysicsState(p,"frame-start");
-        diagnosePhysicsState(c,"frame-start");
-
         newPhysicsStep(p,dt);
         newPhysicsStep(c,dt);
-
-        diagnosePhysicsState(p,"after-player-physics");
-        diagnosePhysicsState(c,"after-cpu-physics");
 
         if(
             !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -3690,13 +3626,7 @@ function newBattleFrame(now){
             throw new Error("Non-finite Bey physics state.");
         }
 
-        diagnosePhysicsState(p,"before-collision");
-        diagnosePhysicsState(c,"before-collision");
-
         newPhysicsCollision(dt);
-
-        diagnosePhysicsState(p,"after-collision");
-        diagnosePhysicsState(c,"after-collision");
 
         if(
             !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -4599,9 +4529,18 @@ function tryNewXRailEngagement(s){
         s.vx*railTangent.x+
         s.vy*railTangent.y;
 
-    const capturedSpeed=
-        Math.max(tangentAfter,0.012)+
-        decision.initialBoost;
+    /*
+      CAPTURE -> RIDING CONTRACT
+      --------------------------
+      Capture decides whether the Bey caught the rail. It does not inject a
+      hidden "initial boost". The Bey enters the rail with the tangential
+      momentum it actually brought to the contact.
+    */
+    if(!Number.isFinite(tangentAfter) || tangentAfter<=0){
+        return false;
+    }
+
+    const capturedSpeed=tangentAfter;
 
     s.vx=railTangent.x*capturedSpeed;
     s.vy=railTangent.y*capturedSpeed;
@@ -4615,13 +4554,15 @@ function tryNewXRailEngagement(s){
             ? "RIGHT_SPIN_CCW_PATH"
             : "LEFT_SPIN_CW_PATH";
 
-    s.railGrip=decision.grip;
+    s.railGrip=Number.isFinite(decision.grip)
+        ? decision.grip
+        : 0.50;
     s.railContactPoint={x:nearest.x,y:nearest.y};
     s.railDistance=nearest.distance;
     s.railTravelDistance=0;
     s.railRideTime=0;
     s.railSpeed=capturedSpeed;
-    s.railBoost=decision.initialBoost;
+    s.railBoost=0;
     s.railUses=(s.railUses||0)+1;
     s.railChainCount=(s.railChainCount||0)+1;
 
@@ -4781,45 +4722,73 @@ function applyXRailConstraint(s,dt){
 
     const g=getNewXRailGeometry();
     const nearest=newXRailNearest(s.x,s.y);
-    if(!nearest) return false;
+    if(!nearest){
+        newXRailExit(s,"rail-geometry");
+        return false;
+    }
 
     const direction=railDirection(s);
     const railDist=nearest.distance;
-    const radius=Number(s.radius)||0.020;
-    const contactLimit=0.070+radius*0.60;
+    const radius=Number(s.radius);
 
-    diagnoseXRailValue(s,"before-rail-constraint",{
-        dt,x:s.x,y:s.y,vx:s.vx,vy:s.vy,rpm:s.rpm,
-        railDist,radius,contactLimit
-    });
+    if(!Number.isFinite(radius) || radius<=0){
+        newXRailExit(s,"invalid-radius");
+        return false;
+    }
+
+    const contactLimit=0.070+radius*0.60;
 
     /*
       PHYSICAL RAIL CONSTRAINT
 
-      railDistance is diagnostic/track progress only. It does not directly
-      place the Bey on the spline. The Bey's actual position and velocity are
-      authoritative.
+      Position and velocity remain authoritative. The rail supplies a local
+      surface tangent/normal constraint; it does not place the Bey on a
+      spline or maintain a second movement speed.
     */
-    if(railDist>contactLimit){
+    if(!Number.isFinite(railDist) || railDist>contactLimit){
         newXRailExit(s,"lost-contact");
         return false;
     }
 
-    const tangent=newXRailTangentAtPoint(nearest,direction,s.x,s.y);
+    /*
+      newXRailTangentAtPoint() already returns the tangent in the Bey's
+      authored travel direction. Do not apply direction a second time.
+    */
+    const tangent=newXRailTangentAtPoint(
+        nearest,
+        direction,
+        s.x,
+        s.y
+    );
 
-    diagnoseXRailValue(s,"rail-tangent",{
-        tangentX:tangent?.x,tangentY:tangent?.y,direction
-    });
+    let tx=Number(tangent?.x);
+    let ty=Number(tangent?.y);
+    const tangentLength=Math.hypot(tx,ty);
 
-    const tx=tangent.x*direction;
-    const ty=tangent.y*direction;
+    if(
+        !Number.isFinite(tx) ||
+        !Number.isFinite(ty) ||
+        !Number.isFinite(tangentLength) ||
+        tangentLength<0.00001
+    ){
+        newXRailExit(s,"invalid-tangent");
+        return false;
+    }
 
-    diagnoseXRailValue(s,"directed-tangent",{tx,ty});
+    tx/=tangentLength;
+    ty/=tangentLength;
 
-    // Rail normal points from rail toward the Bey.
+    /*
+      Rail normal points from the rail toward the Bey.
+    */
     let nx=s.x-nearest.x;
     let ny=s.y-nearest.y;
     let nl=Math.hypot(nx,ny);
+
+    if(!Number.isFinite(nl)){
+        newXRailExit(s,"invalid-normal");
+        return false;
+    }
 
     if(nl<0.00001){
         nx=-ty;
@@ -4830,59 +4799,51 @@ function applyXRailConstraint(s,dt){
         ny/=nl;
     }
 
-    diagnoseXRailValue(s,"rail-normal",{nx,ny,nl});
-    diagnoseXRailValue(s,"rail-raw-velocity",{rawVx:s.vx,rawVy:s.vy});
+    let vx=Number(s.vx);
+    let vy=Number(s.vy);
 
-    let vx=Number(s.vx)||0;
-    let vy=Number(s.vy)||0;
-
-    diagnoseXRailValue(s,"rail-local-velocity",{vx,vy});
-
-    const tangentialSpeed=vx*tx+vy*ty;
-    const normalSpeed=vx*nx+vy*ny;
-
-    diagnoseXRailValue(s,"rail-velocity-projection",{
-        tangentialSpeed,normalSpeed
-    });
+    if(!Number.isFinite(vx) || !Number.isFinite(vy)){
+        newXRailExit(s,"invalid-velocity");
+        return false;
+    }
 
     /*
-      A rail only helps a Bey that is genuinely moving with the track.
-      Never manufacture a large initial rail velocity.
+      Decompose the ACTUAL velocity into rail tangent and rail normal.
+      Positive normal velocity is away from the rail and is allowed to
+      continue. Negative normal velocity is velocity into the rail and is
+      removed by the surface constraint.
     */
+    let tangentialSpeed=vx*tx+vy*ty;
+    const normalSpeed=vx*nx+vy*ny;
+
+    if(
+        !Number.isFinite(tangentialSpeed) ||
+        !Number.isFinite(normalSpeed)
+    ){
+        newXRailExit(s,"invalid-velocity-components");
+        return false;
+    }
+
     if(tangentialSpeed<0.004){
         newXRailExit(s,"lost-tangent");
         return false;
     }
 
+    if(normalSpeed<0){
+        vx-=nx*normalSpeed;
+        vy-=ny*normalSpeed;
+    }
+
     /*
-      Remove velocity into the rail while preserving velocity along it.
-      A small amount of surface friction is applied.
+      Rail friction acts along the rail. It does not erase radial/outward
+      momentum and does not manufacture a target velocity.
     */
-    const friction=railClamp(
-        0.020 + (1-railClamp((Number(s.rpm)||0),0,1))*0.018,
-        0.018,
-        0.038
+    const rpmN=railClamp(Number(s.rpm),0,1);
+    const affinity=railClamp(
+        Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),
+        0,
+        1
     );
-
-    diagnoseXRailValue(s,"rail-friction",{friction});
-
-    let railSpeed=tangentialSpeed;
-    railSpeed*=Math.max(0,1-friction*dt*60);
-
-    diagnoseXRailValue(s,"rail-speed-after-friction",{railSpeed});
-
-    /*
-      REALISTIC RAIL ACCELERATION
-
-      The X-Rail provides acceleration, but it is a force-like acceleration,
-      not a target-speed snap. Stronger contact, higher RPM, and attack-style
-      rail interaction provide more acceleration. Acceleration falls as the
-      Bey approaches its current rail-speed ceiling.
-    */
-    const rpmN=railClamp((Number(s.rpm)||0),0,1);
-    const affinity=railClamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
-
-    diagnoseXRailValue(s,"rail-inputs",{rpmN,affinity});
 
     const contactQuality=railClamp(
         1-(railDist/contactLimit),
@@ -4899,34 +4860,48 @@ function applyXRailConstraint(s,dt){
         0.98
     );
 
-    diagnoseXRailValue(s,"rail-grip",{contactQuality,grip});
+    const friction=railClamp(
+        0.020+
+        (1-rpmN)*0.018,
+        0.018,
+        0.038
+    );
 
-    const bitType=String(
-        s.bitType||
-        s.bit?.type||
-        s.combo?.bitType||
-        ""
-    ).toLowerCase();
-
-    const attackBit=
-        bitType.includes("flat")||
-        bitType.includes("rush")||
-        bitType.includes("taper");
-
-    const accelerationBase=attackBit?0.050:0.038;
+    tangentialSpeed*=
+        Math.max(0,1-friction*dt*60);
 
     /*
-      Ceiling is a physical-ish limit rather than the old fixed rail speed.
-      It scales with RPM and grip and is approached asymptotically.
+      Gradual rail acceleration.
+
+      This is force-like acceleration, not a snap to a canned speed.
+      Attack-oriented Bits receive stronger rail drive through their
+      physical acceleration property.
     */
+    const bp=bitPhysics(s);
+    const bitAcceleration=railClamp(
+        Number(bp?.acceleration ?? 60)/100,
+        0,
+        1
+    );
+    const movement=railClamp(
+        Number(bp?.movement ?? 60)/100,
+        0,
+        1
+    );
+
+    const attackBit=movement>=0.80;
+    const accelerationBase=
+        0.026+
+        bitAcceleration*0.022+
+        (attackBit?0.008:0);
+
     const railCeiling=
         0.085+
         rpmN*0.050+
-        grip*0.028;
+        grip*0.028+
+        bitAcceleration*0.012;
 
-    const speedRoom=Math.max(0,railCeiling-railSpeed);
-
-    diagnoseXRailValue(s,"rail-ceiling",{railCeiling,speedRoom});
+    const speedRoom=Math.max(0,railCeiling-tangentialSpeed);
 
     const acceleration=
         accelerationBase*
@@ -4935,31 +4910,38 @@ function applyXRailConstraint(s,dt){
         (0.35+contactQuality*0.65)*
         (0.35+Math.min(1,speedRoom/0.040)*0.65);
 
-    diagnoseXRailValue(s,"rail-acceleration",{acceleration});
-
-    railSpeed+=acceleration*dt;
-
-    diagnoseXRailValue(s,"rail-speed-after-acceleration",{railSpeed});
-
-    // Never reverse or exceed the physically selected ceiling.
-    railSpeed=railClamp(
-        railSpeed,
-        0.004,
-        railCeiling
+    tangentialSpeed+=acceleration*dt;
+    tangentialSpeed=Math.min(
+        railCeiling,
+        Math.max(0.004,tangentialSpeed)
     );
 
-    
-    diagnoseXRailValue(s,"rail-speed-after-clamp",{railSpeed});
-/*
-      Convert the rail speed back into velocity. The rail controls the
-      tangent, but does not teleport the Bey to a spline point.
-    */
-    s.vx=tx*railSpeed;
-    s.vy=ty*railSpeed;
+    if(!Number.isFinite(tangentialSpeed)){
+        newXRailExit(s,"invalid-rail-speed");
+        return false;
+    }
 
     /*
-      Maintain a small physical separation from the rail instead of snapping
-      the Bey onto a spline point. This prevents the old "magnet" behavior.
+      Reconstruct actual velocity from:
+        - tangential momentum after friction/rail drive
+        - any legitimate outward normal momentum
+
+      This keeps the rail physically connected to the Bey rather than
+      replacing the Bey with a spline-following controller.
+    */
+    const outwardNormal=Math.max(0,normalSpeed);
+
+    s.vx=tx*tangentialSpeed+nx*outwardNormal;
+    s.vy=ty*tangentialSpeed+ny*outwardNormal;
+
+    if(!Number.isFinite(s.vx) || !Number.isFinite(s.vy)){
+        newXRailExit(s,"invalid-reconstructed-velocity");
+        return false;
+    }
+
+    /*
+      Maintain a small physical separation from the rail without snapping
+      position to the spline.
     */
     const desiredGap=radius*0.82;
     const correction=Math.min(
@@ -4972,22 +4954,23 @@ function applyXRailConstraint(s,dt){
         s.y+=ny*correction;
     }
 
-    // Track progress is read from actual position, not used to place it.
     const projected=newXRailNearest(s.x,s.y);
     if(projected){
         s.railDistance=projected.distance;
     }
 
-    s.railSpeed=railSpeed;
+    s.railGrip=grip;
+    s.railSpeed=
+        Math.abs(s.vx*tx+s.vy*ty);
     s.railRideTime=(s.railRideTime||0)+dt;
-    s.railTravelDistance=(s.railTravelDistance||0)+railSpeed*dt;
+    s.railTravelDistance=
+        (s.railTravelDistance||0)+s.railSpeed*dt;
 
     /*
-      PHYSICAL EXIT REGION.
+      PHYSICAL X-EXIT
 
-      The old system could pass through the exit because it was looking only
-      at railDistance while forcing the Bey around the spline. Here the exit
-      is a spatial gate around the actual endpoint.
+      The finite rail ends at a spatial exit region. We release the rail
+      while preserving the velocity just calculated.
     */
     const endpoint=
         direction>0 ? g.rightExit : g.leftExit;
@@ -5008,7 +4991,7 @@ function applyXRailConstraint(s,dt){
     }
 
     /*
-      Hard safety only. This is a backup, not normal rail behavior.
+      Hard safety only. This is not the normal exit mechanism.
     */
     if(
         s.railTravelDistance>g.total*1.15 ||
@@ -5020,7 +5003,6 @@ function applyXRailConstraint(s,dt){
 
     return true;
 }
-
 
 function newPhysicsStep(s,dt){
 
