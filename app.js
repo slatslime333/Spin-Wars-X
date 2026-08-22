@@ -4167,6 +4167,11 @@ function newPhysicsStep(s,dt){
           this pass is capture-only in practice.
         */
         if(!s.railEngaged && !s.railExited){
+            /*
+              X-Rail receives the complete free-space movement segment here.
+              Its engine performs a swept physical contact test so a fast Bey
+              cannot tunnel through the rail between animation frames.
+            */
             SpinWarsXRailEngine.step(s,dt);
         }
 
