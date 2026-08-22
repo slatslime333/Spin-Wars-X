@@ -9,6 +9,7 @@
     "use strict";
 
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    const clamp01=v=>clamp(Number.isFinite(Number(v))?Number(v):0,0,1);
 
     /* EXACT SVG CENTERLINE FROM THE LIVE STADIUM. */
     const SVG_SEGMENTS=[
