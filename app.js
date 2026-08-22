@@ -1,4 +1,4 @@
-/* V105d - X-Rail Phase A embedded in app.js */
+/* Spin Wars X — X-Rail Version 1.3 — Physical Contact + Swept Collision + Exit Lane */
 (function () {
     "use strict";
 
@@ -4697,42 +4697,84 @@ function newXRailExit(s,reason){
     }
 
     /*
-      Bias the velocity through the physical X-Exit opening rather than
-      assigning a canned launch speed.
+      PHYSICAL X-EXIT LANE
+      --------------------
+      The rail tangent at the endpoint points BACK along the rail. The old
+      implementation therefore tried to "bias toward the endpoint", but at
+      the endpoint that vector is almost zero and cannot actually launch the
+      Bey through the X-Exit.
+
+      The opening has a real lane: endpoint -> center notch apex. Redirect
+      only enough of the existing momentum to follow that lane. We preserve
+      the Bey's current speed instead of assigning a canned launch speed.
     */
-    const toExitX=endpoint.x-s.x;
-    const toExitY=endpoint.y-s.y;
-    const len=Math.hypot(toExitX,toExitY);
+    const exitApex={x:0,y:-0.603};
+    const laneX=exitApex.x-endpoint.x;
+    const laneY=exitApex.y-endpoint.y;
+    const laneLen=Math.hypot(laneX,laneY)||1;
+    const ex=laneX/laneLen;
+    const ey=laneY/laneLen;
 
-    if(len>0.0001){
-        const ex=toExitX/len;
-        const ey=toExitY/len;
-        const outward=Math.max(0,vx*ex+vy*ey);
-        const exitBias=0.12;
+    let currentSpeed=Math.hypot(vx,vy);
+    const minimumExitSpeed=0.018;
+    if(currentSpeed<minimumExitSpeed){
+        currentSpeed=minimumExitSpeed;
+    }
 
-        vx+=ex*exitBias;
-        vy+=ey*exitBias;
+    const currentLen=Math.hypot(vx,vy)||1;
+    const currentX=vx/currentLen;
+    const currentY=vy/currentLen;
 
-        // Do not turn a weak exit into an absurd launch.
-        const maxExit=Math.max(0.035,speed*1.18+0.012);
-        const newSpeed=Math.hypot(vx,vy);
+    /*
+      Stronger steering is used only when the current rail tangent is badly
+      misaligned with the physical exit lane. A well-aligned rider keeps most
+      of its existing direction.
+    */
+    const alignment=currentX*ex+currentY*ey;
+    const redirect=railClamp(
+        0.34+(1-alignment)*0.26,
+        0.34,
+        0.68
+    );
 
-        if(newSpeed>maxExit){
-            vx*=maxExit/newSpeed;
-            vy*=maxExit/newSpeed;
-        }
+    let exitVX=
+        currentX*(1-redirect)+
+        ex*redirect;
+    let exitVY=
+        currentY*(1-redirect)+
+        ey*redirect;
+
+    const exitLen=Math.hypot(exitVX,exitVY)||1;
+    exitVX/=exitLen;
+    exitVY/=exitLen;
+
+    /*
+      A tiny additional lane impulse makes the release deterministic enough
+      to pass through the physical opening, but remains small relative to
+      the Bey's real momentum.
+    */
+    const laneImpulse=0.006+Math.min(0.006,currentSpeed*0.08);
+    vx=exitVX*currentSpeed+ex*laneImpulse;
+    vy=exitVY*currentSpeed+ey*laneImpulse;
+
+    const maxExit=Math.max(0.035,currentSpeed*1.12+0.008);
+    const newSpeed=Math.hypot(vx,vy);
+
+    if(newSpeed>maxExit){
+        vx*=maxExit/newSpeed;
+        vy*=maxExit/newSpeed;
     }
 
     s.vx=vx;
     s.vy=vy;
 
-    // Move the Bey just beyond the exit boundary so it cannot immediately
-    // recapture the same rail.
-    if(len>0.0001){
-        const push=0.040+((Number(s.radius)||0.020)*0.55);
-        s.x+=toExitX/len*push;
-        s.y+=toExitY/len*push;
-    }
+    /*
+      Move only into the exit lane, not along the rail endpoint. This makes
+      the release spatially real and prevents an immediate rail recapture.
+    */
+    const push=0.045+((Number(s.radius)||0.020)*0.65);
+    s.x=endpoint.x+ex*push;
+    s.y=endpoint.y+ey*push;
 
     s.railEngaged=false;
     s.railExited=true;
@@ -4838,6 +4880,43 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
             );
             s.railCaptureCooldownPoint={x:s.x,y:s.y};
         }
+    }else{
+        /*
+          IMPORTANT:
+          A tangential graze that fails capture cannot be allowed to sit on
+          the rail forever. The old code did nothing when normalVelocity was
+          ~0, so the free-space orbit controller could keep the Bey visually
+          glued to the rail without ever actually riding it.
+
+          Give the surface a small physical separating response. It is
+          deliberately much smaller than a hard bounce.
+        */
+        const separationSpeed=railClamp(
+            0.0018+
+            Math.max(0,contactRadius-distance)*0.10,
+            0.0018,
+            0.0065
+        );
+
+        if(normalVelocity<separationSpeed){
+            const add=separationSpeed-normalVelocity;
+            s.vx+=nx*add;
+            s.vy+=ny*add;
+        }
+
+        s.impactMomentumState=Math.max(
+            s.impactMomentumState||0,
+            0.24
+        );
+        s.surfaceRecovery=Math.max(
+            s.surfaceRecovery||0,
+            0.10
+        );
+        s.railCaptureCooldown=Math.max(
+            s.railCaptureCooldown||0,
+            0.08
+        );
+        s.railCaptureCooldownPoint={x:s.x,y:s.y};
     }
 
     /*
@@ -5167,6 +5246,74 @@ function applyXRailConstraint(s,dt){
         newXRailExit(s,"rail-safety");
         return false;
     }
+
+    return true;
+}
+
+
+/*
+  X-RAIL SWEPT CONTACT
+  --------------------
+  Free-space movement can move a Bey farther than the rail contact shell in
+  one frame. Checking only the final position therefore allows a high-speed
+  Bey to tunnel through the rail. This helper samples the actual movement
+  segment and resolves the first rail contact it finds.
+
+  It is collision detection only. It does not create a rail-following path.
+*/
+function resolveXRailSweptContact(s,startX,startY){
+    if(!s || s.railEngaged || s.railExited) return false;
+
+    const endX=s.x;
+    const endY=s.y;
+    const travel=Math.hypot(endX-startX,endY-startY);
+
+    if(!Number.isFinite(travel) || travel<0.00001) return false;
+
+    const contactRadius=0.072+(Number(s.radius)||0.020)*0.48;
+    const sampleCount=railClamp(
+        Math.ceil(travel/Math.max(0.018,contactRadius*0.42)),
+        2,
+        18
+    );
+
+    let hit=null;
+
+    for(let i=1;i<=sampleCount;i++){
+        const u=i/sampleCount;
+        const x=startX+(endX-startX)*u;
+        const y=startY+(endY-startY)*u;
+        const nearest=newXRailNearest(x,y);
+
+        if(
+            nearest &&
+            Number.isFinite(nearest.dist2) &&
+            nearest.dist2<=contactRadius*contactRadius
+        ){
+            hit={x,y,nearest,u};
+            break;
+        }
+    }
+
+    if(!hit) return false;
+
+    /*
+      Put the Bey at the first detected contact point. The actual velocity
+      remains the velocity produced by the movement engine, so the rail
+      collision sees the correct impact direction.
+    */
+    s.x=hit.x;
+    s.y=hit.y;
+
+    if(tryNewXRailEngagement(s)){
+        return true;
+    }
+
+    applyXRailContactSafety(
+        s,
+        hit.nearest,
+        0
+    );
 
     return true;
 }
@@ -5670,11 +5817,14 @@ function newPhysicsStep(s,dt){
         /*
           MOVEMENT ENGINE — V100
           ----------------------
-          The approved V99.6 free-space movement model now lives in
-          movement-engine.js. app.js handles battle/rail/collision orchestration
-          and delegates free-space movement here.
+          The approved V99.6 free-space movement model still owns free-space
+          velocity response. We record the start position so app.js can do
+          continuous X-Rail contact detection after that movement step.
         */
-        return SpinWarsMovementEngine.step(s,dt,{
+        const freeMoveStartX=s.x;
+        const freeMoveStartY=s.y;
+
+        SpinWarsMovementEngine.step(s,dt,{
             clamp:newBattleClamp,
             getSpinOrbitTangent,
             enforcePostImpactSpinDirection,
@@ -5691,6 +5841,50 @@ function newPhysicsStep(s,dt){
             staminaEfficiency,
             physicalSpeedTarget
         });
+
+        /*
+          Continuous rail collision happens AFTER free-space integration.
+          This prevents high-speed tunnelling through the rail while keeping
+          movement-engine ownership intact.
+        */
+        resolveXRailSweptContact(
+            s,
+            freeMoveStartX,
+            freeMoveStartY
+        );
+
+        /*
+          The top X-Exit mouth is also checked after movement. The pre-movement
+          check alone could be skipped by a high-speed step.
+        */
+        if(!s.railExited){
+            const halfWidth=0.133;
+            const edgeY=-0.790;
+            const apexY=-0.603;
+            const clearance=s.radius*0.72;
+
+            if(
+                Math.abs(s.x)<halfWidth &&
+                s.y<apexY+clearance
+            ){
+                const boundaryY=
+                    apexY-
+                    Math.abs(edgeY-apexY)*
+                    (1-Math.abs(s.x)/halfWidth);
+
+                if(s.y<boundaryY+clearance){
+                    s.y=boundaryY+clearance;
+                    if(s.vy<0){
+                        s.vy=Math.abs(s.vy)*0.34;
+                    }
+                    s.vx*=0.82;
+                    s.surfaceRecovery=Math.max(
+                        s.surfaceRecovery||0,
+                        0.14
+                    );
+                }
+            }
+        }
     };
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s?.railEngaged) return false;
