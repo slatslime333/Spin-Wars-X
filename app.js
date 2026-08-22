@@ -109,14 +109,14 @@
 
 
     window.SpinWarsXRailEngine = {
-        version:"v1-physical-rail",
+        version:"phase-a-clean",
         capture:capture
     };
 }())
 
 /*==================================
  SPIN WAR X
- Version 1.0 — PHYSICAL RAIL / IMPACT STABILITY FIX
+ Version 0.7.2 — V99 MOVEMENT CORE REBUILD
 ==================================*/
 
 //=========================
@@ -125,7 +125,7 @@
 
 const Game = {
 
-    version:"1.0",
+    version:"0.7.2",
 
     screen:"menu",
 
@@ -1259,7 +1259,7 @@ function renderMainMenu(){
                 <span class="feature-icon">◎</span>
                 <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
             </div>
-            <div class="menu-version">V1 · PHYSICAL RAIL / IMPACT STABILITY FIX</div>
+            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
         </section>
     </main>`;
 }
@@ -2510,6 +2510,45 @@ function newBattleClamp(value,min,max){
 }
 
 
+/* V109 DIAGNOSTIC FOUNDATION
+   This is intentionally diagnostic-only. It does not alter battle physics.
+   railClamp is restored as the canonical numeric clamp expected by the V109
+   rail code; unlike a NaN sanitizer, it preserves NaN so the diagnostic can
+   identify the first corrupted value instead of hiding it.
+*/
+function railClamp(value,min,max){
+    return Math.max(min,Math.min(max,value));
+}
+
+const V109_DIAGNOSTIC_FIELDS = [
+    "x","y","vx","vy","rpm","stability","axisStability",
+    "tiltLevel","movementEnergy","radius","mass",
+    "railEngaged","railDistance","railSpeed","railRideTime",
+    "railTravelDistance","railGrip","railDirection",
+    "impactMomentumState","lastImpactForce","lastKnockback"
+];
+
+function diagnosePhysicsState(s,label){
+    if(!s) throw new Error(`V109 diagnostic: missing state at ${label}`);
+
+    for(const field of V109_DIAGNOSTIC_FIELDS){
+        const value=s[field];
+        if(value===undefined || value===null) continue;
+        if(typeof value==="number" && !Number.isFinite(value)){
+            const snapshot={};
+            for(const key of V109_DIAGNOSTIC_FIELDS){
+                snapshot[key]=s[key];
+            }
+            throw new Error(
+                `V109 PHYSICS CORRUPTION | ${s.side||"UNKNOWN"} | `+
+                `stage=${label} | field=${field} | value=${String(value)} | `+
+                `snapshot=${JSON.stringify(snapshot)}`
+            );
+        }
+    }
+}
+
+
 /*========================================================
  LAUNCH QUALITY — CANONICAL
 ========================================================*/
@@ -3584,29 +3623,6 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
-function assertFinitePhysicsState(s,label="Bey"){
-    if(!s) throw new Error(`Physics state missing: ${label}`);
-
-    const fields=[
-        "x","y","vx","vy","rpm","radius","mass",
-        "stability","axisStability","tiltLevel","movementEnergy",
-        "motionPhase","motionPhase2","impactMomentumState"
-    ];
-
-    for(const key of fields){
-        if(s[key] !== undefined && !Number.isFinite(Number(s[key]))){
-            throw new Error(`Non-finite ${label}.${key}: ${String(s[key])}`);
-        }
-    }
-
-    if(!(Number(s.radius)>0)){
-        throw new Error(`Invalid ${label}.radius: ${String(s.radius)}`);
-    }
-    if(!(Number(s.mass)>0)){
-        throw new Error(`Invalid ${label}.mass: ${String(s.mass)}`);
-    }
-}
-
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -3627,16 +3643,40 @@ function newBattleFrame(now){
             Game.battle.phase="Battle";
         }
 
+        diagnosePhysicsState(p,"frame-start");
+        diagnosePhysicsState(c,"frame-start");
+
         newPhysicsStep(p,dt);
         newPhysicsStep(c,dt);
 
-        assertFinitePhysicsState(p,"PLAYER");
-        assertFinitePhysicsState(c,"CPU");
+        diagnosePhysicsState(p,"after-player-physics");
+        diagnosePhysicsState(c,"after-cpu-physics");
+
+        if(
+            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+        ){
+            throw new Error("Non-finite Bey physics state.");
+        }
+
+        diagnosePhysicsState(p,"before-collision");
+        diagnosePhysicsState(c,"before-collision");
 
         newPhysicsCollision(dt);
 
-        assertFinitePhysicsState(p,"PLAYER after collision");
-        assertFinitePhysicsState(c,"CPU after collision");
+        diagnosePhysicsState(p,"after-collision");
+        diagnosePhysicsState(c,"after-collision");
+
+        if(
+            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+        ){
+            throw new Error("Non-finite collision result.");
+        }
 
         const pe=document.getElementById("newPlayerBey");
         const ce=document.getElementById("newCpuBey");
@@ -4580,12 +4620,11 @@ function newXRailExit(s,reason){
 
     const speed=Math.hypot(vx,vy);
     if(speed<0.003){
-        const endpointRail=newXRailNearest(endpoint.x,endpoint.y);
-        const t=endpointRail
-            ? newXRailTangentAtPoint(endpointRail,direction,endpoint.x,endpoint.y)
-            : {x:direction,y:0};
-        vx=t.x*0.012;
-        vy=t.y*0.012;
+        const t=newXRailTangentAtPoint(
+            newXRailNearest(endpoint.x,endpoint.y)
+        );
+        vx=t.x*direction*0.012;
+        vy=t.y*direction*0.012;
     }
 
     /*
@@ -4733,8 +4772,8 @@ function applyXRailConstraint(s,dt){
     }
 
     const tangent=newXRailTangentAtPoint(nearest,direction,s.x,s.y);
-    const tx=tangent.x;
-    const ty=tangent.y;
+    const tx=tangent.x*direction;
+    const ty=tangent.y*direction;
 
     // Rail normal points from rail toward the Bey.
     let nx=s.x-nearest.x;
@@ -4769,8 +4808,8 @@ function applyXRailConstraint(s,dt){
       Remove velocity into the rail while preserving velocity along it.
       A small amount of surface friction is applied.
     */
-    const friction=newBattleClamp(
-        0.020 + (1-newBattleClamp((Number(s.rpm)||0),0,1))*0.018,
+    const friction=railClamp(
+        0.020 + (1-railClamp((Number(s.rpm)||0),0,1))*0.018,
         0.018,
         0.038
     );
@@ -4786,16 +4825,16 @@ function applyXRailConstraint(s,dt){
       rail interaction provide more acceleration. Acceleration falls as the
       Bey approaches its current rail-speed ceiling.
     */
-    const rpmN=newBattleClamp((Number(s.rpm)||0),0,1);
-    const affinity=newBattleClamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
+    const rpmN=railClamp((Number(s.rpm)||0),0,1);
+    const affinity=railClamp(Number(s.railAffinity ?? s.xRailAffinity ?? 0.5),0,1);
 
-    const contactQuality=newBattleClamp(
+    const contactQuality=railClamp(
         1-(railDist/contactLimit),
         0,
         1
     );
 
-    const grip=newBattleClamp(
+    const grip=railClamp(
         0.62+
         affinity*0.16+
         contactQuality*0.12+
@@ -4839,7 +4878,7 @@ function applyXRailConstraint(s,dt){
     railSpeed+=acceleration*dt;
 
     // Never reverse or exceed the physically selected ceiling.
-    railSpeed=newBattleClamp(
+    railSpeed=railClamp(
         railSpeed,
         0.004,
         railCeiling
@@ -5525,9 +5564,6 @@ function newPhysicsCollision(dt){
     const c=NEW_BATTLE.cpu;
     if(!p||!c) return;
 
-    assertFinitePhysicsState(p,"PLAYER before collision");
-    assertFinitePhysicsState(c,"CPU before collision");
-
     // A Bey riding the X Rail is still physically hittable. A sufficiently
     // strong impact can break its rail grip; weak contact does not.
     const pWasOnRail=!!p.railEngaged;
@@ -5830,9 +5866,6 @@ function newPhysicsCollision(dt){
     if(c.railEngaged && pRailBreakForce>=railBreakThreshold){
         breakXRailFromImpact(c,-nx,-ny,pRailBreakForce);
     }
-
-    assertFinitePhysicsState(p,"PLAYER after impact impulse");
-    assertFinitePhysicsState(c,"CPU after impact impulse");
 
     /*
       Hard-impact rail ejector. Once a rider loses grip, give it a real
