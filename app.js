@@ -3943,6 +3943,25 @@ function enforcePostImpactSpinDirection(s){
 
 function newPhysicsStep(s,dt){
 
+        /*
+          X-RAIL PRIORITY
+          ---------------
+          A rail rider is no longer allowed to pass through the free-space
+          movement model first. That was one of the reasons riders could
+          behave like orbiting Beys and never reach a clean physical exit.
+
+          Existing riders get rail authority at the START of the frame.
+          Free Beys still reach the rail through normal movement, then get a
+          single post-movement contact test below.
+        */
+        if(s.railEngaged){
+            const railRideResult=SpinWarsXRailEngine.step(s,dt);
+            if(railRideResult.active){
+                return;
+            }
+            /* X-Exit/release: continue this same frame under normal movement. */
+        }
+
         const stats = s.stats || {};
         const bp = bitPhysics(s);
 
@@ -4141,9 +4160,14 @@ function newPhysicsStep(s,dt){
           for actual contact. A failed capture is handled as a rail bounce by
           the same engine; app.js does not duplicate the decision.
         */
-        const railResult=SpinWarsXRailEngine.step(s,dt);
-        if(railResult.active){
-            return;
+        /*
+          Free-space movement has now integrated the Bey. Give X-Rail one
+          contact opportunity on the resulting physical state. A Bey that
+          was already riding was handled at the top of this function, so
+          this pass is capture-only in practice.
+        */
+        if(!s.railEngaged && !s.railExited){
+            SpinWarsXRailEngine.step(s,dt);
         }
 
 
