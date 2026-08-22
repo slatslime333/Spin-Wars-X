@@ -325,7 +325,8 @@
     function captureDecision(s,p,contact){
         const c=getContact(s,p);
         if(!c||c.speed<0.007) return {ok:false,reason:"low-speed",contact:c};
-        if(s.spinDirection!==1) return {ok:false,reason:"wrong-spin",contact:c};
+        const spinDirection = s.spinDirection===-1 ? -1 : 1;
+        if(spinDirection!==1) return {ok:false,reason:"wrong-spin",contact:c};
         if(!contact?.impact) return {ok:false,reason:"no-rail-impact",contact:c};
 
         /* Deliberate physical catch: enough inward impact + enough authored-path momentum. */
@@ -370,7 +371,7 @@
 
         s.railEngaged=true;
         s.railExited=false;
-        s.railDirection=1;
+        s.railDirection=1; // only right-spin / CCW can ride this rail
         s.railGrip=decision.grip;
         s.railContactPoint={x:p.x,y:p.y};
         s.railDistance=p.distance;
@@ -718,7 +719,7 @@
     }
 
     global.SpinWarsXRailEngine={
-        version:"4.2-phase2-exit-physics",
+        version:"4.2.1-single-authority",
         geometry:buildGeometry,
         nearest,
         tangentAt,
