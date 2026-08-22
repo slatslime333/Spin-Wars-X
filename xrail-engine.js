@@ -1,24 +1,21 @@
 /*
  * SPIN WARS X — X-RAIL ENGINE
- * Version 3.1 — finite rail + physical X-Exit
+ * Version 4.0 — impact capture / physical exit
  *
- * This file is the ONLY owner of X-Rail physics.
+ * One owner. No spline riding, no scripted exit path, no random capture.
  *
- * The rail is a finite physical surface. A Bey can:
- *   1. miss it;
- *   2. touch it and bounce;
- *   3. touch it with the right momentum/orientation and capture;
- *   4. ride it counter-clockwise;
- *   5. leave through the X-Exit.
+ * Model:
+ *   FREE -> actual crossing/contact -> BOUNCE or CAPTURE -> RIDE -> EXIT -> FREE
  *
- * Free-space movement remains owned by movement-engine.js/app.js.
+ * The rail is a physical surface. It does not attract Beys from a distance.
+ * A successful catch is an impact event, not prolonged proximity.
  */
 (function(global){
     "use strict";
 
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-    /* Exact centerline used by renderNewBattle(). */
+    /* Exact centerline used by the current SVG stadium rail. */
     const SVG_SEGMENTS=[
         [[44.8,10.3],[41.6,8.2],[37.2,7.2],[32.8,9.3]],
         [[32.8,9.3],[20.8,15.1],[14.0,29.0],[14.7,45.5]],
@@ -28,137 +25,73 @@
         [[67.2,9.3],[62.8,7.2],[58.4,8.2],[55.2,10.3]]
     ];
 
-    function toGame(p){
-        return {x:(p[0]-50)/39,y:(p[1]-46)/39};
-    }
-
+    function toGame(p){ return {x:(p[0]-50)/39,y:(p[1]-46)/39}; }
     function bezier(p0,p1,p2,p3,t){
-        const u=1-t;
-        const uu=u*u;
-        const tt=t*t;
-        return {
-            x:uu*u*p0.x+3*uu*t*p1.x+3*u*tt*p2.x+tt*t*p3.x,
-            y:uu*u*p0.y+3*uu*t*p1.y+3*u*tt*p2.y+tt*t*p3.y
-        };
+        const u=1-t,uu=u*u,tt=t*t;
+        return {x:uu*u*p0.x+3*uu*t*p1.x+3*u*tt*p2.x+tt*t*p3.x,
+                y:uu*u*p0.y+3*uu*t*p1.y+3*u*tt*p2.y+tt*t*p3.y};
     }
-
     function derivative(p0,p1,p2,p3,t){
         const u=1-t;
-        return {
-            x:3*u*u*(p1.x-p0.x)+6*u*t*(p2.x-p1.x)+3*t*t*(p3.x-p2.x),
-            y:3*u*u*(p1.y-p0.y)+6*u*t*(p2.y-p1.y)+3*t*t*(p3.y-p2.y)
-        };
+        return {x:3*u*u*(p1.x-p0.x)+6*u*t*(p2.x-p1.x)+3*t*t*(p3.x-p2.x),
+                y:3*u*u*(p1.y-p0.y)+6*u*t*(p2.y-p1.y)+3*t*t*(p3.y-p2.y)};
     }
 
     let geometry=null;
-
     function buildGeometry(){
         if(geometry) return geometry;
-
         const samples=[];
-        const samplesPerCurve=48;
-
+        const perCurve=56;
         for(const raw of SVG_SEGMENTS){
             const [a,b,c,d]=raw.map(toGame);
-
-            for(let i=0;i<samplesPerCurve;i++){
-                const t=i/samplesPerCurve;
+            for(let i=0;i<perCurve;i++){
+                const t=i/perCurve;
                 const p=bezier(a,b,c,d,t);
                 const q=derivative(a,b,c,d,t);
                 const len=Math.hypot(q.x,q.y);
                 if(len<1e-9) continue;
-
-                samples.push({
-                    x:p.x,
-                    y:p.y,
-                    tx:q.x/len,
-                    ty:q.y/len
-                });
+                samples.push({x:p.x,y:p.y,tx:q.x/len,ty:q.y/len});
             }
         }
-
         const last=SVG_SEGMENTS[SVG_SEGMENTS.length-1].map(toGame);
-        const lp=last[3];
-        const ld=derivative(...last,1);
-        const llen=Math.hypot(ld.x,ld.y)||1;
+        const q=derivative(...last,1);
+        const len=Math.hypot(q.x,q.y)||1;
+        samples.push({x:last[3].x,y:last[3].y,tx:q.x/len,ty:q.y/len});
 
-        samples.push({
-            x:lp.x,
-            y:lp.y,
-            tx:ld.x/llen,
-            ty:ld.y/llen
-        });
-
-        const segments=[];
-        let total=0;
-
+        const segments=[]; let total=0;
         for(let i=0;i<samples.length-1;i++){
-            const a=samples[i];
-            const b=samples[i+1];
+            const a=samples[i],b=samples[i+1];
             const length=Math.hypot(b.x-a.x,b.y-a.y);
             if(length<1e-9) continue;
-
-            segments.push({
-                a,b,length,start:total
-            });
+            segments.push({a,b,length,start:total});
             total+=length;
         }
-
-        geometry={
-            samples,
-            segments,
-            total,
-            leftExit:samples[0],
-            rightExit:samples[samples.length-1]
-        };
-
+        geometry={samples,segments,total,leftExit:samples[0],rightExit:samples[samples.length-1]};
         return geometry;
     }
 
     function nearest(x,y){
         const g=buildGeometry();
         if(!Number.isFinite(x)||!Number.isFinite(y)) return null;
-
         let best=null;
-
-        for(const segment of g.segments){
-            const abx=segment.b.x-segment.a.x;
-            const aby=segment.b.y-segment.a.y;
+        for(const seg of g.segments){
+            const abx=seg.b.x-seg.a.x, aby=seg.b.y-seg.a.y;
             const ab2=abx*abx+aby*aby;
             if(ab2<1e-12) continue;
-
-            const t=clamp(
-                ((x-segment.a.x)*abx+(y-segment.a.y)*aby)/ab2,
-                0,1
-            );
-
-            const px=segment.a.x+abx*t;
-            const py=segment.a.y+aby*t;
-            const dx=x-px;
-            const dy=y-py;
-            const dist2=dx*dx+dy*dy;
-
-            if(best && dist2>=best.dist2) continue;
-
-            let tx=segment.a.tx+(segment.b.tx-segment.a.tx)*t;
-            let ty=segment.a.ty+(segment.b.ty-segment.a.ty)*t;
-            const tangentLength=Math.hypot(tx,ty);
-            if(tangentLength<1e-9) continue;
-
-            best={
-                x:px,
-                y:py,
-                dist2,
-                distance:segment.start+segment.length*t,
-                tx:tx/tangentLength,
-                ty:ty/tangentLength
-            };
+            const t=clamp(((x-seg.a.x)*abx+(y-seg.a.y)*aby)/ab2,0,1);
+            const px=seg.a.x+abx*t, py=seg.a.y+aby*t;
+            const dx=x-px,dy=y-py,dist2=dx*dx+dy*dy;
+            if(best&&dist2>=best.dist2) continue;
+            let tx=seg.a.tx+(seg.b.tx-seg.a.tx)*t;
+            let ty=seg.a.ty+(seg.b.ty-seg.a.ty)*t;
+            const tl=Math.hypot(tx,ty);
+            if(tl<1e-9) continue;
+            best={x:px,y:py,dist2,distance:seg.start+seg.length*t,tx:tx/tl,ty:ty/tl};
         }
-
         return best;
     }
 
-    function clearRide(s){
+    function resetRide(s){
         s.railEngaged=false;
         s.railGrip=0;
         s.railDirection=0;
@@ -166,153 +99,95 @@
         s.railRideTime=0;
         s.railTravelDistance=0;
         s.railContactPoint=null;
+        s._xrailLastDistance=null;
     }
 
     function release(s,reason){
         if(!s) return false;
-
-        const point=nearest(s.x,s.y);
-        const speed=Math.hypot(s.vx,s.vy);
-
-        clearRide(s);
-
+        const p=nearest(s.x,s.y);
+        resetRide(s);
         s.railExited=reason==="x-exit";
-        s.railExitForce=reason==="x-exit" ? speed : 0;
-        s.railExitRefractory=reason==="x-exit" ? 0.24 : 0.10;
-        s.railCaptureCooldown=reason==="x-exit" ? 0.22 : 0.08;
+        s.railExitForce=reason==="x-exit"?Math.hypot(s.vx,s.vy):0;
+        s.railExitRefractory=reason==="x-exit"?0.22:0.08;
+        s.railCaptureCooldown=reason==="x-exit"?0.16:0.08;
         s.railCaptureCooldownPoint={x:s.x,y:s.y};
         s.railExitRefractoryPoint={x:s.x,y:s.y};
         s.lastXRailExitReason=reason||"release";
-
-        if(point) s.railDistance=point.distance;
+        if(p) s.railDistance=p.distance;
         return true;
     }
 
-    /*
-     * Capture is deliberately simple.
-     *
-     * A good rail contact needs:
-     *   - right spin (the authored rail only rides CCW);
-     *   - actual inward momentum;
-     *   - meaningful CCW tangential momentum;
-     *   - a non-square impact;
-     *   - a usable tilt.
-     *
-     * There is no random roll and no Bit/RPM meta formula here. Those can
-     * influence the Bey's actual velocity/tilt before contact, which is the
-     * physically cleaner place for them to matter.
-     */
-    function captureDecision(s,p){
+    function getContact(s,p){
+        const distance=Math.sqrt(Math.max(0,p.dist2));
+        if(distance<1e-8) return null;
+        const nx=(s.x-p.x)/distance, ny=(s.y-p.y)/distance;
         const speed=Math.hypot(s.vx,s.vy);
-        if(!Number.isFinite(speed)||speed<0.006){
-            return {ok:false,reason:"low-speed"};
-        }
-
-        if(s.spinDirection!==1){
-            return {ok:false,reason:"wrong-spin"};
-        }
-
-        const distance=Math.sqrt(p.dist2);
-        if(distance<1e-9){
-            return {ok:false,reason:"invalid-contact"};
-        }
-
-        /* n points from the rail toward the Bey. */
-        const nx=(s.x-p.x)/distance;
-        const ny=(s.y-p.y)/distance;
         const normal=s.vx*nx+s.vy*ny;
         const inward=-normal;
-
-        const tangent={x:p.tx,y:p.ty};
-        const tangential=s.vx*tangent.x+s.vy*tangent.y;
-
-        const approachRatio=inward/speed;
-        const tangentRatio=tangential/speed;
-        const tilt=Math.abs(Number(s.tiltLevel)||0);
-
-        /*
-         * A Bey merely orbiting beside the rail must NOT be able to capture.
-         * Require a real inward component and a meaningful CCW component.
-         * These are absolute momentum gates, not proximity gates.
-         */
-        if(inward<0.0045){
-            return {ok:false,reason:"weak-rail-approach"};
-        }
-
-        if(tangential<0.0065||tangentRatio<0.35){
-            return {ok:false,reason:"insufficient-ccw-momentum"};
-        }
-
-        /*
-         * A very square impact should rebound. A useful catch has both
-         * inward and tangential momentum rather than hitting the rail head-on.
-         */
-        if(approachRatio>0.72){
-            return {ok:false,reason:"too-direct"};
-        }
-
-        /*
-         * Flat/low tilt is the natural capture region. A heavy lean makes
-         * the Bey strike/skip the rail rather than settle onto it.
-         */
-        if(tilt>0.32){
-            return {ok:false,reason:"tilt-too-high"};
-        }
-
+        const tangential=s.vx*p.tx+s.vy*p.ty;
         return {
-            ok:true,
-            nx,ny,
-            tangent,
-            inward,
-            tangential,
-            approachRatio,
-            tangentRatio,
-            grip:clamp(
-                0.68+
-                (1-clamp(tilt/0.40,0,1))*0.18+
-                clamp(tangentRatio,0,1)*0.10,
-                0.68,0.96
-            )
+            distance,nx,ny,speed,normal,inward,tangential,
+            approachRatio:inward/Math.max(speed,0.0001),
+            tangentRatio:tangential/Math.max(speed,0.0001),
+            tilt:Math.abs(Number(s.tiltLevel)||0)
         };
     }
 
-    function engage(s){
+    function captureDecision(s,p,previousDistance){
+        const c=getContact(s,p);
+        if(!c||c.speed<0.008) return {ok:false,reason:"low-speed",contact:c};
+        if(s.spinDirection!==1) return {ok:false,reason:"wrong-spin",contact:c};
+
+        /* The Bey must actually be entering the rail, not merely orbiting beside it. */
+        const crossedSinceLastFrame=
+            Number.isFinite(previousDistance) &&
+            previousDistance-c.distance>=0.0035;
+
+        if(c.inward<0.0090 && !crossedSinceLastFrame){
+            return {ok:false,reason:"no-rail-impact",contact:c};
+        }
+        if(c.inward<0.0070){
+            return {ok:false,reason:"weak-impact",contact:c};
+        }
+        if(c.tangential<0.0080 || c.tangentRatio<0.30){
+            return {ok:false,reason:"insufficient-ccw-momentum",contact:c};
+        }
+        if(c.approachRatio>0.82){
+            return {ok:false,reason:"too-direct",contact:c};
+        }
+        if(c.tilt>0.30){
+            return {ok:false,reason:"tilt-too-high",contact:c};
+        }
+
+        return {
+            ok:true,contact:c,
+            grip:clamp(0.70+(1-c.tilt)*0.16+c.tangentRatio*0.10,0.70,0.96)
+        };
+    }
+
+    function engage(s,previousDistance){
         if(!s||s.railEngaged) return false;
+        if((s.railExitRefractory||0)>0 || (s.railCaptureCooldown||0)>0) return false;
 
-        if((s.railExitRefractory||0)>0 ||
-           (s.railCaptureCooldown||0)>0){
-            return false;
-        }
-
-        const point=nearest(s.x,s.y);
-        if(!point) return false;
-
+        const p=nearest(s.x,s.y);
+        if(!p) return false;
         const radius=Number(s.radius)||0.124;
-        const contactRadius=0.018+radius;
-        if(Math.sqrt(point.dist2)>contactRadius){
-            return false;
-        }
+        const contactRadius=radius+0.010; // rail centerline + thin physical rail
+        if(Math.sqrt(p.dist2)>contactRadius) return false;
 
-        const decision=captureDecision(s,point);
+        const decision=captureDecision(s,p,previousDistance);
         s.lastXRailResult=decision.reason;
+        if(!decision.ok) return false;
 
-        if(!decision.ok){
-            return false;
+        /* Remove only inward normal velocity. Never manufacture a path velocity. */
+        const c=decision.contact;
+        if(c.normal<0){
+            s.vx-=c.nx*c.normal;
+            s.vy-=c.ny*c.normal;
         }
-
-        /* Remove only the velocity directed into the rail. */
-        const normal=s.vx*decision.nx+s.vy*decision.ny;
-        if(normal<0){
-            s.vx-=decision.nx*normal;
-            s.vy-=decision.ny*normal;
-        }
-
-        const tangential=
-            s.vx*decision.tangent.x+
-            s.vy*decision.tangent.y;
-
-        if(!Number.isFinite(tangential)||tangential<=0.002){
-            s.lastXRailResult="lost-tangent-on-capture";
+        const tangential=s.vx*p.tx+s.vy*p.ty;
+        if(!Number.isFinite(tangential)||tangential<=0.004){
+            s.lastXRailResult="capture-lost-tangent";
             return false;
         }
 
@@ -320,304 +195,192 @@
         s.railExited=false;
         s.railDirection=1;
         s.railGrip=decision.grip;
-        s.railContactPoint={x:point.x,y:point.y};
-        s.railDistance=point.distance;
+        s.railContactPoint={x:p.x,y:p.y};
+        s.railDistance=p.distance;
         s.railSpeed=tangential;
         s.railRideTime=0;
         s.railTravelDistance=0;
+        s._xrailLastDistance=p.distance;
         s.railUses=(s.railUses||0)+1;
         s.lastXRailResult="capture";
-
         return true;
     }
 
-    function bounce(s,point){
-        if(!s||!point) return false;
-
-        let nx=s.x-point.x;
-        let ny=s.y-point.y;
-        let length=Math.hypot(nx,ny);
-
-        if(length<1e-9){
-            nx=-point.ty;
-            ny=point.tx;
-            length=1;
-        }
-
-        nx/=length;
-        ny/=length;
-
+    function bounce(s,p){
+        if(!s||!p) return false;
+        let nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
+        if(len<1e-9){nx=-p.ty;ny=p.tx;len=1;}
+        nx/=len;ny/=len;
         const normal=s.vx*nx+s.vy*ny;
-
         if(normal<0){
-            const restitution=0.42;
+            const restitution=0.46;
             const reflected=-normal*restitution;
-            s.vx-=nx*normal;
-            s.vy-=ny*normal;
-            s.vx+=nx*reflected;
-            s.vy+=ny*reflected;
-        }else{
-            const separation=0.0015;
-            s.vx+=nx*separation;
-            s.vy+=ny*separation;
+            s.vx-=nx*normal; s.vy-=ny*normal;
+            s.vx+=nx*reflected; s.vy+=ny*reflected;
         }
-
-        const distance=Math.sqrt(point.dist2);
-        const gap=Math.max(0.012,(Number(s.radius)||0.124)*0.90);
-        if(distance<gap){
-            const push=gap-distance;
-            s.x+=nx*push;
-            s.y+=ny*push;
-        }
-
+        const d=Math.sqrt(p.dist2);
+        const gap=(Number(s.radius)||0.124)+0.006;
+        if(d<gap){const push=gap-d;s.x+=nx*push;s.y+=ny*push;}
         s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);
         s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
-        s.railCaptureCooldown=0.08;
+        s.railCaptureCooldown=0.10;
         s.railCaptureCooldownPoint={x:s.x,y:s.y};
         s.lastXRailResult="bounce";
         return true;
     }
 
-    function contactSafety(s,point){
-        return bounce(s,point);
-    }
+    function contactSafety(s,p){return bounce(s,p);}
 
-    function constraint(s,dt){
-        if(!s?.railEngaged) return false;
-
+    function riderStep(s,dt){
         const g=buildGeometry();
-        const point=nearest(s.x,s.y);
-        if(!point){
-            release(s,"no-geometry");
-            return false;
-        }
+        const p=nearest(s.x,s.y);
+        if(!p){release(s,"no-geometry");return false;}
 
         const radius=Number(s.radius)||0.124;
-        const contactLimit=0.055+radius+0.025;
-        const distance=Math.sqrt(point.dist2);
+        const distance=Math.sqrt(p.dist2);
+        const contactLimit=radius+0.028;
+        if(distance>contactLimit){release(s,"lost-contact");return false;}
 
-        if(distance>contactLimit){
-            release(s,"lost-contact");
-            return false;
-        }
-
-        const tangent={x:point.tx,y:point.ty};
-        let nx=s.x-point.x;
-        let ny=s.y-point.y;
-        let normalLength=Math.hypot(nx,ny);
-
-        if(normalLength<1e-9){
-            nx=-tangent.y;
-            ny=tangent.x;
-            normalLength=1;
-        }else{
-            nx/=normalLength;
-            ny/=normalLength;
-        }
-
-        const tangential=s.vx*tangent.x+s.vy*tangent.y;
-        if(!Number.isFinite(tangential)||tangential<=0.002){
-            release(s,"lost-tangent");
+        const lastDistance=s._xrailLastDistance;
+        if(Number.isFinite(lastDistance) && p.distance<lastDistance-0.030){
+            release(s,"lost-forward-progress");
             return false;
         }
 
         /*
-         * Riding is a surface constraint. Remove normal velocity; preserve
-         * the Bey's actual tangential momentum and apply only small surface
-         * friction/acceleration.
+         * X-EXIT: the final rail point is the mouth. There is no canned exit
+         * position or exit trajectory. If the Bey reaches the final throat
+         * while moving in the authored CCW direction, rail authority ends.
+         * Its current x/y/vx/vy are preserved exactly.
          */
-        const normal=s.vx*nx+s.vy*ny;
-        if(normal!==0){
-            s.vx-=nx*normal;
-            s.vy-=ny*normal;
-        }
+        const exitDistance=0.20;
+        const exitPoint=g.rightExit;
+        const endpointDistance=Math.hypot(s.x-exitPoint.x,s.y-exitPoint.y);
+        const exitForward=s.vx*exitPoint.tx+s.vy*exitPoint.ty;
+        const nearExit=p.distance>=g.total-exitDistance;
+        const centerX=-exitPoint.x;
+        const centerY=-exitPoint.y;
+        const centerLen=Math.hypot(centerX,centerY)||1;
+        const centerDot=(s.vx*(centerX/centerLen)+s.vy*(centerY/centerLen)) /
+            Math.max(Math.hypot(s.vx,s.vy),0.0001);
 
-        let railSpeed=tangential;
-        const rpm=clamp(Number(s.rpm)||0,0,1);
-        const grip=clamp(Number(s.railGrip)||0.70,0.55,0.96);
-        const acceleration=(0.00014+0.00018*rpm+0.00010*grip)*dt*60;
-        const friction=(0.00004+(1-rpm)*0.00005)*dt*60;
-
-        railSpeed=Math.max(0.0025,railSpeed+acceleration-friction);
-
-        /* Do not manufacture a second rail-speed target. */
-        s.vx=tangent.x*railSpeed;
-        s.vy=tangent.y*railSpeed;
-
-        /* app.js returns early for riders, so integrate this constrained frame. */
-        s.x+=s.vx*dt*60;
-        s.y+=s.vy*dt*60;
-
-        /* Keep the Bey at the physical contact shell without snapping it to path. */
-        const after=nearest(s.x,s.y);
-        if(after){
-            const ax=s.x-after.x;
-            const ay=s.y-after.y;
-            const alen=Math.hypot(ax,ay);
-            const targetGap=radius+0.012;
-
-            if(alen>1e-9){
-                const gapError=targetGap-alen;
-                if(Math.abs(gapError)>0.0005){
-                    const correction=clamp(gapError,-0.018,0.018);
-                    s.x+=(ax/alen)*correction;
-                    s.y+=(ay/alen)*correction;
-                }
-            }
-        }
-
-        s.railSpeed=railSpeed;
-        s.railRideTime=(s.railRideTime||0)+dt;
-        s.railTravelDistance=(s.railTravelDistance||0)+railSpeed*dt;
-        s.railDistance=point.distance;
-        s.railContactPoint={x:point.x,y:point.y};
-        s.railExitApproachDistance=Math.hypot(
-            s.x-g.rightExit.x,
-            s.y-g.rightExit.y
-        );
-
-        /*
-         * X-EXIT
-         * -------
-         * The rail is finite. The final section is an opening, not another
-         * track segment and not a scripted launch path.
-         *
-         * Once the rider reaches the final exit throat, rail authority ends.
-         * We preserve the Bey's ACTUAL position and speed, then add only a
-         * modest centerward bias. Normal movement owns the next frame.
-         *
-         * There is deliberately NO:
-         *   - x/y placement onto a canned exit point
-         *   - spline/path continuation
-         *   - fixed exit speed
-         *   - forced exit trajectory
-         */
-        const endpoint=g.rightExit;
-        const endpointDistance=Math.hypot(
-            s.x-endpoint.x,
-            s.y-endpoint.y
-        );
-
-        const exitProgressWindow=0.16;
-        const exitThroatDistance=0.135+radius*0.35;
-
-        if(
-            point.distance>=g.total-exitProgressWindow ||
-            endpointDistance<=exitThroatDistance
-        ){
-            const centerX=-s.x;
-            const centerY=-s.y;
-            const centerLength=Math.hypot(centerX,centerY)||1;
-            const cx=centerX/centerLength;
-            const cy=centerY/centerLength;
-
-            const speed=Math.max(0.010,Math.hypot(s.vx,s.vy));
-            const currentX=s.vx/speed;
-            const currentY=s.vy/speed;
-
+        if(nearExit && endpointDistance<=0.24 && exitForward>0.006 && centerDot>0.45){
             /*
-             * Preserve the actual outgoing direction. The centerward blend
-             * represents the physical opening/guide geometry, not a path.
+             * The rider is already moving through the real opening. Release
+             * exactly where it is and preserve its current velocity. The
+             * following normal-movement step carries it into the stadium.
              */
-            const blend=0.34;
-            let vx=currentX*(1-blend)+cx*blend;
-            let vy=currentY*(1-blend)+cy*blend;
-            const len=Math.hypot(vx,vy)||1;
-
-            s.vx=(vx/len)*speed;
-            s.vy=(vy/len)*speed;
-
-            /* IMPORTANT: leave s.x/s.y exactly where physics put the Bey. */
             release(s,"x-exit");
             s.lastXRailResult="x-exit";
             return false;
         }
 
+        const tx=p.tx,ty=p.ty;
+        let nx=s.x-p.x,ny=s.y-p.y,nlen=Math.hypot(nx,ny);
+        if(nlen<1e-9){nx=-ty;ny=tx;nlen=1;} else {nx/=nlen;ny/=nlen;}
+
+        const tangentSpeed=s.vx*tx+s.vy*ty;
+        if(!Number.isFinite(tangentSpeed)||tangentSpeed<=0.0025){
+            release(s,"lost-tangent");return false;
+        }
+
+        /*
+         * A rail rider can only travel in the authored CCW tangent direction.
+         * The rail removes the normal component of velocity; it does not
+         * invent a new speed or steer the Bey toward a canned path.
+         */
+        const rpm=clamp(Number(s.rpm)||0,0,1);
+        const grip=clamp(Number(s.railGrip)||0.72,0.65,0.96);
+        const friction=(0.000035+(1-rpm)*0.000055)*dt*60;
+        const railAssist=(0.00002+0.00008*rpm*grip)*dt*60;
+        const railSpeed=Math.max(0.0025,tangentSpeed-friction+railAssist);
+
+        s.vx=tx*railSpeed;
+        s.vy=ty*railSpeed;
+
+        /* Rail riders are integrated here because app.js skips free movement for them. */
+        s.x+=s.vx*dt*60;
+        s.y+=s.vy*dt*60;
+
+        /* Tiny normal correction keeps contact with the physical rail surface. */
+        const after=nearest(s.x,s.y);
+        if(after){
+            const ax=s.x-after.x,ay=s.y-after.y,alen=Math.hypot(ax,ay);
+            const targetGap=radius+0.006;
+            if(alen>1e-9){
+                const correction=clamp(targetGap-alen,-0.010,0.010);
+                s.x+=(ax/alen)*correction;
+                s.y+=(ay/alen)*correction;
+            }
+            s.railDistance=after.distance;
+            s.railContactPoint={x:after.x,y:after.y};
+            s._xrailLastDistance=after.distance;
+        }
+
+        s.railSpeed=Math.hypot(s.vx,s.vy);
+        s.railRideTime=(s.railRideTime||0)+dt;
+        s.railTravelDistance=(s.railTravelDistance||0)+s.railSpeed*dt;
         s.lastXRailResult="riding";
         return true;
     }
 
     function step(s,dt){
         if(!s) return {active:false,state:"none"};
-
-        if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||
-           !Number.isFinite(s.vx)||!Number.isFinite(s.vy)){
+        if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||!Number.isFinite(s.vx)||!Number.isFinite(s.vy)){
             throw new Error("X-Rail received non-finite Bey state.");
         }
 
         if(s.railEngaged){
-            const active=constraint(s,dt);
-            return {
-                active,
-                state:active?"riding":"release"
-            };
+            return {active:riderStep(s,dt),state:s.railEngaged?"riding":"release"};
         }
 
-        if((s.railExitRefractory||0)>0){
-            s.railExitRefractory=Math.max(0,s.railExitRefractory-dt);
-        }
-        if((s.railCaptureCooldown||0)>0){
-            s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
-        }
+        if((s.railExitRefractory||0)>0) s.railExitRefractory=Math.max(0,s.railExitRefractory-dt);
+        if((s.railCaptureCooldown||0)>0) s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
 
-        const point=nearest(s.x,s.y);
-        if(!point) return {active:false,state:"none"};
-
+        const p=nearest(s.x,s.y);
+        if(!p){s._xrailLastDistance=null;return {active:false,state:"none"};}
+        const distance=Math.sqrt(p.dist2);
         const radius=Number(s.radius)||0.124;
-        const contactRadius=0.018+radius;
-        if(Math.sqrt(point.dist2)>contactRadius){
-            return {active:false,state:"none"};
-        }
+        const contactRadius=radius+0.010;
+
+        if(!Number.isFinite(s._xrailLastDistance)) s._xrailLastDistance=distance;
+        const previousDistance=s._xrailLastDistance;
+        s._xrailLastDistance=distance;
+
+        if(distance>contactRadius) return {active:false,state:"none"};
 
         if(s.railExited||s.railExitRefractory>0||s.railCaptureCooldown>0){
-            bounce(s,point);
+            bounce(s,p);
             return {active:false,state:"bounce"};
         }
 
-        if(engage(s)){
-            return {active:true,state:"capture"};
-        }
-
-        bounce(s,point);
+        if(engage(s,previousDistance)) return {active:false,state:"capture"};
+        bounce(s,p);
         return {active:false,state:"bounce"};
     }
 
     function inspect(s){
         if(!s) return null;
-        const point=nearest(s.x,s.y);
-        if(!point) return null;
-
-        const distance=Math.sqrt(point.dist2)||1e-9;
-        const nx=(s.x-point.x)/distance;
-        const ny=(s.y-point.y)/distance;
-        const speed=Math.hypot(s.vx,s.vy);
-        const normal=s.vx*nx+s.vy*ny;
-        const tangent=s.vx*point.tx+s.vy*point.ty;
-
-        return {
-            distance,
-            speed,
-            normal,
-            tangent,
-            approachRatio:-normal/Math.max(speed,0.0001),
-            tangentRatio:tangent/Math.max(speed,0.0001),
-            tilt:Number(s.tiltLevel)||0,
-            spinDirection:s.spinDirection,
-            engaged:!!s.railEngaged,
-            result:s.lastXRailResult||null
-        };
+        const p=nearest(s.x,s.y); if(!p) return null;
+        const c=getContact(s,p);
+        return c?{
+            distance:c.distance,speed:c.speed,normal:c.normal,inward:c.inward,
+            tangential:c.tangential,approachRatio:c.approachRatio,
+            tangentRatio:c.tangentRatio,tilt:c.tilt,
+            previousDistance:s._xrailLastDistance??null,
+            progress:p.distance,total:buildGeometry().total,
+            engaged:!!s.railEngaged,result:s.lastXRailResult||null
+        }:null;
     }
 
     global.SpinWarsXRailEngine={
-        version:"3.1-finite-rail-physical-exit",
+        version:"4.0-impact-capture-physical-exit",
         geometry:buildGeometry,
         nearest,
         release,
         engage,
         contactSafety,
-        constraint,
         step,
         inspect
     };
-
 })(window);
