@@ -1,6 +1,6 @@
 /*==================================
  SPIN WAR X
- Version 1.2 — X-RAIL CONTACT / RIDE
+ X-RAIL 3.0 — SINGLE PHYSICAL RAIL MODEL
 ==================================*/
 
 //=========================
@@ -2384,7 +2384,6 @@ const NEW_BATTLE = {
     active:false,
     player:null,
     cpu:null,
-    railGeometry:null
 };
 
 // Self-contained helper for the NEW engine.
@@ -2393,13 +2392,6 @@ function newBattleClamp(value,min,max){
     return Math.max(min,Math.min(max,value));
 }
 
-
-/* V109 DIAGNOSTIC FOUNDATION
-   This is intentionally diagnostic-only. It does not alter battle physics.
-   railClamp is restored as the canonical numeric clamp expected by the V109
-   rail code; unlike a NaN sanitizer, it preserves NaN so the diagnostic can
-   identify the first corrupted value instead of hiding it.
-*/
 
 
 /*========================================================
@@ -2629,95 +2621,71 @@ function newBattleLaunchState(side){
 
     if(isXRailLaunch){
         /*
-          V81 X-RAIL LAUNCH CONTRACT
-          -------------------------
-          X-Rail launches begin at the LOWER CORNER of the top rail on the
-          player's side. The launch quality determines how accurately the
-          Bey reaches that corner; a poor launch can miss the rail.
+          X-RAIL LAUNCH
+          -------------
+          This is a physical approach to the actual rail centerline. It does
+          not force engagement. The standalone rail engine decides whether
+          the contact catches or bounces.
 
-          RIGHT spin follows the authored rail path:
-            lower-left entry -> around the stadium -> lower-right/top exit.
-
-          LEFT spin follows the exact reverse.
-
-          IMPORTANT: the launch tangent and the rider tangent use the SAME
-          SpinWarsXRailEngine.direction() convention. No separate sign inversion is allowed.
+          Right-spin is the only spin that can ride the authored CCW rail.
+          Left-spin still launches toward the rail, but the rail rejects it
+          as a ride and produces a physical bounce.
         */
         const railEntry = sideXSign < 0
             ? {x:-0.820,y:0.480}
             : {x: 0.820,y:0.480};
 
-        const railTarget=SpinWarsXRailEngine.nearest(railEntry.x,railEntry.y);
-        const railRadius=Math.hypot(
-            railTarget.x,
-            railTarget.y
-        )||1;
+        const railTarget=SpinWarsXRailEngine.nearest(
+            railEntry.x,
+            railEntry.y
+        );
 
-        // Spawn slightly inside the rail so the Bey approaches the corner
-        // naturally instead of appearing on the wrong lane.
-        const inwardX=-railTarget.x/railRadius;
-        const inwardY=-railTarget.y/railRadius;
+        if(railTarget){
+            const railRadius=Math.hypot(
+                railTarget.x,
+                railTarget.y
+            )||1;
 
-        const qualityMiss={
-            Horrible:0.090,
-            Bad:0.052,
-            Okay:0.028,
-            Good:0.012,
-            Perfect:0.004
-        }[plan.quality]||0.028;
+            const inwardX=-railTarget.x/railRadius;
+            const inwardY=-railTarget.y/railRadius;
 
-        const missAngle=(Math.random()*2-1)*0.55;
-        const missX=Math.cos(missAngle)*qualityMiss;
-        const missY=Math.sin(missAngle)*qualityMiss;
+            const qualityMiss={
+                Horrible:0.090,
+                Bad:0.052,
+                Okay:0.030,
+                Good:0.014,
+                Perfect:0.004
+            }[plan.quality]||0.030;
 
-        const entryOffset=0.045+qualityPlacement*0.42;
+            const missAngle=(Math.random()*2-1)*0.55;
+            const missX=Math.cos(missAngle)*qualityMiss;
+            const missY=Math.sin(missAngle)*qualityMiss;
+            const entryOffset=0.045+qualityPlacement*0.42;
 
-        const actualStartX=
-            railTarget.x+
-            inwardX*entryOffset+
-            missX;
-        const actualStartY=
-            railTarget.y+
-            inwardY*entryOffset+
-            missY;
+            startX=railTarget.x+inwardX*entryOffset+missX;
+            startY=railTarget.y+inwardY*entryOffset+missY;
 
-        // Override the generic start position for X-Rail only.
-        // This keeps all other launch techniques untouched.
-        startX=actualStartX;
-        startY=actualStartY;
+            const dx=railTarget.x-startX;
+            const dy=railTarget.y-startY;
+            const approachLength=Math.hypot(dx,dy)||1;
+            const approachX=dx/approachLength;
+            const approachY=dy/approachLength;
 
-        const dx=railTarget.x-startX;
-        const dy=railTarget.y-startY;
-        const d=Math.hypot(dx,dy)||1;
+            /* 55% tangent / 45% approach: useful CCW momentum without a square hit. */
+            const tangentWeight=0.55;
+            const approachWeight=0.45;
+            const railLaunchSpeed=launchSpeed*(1.03+0.07*qualityFactor);
 
-        const approachX=dx/d;
-        const approachY=dy/d;
+            vx=(
+                railTarget.tx*tangentWeight+
+                approachX*approachWeight
+            )*railLaunchSpeed;
 
-        /*
-          ONE source of truth:
-          SpinWarsXRailEngine.direction() already defines Right-spin as the authored
-          LEFT -> RIGHT path. Use that same sign here.
-        */
-        const spinDirection =
-            combo.blade?.spin==="Left" ? -1 : 1;
-        const railTravelDirection=spinDirection===-1 ? -1 : 1;
-
-        const railTangentX=railTarget.tx*railTravelDirection;
-        const railTangentY=railTarget.ty*railTravelDirection;
-
-        const tangentWeight=0.46;
-        const approachWeight=0.54;
-        const railLaunchSpeed=launchSpeed*(1.03+0.07*qualityFactor);
-
-        vx=
-            (railTangentX*tangentWeight+
-             approachX*approachWeight)*
-            railLaunchSpeed;
-
-        vy=
-            (railTangentY*tangentWeight+
-             approachY*approachWeight)*
-            railLaunchSpeed;
+            vy=(
+                railTarget.ty*tangentWeight+
+                approachY*approachWeight
+            )*railLaunchSpeed;
+        }
     }
 
     if(plan.technique==="Drop Launch"){
@@ -2792,16 +2760,12 @@ function newBattleLaunchState(side){
             0.25,1
         ),
         tiltLevel:0.08,
-        railUses:0,
         railCaptureCooldown:0,
         railCaptureCooldownPoint:null,
-        railChainLock:0,
-        railChainCount:0,
-        railAwayTime:0,
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        railEngaged:false,railDistance:0,
+        railEngaged:false,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
         railGrip:0,
         railDirection:0,
@@ -4168,122 +4132,20 @@ function newPhysicsStep(s,dt){
                 Math.max(0,s.surfaceBounce-dt);
         }
 
-        if(s.railExitRefractory>0){
-
-            s.railExitRefractory =
-                Math.max(0,s.railExitRefractory-dt);
-
-            if(s.railExitRefractoryPoint){
-                const dx =
-                    s.x-s.railExitRefractoryPoint.x;
-                const dy =
-                    s.y-s.railExitRefractoryPoint.y;
-
-                if(Math.hypot(dx,dy)>0.12){
-                    s.railExitRefractory=0;
-                    s.railExitRefractoryPoint=null;
-                }
-            }
-        }
-
-        if(s.railCaptureCooldown>0){
-            s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
-            if(s.railCaptureCooldownPoint){
-                const moved=Math.hypot(
-                    s.x-s.railCaptureCooldownPoint.x,
-                    s.y-s.railCaptureCooldownPoint.y
-                );
-                if(moved>0.10){
-                    s.railCaptureCooldown=0;
-                    s.railCaptureCooldownPoint=null;
-                }
-            }
-        }
-
-        if(s.railChainLock>0){
-            s.railChainLock=Math.max(0,s.railChainLock-dt);
-        }
-
-        if(!s.railEngaged){
-            const railNear=SpinWarsXRailEngine.nearest(s.x,s.y);
-            const railAwayDistance=railNear
-                ? Math.sqrt(railNear.dist2)
-                : 1;
-
-            if(railAwayDistance>0.22){
-                s.railAwayTime=(s.railAwayTime||0)+dt;
-                if(s.railAwayTime>0.55){
-                    s.railChainCount=0;
-                    s.railAwayTime=0;
-                }
-            }else{
-                s.railAwayTime=0;
-            }
-        }
-
         applyKnockbackBoundaryOverride(s);
 
         /*
-          RAIL PRIORITY
-          -------------
-          The X-Rail is a separate constrained surface. Once a Bey is
-          captured, the free-space movement response must NOT run first and
-          fight the rail constraint.
-
-          This was a major source of contradictory behavior in V70.
+          X-RAIL IS ONE PHYSICS OWNER
+          ---------------------------
+          Existing riders are constrained by the rail. Free Beys are tested
+          for actual contact. A failed capture is handled as a rail bounce by
+          the same engine; app.js does not duplicate the decision.
         */
-        if(s.railEngaged){
-            const railActive=SpinWarsXRailEngine.constraint(s,dt);
-            if(railActive) return;
+        const railResult=SpinWarsXRailEngine.step(s,dt);
+        if(railResult.active){
+            return;
         }
 
-        /*
-          Surface contact first.
-        */
-        const nearest = SpinWarsXRailEngine.nearest(s.x,s.y);
-
-        if(nearest){
-            const railDistance =
-                Math.sqrt(nearest.dist2);
-
-            // X-Rail contact is based on the actual rendered rail centerline
-            // plus the Bey radius. Keep this threshold in the same physical
-            // space as xrail-engine.js; the old 0.072+radius*0.48 threshold
-            // was too small to reach the rail's true contact shell.
-            const contactRadius =
-                0.055+
-                s.radius;
-
-            if(
-                railDistance<=contactRadius &&
-                !s.railExited
-            ){
-
-                const dx=s.x-nearest.x;
-                const dy=s.y-nearest.y;
-                const len=Math.hypot(dx,dy)||1;
-                const nx=dx/len;
-                const ny=dy/len;
-                const incomingNormal=s.vx*nx+s.vy*ny;
-
-                // Finish corridor is the ONLY place where normal rail
-                // collision may be bypassed.
-                const finishCorridor=
-                    SpinWarsXRailEngine.isBottomFinishCorridor(s) &&
-                    s.vy>0.006;
-
-                if(
-                    !finishCorridor &&
-                    !SpinWarsXRailEngine.engage(s)
-                ){
-                    SpinWarsXRailEngine.contactSafety(
-                        s,nearest,incomingNormal
-                    );
-                }
-
-                if(s.railEngaged) return;
-            }
-        }
 
         /*
           SOFT COMBAT ENGAGEMENT
@@ -4517,26 +4379,13 @@ function breakXRailFromImpact(s,nx,ny,force){
         }
     }
 
-    s.railEngaged=false;
+    SpinWarsXRailEngine.release(s,"collision");
     s.railExited=false;
-    s.railGrip=0;
-    s.railContactPoint=null;
-    s.railSpeed=0;
-    s.railTravelDistance=0;
-    s.railRideTime=0;
-    s.railDirection=0;
-
     s.railExitRefractory=0.20;
-    s.railCaptureCooldown=0.45;
-    s.railChainLock=Math.max(
-        s.railChainLock||0,
-        0.55
-    );
+    s.railCaptureCooldown=0.28;
     s.railCaptureCooldownPoint={x:s.x,y:s.y};
     s.railExitRefractoryPoint={x:s.x,y:s.y};
 
-    s.vx=s.vx;
-    s.vy=s.vy;
     s.knockbackOverrideUntil=performance.now()+280;
     s.knockbackOverrideForce=force;
     s.rpm=newBattleClamp(
@@ -4909,11 +4758,10 @@ function newPhysicsCollision(dt){
             if(railPoint){
                 const rd=Math.sqrt(Math.max(0,railPoint.dist2));
                 const rr=0.030+rider.radius*0.24;
-                if(rd<=rr && !SpinWarsXRailEngine.isBottomFinishCorridor(rider)){
+                if(rd<=rr){
                     SpinWarsXRailEngine.contactSafety(
                         rider,
-                        railPoint,
-                        0
+                        railPoint
                     );
                 }
             }
