@@ -27,77 +27,103 @@
         const rpmFloor=deliberate?0.22:(attackBit?0.34:0.38);
         if(rpm<rpmFloor) return {capture:false,reason:"low-rpm"};
 
-        const speedFloor=deliberate?0.006:(attackBit?0.012:0.014);
+        const speedFloor=deliberate?0.008:(attackBit?0.014:0.016);
         if(speed<speedFloor) return {capture:false,reason:"low-speed"};
 
         /*
-          A rail catch is a tangential interaction, not a generic wall hit.
-          The normal component must remain controlled. This is deliberately
-          checked before the RNG so a hard, nearly head-on impact cannot
-          become a magical rail capture.
+          X-RAIL IS A SURFACE, NOT A TRACK.
+          A Bey must actually enter the rail from the outside with useful
+          tangential momentum. Simply travelling alongside the rail is a
+          graze and must remain a graze.
         */
-        const tangentFloor=deliberate?0.20:(attackBit?0.34:0.40);
-        const tangentSpeedFloor=deliberate?0.0045:(attackBit?0.008:0.010);
+        const tangentFloor=
+            deliberate ? 0.24 :
+            (attackBit ? 0.40 : 0.46);
+
+        const tangentSpeedFloor=
+            deliberate ? 0.0050 :
+            (attackBit ? 0.009 : 0.011);
 
         if(tangent<tangentFloor || tangentSpeed<tangentSpeedFloor){
             return {capture:false,reason:"insufficient-tangent"};
         }
 
-        const maxNormalRatio=
-            deliberate
-                ? 0.78
-                : (attackBit ? 0.68 : 0.62);
+        /*
+          A successful capture needs a real inward contact impulse. This is
+          the key distinction between a physical rail catch and a Bey that
+          merely happens to orbit near the green rail.
+        */
+        const minimumApproachRatio=deliberate?0.10:0.16;
+        const minimumApproachSpeed=deliberate?0.0045:0.0065;
+
+        if(
+            approach<minimumApproachRatio ||
+            Number(input.approachSpeed||0)<minimumApproachSpeed
+        ){
+            return {capture:false,reason:"no-real-rail-approach"};
+        }
 
         /*
-          A Bey already moving away from the rail cannot "catch" it from the
-          outside. It must be approaching the surface or travelling almost
-          exactly alongside it.
+          Moving away from the rail cannot create a capture.
         */
         if(outwardSpeed>0.0035){
             return {capture:false,reason:"moving-away-from-rail"};
         }
 
+        /*
+          Too much normal energy is a wall hit, not a rail catch.
+          A very shallow, highly tangential high-speed contact is allowed;
+          a square/high-energy hit rebounds through the surface-contact path.
+        */
+        const maxNormalRatio=deliberate?0.56:0.48;
+
         if(normalRatio>maxNormalRatio){
             return {capture:false,reason:"too-much-normal-impact"};
         }
 
+        const highEnergyContact=
+            speed>0.040 &&
+            normalRatio>0.34 &&
+            tangent<0.78;
+
+        if(highEnergyContact){
+            return {capture:false,reason:"high-energy-bounce"};
+        }
+
         /*
-          A fresh hard collision gets one more physical rejection test.
-          A rider/approacher with substantial impact energy must have a
-          strongly tangential path to stick; otherwise it rebounds.
+          A fresh Bey-to-Bey impact gets an additional physical rejection
+          test before RNG. A hard impact cannot magically become a rail ride.
         */
         if(
             recentKnockback &&
             (
-                normalRatio>0.50 ||
-                normalSpeed>0.010 ||
-                impactForce>0.0065
+                normalRatio>0.42 ||
+                normalSpeed>0.009 ||
+                impactForce>0.0060
             ) &&
-            tangent<0.62
+            tangent<0.74
         ){
             return {capture:false,reason:"hard-impact-no-catch"};
         }
 
-        const approachFloor=deliberate?0.035:0.065;
+        const approachQuality=clamp(
+            (approach-minimumApproachRatio)/
+            Math.max(0.01,1-minimumApproachRatio),
+            0,1
+        );
 
-        if(
-            approach<approachFloor &&
-            tangent<Math.min(0.64,tangentFloor+0.14)
-        ){
-            return {capture:false,reason:"insufficient-approach"};
-        }
-
-        const approachQuality=clamp(approach/0.32,0,1);
         const tangentQuality=clamp(
             (tangent-tangentFloor)/
             Math.max(0.01,1-tangentFloor),
             0,1
         );
+
         const speedQuality=clamp(
             (speed-speedFloor)/0.045,
             0,
             1
         );
+
         const normalQuality=1-clamp(
             normalRatio/maxNormalRatio,
             0,
@@ -105,30 +131,30 @@
         );
 
         const score=clamp(
-            approachQuality*0.15+
-            tangentQuality*0.38+
-            speedQuality*0.16+
-            normalQuality*0.15+
-            affinity*0.08+
-            stability*0.08+
-            rpm*0.05,
+            approachQuality*0.22+
+            tangentQuality*0.34+
+            speedQuality*0.13+
+            normalQuality*0.17+
+            affinity*0.06+
+            stability*0.05+
+            rpm*0.03,
             0,1
         );
 
         /*
-          Deliberate X-Rail launches get a meaningful advantage, but never
-          bypass the physical tests above.
+          RNG is a small uncertainty around a physical result, not the
+          mechanism that creates the rail ride.
         */
         const baseChance=deliberate
-            ? 0.70+score*0.20
-            : 0.12+
-              score*0.66+
+            ? 0.55+score*0.25
+            : 0.05+
+              score*0.55+
               (attackBit?0.04:0);
 
         const chance=clamp(
-            baseChance+(Math.random()-0.5)*0.035,
-            0.12,
-            0.90
+            baseChance+(Math.random()-0.5)*0.025,
+            0.05,
+            0.82
         );
 
         if(Math.random()>chance){
@@ -145,26 +171,26 @@
             score,
             chance,
             grip:clamp(
-                0.54+
-                affinity*0.15+
-                score*0.22+
+                0.52+
+                affinity*0.14+
+                score*0.24+
                 rpm*0.04,
-                0.48,
-                0.94
+                0.46,
+                0.92
             )
         };
     }
 
 
     window.SpinWarsXRailEngine = {
-        version:"xrail-v2-physical-contact",
+        version:"xrail-v3-contact-ride",
         capture:capture
     };
 }())
 
 /*==================================
  SPIN WAR X
- Version 1.1 — X-RAIL PHYSICAL CONTACT
+ Version 1.2 — X-RAIL CONTACT / RIDE
 ==================================*/
 
 //=========================
@@ -173,7 +199,7 @@
 
 const Game = {
 
-    version:"1.0",
+    version:"1.2",
 
     screen:"menu",
 
@@ -2967,9 +2993,8 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        railEngaged:false,railProgress:0,railDistance:0,
+        railEngaged:false,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
-        railLoops:0,
         railGrip:0,
         railDirection:0,
         railContactPoint:null,
@@ -4558,6 +4583,7 @@ function tryNewXRailEngagement(s){
         speed,
         rpm,
         approachRatio,
+        approachSpeed,
         tangentRatio,
         tangentSpeed:tangent,
         normalSpeed,
@@ -4583,28 +4609,37 @@ function tryNewXRailEngagement(s){
       INTO the rail. The Bey keeps the tangential momentum it actually
       brought to the contact.
     */
-    const inwardSpeed=Math.max(
-        0,
-        -(s.vx*normalX+s.vy*normalY)
-    );
+    /*
+      Capture is a state transition, not a velocity teleport.
+      Remove only the component that is actually driving INTO the rail.
+      Keep the tangential momentum and any small legitimate outward
+      component. The rail constraint will handle the next frame.
+    */
+    const currentNormal=
+        s.vx*normalX+s.vy*normalY;
 
-    if(inwardSpeed>0){
-        s.vx+=normalX*inwardSpeed;
-        s.vy+=normalY*inwardSpeed;
+    if(currentNormal<0){
+        s.vx-=normalX*currentNormal;
+        s.vy-=normalY*currentNormal;
     }
 
     const tangentAfter=
         s.vx*railTangent.x+
         s.vy*railTangent.y;
 
-    if(!Number.isFinite(tangentAfter) || tangentAfter<=0){
+    const outwardAfter=
+        s.vx*normalX+
+        s.vy*normalY;
+
+    if(
+        !Number.isFinite(tangentAfter) ||
+        !Number.isFinite(outwardAfter) ||
+        tangentAfter<=0
+    ){
         return false;
     }
 
     const capturedSpeed=tangentAfter;
-
-    s.vx=railTangent.x*capturedSpeed;
-    s.vy=railTangent.y*capturedSpeed;
 
     s.railEngaged=true;
     s.railExited=false;
@@ -4764,11 +4799,11 @@ function applyXRailContactSafety(s,nearest,incomingNormal){
           response, not a random rail-eject chance.
         */
         const restitution=railClamp(
-            0.30+
-            railClamp(impactNormal/0.028,0,1)*0.34+
-            railClamp((speed-0.025)/0.050,0,1)*0.10,
-            0.30,
-            0.74
+            0.34+
+            railClamp(impactNormal/0.024,0,1)*0.34+
+            railClamp((speed-0.022)/0.045,0,1)*0.12,
+            0.34,
+            0.80
         );
 
         const normalAfter=impactNormal*restitution;
@@ -4941,10 +4976,17 @@ function applyXRailConstraint(s,dt){
       movement take over rather than continuing the orbit around the track.
     */
     const escapeThreshold=
-        0.009+
+        0.010+
         (1-railClamp(Number(s.railGrip)||0.55,0,1))*0.004;
 
-    if(normalSpeed>escapeThreshold){
+    const outwardRatio=
+        normalSpeed/
+        Math.max(Math.hypot(vx,vy),0.0001);
+
+    if(
+        normalSpeed>escapeThreshold &&
+        outwardRatio>0.22
+    ){
         newXRailExit(s,"outward-release");
         return false;
     }
@@ -4986,10 +5028,10 @@ function applyXRailConstraint(s,dt){
     );
 
     const friction=railClamp(
-        0.020+
-        (1-rpmN)*0.018,
-        0.018,
-        0.038
+        0.012+
+        (1-rpmN)*0.012,
+        0.010,
+        0.026
     );
 
     tangentialSpeed*=
@@ -5016,15 +5058,15 @@ function applyXRailConstraint(s,dt){
 
     const attackBit=movement>=0.80;
     const accelerationBase=
-        0.026+
-        bitAcceleration*0.022+
-        (attackBit?0.008:0);
+        0.010+
+        bitAcceleration*0.010+
+        (attackBit?0.004:0);
 
     const railCeiling=
-        0.085+
-        rpmN*0.050+
-        grip*0.028+
-        bitAcceleration*0.012;
+        0.060+
+        rpmN*0.036+
+        grip*0.020+
+        bitAcceleration*0.010;
 
     const speedRoom=Math.max(0,railCeiling-tangentialSpeed);
 
