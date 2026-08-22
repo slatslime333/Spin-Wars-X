@@ -1,2 +1,2 @@
-# Spin-Wars-X
+# Spin-Wars-Xswag
 Cool game
