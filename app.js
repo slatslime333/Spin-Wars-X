@@ -2400,9 +2400,7 @@ function newBattleClamp(value,min,max){
    rail code; unlike a NaN sanitizer, it preserves NaN so the diagnostic can
    identify the first corrupted value instead of hiding it.
 */
-function railClamp(value,min,max){
-    return Math.max(min,Math.min(max,value));
-}
+
 
 /*========================================================
  LAUNCH QUALITY — CANONICAL
@@ -2643,13 +2641,13 @@ function newBattleLaunchState(side){
           LEFT spin follows the exact reverse.
 
           IMPORTANT: the launch tangent and the rider tangent use the SAME
-          railDirection() convention. No separate sign inversion is allowed.
+          SpinWarsXRailEngine.direction() convention. No separate sign inversion is allowed.
         */
         const railEntry = sideXSign < 0
             ? {x:-0.820,y:0.480}
             : {x: 0.820,y:0.480};
 
-        const railTarget=newXRailNearest(railEntry.x,railEntry.y);
+        const railTarget=SpinWarsXRailEngine.nearest(railEntry.x,railEntry.y);
         const railRadius=Math.hypot(
             railTarget.x,
             railTarget.y
@@ -2697,7 +2695,7 @@ function newBattleLaunchState(side){
 
         /*
           ONE source of truth:
-          railDirection() already defines Right-spin as the authored
+          SpinWarsXRailEngine.direction() already defines Right-spin as the authored
           LEFT -> RIGHT path. Use that same sign here.
         */
         const spinDirection =
@@ -2797,11 +2795,11 @@ function newBattleLaunchState(side){
         railUses:0,
         railCaptureCooldown:0,
         railCaptureCooldownPoint:null,
-        railExitRefractory:0,
-        railExitRefractoryPoint:null,
+        railChainLock:0,
+        railChainCount:0,
+        railAwayTime:0,
 
-        // Right spin is the only spin that can lock onto X-Rail.
-        // Left spin can contact/bounce, but cannot ride it.
+        // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
         railEngaged:false,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
@@ -2809,6 +2807,8 @@ function newBattleLaunchState(side){
         railDirection:0,
         railContactPoint:null,
         railExited:false,
+        railExitRefractory:0,
+        railExitRefractoryPoint:null,
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
         surfaceRecovery:0,
@@ -2816,10 +2816,6 @@ function newBattleLaunchState(side){
     };
 }
 function startNewBattle(){
-    if(!window.SpinWarsXRailEngine){
-        throw new Error("X-Rail engine failed to load.");
-    }
-
     // This is the only function allowed to start the live physics loop.
     // Validate the shared direction convention before any physics runs so
     // free movement and X-Rail cannot silently disagree.
@@ -3808,23 +3804,178 @@ function newBattleFrame(now){
 
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
-/*
- * X-RAIL ORCHESTRATION ADAPTER
- * Actual X-Rail physics lives in xrail-engine.js.
- */
-function getNewXRailGeometry(){ return SpinWarsXRailEngine.geometry(); }
-function newXRailNearest(x,y){ return SpinWarsXRailEngine.nearest(x,y); }
-function newXRailTangentAtPoint(point){ return SpinWarsXRailEngine.tangentAt(point); }
-function railDirection(){ return 1; }
-function newXRailRelease(s,direction,reason="release"){ return SpinWarsXRailEngine.release(s,reason); }
-function tryNewXRailEngagement(s){
-    const was=!!s?.railEngaged;
-    SpinWarsXRailEngine.step(s,0,"contact");
-    return !was && !!s?.railEngaged;
+
+
+
+
+
+
+function speedOf(s){
+    return Math.hypot(s?.vx||0,s?.vy||0);
 }
-function newXRailExit(s,reason){ return SpinWarsXRailEngine.release(s,reason==="x-exit"?"x-exit":reason); }
-function applyXRailContactSafety(s,nearest){ return SpinWarsXRailEngine.bounce(s,nearest); }
-function applyXRailConstraint(s,dt){ return !!SpinWarsXRailEngine.step(s,dt,"riding").active; }
+
+function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
+    const n=bit?.name||"";
+    const r=newBattleClamp((Number(rpm)||0)/100,0,1);
+    const st=newBattleClamp((Number(stability)||0)/100,0,1);
+    const tilt=newBattleClamp(Math.abs(Number(currentTilt)||0),0,1);
+
+    if(n==="Point"){
+        const aggression=newBattleClamp(
+            0.04+
+            Math.pow(tilt,1.55)*0.78+
+            (1-st)*0.14,
+            0,1
+        );
+
+        return {
+            mode:aggression>0.56?"aggressive":"stable",
+            aggression,
+            mobility:0.27+aggression*0.55,
+            staminaEfficiency:1-aggression*0.26
+        };
+    }
+
+    if(n==="Level"){
+        const lowRpm=Math.pow(1-r,1.18);
+
+        const aggression=newBattleClamp(
+            0.035+
+            lowRpm*0.64+
+            Math.pow(tilt,1.35)*0.34+
+            (1-st)*0.10,
+            0,1
+        );
+
+        return {
+            mode:aggression>0.56?"aggressive":"stable",
+            aggression,
+            mobility:0.28+aggression*0.60,
+            staminaEfficiency:1-aggression*0.22
+        };
+    }
+
+    return null;
+}
+
+function getBattleStat(s,key,fallback=70){
+    const value=Number(s?.stats?.[key]);
+
+    if(!Number.isFinite(value)){
+        return Math.max(
+            60,
+            Math.min(99,fallback)
+        )/99;
+    }
+
+    return Math.max(
+        60,
+        Math.min(99,value)
+    )/99;
+}
+
+function bitPhysics(s){
+    return BIT_PHYSICS[s.bit?.name] || BIT_PHYSICS.Point;
+}
+
+function getSpinOrbitTangent(x,y,spinDirection){
+    /*
+      SINGLE DIRECTION CONVENTION
+      ----------------------------
+      Screen coordinates use +Y downward.
+
+      RIGHT spin = counter-clockwise around the stadium:
+        tangent = (y, -x)
+
+      LEFT spin = the exact reverse.
+
+      This is the same convention used by the X-Rail. No later system is
+      allowed to "correct" this direction after movement is calculated.
+    */
+    const r=Math.hypot(x,y)||1;
+    const sign=spinDirection===1 ? 1 : -1;
+    return {
+        x:(y/r)*sign,
+        y:(-x/r)*sign
+    };
+}
+
+function validatePhysicsDirectionContract(){
+    const checks=[
+        {x:0,y:-1,expectX:-1,expectY:0,name:"top"},
+        {x:-1,y:0,expectX:0,expectY:1,name:"left"},
+        {x:0,y:1,expectX:1,expectY:0,name:"bottom"},
+        {x:1,y:0,expectX:0,expectY:-1,name:"right"}
+    ];
+    for(const c of checks){
+        const t=getSpinOrbitTangent(c.x,c.y,1);
+        const dot=t.x*c.expectX+t.y*c.expectY;
+        if(dot<0.999){
+            throw new Error(`Physics direction contract failed at ${c.name}.`);
+        }
+    }
+    return true;
+}
+
+
+/*
+ * V79 PHYSICS DIRECTION CONTRACT
+ * ------------------------------
+ * A collision may redirect a Bey's velocity, but it must NEVER create a
+ * sustained orbit opposite to the Bey's physical spin direction.
+ *
+ * This runs only at the collision event. It does NOT become a second
+ * per-frame movement controller, so it cannot fight the normal orbit physics
+ * or the X-Rail.
+ *
+ * Radial/impact velocity is preserved. Only the tangential component that
+ * would establish an opposite-direction orbit is removed.
+ */
+function enforcePostImpactSpinDirection(s){
+    if(!s || s.railEngaged) return;
+
+    const rpm=newBattleClamp(s.rpm||0,0,1);
+    if(rpm<=0.10) return;
+
+    const radius=Math.hypot(s.x,s.y);
+    if(radius<0.035) return;
+
+    const tangent=getSpinOrbitTangent(
+        s.x,
+        s.y,
+        s.spinDirection
+    );
+    const tangential=s.vx*tangent.x+s.vy*tangent.y;
+
+    /*
+      Remove ONLY an opposite-spin tangential component. Valid same-spin
+      tangential momentum and radial impact momentum remain untouched.
+    */
+    if(tangential<0){
+        s.vx-=tangent.x*tangential;
+        s.vy-=tangent.y*tangential;
+    }
+
+    s.lastOrbitDirection=s.spinDirection===1 ? "CCW" : "CW";
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function newPhysicsStep(s,dt){
 
@@ -4017,13 +4168,118 @@ function newPhysicsStep(s,dt){
                 Math.max(0,s.surfaceBounce-dt);
         }
 
+        if(s.railExitRefractory>0){
+
+            s.railExitRefractory =
+                Math.max(0,s.railExitRefractory-dt);
+
+            if(s.railExitRefractoryPoint){
+                const dx =
+                    s.x-s.railExitRefractoryPoint.x;
+                const dy =
+                    s.y-s.railExitRefractoryPoint.y;
+
+                if(Math.hypot(dx,dy)>0.12){
+                    s.railExitRefractory=0;
+                    s.railExitRefractoryPoint=null;
+                }
+            }
+        }
+
+        if(s.railCaptureCooldown>0){
+            s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
+            if(s.railCaptureCooldownPoint){
+                const moved=Math.hypot(
+                    s.x-s.railCaptureCooldownPoint.x,
+                    s.y-s.railCaptureCooldownPoint.y
+                );
+                if(moved>0.10){
+                    s.railCaptureCooldown=0;
+                    s.railCaptureCooldownPoint=null;
+                }
+            }
+        }
+
+        if(s.railChainLock>0){
+            s.railChainLock=Math.max(0,s.railChainLock-dt);
+        }
+
+        if(!s.railEngaged){
+            const railNear=SpinWarsXRailEngine.nearest(s.x,s.y);
+            const railAwayDistance=railNear
+                ? Math.sqrt(railNear.dist2)
+                : 1;
+
+            if(railAwayDistance>0.22){
+                s.railAwayTime=(s.railAwayTime||0)+dt;
+                if(s.railAwayTime>0.55){
+                    s.railChainCount=0;
+                    s.railAwayTime=0;
+                }
+            }else{
+                s.railAwayTime=0;
+            }
+        }
+
+        applyKnockbackBoundaryOverride(s);
+
         /*
-          X-RAIL — standalone physics module.
-          Active riders are constrained by xrail-engine.js; free-space
-          movement remains entirely owned by movement-engine.js.
+          RAIL PRIORITY
+          -------------
+          The X-Rail is a separate constrained surface. Once a Bey is
+          captured, the free-space movement response must NOT run first and
+          fight the rail constraint.
+
+          This was a major source of contradictory behavior in V70.
         */
-        const railBeforeMove=SpinWarsXRailEngine.step(s,dt,"preMovement");
-        if(railBeforeMove.active) return;
+        if(s.railEngaged){
+            const railActive=SpinWarsXRailEngine.constraint(s,dt);
+            if(railActive) return;
+        }
+
+        /*
+          Surface contact first.
+        */
+        const nearest = SpinWarsXRailEngine.nearest(s.x,s.y);
+
+        if(nearest){
+            const railDistance =
+                Math.sqrt(nearest.dist2);
+
+            const contactRadius =
+                0.072+
+                s.radius*0.48;
+
+            if(
+                railDistance<=contactRadius &&
+                !s.railExited
+            ){
+
+                const dx=s.x-nearest.x;
+                const dy=s.y-nearest.y;
+                const len=Math.hypot(dx,dy)||1;
+                const nx=dx/len;
+                const ny=dy/len;
+                const incomingNormal=s.vx*nx+s.vy*ny;
+
+                // Finish corridor is the ONLY place where normal rail
+                // collision may be bypassed.
+                const finishCorridor=
+                    SpinWarsXRailEngine.isBottomFinishCorridor(s) &&
+                    s.vy>0.006;
+
+                if(
+                    !finishCorridor &&
+                    !SpinWarsXRailEngine.engage(s)
+                ){
+                    SpinWarsXRailEngine.contactSafety(
+                        s,nearest,incomingNormal
+                    );
+                }
+
+                if(s.railEngaged) return;
+            }
+        }
 
         /*
           SOFT COMBAT ENGAGEMENT
@@ -4224,7 +4480,7 @@ function newPhysicsStep(s,dt){
           movement-engine.js. app.js handles battle/rail/collision orchestration
           and delegates free-space movement here.
         */
-        SpinWarsMovementEngine.step(s,dt,{
+        return SpinWarsMovementEngine.step(s,dt,{
             clamp:newBattleClamp,
             getSpinOrbitTangent,
             enforcePostImpactSpinDirection,
@@ -4241,34 +4497,86 @@ function newPhysicsStep(s,dt){
             staminaEfficiency,
             physicalSpeedTarget
         });
-
-        /* Catch physical rail contact created by this movement step. */
-        const railAfterMove=SpinWarsXRailEngine.step(s,dt,"postMovement");
-        if(railAfterMove.active) return;
     };
 function breakXRailFromImpact(s,nx,ny,force){
     if(!s?.railEngaged) return false;
+
+    const impactMagnitude=Math.max(0.003,force);
     const point=SpinWarsXRailEngine.nearest(s.x,s.y);
+
+    /*
+      A strong impact can knock a Bey OFF the rail. It does not reset the
+      Bey to the track or force an artificial orbit.
+    */
     if(point){
-        const dx=s.x-point.x,dy=s.y-point.y;
+        const dx=s.x-point.x;
+        const dy=s.y-point.y;
         const len=Math.hypot(dx,dy)||1;
-        const rx=dx/len,ry=dy/len;
-        const outward=s.vx*rx+s.vy*ry;
-        const minimumOutward=0.004+Math.max(0,force)*0.20;
+        const rx=dx/len;
+        const ry=dy/len;
+
+        const outward=
+            s.vx*rx+
+            s.vy*ry;
+
+        const minimumOutward=0.004+impactMagnitude*0.20;
+
         if(outward<minimumOutward){
             const add=minimumOutward-outward;
-            s.vx+=rx*add;s.vy+=ry*add;
+            s.vx+=rx*add;
+            s.vy+=ry*add;
+        }
+
+        const contactRadius=0.072+s.radius*0.48;
+        const distance=Math.sqrt(point.dist2);
+
+        if(distance<contactRadius){
+            const push=contactRadius-distance+0.006;
+            s.x+=rx*push;
+            s.y+=ry*push;
         }
     }
-    SpinWarsXRailEngine.release(s,"collision");
-    s.surfaceBounce=Math.max(s.surfaceBounce||0,0.20);
-    s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.12);
-    const f=Math.max(0,force);
-    s.rpm=newBattleClamp(s.rpm-(0.0035+f*0.20),0,1);
-    s.stability=newBattleClamp(s.stability-(0.008+f*0.35),0,1);
-    s.tiltLevel=newBattleClamp((s.tiltLevel||0)+0.045+f*0.55,0,1);
+
+    s.railEngaged=false;
+    s.railExited=false;
+    s.railGrip=0;
+    s.railContactPoint=null;
+    s.railSpeed=0;
+    s.railTravelDistance=0;
+    s.railRideTime=0;
+    s.railDirection=0;
+
+    s.railExitRefractory=0.20;
+    s.railCaptureCooldown=0.45;
+    s.railChainLock=Math.max(
+        s.railChainLock||0,
+        0.55
+    );
+    s.railCaptureCooldownPoint={x:s.x,y:s.y};
+    s.railExitRefractoryPoint={x:s.x,y:s.y};
+
+    s.vx=s.vx;
+    s.vy=s.vy;
     s.knockbackOverrideUntil=performance.now()+280;
     s.knockbackOverrideForce=force;
+    s.rpm=newBattleClamp(
+        s.rpm-(0.0035+force*0.20),
+        0,1
+    );
+    s.stability=newBattleClamp(
+        s.stability-(0.008+force*0.35),
+        0,1
+    );
+    s.tiltLevel=newBattleClamp(
+        (s.tiltLevel||0)+0.045+force*0.55,
+        0,1
+    );
+
+    s.surfaceBounce=0.20;
+    s.surfaceRecovery=0.12;
+    s.motionPhase+=1.0+Math.random()*0.7;
+    s.motionPhase2+=0.4+Math.random()*0.5;
+
     return true;
 }
 
@@ -4617,12 +4925,16 @@ function newPhysicsCollision(dt){
     // intentional pass-through route.
     for(const rider of [p,c]){
         if(!rider.railEngaged){
-            const railPoint=newXRailNearest(rider.x,rider.y);
+            const railPoint=SpinWarsXRailEngine.nearest(rider.x,rider.y);
             if(railPoint){
                 const rd=Math.sqrt(Math.max(0,railPoint.dist2));
                 const rr=0.030+rider.radius*0.24;
-                if(rd<=rr && !isBottomFinishCorridor(rider)){
-                    SpinWarsXRailEngine.bounce(rider,railPoint);
+                if(rd<=rr && !SpinWarsXRailEngine.isBottomFinishCorridor(rider)){
+                    SpinWarsXRailEngine.contactSafety(
+                        rider,
+                        railPoint,
+                        0
+                    );
                 }
             }
         }
@@ -4978,24 +5290,10 @@ function newPhysicsCollision(dt){
 // Launch angle and technique are selected on the stadium setup view.
 // The selected launch state is passed directly into the physical engine.
 
-/*
-  BOOTSTRAP FIX
-  -------------
-  index.html loads app.js with a cache-busting dynamic script so future
-  app.js revisions do not require editing index.html. A dynamically
-  injected script can execute after DOMContentLoaded has already fired.
-  In that case the old listener would never run and the game would remain
-  blank. Boot immediately when the DOM is already ready; otherwise wait
-  for DOMContentLoaded.
-*/
 function bootSpinWars(){
     if(window.__spinWarsBooted) return;
     window.__spinWarsBooted=true;
     hookMenuButtons();
 }
-
-if(document.readyState==="loading"){
-    window.addEventListener("DOMContentLoaded",bootSpinWars,{once:true});
-}else{
-    bootSpinWars();
-}
+if(document.readyState==="loading") window.addEventListener("DOMContentLoaded",bootSpinWars,{once:true});
+else bootSpinWars();
