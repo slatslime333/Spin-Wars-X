@@ -82,12 +82,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.62,
+        (s.impactMomentumState||0)-dt*0.78,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.95*s.impactMomentumState;
+    1-0.92*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -121,10 +121,10 @@ const mobilityResponse=
   RPM contracts the radius smoothly as spin energy falls.
 */
 const baseOrbitRadius=
-    0.155+
-    (1-centerAffinity)*0.39+
-    (movement*0.055)+
-    ((1-bitStability)*0.025);
+    (movement>=0.80 ? 0.168 : 0.092)+
+    (1-centerAffinity)*(movement>=0.80 ? 0.40 : 0.18)+
+    (movement*0.050)+
+    ((1-bitStability)*0.018);
 
 /*
   RPM ORBIT TIGHTENING — V99.1
@@ -253,21 +253,21 @@ if(movement>=0.80){
     */
     const nonAttackT=
         clamp(
-            (rpm-0.55)/(1-0.55),
+            (rpm-0.72)/(1-0.72),
             0,
             1
         );
 
     rpmRadiusFactor=
-        0.12+
-        0.88*Math.pow(nonAttackT,3.10);
+        0.07+
+        0.93*Math.pow(nonAttackT,2.15);
 }
 
 const preferredRadius=
     clamp(
         baseOrbitRadius*rpmRadiusFactor,
-        0.145,
-        0.58
+        movement>=0.80 ? 0.16 : 0.048,
+        movement>=0.80 ? 0.62 : 0.34
     );
 
 /*
@@ -276,8 +276,8 @@ const preferredRadius=
   respond to the movement tendency; it is not a second speed source.
 */
 const orbitSpeedFraction=
-    0.42+
-    0.24*movement+
+    (movement>=0.80 ? 0.62 : 0.38)+
+    0.28*movement+
     0.10*(1-centerAffinity);
 
 /*
@@ -395,11 +395,12 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
+const radialGain=movement>=0.80 ? 0.20 : 0.46;
 const desiredRadialSpeed=
     clamp(
-        (preferredRadius-rNow)*0.18,
-        -0.014,
-        0.014
+        (preferredRadius-rNow)*radialGain,
+        movement>=0.80 ? -0.018 : -0.038,
+        movement>=0.80 ? 0.018 : 0.028
     );
 
 const desiredVX=
@@ -412,18 +413,18 @@ const desiredVY=
 
 const responseRate=
     (
-        0.024+
+        (movement>=0.80 ? 0.028 : 0.046)+
         control*0.014+
         bitPrecession*0.006+
         movement*0.004
     )*
-    (0.40+0.60*rpm)*
+    (0.42+0.58*rpm)*
     mobilityResponse;
 
 const responseAmount=clamp(
     responseRate*dt*60*orbitSteeringAvailability,
     0,
-    0.055
+    movement>=0.80 ? 0.070 : 0.10
 );
 
 // Always blend, but impact ownership starves this toward zero so a
@@ -524,6 +525,26 @@ if(radius>wall){
     const outward =
         s.vx*nx+s.vy*ny;
 
+    /*
+      Finish openings sit on the lower rim. A real outward knock that
+      reaches that lip can leave the bowl; a normal orbit still bounces.
+    */
+    const inXtremeGate=s.y>=0.64 && Math.abs(s.x)<=0.34;
+    const inPocketGate=s.y>=0.56 && Math.abs(s.x)>=0.44;
+    const finishEscape=
+        outward>0.010 &&
+        radius<=1.08 &&
+        (s.impactMomentumState||0)>0.18 &&
+        (inXtremeGate||inPocketGate);
+
+    if(finishEscape){
+        s.finishLipContact={
+            zone:inXtremeGate?"Xtreme":"Over",
+            speed:Math.hypot(s.vx,s.vy),
+            outward,
+            force:s.lastImpactForce||0
+        };
+    }else{
     s.x=nx*(wall-0.002);
     s.y=ny*(wall-0.002);
 
@@ -628,6 +649,7 @@ if(radius>wall){
           after a wall impact. This is not a per-frame controller.
         */
         enforceDirection(s);
+    }
     }
 }
 
