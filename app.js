@@ -4802,33 +4802,28 @@ function newPhysicsStep(s,dt){
         /*
           X-EXIT MOUTH
           -------------
-          The top notch is open to a genuine rail exit, but normal bowl
-          movement cannot simply phase through the mouth. A Bey that was not
-          released from the rail is redirected back into the bowl.
+          Free-Bey contact with the visual X-Exit V is owned by
+          SpinWarsXRailEngine. This is only a last-chance block so a
+          non-rider cannot phase out the top gap. It does not add
+          sideways steering.
         */
         {
             const halfWidth=0.133;
-            const edgeY=-0.790;
-            const apexY=-0.603;
+            const apexY=-0.641;
             const clearance=s.radius*0.72;
 
             if(
                 !s.railExited &&
+                !s.xrailExitRampActive &&
+                !s.railExitSurfaceHit &&
                 Math.abs(s.x)<halfWidth &&
-                s.y<apexY+clearance
+                s.y<apexY+clearance &&
+                s.vy<0
             ){
-                const boundaryY=
-                    apexY-
-                    Math.abs(edgeY-apexY)*
-                    (1-Math.abs(s.x)/halfWidth);
-
-                if(s.y<boundaryY+clearance && s.vy<0){
-                    s.y=boundaryY+clearance;
-                    s.vy=Math.abs(s.vy)*0.34;
-                    s.vx*=0.82;
-                    s.surfaceRecovery=0.14;
-                    s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
-                }
+                s.y=apexY+clearance;
+                s.vy=Math.abs(s.vy)*0.58;
+                s.surfaceRecovery=0.10;
+                s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
             }
         }
 
