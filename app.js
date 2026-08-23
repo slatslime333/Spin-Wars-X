@@ -4802,27 +4802,27 @@ function newPhysicsStep(s,dt){
         /*
           X-EXIT MOUTH
           -------------
-          Free-Bey contact with the visual X-Exit V is owned by
-          SpinWarsXRailEngine. This is only a last-chance block so a
-          non-rider cannot phase out the top gap. It does not add
-          sideways steering.
+          Backup only. The X-Rail engine owns the solid X-Exit. If a
+          non-rider is still in the mouth this frame, push them into
+          the bowl. Do not require vy<0 — orbiting can cross horizontally.
         */
         {
-            const halfWidth=0.133;
+            const halfWidth=0.16;
             const apexY=-0.641;
-            const clearance=s.radius*0.72;
+            const clearance=s.radius+0.012;
 
             if(
                 !s.railExited &&
                 !s.xrailExitRampActive &&
-                !s.railExitSurfaceHit &&
                 Math.abs(s.x)<halfWidth &&
-                s.y<apexY+clearance &&
-                s.vy<0
+                s.y<apexY+clearance
             ){
                 s.y=apexY+clearance;
-                s.vy=Math.abs(s.vy)*0.58;
+                const speed=Math.max(0.018,Math.hypot(s.vx,s.vy));
+                s.vx=0;
+                s.vy=speed;
                 s.surfaceRecovery=0.10;
+                s.impactMomentumState=Math.max(s.impactMomentumState||0,0.88);
                 s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
             }
         }
