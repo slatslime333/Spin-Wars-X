@@ -33,8 +33,8 @@ const RIDE_MAX_STEP=0.010;
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
-  (Number(s.lastImpactForce)||0)>=0.011 &&
-  (Number(s.impactMomentumState)||0)>0.45;
+  (Number(s.lastImpactForce)||0)>=0.008 &&
+  (Number(s.impactMomentumState)||0)>0.38;
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
@@ -302,22 +302,35 @@ function optionalStat(s,names,def){
  for(const name of names){const v=Number(s?.[name]);if(Number.isFinite(v))return clamp01(v/99);}
  return def;
 }
+function pickExitLane(s){
+ const seed=
+  hashString((s.blade&&s.blade.name)||s.id||"bey")*0.91+
+  (Number(s.railRideTime)||0)*2.17+
+  (Number(s.railTravelDistance)||0)*1.31+
+  ((Number(s.x)||0)+1.7)*0.37+
+  ((Number(s.railSpeed)||0)*8.3);
+ const roll=seed-Math.floor(seed);
+ if(roll<0.30) return -1;
+ if(roll>0.70) return 1;
+ return 0;
+}
 function chooseExitHeading(s,p){
  const speed=Math.hypot(s.vx,s.vy),railSpeed=Number(s.railSpeed)||speed,rpm=clamp01(s.rpm),tilt=clamp(Math.abs(Number(s.tiltLevel)||0),0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
  const balance=optionalStat(s,["balance","balanceStat"],0.70);
  const exit=exitRampGeometry();
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
  const exitEnergyFactor=1;
- // Leave the rail at the speed you actually carried. RPM already changed
- // ride friction; do not restack attack/RPM multipliers on the way out.
  const rawSpeed=railSpeed*(1.06-tilt*0.03);
  const exitSpeed=Math.min(0.19,Math.max(0.028,rawSpeed));
- /*
-  * The X-Exit lane is the visual V into the bowl. Exit heading is that
-  * lane, not a blend of the curling rail tangent (which pointed into the
-  * gap and caused the leftward wiggle).
-  */
- return{x:exit.inward.x,y:exit.inward.y,speed:exitSpeed,lateralAmount:0,quality,spread:0,seed:0,exitEnergyFactor};
+ const lane=pickExitLane(s);
+ const yaw=lane*0.20;
+ const ix=exit.inward.x,iy=exit.inward.y;
+ const cs=Math.cos(yaw),sn=Math.sin(yaw);
+ const hx=ix*cs-iy*sn,hy=ix*sn+iy*cs;
+ const hlen=Math.hypot(hx,hy)||1;
+ s.xExitLane=lane;
+ s.xExitLaneX=lane*0.12;
+ return{x:hx/hlen,y:hy/hlen,speed:exitSpeed,lateralAmount:lane,quality,spread:Math.abs(yaw),seed:yaw,exitEnergyFactor,lane};
 }
 function beginExitRamp(s,p){
  if(s.xrailExitRampActive)return true;
@@ -325,7 +338,8 @@ function beginExitRamp(s,p){
  const exit=exitRampGeometry();
  const rampTime=clamp(0.08+(1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.03,0.08,0.12);
  const start={x:s.x,y:s.y};
- const end={x:exit.apex.x,y:exit.apex.y+0.12};
+ const laneX=Number(heading.lane||s.xExitLane||0)*0.10;
+ const end={x:exit.apex.x+laneX,y:exit.apex.y+0.12};
  const control={x:start.x*0.22+end.x*0.78,y:start.y*0.55+end.y*0.45};
  s.xrailExitRampActive=true;s.xrailExitRampTime=0;s.xrailExitRampDuration=rampTime;s.xrailExitRampStart=start;s.xrailExitRampHeading=heading;
  s.xrailExitRampControl=control;s.xrailExitRampEnd=end;s.xrailExitForceCenter=false;
@@ -409,9 +423,19 @@ function stepCenterLock(s,dt){
  if(lock<=0)return false;
  s.xExitCenterLock=Math.max(0,lock-dt);
  const speed=Math.max(0.018,Math.hypot(s.vx,s.vy));
- s.x+=(0-s.x)*Math.min(1,dt*14);
- s.vx=0;
- s.vy=speed;
+ const laneX=Number(s.xExitLaneX)||0;
+ const heading=s.xrailExitRampHeading||s.railExitVector;
+ s.x+=(laneX-s.x)*Math.min(1,dt*10);
+ let hx=0,hy=1;
+ if(heading && Number.isFinite(heading.x) && Number.isFinite(heading.y)){
+  const hl=Math.hypot(heading.x,heading.y)||1;
+  hx=heading.x/hl;hy=heading.y/hl;
+ }else{
+  const aim=Math.hypot(laneX,1)||1;
+  hx=laneX/aim;hy=1/aim;
+ }
+ s.vx=hx*speed;
+ s.vy=hy*speed;
  s.x+=s.vx*dt*60;
  s.y+=s.vy*dt*60;
  s.lastXRailResult="x-exit-center";
@@ -476,5 +500,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.1-solid-mouths",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth};
+global.SpinWarsXRailEngine={version:"6.2-exit-lanes",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading};
 })(typeof window!=="undefined"?window:globalThis);
