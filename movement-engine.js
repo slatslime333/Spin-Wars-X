@@ -82,12 +82,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.78,
+        (s.impactMomentumState||0)-dt*0.46,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.92*s.impactMomentumState;
+    1-0.97*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -210,22 +210,20 @@ let rpmRadiusFactor;
 
 if(movement>=0.80){
     /*
-      ATTACK — V99.3 LOCKED
-      Do not alter attack movement in this pass.
+      ATTACK
+      100% stays wide. By ~75% the ring should already look tighter.
+      At ~30% it stays a bit aggressive, but not out by the X-Rail.
     */
-    const rpmTightenFloor=0.28;
-    const rpmTightenPower=1.55;
-
     const rpmTightenT=
         clamp(
-            (rpm-rpmTightenFloor)/
-            (1-rpmTightenFloor),
+            (rpm-0.18)/(1-0.18),
             0,
             1
         );
 
     rpmRadiusFactor=
-        Math.pow(rpmTightenT,rpmTightenPower);
+        0.22+
+        0.78*Math.pow(rpmTightenT,1.45);
 }else{
     /*
       NON-ATTACK — V99.4
@@ -266,8 +264,8 @@ if(movement>=0.80){
 const preferredRadius=
     clamp(
         baseOrbitRadius*rpmRadiusFactor,
-        movement>=0.80 ? 0.16 : 0.048,
-        movement>=0.80 ? 0.62 : 0.34
+        movement>=0.80 ? 0.11 : 0.048,
+        movement>=0.80 ? 0.58 : 0.34
     );
 
 /*
@@ -305,14 +303,13 @@ const orbitSpeedFraction=
 let orbitSpeedTightness=1.0;
 
 if(movement<0.80){
-    /*
-      Keep a small amount of movement at low RPM so the Bey does not
-      become a frozen dot. The majority of the contraction comes from
-      the same radius factor already used above.
-    */
     orbitSpeedTightness=
         0.34+
         0.66*rpmRadiusFactor;
+}else{
+    orbitSpeedTightness=
+        0.48+
+        0.52*rpmRadiusFactor;
 }
 
 const targetOrbitSpeed=
@@ -395,12 +392,14 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
-const radialGain=movement>=0.80 ? 0.20 : 0.46;
+const radialGain=movement>=0.80
+    ? 0.22+(1-rpm)*0.20
+    : 0.46;
 const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
-        movement>=0.80 ? -0.018 : -0.038,
-        movement>=0.80 ? 0.018 : 0.028
+        movement>=0.80 ? -0.026 : -0.038,
+        movement>=0.80 ? 0.020 : 0.028
     );
 
 const desiredVX=
@@ -413,10 +412,10 @@ const desiredVY=
 
 const responseRate=
     (
-        (movement>=0.80 ? 0.028 : 0.046)+
-        control*0.014+
-        bitPrecession*0.006+
-        movement*0.004
+        (movement>=0.80 ? 0.018 : 0.040)+
+        control*0.010+
+        bitPrecession*0.005+
+        movement*0.003
     )*
     (0.42+0.58*rpm)*
     mobilityResponse;
@@ -424,7 +423,7 @@ const responseRate=
 const responseAmount=clamp(
     responseRate*dt*60*orbitSteeringAvailability,
     0,
-    movement>=0.80 ? 0.070 : 0.10
+    movement>=0.80 ? 0.048 : 0.085
 );
 
 // Always blend, but impact ownership starves this toward zero so a
