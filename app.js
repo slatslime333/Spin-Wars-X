@@ -4992,9 +4992,13 @@ function newPhysicsCollision(dt){
     const cContactEfficiency=contactEfficiency(c.blade);
 
     const pMomentum=
-        pMass*pSpeed*Math.max(0.42,Math.pow(pRPM,0.68));
+        pMass*
+        Math.max(pSpeed,0.006+pRPM*0.010)*
+        Math.max(0.38,Math.pow(Math.max(pRPM,0.22),0.62));
     const cMomentum=
-        cMass*cSpeed*Math.max(0.42,Math.pow(cRPM,0.68));
+        cMass*
+        Math.max(cSpeed,0.006+cRPM*0.010)*
+        Math.max(0.38,Math.pow(Math.max(cRPM,0.22),0.62));
 
     // Closing speed identifies who is actually driving into the contact.
     const pClosing=Math.max(0,-closing);
@@ -5003,13 +5007,13 @@ function newPhysicsCollision(dt){
     // Kinetic-energy-style term. Squared velocity makes a fast crash
     // substantially more energetic than a slow bump.
     const pKinetic=
-        0.5*pMass*pSpeed*pSpeed*
-        (0.40+0.60*pRPM)*
-        (1.08+0.18*pRPM);
+        0.5*pMass*Math.max(pSpeed*pSpeed,0.00012+pRPM*0.00018)*
+        (0.48+0.52*Math.max(pRPM,0.20))*
+        (1.10+0.20*pRPM);
     const cKinetic=
-        0.5*cMass*cSpeed*cSpeed*
-        (0.40+0.60*cRPM)*
-        (1.08+0.18*cRPM);
+        0.5*cMass*Math.max(cSpeed*cSpeed,0.00012+cRPM*0.00018)*
+        (0.48+0.52*Math.max(cRPM,0.20))*
+        (1.10+0.20*cRPM);
 
     // Tangential clashes still have real energy, but they are weaker than a
     // direct collision.
@@ -5027,21 +5031,37 @@ function newPhysicsCollision(dt){
 
     // Momentum is the physical input; Attack/Knockback determine how well
     // the Bey converts that input into an offensive collision.
+    const pParked=pSpeed<0.007;
+    const cParked=cSpeed<0.007;
+    const bothParked=pParked&&cParked;
+    const pSpinBite=
+        (0.00052+pAttack*0.00070+pKB*0.00086)*
+        (0.30+0.70*Math.max(pRPM,0.22))*
+        (pParked?1.18:0.58)*
+        (bothParked?0.34:1);
+    const cSpinBite=
+        (0.00052+cAttack*0.00070+cKB*0.00086)*
+        (0.30+0.70*Math.max(cRPM,0.22))*
+        (cParked?1.18:0.58)*
+        (bothParked?0.34:1);
+
     const pEnergy=(
         pKinetic+
-        pClosing*pMomentum*0.55+
-        grazingEnergy*0.32
+        pClosing*pMomentum*0.62+
+        grazingEnergy*0.36+
+        pSpinBite
     )*pContactEfficiency;
 
     const cEnergy=(
         cKinetic+
-        cClosing*cMomentum*0.55+
-        grazingEnergy*0.32
+        cClosing*cMomentum*0.62+
+        grazingEnergy*0.36+
+        cSpinBite
     )*cContactEfficiency;
 
     const statDrivenContact=
-        (0.0010+Math.min(pCombatRating,cCombatRating)*0.00082)*
-        Math.pow((pRPM+cRPM)*0.5,0.72);
+        (0.0016+Math.min(pCombatRating,cCombatRating)*0.00115)*
+        Math.pow(Math.max(0.28,(pRPM+cRPM)*0.5),0.55);
 
     const effectiveImpact=Math.max(
         impactSpeed,
@@ -5058,31 +5078,31 @@ function newPhysicsCollision(dt){
 
     const contactEnergy=
         effectiveImpact*
-        (0.88+avgRPM*0.72);
+        (1.02+avgRPM*0.58);
 
     const pEnergyScale=
-        0.72+
-        newBattleClamp(pEnergy/0.0018,0,2.4)*0.22+
-        newBattleClamp(pMomentum/0.040,0,2.2)*0.16;
+        0.84+
+        newBattleClamp(pEnergy/0.0016,0,2.6)*0.28+
+        newBattleClamp(pMomentum/0.034,0,2.4)*0.20;
 
     const cEnergyScale=
-        0.72+
-        newBattleClamp(cEnergy/0.0018,0,2.4)*0.22+
-        newBattleClamp(cMomentum/0.040,0,2.2)*0.16;
+        0.84+
+        newBattleClamp(cEnergy/0.0016,0,2.6)*0.28+
+        newBattleClamp(cMomentum/0.034,0,2.4)*0.20;
 
     const pHit =
         contactEnergy *
         pEnergyScale *
-        (0.90+pKB*0.22) *
-        (0.90+pAttack*0.18) *
-        (0.82+pRPM*0.26);
+        (0.96+pKB*0.38) *
+        (0.94+pAttack*0.32) *
+        (0.90+pRPM*0.16);
 
     const cHit =
         contactEnergy *
         cEnergyScale *
-        (0.90+cKB*0.22) *
-        (0.90+cAttack*0.18) *
-        (0.82+cRPM*0.26);
+        (0.96+cKB*0.38) *
+        (0.94+cAttack*0.32) *
+        (0.90+cRPM*0.16);
 
     const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
     const hitRoll=0.90+Math.random()*0.20;
@@ -5124,47 +5144,47 @@ function newPhysicsCollision(dt){
         const name=s.bit?.name;
         if(name==="Point") return 0.96+(dynamic?.aggression||0)*0.14;
         if(name==="Level") return 0.98+(dynamic?.aggression||0)*0.10;
-        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.10 : 0.94;
+        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.24 : 1.00;
     };
     const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
     const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
-    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.86 : 1.0;
-    const attackVsAttackImpactMultiplier=bothAttackCollision ? 0.94 : 1.0;
+    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.90 : 1.0;
+    const attackVsAttackImpactMultiplier=bothAttackCollision ? 1.0 : 1.0;
     const extremeSpeedScale=
-        relativeSpeed>0.090 ? 0.090/relativeSpeed : 1;
+        relativeSpeed>0.110 ? 0.110/relativeSpeed : 1;
 
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.min(
-        0.012,
+        0.0175,
         Math.max(
-            0.00045+contactEnergy*0.0087,
-            pForce*pBitKnockbackMultiplier*
+            0.00055+contactEnergy*0.0055+pSpinBite*3.2,
+            pForce*0.022*pBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             extremeSpeedScale*
             (
-                0.62+
-                (1-cDef)*0.16
+                0.82+
+                (1-cDef)*0.22
             )*
-            (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
+            (1.02+newBattleClamp(momentumFactor/2.0,0,0.30))
         )
     );
     const cKnockback=Math.min(
-        0.012,
+        0.0175,
         Math.max(
-            0.00045+contactEnergy*0.0087,
-            cForce*cBitKnockbackMultiplier*
+            0.00055+contactEnergy*0.0055+cSpinBite*3.2,
+            cForce*0.022*cBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             extremeSpeedScale*
             (
-                0.62+
-                (1-pDef)*0.16
+                0.82+
+                (1-pDef)*0.22
             )*
-            (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
+            (1.02+newBattleClamp(momentumFactor/2.0,0,0.30))
         )
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
@@ -5575,19 +5595,19 @@ function newPhysicsCollision(dt){
 
     const impactVisualEnergy=
         newBattleClamp(
-            effectiveImpact/0.028+
-            heavyFactor*0.08,
+            effectiveImpact/0.022+
+            heavyFactor*0.12,
             0,1
         );
 
     const visualStrength=newBattleClamp(
-        0.70+
-        impactVisualEnergy*0.72,
-        0.70,1.58
+        0.78+
+        impactVisualEnergy*0.86,
+        0.78,1.72
     );
     const impactClass=
-        visualStrength>=1.28 ? "heavy" :
-        visualStrength>=0.98 ? "medium" : "light";
+        visualStrength>=1.22 ? "heavy" :
+        visualStrength>=0.96 ? "medium" : "light";
 
     p.hitFlash=0.27*visualStrength;
     c.hitFlash=0.27*visualStrength;
