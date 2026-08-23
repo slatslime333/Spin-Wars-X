@@ -225,14 +225,16 @@ function bounce(s,p){
  let nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
  if(len<1e-9){nx=-p.ty;ny=p.tx;}else{nx/=len;ny/=len;}
  const normal=s.vx*nx+s.vy*ny;setContactDebug(s,p,Math.sqrt(Math.max(0,p.dist2)),"surface");
- if(normal<0){
-  const restitution=0.46,reflected=-normal*restitution;s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
- }
  const gap=contactRadius(s),d=Math.sqrt(Math.max(0,p.dist2));
  if(d<gap){const push=gap-d;s.x+=nx*push;s.y+=ny*push;}
- if(normal>=0 && d>=gap){s.lastXRailResult="near-rail-no-impact";return false;}
- s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);s.railCaptureCooldown=0.10;
- s.railCaptureCooldownPoint={x:s.x,y:s.y};s.lastXRailResult="bounce";
+ if(normal>=0){
+  s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
+  return false;
+ }
+ const restitution=0.46,reflected=-normal*restitution;
+ s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
+ s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
+ s.lastXRailResult="bounce";
  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.55);
  return true;
 }
@@ -367,11 +369,10 @@ function step(s,dt){
  if(swept){
    const overlapping=swept.distance<=contactRadius(s);
    if(swept.impact||overlapping){
-     let blocked=false;
-     if(s.railExited||s.railExitRefractory>0||s.railCaptureCooldown>0)blocked=bounce(s,swept);
-     else if(!engage(s,swept))blocked=bounce(s,swept);
+     if(s.railExited||s.railExitRefractory>0||s.railCaptureCooldown>0)bounce(s,swept);
+     else if(!engage(s,swept))bounce(s,swept);
      s._xrailPrevX=s.x;s._xrailPrevY=s.y;const p=nearest(s.x,s.y);s._xrailPrevDistance=p?Math.sqrt(Math.max(0,p.dist2)):Infinity;
-     return{active:!!s.railEngaged||blocked,state:s.railEngaged?"capture":(blocked?"bounce":"free")};
+     return{active:!!s.railEngaged||!!s.xrailExitRampActive,state:s.railEngaged?"capture":"free"};
    }
    setContactDebug(s,swept,swept.distance,"near");
  }else clearContactDebug(s);
@@ -382,5 +383,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),exitSurface=exitSurfaceContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,exitSurfaceContact:!!exitSurface,exitSurfaceImpact:!!exitSurface?.actualImpact,exitSurfaceDistance:exitSurface?.distance??null,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"4.6-solid-x-exit",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"4.6.1-rail-bounce-no-freeze",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);
