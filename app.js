@@ -4800,31 +4800,6 @@ function newPhysicsStep(s,dt){
         }
 
         /*
-          X-EXIT MOUTH
-          -------------
-          Backup only. The X-Rail engine owns the solid X-Exit. If a
-          non-rider is still in the mouth this frame, push them into
-          the bowl. Do not require vy<0 — orbiting can cross horizontally.
-        */
-        {
-            const halfWidth=0.16;
-            const apexY=-0.641;
-            const clearance=s.radius+0.012;
-
-            if(
-                !s.railExited &&
-                !s.xrailExitRampActive &&
-                Math.abs(s.x)<halfWidth &&
-                s.y<apexY+clearance
-            ){
-                s.y=apexY+clearance;
-                if(s.vy<0)s.vy=Math.abs(s.vy)*0.46;
-                s.surfaceRecovery=0.10;
-                s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
-            }
-        }
-
-        /*
           MOVEMENT ENGINE — V100
           ----------------------
           The approved V99.6 free-space movement model now lives in
