@@ -12,6 +12,57 @@ collisions, damage, finishes, and decisions.
 (function(global){
 "use strict";
 
+function isAttackBit(movement){
+  return movement>=0.80;
+}
+
+/*
+  Home orbit radius is the ring this Bit wants at this RPM.
+  Attack stays wider than stamina at the same spin; nobody's home is the X-Rail.
+*/
+function homeOrbitRadius(movement,centerAffinity,bitStability,rpm){
+  const stab=Number.isFinite(bitStability)?bitStability:0.60;
+  const center=Number.isFinite(centerAffinity)?centerAffinity:0.60;
+  const move=Number.isFinite(movement)?movement:0.60;
+  const spin=Math.max(0,Math.min(1,Number.isFinite(rpm)?rpm:1));
+
+  if(isAttackBit(move)){
+    const base=
+      0.14+
+      (1-center)*0.32+
+      move*0.04+
+      (1-stab)*0.012;
+    const rpmFactor=
+      0.18+
+      0.82*Math.pow(Math.max(0.12,spin),1.25);
+    return Math.max(0.11,Math.min(0.38,base*rpmFactor));
+  }
+
+  const base=
+    0.050+
+    center*0.055+
+    (1-move)*0.040+
+    stab*0.018;
+  const tightenPow=move<0.40?2.20:move<0.55?1.90:1.55;
+  const rpmFactor=
+    0.08+
+    0.92*Math.pow(Math.max(0.08,spin),tightenPow);
+  return Math.max(0.035,Math.min(0.22,base*rpmFactor));
+}
+
+/*
+  Angular rate for holding that ring: tangent speed = homeRadius * omega.
+  Independent cruise speed is what used to inflate Attack onto the rail.
+*/
+function orbitOmega(movement,rpm){
+  const move=Number.isFinite(movement)?movement:0.60;
+  const spin=Math.max(0,Math.min(1,Number.isFinite(rpm)?rpm:1));
+  if(isAttackBit(move)){
+    return 0.092*(0.50+0.50*spin);
+  }
+  return 0.070*(0.48+0.52*spin);
+}
+
 function step(s,dt,ctx){
 /*
   MODULE BOUNDARY:
@@ -109,220 +160,19 @@ const mobilityStat=
 const mobilityResponse=
     0.55+0.45*clamp(mobilityStat/100,0,1);
 
-/*
-  Natural orbit radius.
-
-  CenterAffinity is a physical Bit property:
-    Ball / Orb / Needle / Hexa -> tight
-    Flat / Rush / Kick          -> wider
-
-  Attack Bits receive only a continuous movement contribution from
-  their Bit movement value. There is no separate attack controller.
-  RPM contracts the radius smoothly as spin energy falls.
-*/
-const baseOrbitRadius=
-    (movement>=0.80 ? 0.168 : 0.092)+
-    (1-centerAffinity)*(movement>=0.80 ? 0.40 : 0.18)+
-    (movement*0.050)+
-    ((1-bitStability)*0.018);
-
-/*
-  RPM ORBIT TIGHTENING — V99.1
-  -----------------------------
-  V99's orbit model is working; the remaining issue is that the
-  preferred radius stayed too wide for too long.
-
-  We deliberately make the radius contraction noticeable around
-  80% RPM rather than waiting until the Bey is nearly dying.
-
-  100 RPM  -> full natural radius
-  90 RPM   -> slight but visible contraction
-  80 RPM   -> clear contraction
-  70 RPM   -> much tighter
-  50 RPM   -> strongly centered
-
-  Attack Bits still remain wider because their BASE radius is larger.
-  Non-Attack Bits therefore tighten sooner visually without needing
-  a separate movement engine.
-*/
-/*
-  BIT-SPECIFIC RPM TIGHTENING — V99.2
-  ----------------------------------
-  V99.1 correctly made the orbit tighten earlier, but it still used
-  one RPM curve for every Bit.
-
-  That is not how the movement should feel.
-
-  Non-Attack Bits have a strong center preference, so their orbit
-  should start collapsing toward center earlier in the spin-down.
-
-  Attack Bits retain a wider aggressive orbit longer, but they should
-  ALSO visibly tighten before they get very low on RPM.
-
-  These are continuous curves, not "at 80% switch" rules.
-*/
-const isAttackMovement =
-    movement>=0.80;
-
-/*
-  V99.3 — STRONGER, MORE VISIBLE RPM TIGHTENING
-  -----------------------------------------------
-  V99.2 was directionally correct, but the radius difference was not
-  large enough to be obvious during gameplay.
-
-  We now deliberately use different contraction profiles:
-
-  ATTACK:
-    100% = full wide orbit
-     90% = clearly tighter
-     80% = substantially tighter, but still wide/aggressive
-     70% = tight aggressive orbit
-     60% = considerably tighter again
-
-  NON-ATTACK:
-    100% = normal controlled orbit
-     90% = noticeably tighter
-     80% = strongly centered
-     70% = very close to center
-     60% = essentially stable-center movement
-
-  The curve is still continuous. There is no hard RPM switch.
-*/
-/*
-  V99.4 — NON-ATTACK LOW-RPM CENTER STABILIZATION
-  ------------------------------------------------
-  Attack movement is now considered good and is left unchanged.
-
-  Non-Attack Bits were still visibly too wide around ~80 RPM. Their
-  orbit now contracts much more aggressively through the 90→75 RPM
-  region while 100 RPM remains unchanged.
-
-  Target feel:
-    100% = normal natural orbit
-     90% = beginning to tighten
-     80% = MUCH tighter / strongly center-stable
-     70% = very tight
-     60% = near-center stability
-
-  This remains continuous; there is no hard 80-RPM switch.
-*/
-let rpmRadiusFactor;
-
-if(movement>=0.80){
-    /*
-      ATTACK
-      100% stays wide. By ~75% the ring should already look tighter.
-      At ~30% it stays a bit aggressive, but not out by the X-Rail.
-    */
-    const rpmTightenT=
-        clamp(
-            (rpm-0.18)/(1-0.18),
-            0,
-            1
-        );
-
-    rpmRadiusFactor=
-        0.22+
-        0.78*Math.pow(rpmTightenT,1.45);
-}else{
-    /*
-      NON-ATTACK — V99.4
-      Much stronger contraction around the 80% RPM region.
-    */
-    /*
-      V99.5 — stronger Non-Attack stabilization.
-
-      The previous curve was still leaving too much lateral orbit at
-      ~80 RPM. We want the transition to center to be unmistakable
-      while preserving the normal high-RPM orbit.
-
-      Approximate remaining radius:
-        100 RPM = 100%
-         90 RPM = ~70%
-         85 RPM = ~55%
-         80 RPM = ~40%
-         75 RPM = ~30%
-         70 RPM = ~23%
-         60 RPM = ~16%
-
-      This does NOT change the actual velocity model; it only changes
-      the natural orbit-radius target used by the existing movement
-      response.
-    */
-    const nonAttackT=
-        clamp(
-            (rpm-0.72)/(1-0.72),
-            0,
-            1
-        );
-
-    rpmRadiusFactor=
-        0.07+
-        0.93*Math.pow(nonAttackT,2.15);
-}
-
 const preferredRadius=
-    clamp(
-        baseOrbitRadius*rpmRadiusFactor,
-        movement>=0.80 ? 0.11 : 0.048,
-        movement>=0.80 ? 0.44 : 0.34
+    homeOrbitRadius(movement,centerAffinity,bitStability,rpm);
+
+const omega=orbitOmega(movement,rpm);
+
+let targetOrbitSpeed=Math.max(0.0065,preferredRadius*omega);
+
+if((s.impactMomentumState||0)>0.22){
+    targetOrbitSpeed=Math.max(
+        targetOrbitSpeed,
+        Math.hypot(s.vx,s.vy)
     );
-
-/*
-  The Bit's natural travel speed comes from the physical speed target
-  already established above. Mobility changes how quickly the Bey can
-  respond to the movement tendency; it is not a second speed source.
-*/
-const orbitSpeedFraction=
-    (movement>=0.80 ? 0.62 : 0.38)+
-    0.28*movement+
-    0.10*(1-centerAffinity);
-
-/*
-  V99.6 — ROOT FIX FOR NON-ATTACK ORBIT WIDTH
-  --------------------------------------------
-  The previous versions changed preferredRadius, but the Bey was
-  still being given nearly the same tangential target speed.
-
-  That is why the visual orbit barely changed.
-
-  An orbital path is approximately:
-      radius ≈ tangential speed / turning rate
-
-  So changing ONLY the radius target is not enough. Non-Attack Bits
-  must also lose tangential travel speed as their RPM falls.
-
-  Attack remains untouched.
-
-  At 100% RPM the factor is 1.0.
-  As Non-Attack preferred radius contracts, its tangential target
-  speed contracts with it. This makes the orbit physically converge
-  instead of merely telling the radial controller where the Bey
-  should be.
-*/
-let orbitSpeedTightness=1.0;
-
-if(movement<0.80){
-    orbitSpeedTightness=
-        0.34+
-        0.66*rpmRadiusFactor;
-}else{
-    /*
-      Attack must keep circling as RPM falls. Shrinking this too far
-      leaves mostly radial correction, which looks like a straight
-      shuttle through the stadium. Keep enough tangent that a tighter
-      ring is still a ring.
-    */
-    orbitSpeedTightness=
-        0.58+
-        0.42*rpmRadiusFactor;
 }
-
-const targetOrbitSpeed=
-    physicalSpeedTarget*
-    orbitSpeedFraction*
-    (0.72+0.28*s.movementEnergy)*
-    orbitSpeedTightness;
 
 /*
   Authoritative direction convention:
@@ -398,44 +248,38 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
-const radialGain=movement>=0.80
-    ? 0.28+(1-rpm)*0.24
-    : 0.46;
+const radialGain=isAttackBit(movement)?0.58:0.78;
+const holdR=Math.max(0.08,rNow);
+const discreteOutward=
+    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
 const desiredRadialSpeed=
     clamp(
-        (preferredRadius-rNow)*radialGain,
-        movement>=0.80 ? -0.038 : -0.038,
-        movement>=0.80 ? 0.024 : 0.028
+        (preferredRadius-rNow)*radialGain-discreteOutward,
+        -0.020,
+        0.010
     );
 
-const desiredVX=
-    tangentX*targetOrbitSpeed+
-    radialX*desiredRadialSpeed;
+const inImpact=(s.impactMomentumState||0)>0.22;
+const tangentFollow=inImpact?0.08:0.55;
+const radialFollow=inImpact?0.10:0.62;
+const follow=
+    orbitSteeringAvailability*
+    mobilityResponse*
+    (0.85+control*0.15);
 
-const desiredVY=
-    tangentY*targetOrbitSpeed+
-    radialY*desiredRadialSpeed;
+const currentTangent=s.vx*tangentX+s.vy*tangentY;
+const currentRadial=s.vx*radialX+s.vy*radialY;
+const newTangent=
+    currentTangent+
+    (targetOrbitSpeed-currentTangent)*
+    clamp(tangentFollow*follow,0,0.70);
+const newRadial=
+    currentRadial+
+    (desiredRadialSpeed-currentRadial)*
+    clamp(radialFollow*follow,0,0.78);
 
-const responseRate=
-    (
-        (movement>=0.80 ? 0.028 : 0.040)+
-        control*0.010+
-        bitPrecession*0.005+
-        movement*0.003
-    )*
-    (0.42+0.58*rpm)*
-    mobilityResponse;
-
-const responseAmount=clamp(
-    responseRate*dt*60*orbitSteeringAvailability,
-    0,
-    movement>=0.80 ? 0.048 : 0.085
-);
-
-// Always blend, but impact ownership starves this toward zero so a
-// knock keeps its path. Orbit is a later tendency, not a snap-back.
-s.vx+=(desiredVX-s.vx)*responseAmount;
-s.vy+=(desiredVY-s.vy)*responseAmount;
+s.vx=tangentX*newTangent+radialX*newRadial;
+s.vy=tangentY*newTangent+radialY*newRadial;
 
 /*
   LOW RPM
@@ -754,8 +598,10 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.0.0",
-    step
+    version:"1.1.0",
+    step,
+    homeOrbitRadius,
+    orbitOmega
 };
 
 })(typeof window!=="undefined" ? window : globalThis);

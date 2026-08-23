@@ -4542,32 +4542,24 @@ function newPhysicsStep(s,dt){
         const speedNow=Math.hypot(s.vx,s.vy);
         const keepImpactSpeed=(s.impactMomentumState||0)>0.16;
 
-        // Attack Bits keep circling as RPM falls. Extra low-RPM braking
-        // was wiping their tangent and leaving a straight shuttle.
-        if(!keepImpactSpeed && !attackBit && rpm<0.40 && speedNow>physicalSpeedTarget){
-            const lowRpmBrake=(0.0010+(0.40-rpm)*0.0030)*dt*60;
-            const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
-            s.vx*=brakeScale;
-            s.vy*=brakeScale;
-        }
-
-        if(!keepImpactSpeed && speedNow>physicalSpeedTarget*1.08){
+        /*
+          Orbit speed is owned by the home-ring driver in movement-engine.
+          Do not accelerate up to a separate cruise target — that is what
+          pushed Attack onto the X-Rail. Only bleed runaway leftover speed.
+        */
+        const cruiseCap=attackBit?0.085:0.055;
+        if(!keepImpactSpeed && speedNow>cruiseCap){
             const excessRatio=newBattleClamp(
-                (speedNow-physicalSpeedTarget)/
-                Math.max(speedNow,0.0001),0,0.24
+                (speedNow-cruiseCap)/Math.max(speedNow,0.0001),
+                0,
+                0.24
             );
             const decay=
-                (0.0012+bitFriction*0.0018+excessRatio*0.0035)*
+                (0.0010+bitFriction*0.0014+excessRatio*0.0028)*
                 dt*60;
             const scale=newBattleClamp(1-decay,0.90,1);
             s.vx*=scale;
             s.vy*=scale;
-        }else if(speedNow>0.001 && speedNow<physicalSpeedTarget){
-            const acceleration=
-                (0.00035+bitAcceleration*0.0010)*
-                (0.45+0.55*rpm)*dt*60;
-            s.vx+=(s.vx/speedNow)*acceleration;
-            s.vy+=(s.vy/speedNow)*acceleration;
         }
 
         const workRate=
