@@ -1,5 +1,5 @@
 /* SPIN WARS X — X-RAIL ENGINE
- * Version 4.6 — solid X-Exit / inward launch on impact
+ * Version 4.7 — unlocked X-Exit launches down the stadium center
  *
  * Capture and riding are unchanged. 4.6 makes the rail and X-Exit solid
  * for free Beys: they cannot orbit through the mouth, and an X-Exit
@@ -95,6 +95,11 @@ function inTriangle(p,a,b,c){
  const b1=triSign(p,a,b)<0,b2=triSign(p,b,c)<0,b3=triSign(p,c,a)<0;
  return (b1===b2)&&(b2===b3);
 }
+function inExitMouthRegion(s){
+ const g=exitRampGeometry();
+ const pad=beyRadius(s)+0.02;
+ return !!s && s.y<g.apex.y+pad && s.y>g.left.y-pad && Math.abs(s.x)<0.22;
+}
 function exitSurfaceContact(s){
  const g=exitRampGeometry(),radius=beyRadius(s)+RAIL_HALF_WIDTH+0.010;
  let best=null;
@@ -108,7 +113,7 @@ function exitSurfaceContact(s){
      best={...q,tx,ty,nx,ny,distance:Math.sqrt(q.dist2),inwardX:g.inward.x,inwardY:g.inward.y};
    }
  }
- const inside=inTriangle(s,g.left,g.right,g.apex);
+ const inside=inTriangle(s,g.left,g.right,g.apex)||inExitMouthRegion(s);
  if(!best && !inside)return null;
  if(!best){
   best={x:g.apex.x,y:g.apex.y,distance:0,nx:g.inward.x,ny:g.inward.y,
@@ -121,7 +126,7 @@ function exitSurfaceContact(s){
 }
 function bounceFromExit(s,c){
  if(!s||!c||!c.actualImpact)return false;
- beginExitRamp(s,c);
+ beginExitRamp(s,c,{forceCenter:!s.railEngaged});
  s.lastXRailResult="exit-surface-bounce";
  s.railExitSurfaceHit=true;
  s.railExitSurfaceHitTime=0;
@@ -264,16 +269,20 @@ function chooseExitHeading(s,p){
   */
  return{x:exit.inward.x,y:exit.inward.y,speed:exitSpeed,lateralAmount:0,quality,spread:0,seed:0,exitEnergyFactor};
 }
-function beginExitRamp(s,p){
+function beginExitRamp(s,p,opts){
  if(s.xrailExitRampActive)return true;
  const heading=chooseExitHeading(s,p),speed=Math.hypot(s.vx,s.vy);
  const exit=exitRampGeometry();
- const rampTime=clamp(0.09+(1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.04,0.09,0.14);
+ const forceCenter=!!opts?.forceCenter||!s.railEngaged;
+ const rampTime=clamp(0.08+(1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.03,0.08,0.12);
  const start={x:s.x,y:s.y};
- const end={x:exit.apex.x+exit.inward.x*0.10,y:exit.apex.y+exit.inward.y*0.10};
- const control={x:start.x*0.22+end.x*0.78,y:start.y*0.55+end.y*0.45};
+ const end={x:exit.apex.x,y:exit.apex.y+0.12};
+ const control=forceCenter
+  ? {x:0,y:(start.y+end.y)*0.5}
+  : {x:start.x*0.22+end.x*0.78,y:start.y*0.55+end.y*0.45};
+ if(forceCenter){heading.x=exit.inward.x;heading.y=exit.inward.y;}
  s.xrailExitRampActive=true;s.xrailExitRampTime=0;s.xrailExitRampDuration=rampTime;s.xrailExitRampStart=start;s.xrailExitRampHeading=heading;
- s.xrailExitRampControl=control;s.xrailExitRampEnd=end;
+ s.xrailExitRampControl=control;s.xrailExitRampEnd=end;s.xrailExitForceCenter=forceCenter;
  s.xrailExitRampStartSpeed=Math.max(0.004,speed);s.xrailExitRampSpeed=heading.speed;
  s.xrailExitTarget=end;s.xrailExitTargetBias=0;s.railExitQuality=heading.quality;s.railExitEnergyFactor=heading.exitEnergyFactor;
  s.railExitKnockbackMultiplier=1+0.10*heading.quality;s.lastXRailResult="x-exit-ramp";s.railExitForce=heading.speed;
@@ -289,11 +298,14 @@ function exitRampStep(s,dt){
  const u=1-smooth;
  const x=u*u*start.x+2*u*smooth*control.x+smooth*smooth*end.x;
  const y=u*u*start.y+2*u*smooth*control.y+smooth*smooth*end.y;
- const dx=2*u*(control.x-start.x)+2*smooth*(end.x-control.x);
- const dy=2*u*(control.y-start.y)+2*smooth*(end.y-control.y);
- let dlen=Math.hypot(dx,dy)||1;
- let hx=dx/dlen,hy=dy/dlen;
- if(hx*heading.x+hy*heading.y<0.15){hx=heading.x;hy=heading.y;}
+ let hx=heading.x,hy=heading.y;
+ if(!s.xrailExitForceCenter){
+  const dx=2*u*(control.x-start.x)+2*smooth*(end.x-control.x);
+  const dy=2*u*(control.y-start.y)+2*smooth*(end.y-control.y);
+  let dlen=Math.hypot(dx,dy)||1;
+  hx=dx/dlen;hy=dy/dlen;
+  if(hx*heading.x+hy*heading.y<0.15){hx=heading.x;hy=heading.y;}
+ }
  const startSpeed=Math.max(0.004,Number(s.xrailExitRampStartSpeed)||0.004);
  const targetSpeed=Math.max(startSpeed,Number(s.xrailExitRampSpeed)||startSpeed);
  const speed=startSpeed+(targetSpeed-startSpeed)*smooth;
@@ -303,7 +315,9 @@ function exitRampStep(s,dt){
   release(s,"x-exit");
   s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;
   s.railExitForce=targetSpeed;s.railExitVector={x:heading.x,y:heading.y};s.railExitBias=0;s.railExitRampCompleted=true;
-  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.88);
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,1);
+  s.xExitCenterLock=s.xrailExitForceCenter?0.28:0.16;
+  s.xrailExitForceCenter=false;
   return false;
  }
  return true;
@@ -337,12 +351,30 @@ function riderStep(s,dt){
  }
  s.railSpeed=Math.hypot(s.vx,s.vy);s.railRideTime=(s.railRideTime||0)+dt;s.railTravelDistance=(s.railTravelDistance||0)+s.railSpeed*dt;s.lastXRailResult="riding";return true;
 }
+function stepCenterLock(s,dt){
+ const lock=Number(s.xExitCenterLock)||0;
+ if(lock<=0)return false;
+ s.xExitCenterLock=Math.max(0,lock-dt);
+ const speed=Math.max(0.018,Math.hypot(s.vx,s.vy));
+ s.x+=(0-s.x)*Math.min(1,dt*14);
+ s.vx=0;
+ s.vy=speed;
+ s.x+=s.vx*dt*60;
+ s.y+=s.vy*dt*60;
+ s.lastXRailResult="x-exit-center";
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,1);
+ return true;
+}
 function step(s,dt){
  if(!s)return{active:false,state:"none"};
  if(!Number.isFinite(s.x)||!Number.isFinite(s.y)||!Number.isFinite(s.vx)||!Number.isFinite(s.vy))throw new Error("X-Rail received non-finite Bey state.");
  if(s.xrailExitRampActive){
   const active=exitRampStep(s,dt);s._xrailPrevX=s.x;s._xrailPrevY=s.y;
   return{active:true,state:"x-exit-ramp"};
+ }
+ if(stepCenterLock(s,dt)){
+  s._xrailPrevX=s.x;s._xrailPrevY=s.y;
+  return{active:true,state:"x-exit-center"};
  }
  if(s.railEngaged){
   const active=riderStep(s,dt);s._xrailPrevX=s.x;s._xrailPrevY=s.y;s._xrailPrevDistance=Number.isFinite(s.railDistance)?s.railDistance:s._xrailPrevDistance;
@@ -369,6 +401,11 @@ function step(s,dt){
  if(swept){
    const overlapping=swept.distance<=contactRadius(s);
    if(swept.impact||overlapping){
+     if(inExitMouthRegion(s)&&!s.railEngaged){
+      bounceFromExit(s,{actualImpact:true});
+      s._xrailPrevX=s.x;s._xrailPrevY=s.y;
+      return{active:true,state:"x-exit-redirect"};
+     }
      if(s.railExited||s.railExitRefractory>0||s.railCaptureCooldown>0)bounce(s,swept);
      else if(!engage(s,swept))bounce(s,swept);
      s._xrailPrevX=s.x;s._xrailPrevY=s.y;const p=nearest(s.x,s.y);s._xrailPrevDistance=p?Math.sqrt(Math.max(0,p.dist2)):Infinity;
@@ -383,5 +420,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),exitSurface=exitSurfaceContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,exitSurfaceContact:!!exitSurface,exitSurfaceImpact:!!exitSurface?.actualImpact,exitSurfaceDistance:exitSurface?.distance??null,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"4.6.1-rail-bounce-no-freeze",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"4.7-xexit-center-launch",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);
