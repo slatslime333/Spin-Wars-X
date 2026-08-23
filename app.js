@@ -2572,17 +2572,17 @@ function newBattleLaunchState(side){
     let startX=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? sideXSign*(0.105 + placementJitter*0.14)
+            ? sideXSign*(0.045 + placementJitter*0.20)
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
                 : sideXSign*(0.70 + placementJitter*0.18);
 
-    // Drop Launch stays high near the player's side of the X Exit.
-    // X-Rail Launch starts slightly off the rail so it must approach it.
+    // Drop hangs just under the X-Exit, then falls straight into the bowl.
+    // X-Rail starts at the lower corner on the player's side.
     let startY=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? -0.705 + placementJitter*0.06
+            ? -0.495 + placementJitter*0.04
             : isXRailLaunch
                 ? placementJitter*0.06
                 : placementJitter;
@@ -2635,34 +2635,46 @@ function newBattleLaunchState(side){
           IMPORTANT: the launch tangent and the rider tangent use the SAME
           railDirection() convention. No separate sign inversion is allowed.
         */
-        const railEntry = sideXSign < 0
-            ? {x:-0.820,y:0.480}
-            : {x: 0.820,y:0.480};
+        const railHint = sideXSign < 0
+            ? {x:-0.75,y:0.45}
+            : {x: 0.75,y:0.45};
 
-        const railTarget=newXRailNearest(railEntry.x,railEntry.y);
+        const railTarget=
+            (window.SpinWarsXRailEngine &&
+             typeof window.SpinWarsXRailEngine.nearest==="function")
+                ? window.SpinWarsXRailEngine.nearest(railHint.x,railHint.y)
+                : newXRailNearest(railHint.x,railHint.y);
+
         const railRadius=Math.hypot(
             railTarget.x,
             railTarget.y
         )||1;
 
-        // Spawn slightly inside the rail so the Bey approaches the corner
-        // naturally instead of appearing on the wrong lane.
+        // Spawn on the inside of the rail. Better launches start closer and
+        // are more likely to hook. Horrible launches sit far enough inside
+        // that they often miss and stay in the bowl.
         const inwardX=-railTarget.x/railRadius;
         const inwardY=-railTarget.y/railRadius;
 
         const qualityMiss={
-            Horrible:0.090,
-            Bad:0.052,
-            Okay:0.028,
-            Good:0.012,
-            Perfect:0.004
-        }[plan.quality]||0.028;
+            Horrible:0.11,
+            Bad:0.068,
+            Okay:0.034,
+            Good:0.014,
+            Perfect:0.003
+        }[plan.quality]||0.034;
 
-        const missAngle=(Math.random()*2-1)*0.55;
+        const missAngle=(Math.random()*2-1)*Math.PI;
         const missX=Math.cos(missAngle)*qualityMiss;
         const missY=Math.sin(missAngle)*qualityMiss;
 
-        const entryOffset=0.045+qualityPlacement*0.42;
+        const entryOffset={
+            Horrible:0.165,
+            Bad:0.092,
+            Okay:0.048,
+            Good:0.022,
+            Perfect:0.010
+        }[plan.quality]||0.048;
 
         const actualStartX=
             railTarget.x+
@@ -2697,8 +2709,12 @@ function newBattleLaunchState(side){
         const railTangentX=railTarget.tx*railTravelDirection;
         const railTangentY=railTarget.ty*railTravelDirection;
 
-        const tangentWeight=0.46;
-        const approachWeight=0.54;
+        const tangentWeight=
+            plan.quality==="Perfect" ? 0.72 :
+            plan.quality==="Good" ? 0.64 :
+            plan.quality==="Okay" ? 0.54 :
+            plan.quality==="Bad" ? 0.42 : 0.28;
+        const approachWeight=1-tangentWeight;
         const railLaunchSpeed=launchSpeed*(1.03+0.07*qualityFactor);
 
         vx=
@@ -2725,8 +2741,8 @@ function newBattleLaunchState(side){
 
     const dropStallDuration=
         plan.technique==="Drop Launch"
-            ? (plan.angle==="Hard Tilt" ? 0.34 :
-               plan.angle==="Slight Tilt" ? 0.28 : 0.24)
+            ? (plan.angle==="Hard Tilt" ? 1.15 :
+               plan.angle==="Slight Tilt" ? 0.72 : 0.42)
             : 0;
 
     return {
@@ -4409,19 +4425,20 @@ function newPhysicsStep(s,dt){
 
         /*
           DROP LAUNCH:
-          Hold the Bey near the player's side of the X Exit, then release it
-          after a short stall. This prevents the old "spawn and immediately
-          fly straight to the bottom" behavior.
+          Hang still at the top of the stadium, then fall straight toward
+          the center. Harder tilt stalls longer. A real collision from
+          another Bey interrupts the stall by ending it; this block must
+          not overwrite that knockback.
         */
         if(s.launchDropActive && !s.launchDropReleased){
             s.launchStallElapsed=(s.launchStallElapsed||0)+dt;
 
-            if(s.launchStallElapsed < (s.launchStall||0.24)){
+            if(s.launchStallElapsed < (s.launchStall||0.42)){
                 s.vx=0;
                 s.vy=0;
                 s.tiltLevel=newBattleClamp(
-                    (s.launchTilt==="Hard Tilt" ? 0.22 :
-                     s.launchTilt==="Slight Tilt" ? 0.15 : 0.08),
+                    (s.launchTilt==="Hard Tilt" ? 0.28 :
+                     s.launchTilt==="Slight Tilt" ? 0.16 : 0.07),
                     0.02,0.94
                 );
                 return;
@@ -4429,26 +4446,11 @@ function newPhysicsStep(s,dt){
 
             const dropSide=s.side==="player" ? -1 : 1;
             const dropTilt=
-                s.launchTilt==="Hard Tilt" ? 0.24 :
-                s.launchTilt==="Slight Tilt" ? 0.14 : 0.08;
+                s.launchTilt==="Hard Tilt" ? 0.12 :
+                s.launchTilt==="Slight Tilt" ? 0.06 : 0.0;
 
-            const dropQualityFactor={
-                Horrible:0.72,
-                Bad:0.86,
-                Okay:1.00,
-                Good:1.08,
-                Perfect:1.15
-            }[s.launchQuality]||1;
-
-            s.vx=
-                dropSide*
-                dropTilt*
-                (0.012+0.003*dropQualityFactor);
-
-            s.vy=
-                (0.0095+0.0020*dropQualityFactor)*
-                (s.launchTilt==="Hard Tilt" ? 0.92 : 1.0);
-
+            s.vx=dropSide*dropTilt*0.018;
+            s.vy=0.034;
             s.launchDropReleased=true;
         }
 
@@ -4927,6 +4929,15 @@ function newPhysicsCollision(dt){
     // Allow meaningful glancing/tangential contact, but reject a truly
     // stationary overlap.
     if(closing>=0 && relativeSpeed<0.0022) return;
+
+    if(p.launchDropActive && !p.launchDropReleased){
+        p.launchDropReleased=true;
+        p.launchStallElapsed=p.launchStall||0;
+    }
+    if(c.launchDropActive && !c.launchDropReleased){
+        c.launchDropReleased=true;
+        c.launchStallElapsed=c.launchStall||0;
+    }
 
     const pAttack=getBattleStat(p,"attack");
     const cAttack=getBattleStat(c,"attack");
