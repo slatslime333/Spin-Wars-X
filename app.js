@@ -4482,8 +4482,9 @@ function newPhysicsStep(s,dt){
                     : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
+        const keepImpactSpeed=(s.impactMomentumState||0)>0.22;
 
-        if(rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
+        if(!keepImpactSpeed && rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
             const floor=attackBit?0.60:0.40;
             const lowRpmBrake=(0.0010+(floor-rpm)*0.0030)*dt*60;
             const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
@@ -4491,7 +4492,7 @@ function newPhysicsStep(s,dt){
             s.vy*=brakeScale;
         }
 
-        if(speedNow>physicalSpeedTarget*1.08){
+        if(!keepImpactSpeed && speedNow>physicalSpeedTarget*1.08){
             const excessRatio=newBattleClamp(
                 (speedNow-physicalSpeedTarget)/
                 Math.max(speedNow,0.0001),0,0.24
@@ -5144,12 +5145,12 @@ function newPhysicsCollision(dt){
         const name=s.bit?.name;
         if(name==="Point") return 0.96+(dynamic?.aggression||0)*0.14;
         if(name==="Level") return 0.98+(dynamic?.aggression||0)*0.10;
-        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.24 : 1.00;
+        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.42 : 1.08;
     };
     const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
     const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
-    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.90 : 1.0;
-    const attackVsAttackImpactMultiplier=bothAttackCollision ? 1.0 : 1.0;
+    const nonAttackImpactMultiplier=bothNonAttackCollision ? 1.12 : 1.0;
+    const attackVsAttackImpactMultiplier=bothAttackCollision ? 1.06 : 1.0;
     const extremeSpeedScale=
         relativeSpeed>0.110 ? 0.110/relativeSpeed : 1;
 
@@ -5157,34 +5158,42 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
+    const pRailExitBoost=
+        ((p.railExited||p.lastXRailResult==="x-exit") ? 1.22 : 1)*
+        (Number(p.railExitKnockbackMultiplier)||1);
+    const cRailExitBoost=
+        ((c.railExited||c.lastXRailResult==="x-exit") ? 1.22 : 1)*
+        (Number(c.railExitKnockbackMultiplier)||1);
     const pKnockback=Math.min(
-        0.0175,
+        0.026,
         Math.max(
-            0.00055+contactEnergy*0.0055+pSpinBite*3.2,
-            pForce*0.022*pBitKnockbackMultiplier*
+            0.00090+contactEnergy*0.0088+pSpinBite*4.4,
+            pForce*0.038*pBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
+            pRailExitBoost*
             extremeSpeedScale*
             (
-                0.82+
-                (1-cDef)*0.22
+                0.90+
+                (1-cDef)*0.24
             )*
-            (1.02+newBattleClamp(momentumFactor/2.0,0,0.30))
+            (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
         )
     );
     const cKnockback=Math.min(
-        0.0175,
+        0.026,
         Math.max(
-            0.00055+contactEnergy*0.0055+cSpinBite*3.2,
-            cForce*0.022*cBitKnockbackMultiplier*
+            0.00090+contactEnergy*0.0088+cSpinBite*4.4,
+            cForce*0.038*cBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
+            cRailExitBoost*
             extremeSpeedScale*
             (
-                0.82+
-                (1-pDef)*0.22
+                0.90+
+                (1-pDef)*0.24
             )*
-            (1.02+newBattleClamp(momentumFactor/2.0,0,0.30))
+            (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
         )
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
