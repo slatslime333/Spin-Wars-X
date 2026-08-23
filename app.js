@@ -2572,17 +2572,17 @@ function newBattleLaunchState(side){
     let startX=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? sideXSign*(0.045 + placementJitter*0.20)
+            ? sideXSign*(0.112 + placementJitter*0.12)
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
                 : sideXSign*(0.70 + placementJitter*0.18);
 
-    // Drop hangs just under the X-Exit, then falls straight into the bowl.
+    // Drop hangs from the top lip of the X-Exit on that player's side.
     // X-Rail starts at the lower corner on the player's side.
     let startY=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? -0.495 + placementJitter*0.04
+            ? -0.900 + placementJitter*0.02
             : isXRailLaunch
                 ? placementJitter*0.06
                 : placementJitter;
@@ -2768,7 +2768,9 @@ function newBattleLaunchState(side){
         launchStallElapsed:0,
         launchDropActive:plan.technique==="Drop Launch",
         launchDropReleased:false,
+        launchDropFalling:false,
         launchDropElapsed:0,
+        launchSideSign:sideXSign,
         launchComplete:false,
 
         // Natural movement state: these alter forces over time rather than
@@ -3375,7 +3377,7 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0076;
+    const impactEntry=recentImpact && force>=0.0050;
     const railExitForce=s.railExitForce||0;
     const railEntry=recentRailExit && speed>=0.078 && (force>=0.0028 || railExitForce>=0.0028);
 
@@ -3409,8 +3411,8 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.055 &&
-            alignment>=0.395;
+            speed>=0.046 &&
+            alignment>=0.30;
 
         const railQualified=
             railEntry &&
@@ -3453,9 +3455,9 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.053 &&
-            outward>=0.0058 &&
-            alignment>=0.395;
+            speed>=0.044 &&
+            outward>=0.0044 &&
+            alignment>=0.30;
 
         const railQualified=
             railEntry &&
@@ -4407,8 +4409,8 @@ function newPhysicsStep(s,dt){
         const knockbackStat=getBattleStat(s,"knockback");
         const attackSpeedBoost =
             attackBit
-                ? (1.14 + 0.12*attackStat + 0.10*Math.pow(rpm,0.70))
-                : (0.98 + 0.06*rpm + 0.04*attackStat);
+                ? (1.08 + 0.06*attackStat + 0.04*Math.pow(rpm,0.70))
+                : 1;
 
         /*
           Dynamic tilt/precession:
@@ -4444,7 +4446,7 @@ function newPhysicsStep(s,dt){
                 return;
             }
 
-            const dropSide=s.side==="player" ? -1 : 1;
+            const dropSide=-(s.launchSideSign || (s.side==="player" ? -1 : 1));
             const dropTilt=
                 s.launchTilt==="Hard Tilt" ? 0.12 :
                 s.launchTilt==="Slight Tilt" ? 0.06 : 0.0;
@@ -4452,6 +4454,21 @@ function newPhysicsStep(s,dt){
             s.vx=dropSide*dropTilt*0.018;
             s.vy=0.034;
             s.launchDropReleased=true;
+            s.launchDropFalling=true;
+        }
+
+        if(s.launchDropFalling){
+            if(s.y>-0.52){
+                s.launchDropFalling=false;
+            }else{
+                s.x+=s.vx*dt*60;
+                s.y+=s.vy*dt*60;
+                if(window.SpinWarsXRailEngine &&
+                   typeof window.SpinWarsXRailEngine.step==="function"){
+                    window.SpinWarsXRailEngine.step(s,dt);
+                }
+                return;
+            }
         }
 
         /*
@@ -4464,23 +4481,29 @@ function newPhysicsStep(s,dt){
             0.0254+
             (stats.mobility||70)*0.000060;
 
-        const rpmSpeedFactor=
-            0.20+
-            0.80*Math.pow(rpm,0.78);
+        const rpmSpeedFactor=attackBit
+            ? 0.28+0.72*Math.pow(rpm,0.70)
+            : 0.48+0.52*Math.pow(rpm,0.50);
 
         const physicalSpeedTarget=
             launchMobility*
             (0.98+0.34*bitAcceleration)*
             rpmSpeedFactor*
             (0.86+0.24*bitStability)*
-            (1.04+0.30*movement+0.08*attackStat) *
-            (rpm<0.60 ? 0.76+0.40*(rpm/0.60) : 1.0);
+            (1.04+0.30*movement+0.08*attackStat)*
+            attackSpeedBoost*
+            (attackBit && rpm<0.60
+                ? 0.76+0.40*(rpm/0.60)
+                : (!attackBit && rpm<0.40
+                    ? 0.86+0.14*(rpm/0.40)
+                    : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
 
-        if(rpm<0.60 && speedNow>physicalSpeedTarget){
-            const lowRpmBrake=(0.0014+(0.60-rpm)*0.0038)*dt*60;
-            const brakeScale=newBattleClamp(1-lowRpmBrake,0.90,1);
+        if(rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
+            const floor=attackBit?0.60:0.40;
+            const lowRpmBrake=(0.0010+(floor-rpm)*0.0030)*dt*60;
+            const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
             s.vx*=brakeScale;
             s.vy*=brakeScale;
         }
@@ -4932,10 +4955,12 @@ function newPhysicsCollision(dt){
 
     if(p.launchDropActive && !p.launchDropReleased){
         p.launchDropReleased=true;
+        p.launchDropFalling=true;
         p.launchStallElapsed=p.launchStall||0;
     }
     if(c.launchDropActive && !c.launchDropReleased){
         c.launchDropReleased=true;
+        c.launchDropFalling=true;
         c.launchStallElapsed=c.launchStall||0;
     }
 
@@ -5109,39 +5134,53 @@ function newPhysicsCollision(dt){
     const cDynamicBit=getDynamicBitBehavior(c.bit,c.rpm*100,c.stability*100,c.tiltLevel||0);
     const bitImpactMultiplier=(s,dynamic)=>{
         const name=s.bit?.name;
-        if(name==="Point") return 0.88+(dynamic?.aggression||0)*0.12;
-        if(name==="Level") return 0.90+(dynamic?.aggression||0)*0.08;
-        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.02 : 0.90;
+        if(name==="Point") return 0.96+(dynamic?.aggression||0)*0.14;
+        if(name==="Level") return 0.98+(dynamic?.aggression||0)*0.10;
+        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.18 : 0.94;
     };
     const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
     const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
-    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.90 : 1.0;
-    const attackVsAttackImpactMultiplier=bothAttackCollision ? 0.82 : 1.0;
+    const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.86 : 1.0;
+    const attackVsAttackImpactMultiplier=bothAttackCollision ? 0.94 : 1.0;
+    const launchSoft=
+        Game.battle?.phase==="Launch" ||
+        (p.launchDropActive && (!p.launchDropReleased || p.launchDropFalling)) ||
+        (c.launchDropActive && (!c.launchDropReleased || c.launchDropFalling));
+    const launchHitScale=launchSoft ? 0.38 : 1;
+
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const pKnockback=Math.max(
-        0.00045+contactEnergy*0.0087,
-        pForce*pBitKnockbackMultiplier*
-        nonAttackImpactMultiplier*
-        attackVsAttackImpactMultiplier*
-        (
-            0.62+
-            (1-cDef)*0.16
-        )*
-        (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
+    const pKnockback=Math.min(
+        0.0165,
+        Math.max(
+            0.00055+contactEnergy*0.0104,
+            pForce*pBitKnockbackMultiplier*
+            nonAttackImpactMultiplier*
+            attackVsAttackImpactMultiplier*
+            launchHitScale*
+            (
+                0.74+
+                (1-cDef)*0.18
+            )*
+            (0.98+newBattleClamp(momentumFactor/2.0,0,0.26))
+        )
     );
-    const cKnockback=Math.max(
-        0.00045+contactEnergy*0.0087,
-        cForce*cBitKnockbackMultiplier*
-        nonAttackImpactMultiplier*
-        attackVsAttackImpactMultiplier*
-        (
-            0.62+
-            (1-pDef)*0.16
-        )*
-        (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
+    const cKnockback=Math.min(
+        0.0165,
+        Math.max(
+            0.00055+contactEnergy*0.0104,
+            cForce*cBitKnockbackMultiplier*
+            nonAttackImpactMultiplier*
+            attackVsAttackImpactMultiplier*
+            launchHitScale*
+            (
+                0.74+
+                (1-pDef)*0.18
+            )*
+            (0.98+newBattleClamp(momentumFactor/2.0,0,0.26))
+        )
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
@@ -5557,9 +5596,10 @@ function newPhysicsCollision(dt){
         );
 
     const visualStrength=newBattleClamp(
-        0.70+
-        impactVisualEnergy*0.72,
-        0.70,1.58
+        (launchSoft?0.42:0.70)+
+        impactVisualEnergy*(launchSoft?0.28:0.72),
+        launchSoft?0.42:0.70,
+        launchSoft?0.90:1.58
     );
     const impactClass=
         visualStrength>=1.28 ? "heavy" :
@@ -5589,8 +5629,8 @@ function newPhysicsCollision(dt){
     // information so a light accidental drift cannot become a finish.
     p.lastImpactAt=performance.now();
     c.lastImpactAt=performance.now();
-    p.lastImpactForce=cKnockback;
-    c.lastImpactForce=pKnockback;
+    p.lastImpactForce=launchSoft ? cKnockback*0.35 : cKnockback;
+    c.lastImpactForce=launchSoft ? pKnockback*0.35 : pKnockback;
     p.lastImpactAttacker="cpu";
     c.lastImpactAttacker="player";
 
