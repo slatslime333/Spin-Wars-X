@@ -1,5 +1,5 @@
 /* SPIN WARS X — X-RAIL ENGINE
- * Version 5.3 — drop hangs under the top rail beside the X-Exit
+ * Version 5.5 — stronger combat and X-Rail exit knockback
  *
  * Riding still uses the open rail path and the X-Exit ramp.
  * Free Beys collide with a single closed bumper. The X-Exit closer
@@ -273,10 +273,10 @@ function chooseExitHeading(s,p){
  const balance=optionalStat(s,["balance","balanceStat"],0.70),attack=optionalStat(s,["attack","attackStat"],0.70),knockback=optionalStat(s,["knockback","knockbackStat"],0.70);
  const exit=exitRampGeometry();
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
- const attackRailFactor=clamp(1+attack*0.12+Math.max(0,railSpeed-0.075)*1.6,1,1.20);
- const exitEnergyFactor=clamp(1.03+quality*0.14,1.03,1.17);
- const rawSpeed=railSpeed*(1.04+rpm*0.06+attack*0.055+knockback*0.025-tilt*0.05)*exitEnergyFactor*attackRailFactor;
- const exitSpeed=Math.min(0.160,Math.max(0.018,rawSpeed));
+ const attackRailFactor=clamp(1+attack*0.18+Math.max(0,railSpeed-0.075)*1.8,1,1.28);
+ const exitEnergyFactor=clamp(1.08+quality*0.18,1.08,1.26);
+ const rawSpeed=railSpeed*(1.12+rpm*0.08+attack*0.08+knockback*0.05-tilt*0.04)*exitEnergyFactor*attackRailFactor;
+ const exitSpeed=Math.min(0.205,Math.max(0.028,rawSpeed));
  /*
   * The X-Exit lane is the visual V into the bowl. Exit heading is that
   * lane, not a blend of the curling rail tangent (which pointed into the
@@ -347,7 +347,7 @@ function riderStep(s,dt){
  const movementStat=clamp(Number(s.movement ?? s.stats?.movement ?? 0.70),0,1);
  const attackStat=clamp((Number(s.attack ?? s.stats?.attack ?? 70))/99,0,1);
  const attackRailFactor=clamp(1+(Math.max(0,movementStat-0.72)*0.70)+(Math.max(0,attackStat-0.70)*0.18),1,1.24);
- const ceiling=(0.050+0.045*rpm+0.018*grip)*attackRailFactor;
+ const ceiling=(0.058+0.055*rpm+0.022*grip)*attackRailFactor;
  const acceleration=(0.00065+0.00135*rpm*grip)*
        (1+0.55*Math.max(0,attackRailFactor-1))*dt*60;
  const friction=(0.00010+(1-rpm)*0.00011)*dt*60;
@@ -429,5 +429,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"5.3-drop-under-rail",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"5.5-stronger-knockback",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);

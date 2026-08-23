@@ -82,12 +82,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*2.75,
+        (s.impactMomentumState||0)-dt*1.55,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.78*s.impactMomentumState;
+    1-0.88*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
