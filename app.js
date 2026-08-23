@@ -2572,17 +2572,17 @@ function newBattleLaunchState(side){
     let startX=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? sideXSign*(0.112 + placementJitter*0.12)
+            ? sideXSign*(0.28 + placementJitter*0.05)
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
                 : sideXSign*(0.70 + placementJitter*0.18);
 
-    // Drop hangs from the top lip of the X-Exit on that player's side.
-    // X-Rail starts at the lower corner on the player's side.
+    // Drop hangs under the top X-Rail, beside the X-Exit (not on the rail
+    // and not inside the V). X-Rail still starts at the lower corner.
     let startY=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? -0.900 + placementJitter*0.02
+            ? -0.64 + placementJitter*0.02
             : isXRailLaunch
                 ? placementJitter*0.06
                 : placementJitter;
@@ -4407,10 +4407,7 @@ function newPhysicsStep(s,dt){
         const attackBit = movement>=0.80;
         const attackStat=getBattleStat(s,"attack");
         const knockbackStat=getBattleStat(s,"knockback");
-        const attackSpeedBoost =
-            attackBit
-                ? (1.08 + 0.06*attackStat + 0.04*Math.pow(rpm,0.70))
-                : 1;
+        const attackSpeedBoost = 1;
 
         /*
           Dynamic tilt/precession:
@@ -4452,23 +4449,9 @@ function newPhysicsStep(s,dt){
                 s.launchTilt==="Slight Tilt" ? 0.06 : 0.0;
 
             s.vx=dropSide*dropTilt*0.018;
-            s.vy=0.034;
+            s.vy=0.022;
             s.launchDropReleased=true;
             s.launchDropFalling=true;
-        }
-
-        if(s.launchDropFalling){
-            if(s.y>-0.52){
-                s.launchDropFalling=false;
-            }else{
-                s.x+=s.vx*dt*60;
-                s.y+=s.vy*dt*60;
-                if(window.SpinWarsXRailEngine &&
-                   typeof window.SpinWarsXRailEngine.step==="function"){
-                    window.SpinWarsXRailEngine.step(s,dt);
-                }
-                return;
-            }
         }
 
         /*
@@ -4949,9 +4932,14 @@ function newPhysicsCollision(dt){
     const closing=rvx*nx+rvy*ny;
     const relativeSpeed=Math.hypot(rvx,rvy);
 
-    // Allow meaningful glancing/tangential contact, but reject a truly
-    // stationary overlap.
-    if(closing>=0 && relativeSpeed<0.0022) return;
+    // A real hit must still be closing. Fast overlaps that are already
+    // separating used to keep receiving full knockback every frame, which
+    // launched Beys across the stadium or ended the round instantly.
+    if(closing>=-0.00035) return;
+
+    const now=performance.now();
+    if(now<(NEW_BATTLE.collisionLockUntil||0)) return;
+    NEW_BATTLE.collisionLockUntil=now+90;
 
     if(p.launchDropActive && !p.launchDropReleased){
         p.launchDropReleased=true;
@@ -5136,50 +5124,47 @@ function newPhysicsCollision(dt){
         const name=s.bit?.name;
         if(name==="Point") return 0.96+(dynamic?.aggression||0)*0.14;
         if(name==="Level") return 0.98+(dynamic?.aggression||0)*0.10;
-        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.18 : 0.94;
+        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.10 : 0.94;
     };
     const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
     const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
     const nonAttackImpactMultiplier=bothNonAttackCollision ? 0.86 : 1.0;
     const attackVsAttackImpactMultiplier=bothAttackCollision ? 0.94 : 1.0;
-    const launchSoft=
-        Game.battle?.phase==="Launch" ||
-        (p.launchDropActive && (!p.launchDropReleased || p.launchDropFalling)) ||
-        (c.launchDropActive && (!c.launchDropReleased || c.launchDropFalling));
-    const launchHitScale=launchSoft ? 0.38 : 1;
+    const extremeSpeedScale=
+        relativeSpeed>0.090 ? 0.090/relativeSpeed : 1;
 
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     const pKnockback=Math.min(
-        0.0165,
+        0.012,
         Math.max(
-            0.00055+contactEnergy*0.0104,
+            0.00045+contactEnergy*0.0087,
             pForce*pBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
-            launchHitScale*
+            extremeSpeedScale*
             (
-                0.74+
-                (1-cDef)*0.18
+                0.62+
+                (1-cDef)*0.16
             )*
-            (0.98+newBattleClamp(momentumFactor/2.0,0,0.26))
+            (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
         )
     );
     const cKnockback=Math.min(
-        0.0165,
+        0.012,
         Math.max(
-            0.00055+contactEnergy*0.0104,
+            0.00045+contactEnergy*0.0087,
             cForce*cBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
-            launchHitScale*
+            extremeSpeedScale*
             (
-                0.74+
-                (1-pDef)*0.18
+                0.62+
+                (1-pDef)*0.16
             )*
-            (0.98+newBattleClamp(momentumFactor/2.0,0,0.26))
+            (0.98+newBattleClamp(momentumFactor/2.0,0,0.22))
         )
     );
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
@@ -5596,10 +5581,9 @@ function newPhysicsCollision(dt){
         );
 
     const visualStrength=newBattleClamp(
-        (launchSoft?0.42:0.70)+
-        impactVisualEnergy*(launchSoft?0.28:0.72),
-        launchSoft?0.42:0.70,
-        launchSoft?0.90:1.58
+        0.70+
+        impactVisualEnergy*0.72,
+        0.70,1.58
     );
     const impactClass=
         visualStrength>=1.28 ? "heavy" :
@@ -5629,8 +5613,8 @@ function newPhysicsCollision(dt){
     // information so a light accidental drift cannot become a finish.
     p.lastImpactAt=performance.now();
     c.lastImpactAt=performance.now();
-    p.lastImpactForce=launchSoft ? cKnockback*0.35 : cKnockback;
-    c.lastImpactForce=launchSoft ? pKnockback*0.35 : pKnockback;
+    p.lastImpactForce=cKnockback;
+    c.lastImpactForce=pKnockback;
     p.lastImpactAttacker="cpu";
     c.lastImpactAttacker="player";
 
