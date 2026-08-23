@@ -3769,6 +3769,9 @@ function newBattleFrame(now){
                 commentary.textContent=
                     `${p.blade.name}: ${p.launchQuality} launch · ${Math.round(p.rpm*100)}% RPM | `+
                     `${c.blade.name}: ${c.launchQuality} launch · ${Math.round(c.rpm*100)}% RPM`;
+            }else if(NEW_BATTLE.lastImpact && performance.now()-(NEW_BATTLE.lastImpact.time||0)<900){
+                commentary.textContent=
+                    `IMPACT ${NEW_BATTLE.lastImpact.impactClass} · knockback ${Number(NEW_BATTLE.lastImpact.kb||0).toFixed(3)}`;
             }else if(p.railEngaged || c.railEngaged){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
@@ -5152,7 +5155,7 @@ function newPhysicsCollision(dt){
     const nonAttackImpactMultiplier=bothNonAttackCollision ? 1.12 : 1.0;
     const attackVsAttackImpactMultiplier=bothAttackCollision ? 1.06 : 1.0;
     const extremeSpeedScale=
-        relativeSpeed>0.110 ? 0.110/relativeSpeed : 1;
+        relativeSpeed>0.24 ? 0.24/relativeSpeed : 1;
 
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
@@ -5164,38 +5167,50 @@ function newPhysicsCollision(dt){
     const cRailExitBoost=
         ((c.railExited||c.lastXRailResult==="x-exit") ? 1.22 : 1)*
         (Number(c.railExitKnockbackMultiplier)||1);
+    const bounceSep=Math.max(0,-closing)*(0.70+directness*0.30);
+    const pSpinPower=
+        (0.018+pAttack*0.024+pKB*0.026)*
+        (0.42+0.58*Math.max(pRPM,0.22))*
+        (pParked&&cParked?0.34:1);
+    const cSpinPower=
+        (0.018+cAttack*0.024+cKB*0.026)*
+        (0.42+0.58*Math.max(cRPM,0.22))*
+        (pParked&&cParked?0.34:1);
     const pKnockback=Math.min(
-        0.026,
+        0.082,
         Math.max(
-            0.00090+contactEnergy*0.0088+pSpinBite*4.4,
-            pForce*0.038*pBitKnockbackMultiplier*
+            0.016,
+            (bounceSep*0.60+pSpinPower+pForce*0.014)*
+            pBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             pRailExitBoost*
             extremeSpeedScale*
-            (
-                0.90+
-                (1-cDef)*0.24
-            )*
+            (0.92+(1-cDef)*0.22)*
             (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
         )
     );
     const cKnockback=Math.min(
-        0.026,
+        0.082,
         Math.max(
-            0.00090+contactEnergy*0.0088+cSpinBite*4.4,
-            cForce*0.038*cBitKnockbackMultiplier*
+            0.016,
+            (bounceSep*0.60+cSpinPower+cForce*0.014)*
+            cBitKnockbackMultiplier*
             nonAttackImpactMultiplier*
             attackVsAttackImpactMultiplier*
             cRailExitBoost*
             extremeSpeedScale*
-            (
-                0.90+
-                (1-pDef)*0.24
-            )*
+            (0.92+(1-pDef)*0.22)*
             (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
         )
     );
+
+    // Stop walking into each other, then shove apart. Adding a tiny delta
+    // on top of inbound speed looked like "damage with no impact".
+    const pNormal=p.vx*nx+p.vy*ny;
+    const cNormal=c.vx*nx+c.vy*ny;
+    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
+    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
 
@@ -5213,8 +5228,8 @@ function newPhysicsCollision(dt){
     const pImpactMomentumState=
         newBattleClamp(
             Math.max(
-                pKnockback/0.0085,
-                effectiveImpact/0.026
+                pKnockback/0.028,
+                effectiveImpact/0.022
             ),
             0,1
         );
@@ -5222,8 +5237,8 @@ function newPhysicsCollision(dt){
     const cImpactMomentumState=
         newBattleClamp(
             Math.max(
-                cKnockback/0.0085,
-                effectiveImpact/0.026
+                cKnockback/0.028,
+                effectiveImpact/0.022
             ),
             0,1
         );
@@ -5632,7 +5647,8 @@ function newPhysicsCollision(dt){
         heavy:impactClass==="heavy",
         playerRpmLoss:__pRpmLoss+__pExtraRpmLoss,
         cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
-        time:performance.now()
+        time:performance.now(),
+        kb:(pKnockback+cKnockback)*0.5
     };
 
     p.lastKnockback=pKnockback;
