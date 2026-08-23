@@ -1,10 +1,9 @@
 /* SPIN WARS X — X-RAIL ENGINE
- * Version 4.8 — unhooked X-Exit is a natural bounce, not a rail dash
+ * Version 4.9 — one X-Exit V, bounce toward stadium center
  *
  * Capture and riding are unchanged. Riders still use the X-Exit ramp.
- * Free Beys treat the X-Exit V as solid plastic: reflect off the face
- * they hit, lose energy, and stay in the bowl. No ramp, no speed boost,
- * no extra knockback.
+ * Free Beys collide with the visual V only (no second back-chord wall)
+ * and bounce toward the middle of the stadium without a speed boost.
  */
 (function(global){
 "use strict";
@@ -72,13 +71,12 @@ function exitRampGeometry(){
  const ix=-mx/centerLen,iy=-my/centerLen;
  const apex=toGame([50,21.0]);
  /*
-  * Solid X-Exit: the visual V plus the outer chord between rail ends.
-  * Free Beys cannot pass this volume. Riders use the lane through it.
+  * One visual V: left arm and right arm only.
+  * The back chord between rail ends is NOT a second wall.
   */
  const faces=[
   {a:{x:a.x,y:a.y},b:{x:apex.x,y:apex.y}},
-  {a:{x:b.x,y:b.y},b:{x:apex.x,y:apex.y}},
-  {a:{x:a.x,y:a.y},b:{x:b.x,y:b.y}}
+  {a:{x:b.x,y:b.y},b:{x:apex.x,y:apex.y}}
  ];
  return {left:a,right:b,mid:{x:mx,y:my},apex,inward:{x:ix,y:iy},faces};
 }
@@ -104,42 +102,21 @@ function inExitMouthRegion(s){
 function closestExitFace(s){
  const g=exitRampGeometry();
  let best=null;
- const centroid={
-  x:(g.left.x+g.right.x+g.apex.x)/3,
-  y:(g.left.y+g.right.y+g.apex.y)/3
- };
- const inside=inTriangle(s,g.left,g.right,g.apex);
  for(const seg of g.faces){
   const q=closestPointOnSegment(s.x,s.y,seg.a,seg.b);
   const dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,len=Math.hypot(dx,dy)||1;
   const tx=dx/len,ty=dy/len;
   let nx=-ty,ny=tx;
-  const mx=(seg.a.x+seg.b.x)*0.5,my=(seg.a.y+seg.b.y)*0.5;
-  if(inside){
-   /*
-    * Phased into the V: eject through the mouth into the bowl.
-    * Do not accelerate — bounceFromExit still loses energy.
-    */
-   if(nx*g.inward.x+ny*g.inward.y<0){nx=-nx;ny=-ny;}
-  }else if(nx*(mx-centroid.x)+ny*(my-centroid.y)<0){
-   nx=-nx;ny=-ny;
-  }
-  const towardBowl=Math.max(0,1-Math.abs(q.y-g.apex.y)/0.20);
-  if(!inside && towardBowl>0){
-   nx+=g.inward.x*towardBowl*0.9;
-   ny+=g.inward.y*towardBowl*0.9;
-   const nlen=Math.hypot(nx,ny)||1;
-   nx/=nlen;ny/=nlen;
-  }
+  if(nx*(0-q.x)+ny*(0-q.y)<0){nx=-nx;ny=-ny;}
   const distance=Math.sqrt(q.dist2);
   if(!best||distance<best.distance){
-   best={...q,tx,ty,nx,ny,distance,inwardX:g.inward.x,inwardY:g.inward.y,inside};
+   best={...q,tx,ty,nx,ny,distance,inwardX:g.inward.x,inwardY:g.inward.y};
   }
  }
  return best;
 }
 function exitSurfaceContact(s){
- const g=exitRampGeometry(),radius=beyRadius(s)+RAIL_HALF_WIDTH+0.010;
+ const g=exitRampGeometry(),radius=beyRadius(s)+0.016;
  const best=closestExitFace(s);
  if(!best)return null;
  const inside=inTriangle(s,g.left,g.right,g.apex);
@@ -169,41 +146,42 @@ function bounceFromExit(s,c){
  const tx=-by,ty=bx;
  const tang=s.vx*tx+s.vy*ty;
  if(n<0){
-  s.vx=bx*(-n*0.46)+tx*(tang*0.62);
-  s.vy=by*(-n*0.46)+ty*(tang*0.62);
- }
- if(by>0.25 && s.vy<0){
-  s.vy=Math.abs(s.vy)*0.46;
+  s.vx=bx*(-n*0.46)+tx*(tang*0.55);
+  s.vy=by*(-n*0.46)+ty*(tang*0.55);
  }
 
- const gap=beyRadius(s)+RAIL_HALF_WIDTH+0.008;
+ const g=exitRampGeometry();
+ const toX=0-s.x,toY=0-s.y;
+ const toLen=Math.hypot(toX,toY)||1;
+ const cx=toX/toLen,cy=toY/toLen;
+
+ const gap=beyRadius(s)+0.014;
  const dist=Number.isFinite(c.distance)?c.distance:0;
  if(dist<gap){
   const push=gap-dist;
-  s.x+=bx*push;
-  s.y+=by*push;
+  s.x+=cx*push;
+  s.y+=cy*push;
+ }
+ let guard=0;
+ while(inTriangle(s,g.left,g.right,g.apex)&&guard++<8){
+  s.x+=cx*0.02;
+  s.y+=cy*0.02;
  }
 
- const outgoing=Math.hypot(s.vx,s.vy);
- if(outgoing>incoming && incoming>1e-6){
-  s.vx*=incoming/outgoing;
-  s.vy*=incoming/outgoing;
- }
- if(by>0.2){
-  const g=exitRampGeometry();
-  const speed=Math.hypot(s.vx,s.vy);
-  if(speed>1e-6){
-   const mix=0.55;
-   let mx=s.vx/speed+g.inward.x*mix;
-   let my=s.vy/speed+g.inward.y*mix;
-   const ml=Math.hypot(mx,my)||1;
-   s.vx=(mx/ml)*speed;
-   s.vy=(my/ml)*speed;
-  }
- }
+ let speed=Math.hypot(s.vx,s.vy);
+ if(speed>incoming && incoming>1e-6)speed=incoming;
+ if(speed<1e-6)speed=Math.min(incoming,0.02);
+ const rx=s.vx,ry=s.vy,rl=Math.hypot(rx,ry)||1;
+ const mix=0.88;
+ let mx=(rx/rl)*(1-mix)+cx*mix;
+ let my=(ry/rl)*(1-mix)+cy*mix;
+ const ml=Math.hypot(mx,my)||1;
+ s.vx=(mx/ml)*speed;
+ s.vy=(my/ml)*speed;
 
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.12);
  s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.08);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.58);
  s.lastXRailResult="exit-surface-bounce";
  s.railExitSurfaceHit=true;
  s.railExitSurfaceHitTime=0;
@@ -212,8 +190,8 @@ function bounceFromExit(s,c){
  s.railExited=false;
  s.xrailExitRampActive=false;
  s.xExitCenterLock=0;
- s.railCaptureCooldown=Math.max(s.railCaptureCooldown||0,0.20);
- s.railExitRefractory=Math.max(s.railExitRefractory||0,0.16);
+ s.railCaptureCooldown=Math.max(s.railCaptureCooldown||0,0.22);
+ s.railExitRefractory=Math.max(s.railExitRefractory||0,0.18);
  s.railCaptureCooldownPoint={x:s.x,y:s.y};
  s.railExitRefractoryPoint={x:s.x,y:s.y};
  return true;
@@ -468,6 +446,10 @@ function step(s,dt){
   s.railExitSurfaceHitTime=(s.railExitSurfaceHitTime||0)+dt;
   if(s.railExitSurfaceHitTime>0.22)s.railExitSurfaceHit=false;
  }
+ if(s.railExitSurfaceHit && !s.railEngaged){
+  s._xrailPrevX=s.x;s._xrailPrevY=s.y;
+  return{active:false,state:"free"};
+ }
  if(!Number.isFinite(s._xrailPrevX)){s._xrailPrevX=s.x;s._xrailPrevY=s.y;}
  const justRodeExit=!!s.railExited||(s.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0);
  const prev={x:s._xrailPrevX,y:s._xrailPrevY,vx:s.vx,vy:s.vy,radius:s.radius};
@@ -505,5 +487,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),exitSurface=exitSurfaceContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,exitSurfaceContact:!!exitSurface,exitSurfaceImpact:!!exitSurface?.actualImpact,exitSurfaceDistance:exitSurface?.distance??null,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"4.8-natural-xexit-bounce",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"4.9-xexit-center-v",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);
