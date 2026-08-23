@@ -30,10 +30,15 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
   const move=clamp01(movement);
   const center=clamp01(centerAffinity);
   const stab=clamp01(bitStability);
-  return Math.max(0.54,Math.min(0.66,
-    0.56+
-    (1-center)*0.10+
-    (move-0.80)*0.12+
+  /*
+    Mid-outer bowl, not the X-Rail. Flat tips want to walk wide, but a
+    launch should circle first and only graze the rail when leftover
+    speed or a clash carries them out.
+  */
+  return Math.max(0.46,Math.min(0.58,
+    0.48+
+    (1-center)*0.08+
+    (move-0.80)*0.10+
     (1-stab)*0.03
   ));
 }
@@ -41,18 +46,22 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
 function stableOrbitBase(movement,centerAffinity){
   const move=clamp01(movement);
   const center=clamp01(centerAffinity);
-  return Math.max(0.10,Math.min(0.18,
-    0.10+
-    move*0.08+
-    (1-center)*0.04
+  /*
+    A real launch circle — smaller than Attack, not a parked center pin.
+    RPM contraction (not this base) is what walks them in.
+  */
+  return Math.max(0.28,Math.min(0.42,
+    0.30+
+    move*0.10+
+    (1-center)*0.05
   ));
 }
 
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
-  if(kind==="attack") return 0.24+0.76*Math.pow(s,1.55);
-  if(kind==="hybrid") return 0.32+0.68*Math.pow(s,1.45);
-  return 0.55+0.45*Math.pow(s,1.40);
+  if(kind==="attack") return 0.48+0.52*Math.pow(s,1.10);
+  if(kind==="hybrid") return 0.34+0.66*Math.pow(s,1.55);
+  return 0.22+0.78*Math.pow(s,2.35);
 }
 
 function bitOrbitProfile(opts){
@@ -69,34 +78,34 @@ function bitOrbitProfile(opts){
   let attackWeight;
 
   if(klass==="attack"){
-    home=Math.max(0.18,Math.min(0.66,attack));
+    home=Math.max(0.24,Math.min(0.58,attack));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
-    home=Math.max(0.14,Math.min(0.52,stable*(1-mix)+attack*mix));
+    home=Math.max(0.20,Math.min(0.50,stable*(1-mix)+attack*mix));
     attackWeight=mix;
   }else if(klass==="gimmick"){
     const mix=0.14+0.72*gimmick;
     const openRpm=Math.max(rpm,0.50+0.50*gimmick);
     const attackOpen=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(openRpm,"attack");
-    home=Math.max(0.10,Math.min(0.58,stable*(1-mix)+attackOpen*mix));
+    home=Math.max(0.16,Math.min(0.54,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.08,Math.min(0.20,stable));
+    home=Math.max(0.10,Math.min(0.42,stable));
     attackWeight=0.08;
   }
 
   const omega=
-    (0.056*(1-attackWeight)+0.084*attackWeight)*
-    (0.54+0.46*rpm);
+    (0.066*(1-attackWeight)+0.080*attackWeight)*
+    (0.58+0.42*rpm);
 
   return {
     class:klass,
     attackWeight,
     home,
     omega,
-    slopeGain:0.16-0.04*attackWeight,
-    radialFollow:0.24+0.10*attackWeight,
+    slopeGain:0.11-0.02*attackWeight,
+    radialFollow:0.16+0.03*attackWeight,
     radialBleed:0.988-0.008*attackWeight
   };
 }
@@ -225,7 +234,22 @@ const preferredRadius=orbit.home;
 const omega=orbit.omega;
 const attackWeight=orbit.attackWeight;
 
-let targetOrbitSpeed=Math.max(0.0065,preferredRadius*omega);
+/*
+  Hold the circle you are actually on. Giving a center launch the
+  outer-ring speed is what slammed Attack into the X-Rail and left
+  stamina looking parked. Too wide and too fast: slow down so the
+  bowl walks them in. Too tight: a little extra tangent to spiral out.
+*/
+const circleR=Math.max(0.07,rNow);
+let targetOrbitSpeed;
+if(circleR<preferredRadius){
+    targetOrbitSpeed=Math.max(
+        0.008,
+        circleR*omega+(preferredRadius-circleR)*0.004
+    );
+}else{
+    targetOrbitSpeed=Math.max(0.008,preferredRadius*omega);
+}
 
 if((s.impactMomentumState||0)>0.22){
     targetOrbitSpeed=Math.max(
@@ -309,40 +333,34 @@ if(
   allowing collisions to take control immediately after impact.
 */
 const inImpact=(s.impactMomentumState||0)>0.22;
-const holdR=Math.max(0.08,rNow);
-const tangentFollow=inImpact?0.06:0.42;
-const radialFollow=inImpact?0.04:orbit.radialFollow;
+const tangentFollow=inImpact?0.05:0.18;
+const radialFollow=inImpact?0.03:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
     (0.85+control*0.15);
-const tangentBlend=clamp(tangentFollow*follow,0,0.70);
-const radialBlend=clamp(radialFollow*follow,0,0.78);
+const tangentBlend=clamp(tangentFollow*follow,0,0.45);
+const radialBlend=clamp(radialFollow*follow,0,0.28);
 
 const currentTangent=s.vx*tangentX+s.vy*tangentY;
 const currentRadial=s.vx*radialX+s.vy*radialY;
 /*
-  Stadium bowl: a gentle slope toward the home ring, not a magnet.
-  Knockback / wall bounce keep their inward or outward speed. We only
-  add a little slope when the Bey is sitting wide without already
-  falling in. holdFix cancels Euler outward so a wide Attack ring
-  stays a ring instead of walking to the wall.
+  Soft bowl slope, not a magnet. Weak follow is what keeps the path
+  from looking like a drawn circle.
 */
 const slopeGain=orbit.slopeGain;
-const eulerOut=
-    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
-const holdFix=(!inImpact && radialBlend>0.08)
-    ? ((1-radialBlend)/Math.max(radialBlend,0.08))*eulerOut
-    : 0;
-let slope=(preferredRadius-rNow)*(inImpact?0.02:slopeGain);
-if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
-    slope*=0.22;
+let slope=(preferredRadius-rNow)*(inImpact?0.015:slopeGain);
+if(rNow>0.64){
+    slope-=(rNow-0.64)*0.10;
 }
-let desiredRadialSpeed=clamp(
-    clamp(slope,-0.012,0.008)-holdFix,
-    -0.024,
-    0.010
-);
+if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
+    slope*=0.45;
+}
+const eulerLeak=(currentTangent*currentTangent)/Math.max(0.08,rNow);
+const holdFix=(!inImpact && radialBlend>0.05)
+    ? ((1-radialBlend)/radialBlend)*eulerLeak
+    : 0;
+const desiredRadialSpeed=clamp(slope-holdFix,-0.016,0.005);
 
 const newTangent=
     currentTangent+
