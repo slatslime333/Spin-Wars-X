@@ -35,8 +35,8 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
     launch should circle first and only graze the rail when leftover
     speed or a clash carries them out.
   */
-  return Math.max(0.46,Math.min(0.58,
-    0.48+
+  return Math.max(0.52,Math.min(0.64,
+    0.54+
     (1-center)*0.08+
     (move-0.80)*0.10+
     (1-stab)*0.03
@@ -50,8 +50,8 @@ function stableOrbitBase(movement,centerAffinity){
     A real launch circle — smaller than Attack, not a parked center pin.
     RPM contraction (not this base) is what walks them in.
   */
-  return Math.max(0.28,Math.min(0.42,
-    0.30+
+  return Math.max(0.34,Math.min(0.46,
+    0.36+
     move*0.10+
     (1-center)*0.05
   ));
@@ -59,9 +59,9 @@ function stableOrbitBase(movement,centerAffinity){
 
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
-  if(kind==="attack") return 0.48+0.52*Math.pow(s,1.10);
-  if(kind==="hybrid") return 0.34+0.66*Math.pow(s,1.55);
-  return 0.22+0.78*Math.pow(s,2.35);
+  if(kind==="attack") return 0.70+0.30*Math.pow(s,0.78);
+  if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.40);
+  return 0.36+0.64*Math.pow(s,2.00);
 }
 
 function bitOrbitProfile(opts){
@@ -78,7 +78,7 @@ function bitOrbitProfile(opts){
   let attackWeight;
 
   if(klass==="attack"){
-    home=Math.max(0.24,Math.min(0.58,attack));
+    home=Math.max(0.30,Math.min(0.64,attack));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -91,21 +91,21 @@ function bitOrbitProfile(opts){
     home=Math.max(0.16,Math.min(0.54,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.10,Math.min(0.42,stable));
+    home=Math.max(0.16,Math.min(0.46,stable));
     attackWeight=0.08;
   }
 
   const omega=
-    (0.066*(1-attackWeight)+0.080*attackWeight)*
-    (0.58+0.42*rpm);
+    (0.062*(1-attackWeight)+0.090*attackWeight)*
+    (0.60+0.40*rpm);
 
   return {
     class:klass,
     attackWeight,
     home,
     omega,
-    slopeGain:0.11-0.02*attackWeight,
-    radialFollow:0.16+0.03*attackWeight,
+    slopeGain:0.055-0.012*attackWeight,
+    radialFollow:0.12+0.04*attackWeight,
     radialBleed:0.988-0.008*attackWeight
   };
 }
@@ -245,10 +245,20 @@ let targetOrbitSpeed;
 if(circleR<preferredRadius){
     targetOrbitSpeed=Math.max(
         0.008,
-        circleR*omega+(preferredRadius-circleR)*0.004
+        circleR*omega+(preferredRadius-circleR)*(0.004+0.005*attackWeight)
     );
 }else{
-    targetOrbitSpeed=Math.max(0.008,preferredRadius*omega);
+    /*
+      Stay on the home ring. Keeping r*omega outside home is what walked
+      Attack into the wall. A short linger just outside home lets Attack
+      hold width; far outside, drop to home speed so the bowl can walk in.
+    */
+    const over=Math.min(1,(circleR-preferredRadius)/0.14);
+    const linger=(0.06+0.16*attackWeight)*(1-over);
+    targetOrbitSpeed=Math.max(
+        0.008,
+        preferredRadius*omega*(1-linger)+circleR*omega*linger
+    );
 }
 
 if((s.impactMomentumState||0)>0.22){
@@ -332,9 +342,10 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
-const inImpact=(s.impactMomentumState||0)>0.22;
-const tangentFollow=inImpact?0.05:0.18;
-const radialFollow=inImpact?0.03:orbit.radialFollow;
+const impactHold=s.impactMomentumState||0;
+const inImpact=impactHold>0.22;
+const tangentFollow=inImpact?0.04:0.18;
+const radialFollow=inImpact?0.02:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
@@ -345,36 +356,42 @@ const radialBlend=clamp(radialFollow*follow,0,0.28);
 const currentTangent=s.vx*tangentX+s.vy*tangentY;
 const currentRadial=s.vx*radialX+s.vy*radialY;
 /*
-  Soft bowl slope, not a magnet. Weak follow is what keeps the path
-  from looking like a drawn circle.
+  Soft bowl slope, not a magnet. Rim gravity is stronger so a wide
+  lap still feels planted instead of floating onto the rail.
 */
 const slopeGain=orbit.slopeGain;
-let slope=(preferredRadius-rNow)*(inImpact?0.015:slopeGain);
-if(rNow>0.64){
-    slope-=(rNow-0.64)*0.10;
+let slope=(preferredRadius-rNow)*(inImpact?0.010:slopeGain);
+if(rNow>0.68){
+    slope-=(rNow-0.68)*0.22;
 }
 if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
     slope*=0.45;
 }
 const eulerLeak=(currentTangent*currentTangent)/Math.max(0.08,rNow);
-const holdFix=(!inImpact && radialBlend>0.05)
-    ? ((1-radialBlend)/radialBlend)*eulerLeak
-    : 0;
-const desiredRadialSpeed=clamp(slope-holdFix,-0.016,0.005);
-
+const desiredRadialSpeed=clamp(slope,-0.012,0.005);
 const newTangent=
     currentTangent+
     (targetOrbitSpeed-currentTangent)*
     tangentBlend;
-const radialBleed=orbit.radialBleed;
 const newRadial=inImpact
-    ? currentRadial*radialBleed+clamp((preferredRadius-rNow)*0.018,-0.0025,0.0020)
+    ? currentRadial
     : currentRadial+
       (desiredRadialSpeed-currentRadial)*
-      radialBlend;
+      radialBlend-
+      eulerLeak*0.95;
 
-s.vx=tangentX*newTangent+radialX*newRadial;
-s.vy=tangentY*newTangent+radialY*newRadial;
+/*
+  Polar reconstruction rotates leftover knockback onto the orbit
+  tangent — that is the post-hit sway. Keep cartesian flight until
+  impact fades, then ease orbit response back in.
+*/
+const polarMix=clamp((0.26-impactHold)/0.26,0,1);
+if(polarMix>0.02){
+    const polarX=tangentX*newTangent+radialX*newRadial;
+    const polarY=tangentY*newTangent+radialY*newRadial;
+    s.vx=s.vx*(1-polarMix)+polarX*polarMix;
+    s.vy=s.vy*(1-polarMix)+polarY*polarMix;
+}
 
 /*
   LOW RPM
@@ -389,7 +406,7 @@ s.vy=tangentY*newTangent+radialY*newRadial;
   Attack Bits keep their tangent — only a near-dead Attack bit
   gets a light trim, never enough to collapse the orbit into a line.
 */
-if(rpm<0.52 && attackWeight<0.70){
+if(rpm<0.52 && attackWeight<0.70 && (s.impactMomentumState||0)<0.18){
     const lowRpm=
         clamp(
             (0.52-rpm)/0.52,
@@ -443,6 +460,7 @@ s.motionPhase2 +=
   It is deliberately tiny. It breaks perfectly mathematical paths
   without becoming visible RNG movement.
 */
+if(impactHold<=0.16){
 const disturbance =
     (
         0.000012 +
@@ -460,13 +478,18 @@ s.vx +=
 s.vy +=
     (Math.random()-0.5)*
     disturbance*dt*60;
+}
 
 /*
   Final free-space spin-direction projection.
   All free-space forces are complete. This removes ONLY an
   opposite-spin tangential component; it does not add orbit speed.
+  Skip while knockback owns the path — stripping the "wrong" tangent
+  as the Bey flies is the post-hit wiggle.
 */
-enforceDirection(s);
+if(impactHold<=0.16){
+    enforceDirection(s);
+}
 
 /*
   Outer stadium wall.
@@ -693,7 +716,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.0",
+    version:"1.2.1",
     step,
     homeOrbitRadius,
     orbitOmega,
