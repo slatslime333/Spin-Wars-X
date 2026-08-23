@@ -27,6 +27,22 @@ const RAIL_STROKE_WIDTH=2.1;
 const RAIL_HALF_WIDTH=RAIL_STROKE_WIDTH/(2*SVG_SCALE);
 const CONTACT_EPSILON=0.004;
 const DEFAULT_BEY_RADIUS=0.124;
+const MAX_SWEEP_SAMPLES=80;
+const RIDE_MAX_STEP=0.010;
+
+function inCommittedFinishMouth(s){
+ if(!s)return false;
+ const smash=
+  (Number(s.lastImpactForce)||0)>=0.011 &&
+  (Number(s.impactMomentumState)||0)>0.45;
+ if(!smash)return false;
+ const r=Math.hypot(s.x,s.y);
+ const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
+ if(outward<0.012 || r<0.72)return false;
+ const xtreme=s.y>=0.62 && Math.abs(s.x)<=0.22;
+ const pocket=s.y>=0.58 && Math.abs(s.x)>=0.50;
+ return xtreme||pocket;
+}
 
 function toGame(p){return{x:(p[0]-50)/SVG_SCALE,y:(p[1]-46)/SVG_SCALE};}
 function bezier(p0,p1,p2,p3,t){
@@ -162,7 +178,7 @@ function sweptContact(s,findNearest,prevDistance){
  if(!s||typeof findNearest!=="function")return null;
  const x0=Number.isFinite(s._xrailPrevX)?s._xrailPrevX:s.x,y0=Number.isFinite(s._xrailPrevY)?s._xrailPrevY:s.y;
  const x1=s.x,y1=s.y,dx=x1-x0,dy=y1-y0,travel=Math.hypot(dx,dy),radius=contactRadius(s);
- const samples=Math.max(4,Math.min(24,Math.ceil(travel/0.006)));let best=null;
+ const samples=Math.max(4,Math.min(MAX_SWEEP_SAMPLES,Math.ceil(travel/0.004)));let best=null;
  for(let i=0;i<=samples;i++){
   const u=i/samples,x=x0+dx*u,y=y0+dy*u,p=findNearest(x,y);if(!p)continue;
   const distance=Math.sqrt(Math.max(0,p.dist2));if(distance>radius)continue;
@@ -207,9 +223,25 @@ function engage(s,contact){
  if(p.distance<gap&&len>1e-8){const push=gap-p.distance;s.x+=(nx/len)*push;s.y+=(ny/len)*push;}
  return true;
 }
+function separateFromSolid(s,p){
+ if(!s||!p)return false;
+ const gap=contactRadius(s);
+ const d=Number.isFinite(p.distance)?p.distance:Math.sqrt(Math.max(0,p.dist2||0));
+ if(!(d<gap))return false;
+ let nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
+ if(len<1e-9){nx=-p.ty;ny=p.tx;len=1;}else{nx/=len;ny/=len;}
+ const push=gap-d+0.001;
+ s.x+=nx*push;s.y+=ny*push;
+ const vn=s.vx*nx+s.vy*ny;
+ if(vn<0){s.vx-=nx*vn;s.vy-=ny*vn;}
+ return true;
+}
 function bounce(s,p){
  if(!s||!p)return false;
- if((s.railBounceCooldown||0)>0)return false;
+ if((s.railBounceCooldown||0)>0){
+  separateFromSolid(s,p);
+  return false;
+ }
  if(s.launchDropActive && !s.launchDropReleased)return false;
 
  const incoming=Math.hypot(s.vx,s.vy);
@@ -349,12 +381,26 @@ function riderStep(s,dt){
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
  const friction=(0.00008+(1-rpm)*0.00032-grip*0.00008)*dt*60;
  const railSpeed=Math.max(0.018,tangentSpeed-Math.max(0.00002,friction));
- s.vx=tx*railSpeed;s.vy=ty*railSpeed;s.x+=s.vx*dt*60;s.y+=s.vy*dt*60;
- const after=nearest(s.x,s.y);
- if(after){
+ const travel=railSpeed*dt*60;
+ const steps=Math.max(1,Math.ceil(travel/RIDE_MAX_STEP));
+ const stepTravel=travel/steps;
+ s.vx=tx*railSpeed;s.vy=ty*railSpeed;
+ for(let i=0;i<steps;i++){
+  const now=nearest(s.x,s.y);
+  if(!now){release(s,"no-geometry");return false;}
+  const nowDist=Math.sqrt(Math.max(0,now.dist2));
+  if(nowDist>contactLimit){release(s,"lost-contact");return false;}
+  const nowTangent=s.vx*now.tx+s.vy*now.ty;
+  if(!Number.isFinite(nowTangent)||nowTangent<=0.0020){release(s,"lost-tangent");return false;}
+  s.vx=now.tx*railSpeed;s.vy=now.ty*railSpeed;
+  s.x+=now.tx*stepTravel;s.y+=now.ty*stepTravel;
+  const after=nearest(s.x,s.y);
+  if(!after){release(s,"no-geometry");return false;}
   const ax=s.x-after.x,ay=s.y-after.y,alen=Math.hypot(ax,ay),targetGap=radius+RAIL_HALF_WIDTH+0.006;
   if(alen>1e-9){const correction=clamp(targetGap-alen,-0.014,0.014);s.x+=(ax/alen)*correction;s.y+=(ay/alen)*correction;}
   s.railDistance=after.distance;s.railContactPoint={x:after.x,y:after.y};s._xrailLastDistance=after.distance;setContactDebug(s,after,Math.sqrt(Math.max(0,after.dist2)),"riding");
+  const exitPoint=g.rightExit,endpointDistance=Math.hypot(s.x-exitPoint.x,s.y-exitPoint.y);
+  if(after.distance>=g.total-0.16 && endpointDistance<=0.18){beginExitRamp(s,exitPoint);return true;}
  }
  s.railSpeed=Math.hypot(s.vx,s.vy);s.railRideTime=(s.railRideTime||0)+dt;s.railTravelDistance=(s.railTravelDistance||0)+s.railSpeed*dt;s.lastXRailResult="riding";return true;
 }
@@ -396,14 +442,12 @@ function step(s,dt){
  }
  if(!Number.isFinite(s._xrailPrevX)){s._xrailPrevX=s.x;s._xrailPrevY=s.y;}
  const justRodeExit=!!s.railExited||(s.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0);
- const inFinishOpening=
-  s.y>=0.56 &&
-  ((Math.abs(s.x)<=0.34 && s.y>=0.64) || Math.abs(s.x)>=0.44);
+ const mouthPass=inCommittedFinishMouth(s);
  const solid=sweptSolidContact(s);
  if(solid){
   const overlapping=solid.distance<=contactRadius(s);
   if(solid.impact||overlapping){
-   if(!justRodeExit && !solid.closer && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
+   if(!mouthPass && !justRodeExit && !solid.closer && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
     const rail=sweptRailContact(s);
     if(rail && (rail.impact||rail.distance<=contactRadius(s)) && engage(s,rail)){
      s._xrailPrevX=s.x;s._xrailPrevY=s.y;
@@ -412,12 +456,14 @@ function step(s,dt){
      return{active:true,state:"capture"};
     }
    }
-   if(!(inFinishOpening && (s.impactMomentumState||0)>0.18)){
+   if(!mouthPass){
     bounce(s,solid);
+    const after=nearestSolid(s.x,s.y);
+    if(after) separateFromSolid(s,after);
    }
    s._xrailPrevX=s.x;s._xrailPrevY=s.y;
    const p=nearestSolid(s.x,s.y);s._xrailSolidPrevDistance=p?Math.sqrt(Math.max(0,p.dist2)):Infinity;
-   return{active:false,state:"free"};
+   return{active:false,state:mouthPass?"finish-mouth":"free"};
   }
   setContactDebug(s,solid,solid.distance,"near");
  }else clearContactDebug(s);
@@ -430,5 +476,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"5.9-battle-feel",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
-})(window);
+global.SpinWarsXRailEngine={version:"6.1-solid-mouths",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth};
+})(typeof window!=="undefined"?window:globalThis);
