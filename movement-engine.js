@@ -426,8 +426,10 @@ const responseAmount=clamp(
     0.13
 );
 
-s.vx+=(desiredVX-s.vx)*responseAmount;
-s.vy+=(desiredVY-s.vy)*responseAmount;
+if((s.impactMomentumState||0)<=0.35){
+    s.vx+=(desiredVX-s.vx)*responseAmount;
+    s.vy+=(desiredVY-s.vy)*responseAmount;
+}
 
 /*
   LOW RPM
