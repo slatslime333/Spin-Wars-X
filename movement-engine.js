@@ -12,55 +12,105 @@ collisions, damage, finishes, and decisions.
 (function(global){
 "use strict";
 
-function isAttackBit(movement){
-  return movement>=0.80;
+function clamp01(v){
+  return Math.max(0,Math.min(1,Number(v)||0));
 }
 
-/*
-  Home orbit radius is the ring this Bit wants at this RPM.
-  Attack stays wider than stamina at the same spin; nobody's home is the X-Rail.
-*/
-function homeOrbitRadius(movement,centerAffinity,bitStability,rpm){
-  const stab=Number.isFinite(bitStability)?bitStability:0.60;
-  const center=Number.isFinite(centerAffinity)?centerAffinity:0.60;
-  const move=Number.isFinite(movement)?movement:0.60;
-  const spin=Math.max(0,Math.min(1,Number.isFinite(rpm)?rpm:1));
-
-  if(isAttackBit(move)){
-    const base=
-      0.14+
-      (1-center)*0.32+
-      move*0.04+
-      (1-stab)*0.012;
-    const rpmFactor=
-      0.18+
-      0.82*Math.pow(Math.max(0.12,spin),1.25);
-    return Math.max(0.11,Math.min(0.38,base*rpmFactor));
-  }
-
-  const base=
-    0.050+
-    center*0.055+
-    (1-move)*0.040+
-    stab*0.018;
-  const tightenPow=move<0.40?2.20:move<0.55?1.90:1.55;
-  const rpmFactor=
-    0.08+
-    0.92*Math.pow(Math.max(0.08,spin),tightenPow);
-  return Math.max(0.035,Math.min(0.22,base*rpmFactor));
+function bitOrbitClass(bitName,bitType,movement){
+  const name=String(bitName||"").toLowerCase();
+  const type=String(bitType||"").toLowerCase();
+  if(name==="kick"||name==="taper") return "hybrid";
+  if(name==="point"||name==="level") return "gimmick";
+  if(type==="attack") return "attack";
+  if(type==="defense"||type==="stamina"||type==="balance") return "stable";
+  return (Number(movement)||0)>=0.80?"attack":"stable";
 }
 
-/*
-  Angular rate for holding that ring: tangent speed = homeRadius * omega.
-  Independent cruise speed is what used to inflate Attack onto the rail.
-*/
-function orbitOmega(movement,rpm){
-  const move=Number.isFinite(movement)?movement:0.60;
-  const spin=Math.max(0,Math.min(1,Number.isFinite(rpm)?rpm:1));
-  if(isAttackBit(move)){
-    return 0.092*(0.50+0.50*spin);
+function attackOrbitBase(movement,centerAffinity,bitStability){
+  const move=clamp01(movement);
+  const center=clamp01(centerAffinity);
+  const stab=clamp01(bitStability);
+  return Math.max(0.54,Math.min(0.66,
+    0.56+
+    (1-center)*0.10+
+    (move-0.80)*0.12+
+    (1-stab)*0.03
+  ));
+}
+
+function stableOrbitBase(movement,centerAffinity){
+  const move=clamp01(movement);
+  const center=clamp01(centerAffinity);
+  return Math.max(0.10,Math.min(0.18,
+    0.10+
+    move*0.08+
+    (1-center)*0.04
+  ));
+}
+
+function orbitRpmFactor(spin,kind){
+  const s=Math.max(0.12,clamp01(spin));
+  if(kind==="attack") return 0.24+0.76*Math.pow(s,1.55);
+  if(kind==="hybrid") return 0.32+0.68*Math.pow(s,1.45);
+  return 0.55+0.45*Math.pow(s,1.40);
+}
+
+function bitOrbitProfile(opts){
+  opts=opts||{};
+  const movement=Number.isFinite(opts.movement)?opts.movement:0.60;
+  const center=Number.isFinite(opts.centerAffinity)?opts.centerAffinity:0.60;
+  const stab=Number.isFinite(opts.bitStability)?opts.bitStability:0.60;
+  const rpm=clamp01(opts.rpm);
+  const gimmick=clamp01(opts.attackGimmick);
+  const klass=bitOrbitClass(opts.bitName,opts.bitType,movement);
+  const attack=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(rpm,"attack");
+  const stable=stableOrbitBase(movement,center)*orbitRpmFactor(rpm,"stable");
+  let home;
+  let attackWeight;
+
+  if(klass==="attack"){
+    home=Math.max(0.18,Math.min(0.66,attack));
+    attackWeight=1;
+  }else if(klass==="hybrid"){
+    const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
+    home=Math.max(0.14,Math.min(0.52,stable*(1-mix)+attack*mix));
+    attackWeight=mix;
+  }else if(klass==="gimmick"){
+    const mix=0.14+0.72*gimmick;
+    const openRpm=Math.max(rpm,0.50+0.50*gimmick);
+    const attackOpen=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(openRpm,"attack");
+    home=Math.max(0.10,Math.min(0.58,stable*(1-mix)+attackOpen*mix));
+    attackWeight=mix;
+  }else{
+    home=Math.max(0.08,Math.min(0.20,stable));
+    attackWeight=0.08;
   }
-  return 0.070*(0.48+0.52*spin);
+
+  const omega=
+    (0.056*(1-attackWeight)+0.084*attackWeight)*
+    (0.54+0.46*rpm);
+
+  return {
+    class:klass,
+    attackWeight,
+    home,
+    omega,
+    slopeGain:0.16-0.04*attackWeight,
+    radialFollow:0.24+0.10*attackWeight,
+    radialBleed:0.988-0.008*attackWeight
+  };
+}
+
+function homeOrbitRadius(movement,centerAffinity,bitStability,rpm,opts){
+  return bitOrbitProfile(Object.assign({
+    movement,centerAffinity,bitStability,rpm
+  },opts||{})).home;
+}
+
+function orbitOmega(movement,rpm,opts){
+  return bitOrbitProfile(Object.assign({
+    movement,rpm
+  },opts||{})).omega;
 }
 
 function step(s,dt,ctx){
@@ -133,12 +183,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.82,
+        (s.impactMomentumState||0)-dt*0.48,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.85*s.impactMomentumState;
+    1-0.92*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -160,10 +210,20 @@ const mobilityStat=
 const mobilityResponse=
     0.55+0.45*clamp(mobilityStat/100,0,1);
 
-const preferredRadius=
-    homeOrbitRadius(movement,centerAffinity,bitStability,rpm);
-
-const omega=orbitOmega(movement,rpm);
+const orbit=bitOrbitProfile({
+    movement,
+    centerAffinity,
+    bitStability,
+    rpm,
+    bitName:ctx.bitName||s.bitName||(s.bit&&s.bit.name)||"",
+    bitType:ctx.bitType||s.bitType||(s.bit&&s.bit.type)||"",
+    attackGimmick:Number.isFinite(ctx.attackGimmick)
+        ? ctx.attackGimmick
+        : (Number(s.dynamicBitAggression)||0)
+});
+const preferredRadius=orbit.home;
+const omega=orbit.omega;
+const attackWeight=orbit.attackWeight;
 
 let targetOrbitSpeed=Math.max(0.0065,preferredRadius*omega);
 
@@ -248,35 +308,52 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
-const radialGain=isAttackBit(movement)?0.58:0.78;
-const holdR=Math.max(0.08,rNow);
-const discreteOutward=
-    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
-const desiredRadialSpeed=
-    clamp(
-        (preferredRadius-rNow)*radialGain-discreteOutward,
-        -0.020,
-        0.010
-    );
-
 const inImpact=(s.impactMomentumState||0)>0.22;
-const tangentFollow=inImpact?0.08:0.55;
-const radialFollow=inImpact?0.10:0.62;
+const holdR=Math.max(0.08,rNow);
+const tangentFollow=inImpact?0.06:0.42;
+const radialFollow=inImpact?0.04:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
     (0.85+control*0.15);
+const tangentBlend=clamp(tangentFollow*follow,0,0.70);
+const radialBlend=clamp(radialFollow*follow,0,0.78);
 
 const currentTangent=s.vx*tangentX+s.vy*tangentY;
 const currentRadial=s.vx*radialX+s.vy*radialY;
+/*
+  Stadium bowl: a gentle slope toward the home ring, not a magnet.
+  Knockback / wall bounce keep their inward or outward speed. We only
+  add a little slope when the Bey is sitting wide without already
+  falling in. holdFix cancels Euler outward so a wide Attack ring
+  stays a ring instead of walking to the wall.
+*/
+const slopeGain=orbit.slopeGain;
+const eulerOut=
+    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
+const holdFix=(!inImpact && radialBlend>0.08)
+    ? ((1-radialBlend)/Math.max(radialBlend,0.08))*eulerOut
+    : 0;
+let slope=(preferredRadius-rNow)*(inImpact?0.02:slopeGain);
+if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
+    slope*=0.22;
+}
+let desiredRadialSpeed=clamp(
+    clamp(slope,-0.012,0.008)-holdFix,
+    -0.024,
+    0.010
+);
+
 const newTangent=
     currentTangent+
     (targetOrbitSpeed-currentTangent)*
-    clamp(tangentFollow*follow,0,0.70);
-const newRadial=
-    currentRadial+
-    (desiredRadialSpeed-currentRadial)*
-    clamp(radialFollow*follow,0,0.78);
+    tangentBlend;
+const radialBleed=orbit.radialBleed;
+const newRadial=inImpact
+    ? currentRadial*radialBleed+clamp((preferredRadius-rNow)*0.018,-0.0025,0.0020)
+    : currentRadial+
+      (desiredRadialSpeed-currentRadial)*
+      radialBlend;
 
 s.vx=tangentX*newTangent+radialX*newRadial;
 s.vy=tangentY*newTangent+radialY*newRadial;
@@ -294,7 +371,7 @@ s.vy=tangentY*newTangent+radialY*newRadial;
   Attack Bits keep their tangent — only a near-dead Attack bit
   gets a light trim, never enough to collapse the orbit into a line.
 */
-if(rpm<0.52 && movement<0.80){
+if(rpm<0.52 && attackWeight<0.70){
     const lowRpm=
         clamp(
             (0.52-rpm)/0.52,
@@ -318,7 +395,7 @@ if(rpm<0.52 && movement<0.80){
         s.vx=ix*rv+tvx*lateralDamp;
         s.vy=iy*rv+tvy*lateralDamp;
     }
-}else if(rpm<0.18 && movement>=0.80){
+}else if(rpm<0.18 && attackWeight>=0.70){
     const dying=clamp((0.18-rpm)/0.18,0,1);
     const currentR=Math.hypot(s.x,s.y);
     if(currentR>0.045){
@@ -598,10 +675,11 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.1.0",
+    version:"1.2.0",
     step,
     homeOrbitRadius,
-    orbitOmega
+    orbitOmega,
+    bitOrbitProfile
 };
 
 })(typeof window!=="undefined" ? window : globalThis);

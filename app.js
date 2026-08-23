@@ -4462,7 +4462,22 @@ function newPhysicsStep(s,dt){
             s.dynamicBitStaminaEfficiency=1;
         }
 
-        const attackBit = movement>=0.80;
+        const attackGimmick=dynamicBit?dynamicBit.aggression:0;
+        const bitName=s.bit?.name||"";
+        const bitType=s.bit?.type||"";
+        const orbitPreview=window.SpinWarsMovementEngine &&
+            typeof window.SpinWarsMovementEngine.bitOrbitProfile==="function"
+                ? window.SpinWarsMovementEngine.bitOrbitProfile({
+                    movement,
+                    centerAffinity,
+                    bitStability:(bp.stability||60)/100,
+                    rpm,
+                    bitName,
+                    bitType,
+                    attackGimmick
+                })
+                : {attackWeight:movement>=0.80?1:0};
+        const attackBit=orbitPreview.attackWeight>=0.70;
         const attackStat=getBattleStat(s,"attack");
         const knockbackStat=getBattleStat(s,"knockback");
         const attackSpeedBoost = 1;
@@ -4547,7 +4562,7 @@ function newPhysicsStep(s,dt){
           Do not accelerate up to a separate cruise target — that is what
           pushed Attack onto the X-Rail. Only bleed runaway leftover speed.
         */
-        const cruiseCap=attackBit?0.085:0.055;
+        const cruiseCap=0.052+0.036*(orbitPreview.attackWeight||0);
         if(!keepImpactSpeed && speedNow>cruiseCap){
             const excessRatio=newBattleClamp(
                 (speedNow-cruiseCap)/Math.max(speedNow,0.0001),
@@ -4881,7 +4896,10 @@ function newPhysicsStep(s,dt){
             bitFriction,
             bp,
             staminaEfficiency,
-            physicalSpeedTarget
+            physicalSpeedTarget,
+            bitName,
+            bitType,
+            attackGimmick
         });
     };
 function breakXRailFromImpact(s,nx,ny,force){
