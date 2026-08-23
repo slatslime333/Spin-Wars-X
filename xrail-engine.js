@@ -278,8 +278,8 @@ function chooseExitHeading(s,p){
  const exitEnergyFactor=1;
  // Leave the rail at the speed you actually carried. RPM already changed
  // ride friction; do not restack attack/RPM multipliers on the way out.
- const rawSpeed=railSpeed*(1-tilt*0.04);
- const exitSpeed=Math.min(0.16,Math.max(0.018,rawSpeed));
+ const rawSpeed=railSpeed*(1.06-tilt*0.03);
+ const exitSpeed=Math.min(0.19,Math.max(0.028,rawSpeed));
  /*
   * The X-Exit lane is the visual V into the bowl. Exit heading is that
   * lane, not a blend of the curling rail tangent (which pointed into the
@@ -347,8 +347,8 @@ function riderStep(s,dt){
  if(nearExit&&endpointDistance<=0.18){beginExitRamp(s,exitPoint);return true;}
  const tx=p.tx,ty=p.ty,tangentSpeed=s.vx*tx+s.vy*ty;if(!Number.isFinite(tangentSpeed)||tangentSpeed<=0.0020){release(s,"lost-tangent");return false;}
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
- const friction=(0.00016+(1-rpm)*0.00058-grip*0.00006)*dt*60;
- const railSpeed=Math.max(0.010,tangentSpeed-Math.max(0.00004,friction));
+ const friction=(0.00008+(1-rpm)*0.00032-grip*0.00008)*dt*60;
+ const railSpeed=Math.max(0.018,tangentSpeed-Math.max(0.00002,friction));
  s.vx=tx*railSpeed;s.vy=ty*railSpeed;s.x+=s.vx*dt*60;s.y+=s.vy*dt*60;
  const after=nearest(s.x,s.y);
  if(after){
@@ -396,6 +396,9 @@ function step(s,dt){
  }
  if(!Number.isFinite(s._xrailPrevX)){s._xrailPrevX=s.x;s._xrailPrevY=s.y;}
  const justRodeExit=!!s.railExited||(s.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0);
+ const inFinishOpening=
+  s.y>=0.56 &&
+  ((Math.abs(s.x)<=0.34 && s.y>=0.64) || Math.abs(s.x)>=0.44);
  const solid=sweptSolidContact(s);
  if(solid){
   const overlapping=solid.distance<=contactRadius(s);
@@ -409,7 +412,9 @@ function step(s,dt){
      return{active:true,state:"capture"};
     }
    }
-   bounce(s,solid);
+   if(!(inFinishOpening && (s.impactMomentumState||0)>0.18)){
+    bounce(s,solid);
+   }
    s._xrailPrevX=s.x;s._xrailPrevY=s.y;
    const p=nearestSolid(s.x,s.y);s._xrailSolidPrevDistance=p?Math.sqrt(Math.max(0,p.dist2)):Infinity;
    return{active:false,state:"free"};
@@ -425,5 +430,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"5.7-natural-rail",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"5.9-battle-feel",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);

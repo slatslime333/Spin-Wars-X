@@ -2601,13 +2601,13 @@ function newBattleLaunchState(side){
 
     const techniqueSpeed={
         Center:1.00,
-        "Direct Clash":1.10,
-        "X-Rail":1.00,
-        "Drop Launch":0.92
+        "Direct Clash":1.18,
+        "X-Rail":1.16,
+        "Drop Launch":0.96
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.0290+(stats.mobility||70)*0.000070)*
+        (0.0420+(stats.mobility||70)*0.000110)*
         qualityFactor*techniqueSpeed*tilt.speed;
 
     const tiltSign=side==="player"?-1:1;
@@ -3396,17 +3396,20 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.032) return null;
+    if(speed<0.026) return null;
 
-    const recentImpact=age<=520;
-    const recentRailExit=!!s.railExited && age<=700;
+    const recentImpact=age<=720;
+    const recentRailExit=!!s.railExited && age<=800;
 
     // Finishes need a real knock into the opening, not a graze or a
-    // slow drift. They should be available in a fight without needing
-    // a once-a-match super smash. X-Rail exit still uses stored rail speed.
-    const impactEntry=recentImpact && force>=0.012;
+    // slow drift. A knock that actually reaches the lower rim should
+    // be able to score. X-Rail exit still uses stored rail speed.
+    const impactEntry=recentImpact && force>=0.008;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.066 && (force>=0.0024 || railExitForce>=0.0024);
+    const railEntry=recentRailExit && speed>=0.052 && (force>=0.0020 || railExitForce>=0.0020);
+
+    const lip=s.finishLipContact||null;
+    if(s.finishLipContact) s.finishLipContact=null;
 
     // V55 FINISH QUALIFICATION
     // A Bey must actually enter the finish zone with meaningful momentum
@@ -3424,7 +3427,7 @@ function checkForcedStadiumFinish(s){
         s.y<=1.01 &&
         Math.abs(s.x)<=0.255;
 
-    const enteredXtreme=!wasXtreme && inXtreme;
+    const enteredXtreme=(!wasXtreme && inXtreme) || (lip && lip.zone==="Xtreme");
 
     if(enteredXtreme){
         const dx=-s.x;
@@ -3437,13 +3440,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.042 &&
-            alignment>=0.28;
+            speed>=0.032 &&
+            alignment>=0.16;
 
         const railQualified=
             railEntry &&
-            speed>=0.068 &&
-            alignment>=0.32;
+            speed>=0.052 &&
+            alignment>=0.22;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3463,10 +3466,11 @@ function checkForcedStadiumFinish(s){
 
     const enteredPocket=
         (!wasLeftPocket && leftPocket) ||
-        (!wasRightPocket && rightPocket);
+        (!wasRightPocket && rightPocket) ||
+        (lip && lip.zone==="Over");
 
     if(enteredPocket){
-        const targetX=leftPocket ? -0.84 : 0.84;
+        const targetX=(leftPocket || s.x<0) ? -0.84 : 0.84;
         const targetY=0.90;
         const dx=targetX-s.x;
         const dy=targetY-s.y;
@@ -3482,15 +3486,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.040 &&
-            outward>=0.0032 &&
-            alignment>=0.26;
+            speed>=0.030 &&
+            outward>=0.0018 &&
+            alignment>=0.12;
 
         const railQualified=
             railEntry &&
-            speed>=0.064 &&
-            outward>=0.0040 &&
-            alignment>=0.30;
+            speed>=0.048 &&
+            outward>=0.0024 &&
+            alignment>=0.18;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3500,6 +3504,18 @@ function checkForcedStadiumFinish(s){
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
             return "Over";
         }
+    }
+
+    if(typeof window!=="undefined" && (lip || enteredXtreme || enteredPocket)){
+        window.__SWX_FINISH=window.__SWX_FINISH||[];
+        window.__SWX_FINISH.push({
+            lip:lip&&lip.zone,
+            force:+force.toFixed(3),
+            speed:+speed.toFixed(3),
+            x:+s.x.toFixed(3),
+            y:+s.y.toFixed(3)
+        });
+        if(window.__SWX_FINISH.length>30) window.__SWX_FINISH.shift();
     }
 
     return null;
@@ -4493,8 +4509,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.0254+
-            (stats.mobility||70)*0.000060;
+            0.0385+
+            (stats.mobility||70)*0.000095;
 
         const rpmSpeedFactor=attackBit
             ? 0.28+0.72*Math.pow(rpm,0.70)
@@ -5158,7 +5174,7 @@ function newPhysicsCollision(dt){
     // Knockback stays one physical system: closing speed, Attack/KB stats,
     // and remaining RPM. No extra bit-pair or rail-exit multipliers.
     const extremeSpeedScale=
-        relativeSpeed>0.24 ? 0.24/relativeSpeed : 1;
+        relativeSpeed>0.40 ? 0.40/relativeSpeed : 1;
 
     const pRailBreakForce=cForce;
     const cRailBreakForce=pForce;
@@ -5176,23 +5192,23 @@ function newPhysicsCollision(dt){
         Math.max(0.12, Math.min(1, cSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const pKnockback=Math.min(
-        0.082,
+        0.128,
         Math.max(
-            0.0025+avgRPM*0.006,
-            (bounceSep*0.60+pSpinPower+pForce*0.014)*
+            0.0035+avgRPM*0.007,
+            (bounceSep*0.82+pSpinPower+pForce*0.022)*
             extremeSpeedScale*
-            (0.92+(1-cDef)*0.22)*
-            (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
+            (0.94+(1-cDef)*0.24)*
+            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
         )
     );
     const cKnockback=Math.min(
-        0.082,
+        0.128,
         Math.max(
-            0.0025+avgRPM*0.006,
-            (bounceSep*0.60+cSpinPower+cForce*0.014)*
+            0.0035+avgRPM*0.007,
+            (bounceSep*0.82+cSpinPower+cForce*0.022)*
             extremeSpeedScale*
-            (0.92+(1-pDef)*0.22)*
-            (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
+            (0.94+(1-pDef)*0.24)*
+            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
         )
     );
 
@@ -5219,9 +5235,9 @@ function newPhysicsCollision(dt){
     const pImpactMomentumState=
         newBattleClamp(
             Math.max(
-                pKnockback/0.016,
-                effectiveImpact/0.014,
-                0.62
+                pKnockback/0.018,
+                effectiveImpact/0.016,
+                0.68
             ),
             0,1
         );
@@ -5229,9 +5245,9 @@ function newPhysicsCollision(dt){
     const cImpactMomentumState=
         newBattleClamp(
             Math.max(
-                cKnockback/0.016,
-                effectiveImpact/0.014,
-                0.62
+                cKnockback/0.018,
+                effectiveImpact/0.016,
+                0.68
             ),
             0,1
         );
