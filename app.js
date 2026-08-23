@@ -3396,17 +3396,17 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.026) return null;
+    if(speed<0.030) return null;
 
-    const recentImpact=age<=720;
-    const recentRailExit=!!s.railExited && age<=800;
+    const recentImpact=age<=560;
+    const recentRailExit=!!s.railExited && age<=700;
 
-    // Finishes need a real knock into the opening, not a graze or a
-    // slow drift. A knock that actually reaches the lower rim should
-    // be able to score. X-Rail exit still uses stored rail speed.
-    const impactEntry=recentImpact && force>=0.008;
+    // Finishes need a committed knock into the opening. Light rim
+    // clips should not score; a real smash still can. X-Rail exit
+    // still uses stored rail speed.
+    const impactEntry=recentImpact && force>=0.011;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.052 && (force>=0.0020 || railExitForce>=0.0020);
+    const railEntry=recentRailExit && speed>=0.058 && (force>=0.0024 || railExitForce>=0.0024);
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3440,13 +3440,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.032 &&
-            alignment>=0.16;
+            speed>=0.038 &&
+            alignment>=0.24;
 
         const railQualified=
             railEntry &&
-            speed>=0.052 &&
-            alignment>=0.22;
+            speed>=0.060 &&
+            alignment>=0.28;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3486,15 +3486,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.030 &&
-            outward>=0.0018 &&
-            alignment>=0.12;
+            speed>=0.036 &&
+            outward>=0.0028 &&
+            alignment>=0.20;
 
         const railQualified=
             railEntry &&
-            speed>=0.048 &&
-            outward>=0.0024 &&
-            alignment>=0.18;
+            speed>=0.056 &&
+            outward>=0.0032 &&
+            alignment>=0.24;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -4530,7 +4530,7 @@ function newPhysicsStep(s,dt){
                     : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
-        const keepImpactSpeed=(s.impactMomentumState||0)>0.12;
+        const keepImpactSpeed=(s.impactMomentumState||0)>0.16;
 
         if(!keepImpactSpeed && rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
             const floor=attackBit?0.60:0.40;
