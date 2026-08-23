@@ -4818,11 +4818,8 @@ function newPhysicsStep(s,dt){
                 s.y<apexY+clearance
             ){
                 s.y=apexY+clearance;
-                const speed=Math.max(0.018,Math.hypot(s.vx,s.vy));
-                s.vx=0;
-                s.vy=speed;
+                if(s.vy<0)s.vy=Math.abs(s.vy)*0.46;
                 s.surfaceRecovery=0.10;
-                s.impactMomentumState=Math.max(s.impactMomentumState||0,0.88);
                 s.rpm=newBattleClamp(s.rpm-0.0010,0,1);
             }
         }
