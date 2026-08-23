@@ -2760,6 +2760,7 @@ function newBattleLaunchState(side){
         stats,blade:combo.blade,bit:combo.bit,
         launchPlan:plan,
         launchQuality:plan.quality,
+        launchSpeed,
         launchQualityRPM:qualityRPM,
         launchPlacementError:qualityPlacement,
         launchRpmLossMultiplier:tilt.rpm,
@@ -2826,6 +2827,42 @@ function newBattleLaunchState(side){
         surfaceBounce:0
     };
 }
+
+function applyDirectClashAim(self, other){
+    if(!self || !other) return;
+    if(self.launchPlan?.technique!=="Direct Clash") return;
+    const dx=other.x-self.x;
+    const dy=other.y-self.y;
+    const dist=Math.hypot(dx,dy)||0.001;
+    const quality=self.launchQuality || self.launchPlan?.quality || "Okay";
+    const missRad={
+        Perfect:0.04,
+        Great:0.07,
+        Good:0.10,
+        Okay:0.18,
+        Bad:0.30,
+        Poor:0.30,
+        Horrible:0.48,
+        Terrible:0.48
+    }[quality]||0.18;
+    const miss=(Math.random()*2-1)*missRad;
+    const ux=dx/dist;
+    const uy=dy/dist;
+    const cos=Math.cos(miss);
+    const sin=Math.sin(miss);
+    const ax=ux*cos-uy*sin;
+    const ay=ux*sin+uy*cos;
+    const speed=Math.max(Number(self.launchSpeed)||0, 0.028);
+    self.vx=ax*speed;
+    self.vy=ay*speed;
+    self.impactMomentumState=Math.max(Number(self.impactMomentumState)||0, 0.92);
+}
+
+function applyDirectClashLaunches(p, c){
+    applyDirectClashAim(p, c);
+    applyDirectClashAim(c, p);
+}
+
 function startNewBattle(){
     // This is the only function allowed to start the live physics loop.
     // Validate the shared direction convention before any physics runs so
@@ -2858,6 +2895,7 @@ function startNewBattle(){
     // that starts physical battle state.
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
+    applyDirectClashLaunches(NEW_BATTLE.player, NEW_BATTLE.cpu);
 
     Game.player.launch=Game.player.launch||{};
     Game.player.launch.angle=NEW_BATTLE.player.launchPlan.angle;
@@ -3377,7 +3415,9 @@ function checkForcedStadiumFinish(s){
 
     // Normal finishes are collision-driven. High speed alone is NOT enough.
     // This specifically reduces accidental/self-KOs.
-    const impactEntry=recentImpact && force>=0.0050;
+    // A finish needs a real smash, not a light tap that happens to
+    // drift into a pocket. X-Rail exit still has its own stored-momentum path.
+    const impactEntry=recentImpact && force>=0.028;
     const railExitForce=s.railExitForce||0;
     const railEntry=recentRailExit && speed>=0.078 && (force>=0.0028 || railExitForce>=0.0028);
 
@@ -3411,8 +3451,8 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.046 &&
-            alignment>=0.30;
+            speed>=0.055 &&
+            alignment>=0.38;
 
         const railQualified=
             railEntry &&
@@ -3455,9 +3495,9 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.044 &&
+            speed>=0.053 &&
             outward>=0.0044 &&
-            alignment>=0.30;
+            alignment>=0.38;
 
         const railQualified=
             railEntry &&
@@ -4997,12 +5037,12 @@ function newPhysicsCollision(dt){
 
     const pMomentum=
         pMass*
-        Math.max(pSpeed,0.006+pRPM*0.010)*
-        Math.max(0.38,Math.pow(Math.max(pRPM,0.22),0.62));
+        Math.max(pSpeed,pRPM*0.010)*
+        Math.max(0.08,Math.pow(Math.max(pRPM,0.05),0.85));
     const cMomentum=
         cMass*
-        Math.max(cSpeed,0.006+cRPM*0.010)*
-        Math.max(0.38,Math.pow(Math.max(cRPM,0.22),0.62));
+        Math.max(cSpeed,cRPM*0.010)*
+        Math.max(0.08,Math.pow(Math.max(cRPM,0.05),0.85));
 
     // Closing speed identifies who is actually driving into the contact.
     const pClosing=Math.max(0,-closing);
@@ -5011,13 +5051,13 @@ function newPhysicsCollision(dt){
     // Kinetic-energy-style term. Squared velocity makes a fast crash
     // substantially more energetic than a slow bump.
     const pKinetic=
-        0.5*pMass*Math.max(pSpeed*pSpeed,0.00012+pRPM*0.00018)*
-        (0.48+0.52*Math.max(pRPM,0.20))*
-        (1.10+0.20*pRPM);
+        0.5*pMass*Math.max(pSpeed*pSpeed,pRPM*0.00018)*
+        (0.22+0.78*pRPM)*
+        (1.00+0.18*pRPM);
     const cKinetic=
-        0.5*cMass*Math.max(cSpeed*cSpeed,0.00012+cRPM*0.00018)*
-        (0.48+0.52*Math.max(cRPM,0.20))*
-        (1.10+0.20*cRPM);
+        0.5*cMass*Math.max(cSpeed*cSpeed,cRPM*0.00018)*
+        (0.22+0.78*cRPM)*
+        (1.00+0.18*cRPM);
 
     // Tangential clashes still have real energy, but they are weaker than a
     // direct collision.
@@ -5040,13 +5080,13 @@ function newPhysicsCollision(dt){
     const bothParked=pParked&&cParked;
     const pSpinBite=
         (0.00052+pAttack*0.00070+pKB*0.00086)*
-        (0.30+0.70*Math.max(pRPM,0.22))*
-        (pParked?1.18:0.58)*
+        (0.12+0.88*pRPM)*
+        (pParked?0.72:1)*
         (bothParked?0.34:1);
     const cSpinBite=
         (0.00052+cAttack*0.00070+cKB*0.00086)*
-        (0.30+0.70*Math.max(cRPM,0.22))*
-        (cParked?1.18:0.58)*
+        (0.12+0.88*cRPM)*
+        (cParked?0.72:1)*
         (bothParked?0.34:1);
 
     const pEnergy=(
@@ -5126,34 +5166,8 @@ function newPhysicsCollision(dt){
         (0.84+heavyFactor*0.25)*
         hitRoll;
 
-    const pNonAttackType=
-        !["Flat","Rush","Low Flat","Low Rush","Kick","Quake"]
-            .includes(p.bit?.name);
-
-    const cNonAttackType=
-        !["Flat","Rush","Low Flat","Low Rush","Kick","Quake"]
-            .includes(c.bit?.name);
-
-    const bothNonAttackCollision=
-        pNonAttackType && cNonAttackType;
-
-    const attackBitNames=["Flat","Rush","Low Flat","Low Rush","Kick","Quake"];
-    const pAttackBit=attackBitNames.includes(p.bit?.name);
-    const cAttackBit=attackBitNames.includes(c.bit?.name);
-    const bothAttackCollision=pAttackBit&&cAttackBit;
-
-    const pDynamicBit=getDynamicBitBehavior(p.bit,p.rpm*100,p.stability*100,p.tiltLevel||0);
-    const cDynamicBit=getDynamicBitBehavior(c.bit,c.rpm*100,c.stability*100,c.tiltLevel||0);
-    const bitImpactMultiplier=(s,dynamic)=>{
-        const name=s.bit?.name;
-        if(name==="Point") return 0.96+(dynamic?.aggression||0)*0.14;
-        if(name==="Level") return 0.98+(dynamic?.aggression||0)*0.10;
-        return ["Flat","Rush","Low Flat","Low Rush","Kick","Quake"].includes(name) ? 1.42 : 1.08;
-    };
-    const pBitKnockbackMultiplier=bitImpactMultiplier(p,pDynamicBit);
-    const cBitKnockbackMultiplier=bitImpactMultiplier(c,cDynamicBit);
-    const nonAttackImpactMultiplier=bothNonAttackCollision ? 1.12 : 1.0;
-    const attackVsAttackImpactMultiplier=bothAttackCollision ? 1.06 : 1.0;
+    // Knockback stays one physical system: closing speed, Attack/KB stats,
+    // and remaining RPM. No extra bit-pair or rail-exit multipliers.
     const extremeSpeedScale=
         relativeSpeed>0.24 ? 0.24/relativeSpeed : 1;
 
@@ -5161,30 +5175,22 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const pRailExitBoost=
-        ((p.railExited||p.lastXRailResult==="x-exit") ? 1.22 : 1)*
-        (Number(p.railExitKnockbackMultiplier)||1);
-    const cRailExitBoost=
-        ((c.railExited||c.lastXRailResult==="x-exit") ? 1.22 : 1)*
-        (Number(c.railExitKnockbackMultiplier)||1);
     const bounceSep=Math.max(0,-closing)*(0.70+directness*0.30);
     const pSpinPower=
         (0.018+pAttack*0.024+pKB*0.026)*
-        (0.42+0.58*Math.max(pRPM,0.22))*
+        (0.18+0.82*pRPM)*
+        Math.max(0.12, Math.min(1, pSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const cSpinPower=
         (0.018+cAttack*0.024+cKB*0.026)*
-        (0.42+0.58*Math.max(cRPM,0.22))*
+        (0.18+0.82*cRPM)*
+        Math.max(0.12, Math.min(1, cSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const pKnockback=Math.min(
         0.082,
         Math.max(
-            0.016,
+            0.0025+avgRPM*0.006,
             (bounceSep*0.60+pSpinPower+pForce*0.014)*
-            pBitKnockbackMultiplier*
-            nonAttackImpactMultiplier*
-            attackVsAttackImpactMultiplier*
-            pRailExitBoost*
             extremeSpeedScale*
             (0.92+(1-cDef)*0.22)*
             (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
@@ -5193,12 +5199,8 @@ function newPhysicsCollision(dt){
     const cKnockback=Math.min(
         0.082,
         Math.max(
-            0.016,
+            0.0025+avgRPM*0.006,
             (bounceSep*0.60+cSpinPower+cForce*0.014)*
-            cBitKnockbackMultiplier*
-            nonAttackImpactMultiplier*
-            attackVsAttackImpactMultiplier*
-            cRailExitBoost*
             extremeSpeedScale*
             (0.92+(1-pDef)*0.22)*
             (1.04+newBattleClamp(momentumFactor/2.0,0,0.34))
@@ -5267,14 +5269,12 @@ function newPhysicsCollision(dt){
     const pFollow=
         followThrough*
         (0.84+0.24*pAttack)*
-        (0.82+0.20*pKB)*
-        attackVsAttackImpactMultiplier;
+        (0.82+0.20*pKB);
 
     const cFollow=
         followThrough*
         (0.84+0.24*cAttack)*
-        (0.82+0.20*cKB)*
-        attackVsAttackImpactMultiplier;
+        (0.82+0.20*cKB);
 
     p.vx+=tx*pFollow;
     p.vy+=ty*pFollow;
@@ -5406,11 +5406,9 @@ function newPhysicsCollision(dt){
         (0.88+cAttack*0.0016)*
         (0.92+cKB*0.0010);
 
-    const nonAttackRPMMultiplier=
-        (pNonAttackType && cNonAttackType) ? 1.08 : 1.0;
+    const nonAttackRPMMultiplier=1.0;
 
-    const attackVsAttackRPMMultiplier=
-        bothAttackCollision ? 0.92 : 1.0;
+    const attackVsAttackRPMMultiplier=1.0;
 
     /*
       X-Rail attacks get a controlled damage bonus because the rail supplies
@@ -5537,37 +5535,9 @@ function newPhysicsCollision(dt){
     c.rpm=newBattleClamp(c.rpm-pToCDamage,0,1);
     p.rpm=newBattleClamp(p.rpm-cToPDamage,0,1);
 
-    // Non-attack center clashes still matter: repeated contact has a real
-    // RPM cost instead of becoming an endless low-energy tapping match.
-    const attackBits=["Flat","Rush","Low Flat","Low Rush","Kick","Quake"];
-    const pIsNonAttack=!attackBits.includes(p.bit?.name);
-    const cIsNonAttack=!attackBits.includes(c.bit?.name);
-    const bothNonAttackBits=pIsNonAttack&&cIsNonAttack;
-
-    const centerCombatQuality=
-        bothNonAttackBits
-            ? 1.38+
-              ((pAttack+pKB+cAttack+cKB)/396)*0.74
-            : 1.0;
-
-    if(bothNonAttackBits){
-        const centerImpactBoost=centerCombatQuality;
-        p.vx-=nx*(cKnockback*(centerImpactBoost-1)*0.52);
-        p.vy-=ny*(cKnockback*(centerImpactBoost-1)*0.52);
-        c.vx+=nx*(cKnockback*(centerImpactBoost-1)*0.52);
-        c.vy+=ny*(cKnockback*(centerImpactBoost-1)*0.52);
-
-        __pExtraRpmLoss=cToPDamage*(centerImpactBoost-1)*0.52;
-        p.rpm=newBattleClamp(
-            p.rpm-__pExtraRpmLoss,
-            0,1
-        );
-        __cExtraRpmLoss=pToCDamage*(centerImpactBoost-1)*0.52;
-        c.rpm=newBattleClamp(
-            c.rpm-__cExtraRpmLoss,
-            0,1
-        );
-    }
+    // Non-attack vs non-attack still uses the same collision impulse.
+    // Extra shove/RPM here was making light stamina contacts feel bigger
+    // than attack-on-attack hits.
 
     const stabilityHit=
         0.004+

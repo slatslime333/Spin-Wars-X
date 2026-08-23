@@ -1,5 +1,5 @@
 /* SPIN WARS X — X-RAIL ENGINE
- * Version 5.5 — stronger combat and X-Rail exit knockback
+ * Version 5.7 — natural rail speed, catch from remaining momentum
  *
  * Riding still uses the open rail path and the X-Exit ramp.
  * Free Beys collide with a single closed bumper. The X-Exit closer
@@ -181,12 +181,14 @@ function sweptRailContact(s){return sweptContact(s,nearest,s._xrailPrevDistance)
 function sweptSolidContact(s){return sweptContact(s,nearestSolid,s._xrailSolidPrevDistance);}
 function captureDecision(s,p,contact){
  const c=getContact(s,p);
- if(!c||c.speed<0.007)return{ok:false,reason:"low-speed",contact:c};
+ // Catch from remaining CCW bite, not peak RPM. ~70% RPM with real
+ // speed/momentum should still hook; dead or too-direct hits still fail.
+ if(!c||c.speed<0.0040)return{ok:false,reason:"low-speed",contact:c};
  if(s.spinDirection!==1)return{ok:false,reason:"wrong-spin",contact:c};
  if(!contact?.impact)return{ok:false,reason:"no-rail-impact",contact:c};
- if(c.inward<0.0048)return{ok:false,reason:"weak-impact",contact:c};
- if(c.tangential<0.0055||c.tangentRatio<0.20)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
- if(c.approachRatio>0.93)return{ok:false,reason:"too-direct",contact:c};
+ if(c.inward<0.0026)return{ok:false,reason:"weak-impact",contact:c};
+ if(c.tangential<0.0032||c.tangentRatio<0.15)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
+ if(c.approachRatio>0.945)return{ok:false,reason:"too-direct",contact:c};
  if(c.tilt>0.38)return{ok:false,reason:"tilt-too-high",contact:c};
  return{ok:true,contact:c,grip:clamp(0.72+(1-c.tilt)*0.14+c.tangentRatio*0.10,0.72,0.96)};
 }
@@ -270,13 +272,14 @@ function optionalStat(s,names,def){
 }
 function chooseExitHeading(s,p){
  const speed=Math.hypot(s.vx,s.vy),railSpeed=Number(s.railSpeed)||speed,rpm=clamp01(s.rpm),tilt=clamp(Math.abs(Number(s.tiltLevel)||0),0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
- const balance=optionalStat(s,["balance","balanceStat"],0.70),attack=optionalStat(s,["attack","attackStat"],0.70),knockback=optionalStat(s,["knockback","knockbackStat"],0.70);
+ const balance=optionalStat(s,["balance","balanceStat"],0.70);
  const exit=exitRampGeometry();
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
- const attackRailFactor=clamp(1+attack*0.18+Math.max(0,railSpeed-0.075)*1.8,1,1.28);
- const exitEnergyFactor=clamp(1.08+quality*0.18,1.08,1.26);
- const rawSpeed=railSpeed*(1.12+rpm*0.08+attack*0.08+knockback*0.05-tilt*0.04)*exitEnergyFactor*attackRailFactor;
- const exitSpeed=Math.min(0.205,Math.max(0.028,rawSpeed));
+ const exitEnergyFactor=1;
+ // Leave the rail at the speed you actually carried. RPM already changed
+ // ride friction; do not restack attack/RPM multipliers on the way out.
+ const rawSpeed=railSpeed*(1-tilt*0.04);
+ const exitSpeed=Math.min(0.16,Math.max(0.018,rawSpeed));
  /*
   * The X-Exit lane is the visual V into the bowl. Exit heading is that
   * lane, not a blend of the curling rail tangent (which pointed into the
@@ -296,7 +299,7 @@ function beginExitRamp(s,p){
  s.xrailExitRampControl=control;s.xrailExitRampEnd=end;s.xrailExitForceCenter=false;
  s.xrailExitRampStartSpeed=Math.max(0.004,speed);s.xrailExitRampSpeed=heading.speed;
  s.xrailExitTarget=end;s.xrailExitTargetBias=0;s.railExitQuality=heading.quality;s.railExitEnergyFactor=heading.exitEnergyFactor;
- s.railExitKnockbackMultiplier=1+0.10*heading.quality;s.lastXRailResult="x-exit-ramp";s.railExitForce=heading.speed;
+ s.railExitKnockbackMultiplier=1;s.lastXRailResult="x-exit-ramp";s.railExitForce=heading.speed;
  return true;
 }
 function exitRampStep(s,dt){
@@ -344,15 +347,8 @@ function riderStep(s,dt){
  if(nearExit&&endpointDistance<=0.18){beginExitRamp(s,exitPoint);return true;}
  const tx=p.tx,ty=p.ty,tangentSpeed=s.vx*tx+s.vy*ty;if(!Number.isFinite(tangentSpeed)||tangentSpeed<=0.0020){release(s,"lost-tangent");return false;}
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
- const movementStat=clamp(Number(s.movement ?? s.stats?.movement ?? 0.70),0,1);
- const attackStat=clamp((Number(s.attack ?? s.stats?.attack ?? 70))/99,0,1);
- const attackRailFactor=clamp(1+(Math.max(0,movementStat-0.72)*0.70)+(Math.max(0,attackStat-0.70)*0.18),1,1.24);
- const ceiling=(0.058+0.055*rpm+0.022*grip)*attackRailFactor;
- const acceleration=(0.00065+0.00135*rpm*grip)*
-       (1+0.55*Math.max(0,attackRailFactor-1))*dt*60;
- const friction=(0.00010+(1-rpm)*0.00011)*dt*60;
- const targetSpeed=Math.min(ceiling,tangentSpeed+acceleration-friction);
- const railSpeed=Math.max(0.0020,targetSpeed);
+ const friction=(0.00016+(1-rpm)*0.00058-grip*0.00006)*dt*60;
+ const railSpeed=Math.max(0.010,tangentSpeed-Math.max(0.00004,friction));
  s.vx=tx*railSpeed;s.vy=ty*railSpeed;s.x+=s.vx*dt*60;s.y+=s.vy*dt*60;
  const after=nearest(s.x,s.y);
  if(after){
@@ -429,5 +425,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"5.5-stronger-knockback",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"5.7-natural-rail",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);
