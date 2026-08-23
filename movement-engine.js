@@ -18,7 +18,14 @@ function isAttackBit(movement){
 
 /*
   Home orbit radius is the ring this Bit wants at this RPM.
-  Attack stays wider than stamina at the same spin; nobody's home is the X-Rail.
+
+  Attack: flat tip, more stadium friction, starts wide (outer bowl / X-Rail
+  neighborhood) and only slowly walks in as spin dies — a few strong outer
+  laps, then mid-bowl, then an inner ring. It should not live on the rail
+  all battle, and it should not collapse to a center pin at 40% RPM.
+
+  Stamina: tighter than Attack at the same RPM, but still a real ring so
+  Attack cannot just rail-line a stationary target.
 */
 function homeOrbitRadius(movement,centerAffinity,bitStability,rpm){
   const stab=Number.isFinite(bitStability)?bitStability:0.60;
@@ -28,39 +35,38 @@ function homeOrbitRadius(movement,centerAffinity,bitStability,rpm){
 
   if(isAttackBit(move)){
     const base=
-      0.14+
-      (1-center)*0.32+
-      move*0.04+
-      (1-stab)*0.012;
+      0.48+
+      (1-center)*0.28+
+      move*0.06+
+      (1-stab)*0.02;
     const rpmFactor=
-      0.18+
-      0.82*Math.pow(Math.max(0.12,spin),1.25);
-    return Math.max(0.11,Math.min(0.38,base*rpmFactor));
+      0.22+
+      0.78*Math.pow(Math.max(0.12,spin),1.55);
+    return Math.max(0.16,Math.min(0.66,base*rpmFactor));
   }
 
   const base=
-    0.050+
-    center*0.055+
-    (1-move)*0.040+
-    stab*0.018;
-  const tightenPow=move<0.40?2.20:move<0.55?1.90:1.55;
+    0.072+
+    center*0.048+
+    (1-move)*0.038+
+    stab*0.016;
   const rpmFactor=
-    0.08+
-    0.92*Math.pow(Math.max(0.08,spin),tightenPow);
-  return Math.max(0.035,Math.min(0.22,base*rpmFactor));
+    0.42+
+    0.58*Math.pow(Math.max(0.12,spin),1.60);
+  return Math.max(0.08,Math.min(0.22,base*rpmFactor));
 }
 
 /*
   Angular rate for holding that ring: tangent speed = homeRadius * omega.
-  Independent cruise speed is what used to inflate Attack onto the rail.
+  Attack keeps more sweep so the wide laps feel aggressive. Stamina is slower.
 */
 function orbitOmega(movement,rpm){
   const move=Number.isFinite(movement)?movement:0.60;
   const spin=Math.max(0,Math.min(1,Number.isFinite(rpm)?rpm:1));
   if(isAttackBit(move)){
-    return 0.092*(0.50+0.50*spin);
+    return 0.084*(0.62+0.38*spin);
   }
-  return 0.070*(0.48+0.52*spin);
+  return 0.058*(0.52+0.48*spin);
 }
 
 function step(s,dt,ctx){
@@ -133,12 +139,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.82,
+        (s.impactMomentumState||0)-dt*0.48,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.85*s.impactMomentumState;
+    1-0.92*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -248,35 +254,52 @@ if(
   This gives us a real curved trajectory while preserving momentum and
   allowing collisions to take control immediately after impact.
 */
-const radialGain=isAttackBit(movement)?0.58:0.78;
-const holdR=Math.max(0.08,rNow);
-const discreteOutward=
-    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
-const desiredRadialSpeed=
-    clamp(
-        (preferredRadius-rNow)*radialGain-discreteOutward,
-        -0.020,
-        0.010
-    );
-
 const inImpact=(s.impactMomentumState||0)>0.22;
-const tangentFollow=inImpact?0.08:0.55;
-const radialFollow=inImpact?0.10:0.62;
+const holdR=Math.max(0.08,rNow);
+const tangentFollow=inImpact?0.06:0.42;
+const radialFollow=inImpact?0.04:(isAttackBit(movement)?0.34:0.24);
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
     (0.85+control*0.15);
+const tangentBlend=clamp(tangentFollow*follow,0,0.70);
+const radialBlend=clamp(radialFollow*follow,0,0.78);
 
 const currentTangent=s.vx*tangentX+s.vy*tangentY;
 const currentRadial=s.vx*radialX+s.vy*radialY;
+/*
+  Stadium bowl: a gentle slope toward the home ring, not a magnet.
+  Knockback / wall bounce keep their inward or outward speed. We only
+  add a little slope when the Bey is sitting wide without already
+  falling in. holdFix cancels Euler outward so a wide Attack ring
+  stays a ring instead of walking to the wall.
+*/
+const slopeGain=isAttackBit(movement)?0.12:0.16;
+const eulerOut=
+    (targetOrbitSpeed*targetOrbitSpeed)/holdR;
+const holdFix=(!inImpact && radialBlend>0.08)
+    ? ((1-radialBlend)/Math.max(radialBlend,0.08))*eulerOut
+    : 0;
+let slope=(preferredRadius-rNow)*(inImpact?0.02:slopeGain);
+if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
+    slope*=0.22;
+}
+let desiredRadialSpeed=clamp(
+    clamp(slope,-0.012,0.008)-holdFix,
+    -0.024,
+    0.010
+);
+
 const newTangent=
     currentTangent+
     (targetOrbitSpeed-currentTangent)*
-    clamp(tangentFollow*follow,0,0.70);
-const newRadial=
-    currentRadial+
-    (desiredRadialSpeed-currentRadial)*
-    clamp(radialFollow*follow,0,0.78);
+    tangentBlend;
+const radialBleed=isAttackBit(movement)?0.980:0.988;
+const newRadial=inImpact
+    ? currentRadial*radialBleed+clamp((preferredRadius-rNow)*0.018,-0.0025,0.0020)
+    : currentRadial+
+      (desiredRadialSpeed-currentRadial)*
+      radialBlend;
 
 s.vx=tangentX*newTangent+radialX*newRadial;
 s.vy=tangentY*newTangent+radialY*newRadial;
