@@ -4563,7 +4563,9 @@ function newPhysicsStep(s,dt){
           pushed Attack onto the X-Rail. Only bleed runaway leftover speed.
         */
         const cruiseCap=0.052+0.036*(orbitPreview.attackWeight||0);
-        if(!keepImpactSpeed && speedNow>cruiseCap){
+        const rNow=Math.hypot(s.x,s.y);
+        const nearRailRing=rNow>0.70 && rNow<0.90;
+        if(!keepImpactSpeed && !s.railEngaged && !s.xrailExitRampActive && !nearRailRing && speedNow>cruiseCap){
             const excessRatio=newBattleClamp(
                 (speedNow-cruiseCap)/Math.max(speedNow,0.0001),
                 0,

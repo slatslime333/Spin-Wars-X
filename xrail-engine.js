@@ -217,7 +217,7 @@ function engage(s,contact){
  const tangential=s.vx*p.tx+s.vy*p.ty;
  if(!Number.isFinite(tangential)||tangential<=0.0035){s.lastXRailResult="capture-lost-tangent";return false;}
  s.railEngaged=true;s.railExited=false;s.railDirection=1;s.railGrip=decision.grip;s.railContactPoint={x:p.x,y:p.y};
- s.railDistance=p.distance;s.railSpeed=tangential;s.railRideTime=0;s.railTravelDistance=0;s._xrailLastDistance=p.distance;s._xrailPrevDistance=p.distance;
+ s.railDistance=p.distance;s.railSpeed=Math.max(0.042,tangential);s.railRideTime=0;s.railTravelDistance=0;s._xrailLastDistance=p.distance;s._xrailPrevDistance=p.distance;
  s.railUses=(s.railUses||0)+1;s.lastXRailResult="capture";
  const gap=contactRadius(s),nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
  if(p.distance<gap&&len>1e-8){const push=gap-p.distance;s.x+=(nx/len)*push;s.y+=(ny/len)*push;}
@@ -387,14 +387,20 @@ function riderStep(s,dt){
  const g=buildGeometry(),p=nearest(s.x,s.y);if(!p){release(s,"no-geometry");return false;}
  const radius=beyRadius(s),distance=Math.sqrt(Math.max(0,p.dist2)),contactLimit=radius+RAIL_HALF_WIDTH+0.012;
  if(distance>contactLimit){release(s,"lost-contact");return false;}
- const lastDistance=s._xrailLastDistance;if(Number.isFinite(lastDistance)&&p.distance<lastDistance-0.040){release(s,"lost-forward-progress");return false;}
+ const lastDistance=s._xrailLastDistance;if(Number.isFinite(lastDistance)&&p.distance<lastDistance-0.12){release(s,"lost-forward-progress");return false;}
  const exitPoint=g.rightExit,endpointDistance=Math.hypot(s.x-exitPoint.x,s.y-exitPoint.y);
  const nearExit=p.distance>=g.total-0.16;
  if(nearExit&&endpointDistance<=0.18){beginExitRamp(s,exitPoint);return true;}
- const tx=p.tx,ty=p.ty,tangentSpeed=s.vx*tx+s.vy*ty;if(!Number.isFinite(tangentSpeed)||tangentSpeed<=0.0020){release(s,"lost-tangent");return false;}
+ const tx=p.tx,ty=p.ty,tangentSpeed=s.vx*tx+s.vy*ty;
+ const carried=Math.max(
+  Number.isFinite(tangentSpeed)?tangentSpeed:0,
+  Number(s.railSpeed)||0
+ );
+ if(!Number.isFinite(carried)||carried<=0.0020){release(s,"lost-tangent");return false;}
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
  const friction=(0.00008+(1-rpm)*0.00032-grip*0.00008)*dt*60;
- const railSpeed=Math.max(0.018,tangentSpeed-Math.max(0.00002,friction));
+ const railSpeed=Math.max(0.042,carried-Math.max(0.00002,friction));
+ s.railSpeed=railSpeed;
  const travel=railSpeed*dt*60;
  const steps=Math.max(1,Math.ceil(travel/RIDE_MAX_STEP));
  const stepTravel=travel/steps;
@@ -404,8 +410,6 @@ function riderStep(s,dt){
   if(!now){release(s,"no-geometry");return false;}
   const nowDist=Math.sqrt(Math.max(0,now.dist2));
   if(nowDist>contactLimit){release(s,"lost-contact");return false;}
-  const nowTangent=s.vx*now.tx+s.vy*now.ty;
-  if(!Number.isFinite(nowTangent)||nowTangent<=0.0020){release(s,"lost-tangent");return false;}
   s.vx=now.tx*railSpeed;s.vy=now.ty*railSpeed;
   s.x+=now.tx*stepTravel;s.y+=now.ty*stepTravel;
   const after=nearest(s.x,s.y);
