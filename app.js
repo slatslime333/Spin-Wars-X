@@ -3427,7 +3427,7 @@ function checkForcedStadiumFinish(s){
         s.y<=1.01 &&
         Math.abs(s.x)<=0.255;
 
-    const enteredXtreme=(!wasXtreme && inXtreme) || (lip && lip.zone==="Xtreme");
+    const enteredXtreme=(!wasXtreme && inXtreme);
 
     if(enteredXtreme){
         const dx=-s.x;
@@ -3466,8 +3466,7 @@ function checkForcedStadiumFinish(s){
 
     const enteredPocket=
         (!wasLeftPocket && leftPocket) ||
-        (!wasRightPocket && rightPocket) ||
-        (lip && lip.zone==="Over");
+        (!wasRightPocket && rightPocket);
 
     if(enteredPocket){
         const targetX=(leftPocket || s.x<0) ? -0.84 : 0.84;

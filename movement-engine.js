@@ -82,12 +82,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.46,
+        (s.impactMomentumState||0)-dt*0.82,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.97*s.impactMomentumState;
+    1-0.85*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -265,7 +265,7 @@ const preferredRadius=
     clamp(
         baseOrbitRadius*rpmRadiusFactor,
         movement>=0.80 ? 0.11 : 0.048,
-        movement>=0.80 ? 0.58 : 0.34
+        movement>=0.80 ? 0.44 : 0.34
     );
 
 /*
@@ -393,13 +393,13 @@ if(
   allowing collisions to take control immediately after impact.
 */
 const radialGain=movement>=0.80
-    ? 0.22+(1-rpm)*0.20
+    ? 0.30+rpm*0.16
     : 0.46;
 const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
-        movement>=0.80 ? -0.026 : -0.038,
-        movement>=0.80 ? 0.020 : 0.028
+        movement>=0.80 ? -0.032 : -0.038,
+        movement>=0.80 ? 0.024 : 0.028
     );
 
 const desiredVX=
@@ -528,12 +528,14 @@ if(radius>wall){
       Finish openings sit on the lower rim. A real outward knock that
       reaches that lip can leave the bowl; a normal orbit still bounces.
     */
-    const inXtremeGate=s.y>=0.64 && Math.abs(s.x)<=0.34;
-    const inPocketGate=s.y>=0.56 && Math.abs(s.x)>=0.44;
+    const inXtremeGate=s.y>=0.62 && Math.abs(s.x)<=0.22;
+    const inPocketGate=s.y>=0.58 && Math.abs(s.x)>=0.50;
     const finishEscape=
-        outward>0.010 &&
+        outward>0.012 &&
+        radius>=0.72 &&
         radius<=1.08 &&
-        (s.impactMomentumState||0)>0.18 &&
+        (s.lastImpactForce||0)>=0.011 &&
+        (s.impactMomentumState||0)>0.45 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){
