@@ -1,10 +1,11 @@
 /* SPIN WARS X — X-RAIL ENGINE
- * Version 4.3 — physical rail contact / authored SVG path / momentum exit
+ * Version 4.5 — X-Exit lane follow / natural exit-face bounce
  *
- * The rail geometry, capture rules, riding model, and exit path are kept
- * from the working 4.2 system. 4.3 only changes earned exit energy:
- * a better rail ride carries a little more physical velocity through the
- * exit ramp. There is no direct damage/knockback multiplier.
+ * Capture, riding, and rail-wall bounce are unchanged from 4.4.
+ * 4.5 only fixes the X-Exit:
+ *   - riders follow the visual X-Exit lane into the bowl (no heading wiggle)
+ *   - free Beys bounce off the inner X-Exit lip toward the interior
+ *     with no funnel guides, throat slider, or extra inward steering
  */
 (function(global){
 "use strict";
@@ -68,30 +69,21 @@ function exitRampGeometry(){
  const g=buildGeometry();
  const a=g.leftExit,b=g.rightExit;
  const mx=(a.x+b.x)*0.5,my=(a.y+b.y)*0.5;
- const cx=0,cy=0;
- const centerLen=Math.hypot(cx-mx,cy-my)||1;
- const ix=(cx-mx)/centerLen,iy=(cy-my)/centerLen;
+ const centerLen=Math.hypot(-mx,-my)||1;
+ const ix=-mx/centerLen,iy=-my/centerLen;
  /*
-  * The physical X-Exit is the open mouth between the two rail ends.
-  * The short guide surfaces on either side funnel impacts toward the
-  * stadium interior. This is deliberately separate from the rail path:
-  * free Beys collide with the ramp but never become rail riders.
+  * Visual X-Exit inner lip (SVG apex at 50,21). Free Beys bounce off
+  * this inward-facing bumper. Riders do not use it; they follow the
+  * authored exit lane through the V.
   */
- const guideLength=0.34;
- const leftGuide={
-   a:{x:a.x,y:a.y},
-   b:{x:a.x+ix*guideLength,y:a.y+iy*guideLength}
+ const apex=toGame([50,21.0]);
+ const half=0.11;
+ const innerLip={
+   a:{x:apex.x-half,y:apex.y},
+   b:{x:apex.x+half,y:apex.y}
  };
- const rightGuide={
-   a:{x:b.x,y:b.y},
-   b:{x:b.x+ix*guideLength,y:b.y+iy*guideLength}
- };
- const throat={
-   a:{x:mx-0.08*ix,y:my-0.08*iy},
-   b:{x:mx+ix*0.24,y:my+iy*0.24}
- };
- return {left:a,right:b,mid:{x:mx,y:my},inward:{x:ix,y:iy},
-   guides:[leftGuide,rightGuide],throat};
+ return {left:a,right:b,mid:{x:mx,y:my},apex,inward:{x:ix,y:iy},
+   faces:[innerLip]};
 }
 function closestPointOnSegment(x,y,a,b){
  const abx=b.x-a.x,aby=b.y-a.y,ab2=abx*abx+aby*aby;
@@ -101,15 +93,15 @@ function closestPointOnSegment(x,y,a,b){
  return {x:px,y:py,t,dist2:(x-px)**2+(y-py)**2};
 }
 function exitSurfaceContact(s){
- const g=exitRampGeometry(),radius=beyRadius(s)+RAIL_HALF_WIDTH+0.010;
+ const g=exitRampGeometry(),radius=beyRadius(s)+RAIL_HALF_WIDTH+0.006;
  let best=null;
- for(const seg of g.guides.concat([g.throat])){
+ for(const seg of g.faces){
    const q=closestPointOnSegment(s.x,s.y,seg.a,seg.b);
    if(q.dist2<=radius*radius && (!best||q.dist2<best.dist2)){
      const dx=seg.b.x-seg.a.x,dy=seg.b.y-seg.a.y,len=Math.hypot(dx,dy)||1;
      const tx=dx/len,ty=dy/len;
      let nx=-ty,ny=tx;
-     const toCenterX=-q.x,toCenterY=-q.y,tl=Math.hypot(toCenterX,toCenterY)||1;
+     const toCenterX=-q.x,toCenterY=-q.y;
      if(nx*toCenterX+ny*toCenterY<0){nx=-nx;ny=-ny;}
      best={...q,tx,ty,nx,ny,distance:Math.sqrt(q.dist2),inwardX:g.inward.x,inwardY:g.inward.y};
    }
@@ -117,27 +109,27 @@ function exitSurfaceContact(s){
  if(!best)return null;
  const normalVelocity=s.vx*best.nx+s.vy*best.ny;
  const centerVelocity=s.vx*g.inward.x+s.vy*g.inward.y;
- const actualImpact=normalVelocity<0;
+ const actualImpact=normalVelocity<-0.0008;
  return {...best,normalVelocity,centerVelocity,actualImpact};
 }
 function bounceFromExit(s,c){
  if(!s||!c||!c.actualImpact)return false;
- const restitution=0.62;
+ const restitution=0.58;
  const n=c.normalVelocity;
- s.vx-=c.nx*n;
- s.vy-=c.ny*n;
- s.vx+=c.nx*(-n*restitution);
- s.vy+=c.ny*(-n*restitution);
+ s.vx-=c.nx*n*(1+restitution);
+ s.vy-=c.ny*n*(1+restitution);
  /*
-  * The ramp points inward. Preserve tangential momentum and add only a
-  * small inward bias from the physical slope. Never aim at a fixed
-  * center coordinate and never engage the rail state.
+  * Reflect off the visual X-Exit face only. Keep tangential speed.
+  * Do not add an extra inward boost and do not aim at (0,0).
+  * If the remaining velocity would still carry the Bey out the gap,
+  * cancel just that outward component — the plastic is closed there.
   */
- const speed=Math.hypot(s.vx,s.vy)||0;
- const inwardBoost=Math.min(0.010,speed*0.14);
- s.vx+=c.inwardX*inwardBoost;
- s.vy+=c.inwardY*inwardBoost;
- const push=contactRadius(s)-c.distance;
+ const outward=-(s.vx*c.inwardX+s.vy*c.inwardY);
+ if(outward>0){
+  s.vx+=c.inwardX*outward;
+  s.vy+=c.inwardY*outward;
+ }
+ const push=Math.max(0,(beyRadius(s)+RAIL_HALF_WIDTH+0.004)-c.distance);
  if(push>0){s.x+=c.nx*push;s.y+=c.ny*push;}
  s.lastXRailResult="exit-surface-bounce";
  s.railExitSurfaceHit=true;
@@ -263,45 +255,61 @@ function optionalStat(s,names,def){
 function chooseExitHeading(s,p){
  const speed=Math.hypot(s.vx,s.vy),railSpeed=Number(s.railSpeed)||speed,rpm=clamp01(s.rpm),tilt=clamp(Math.abs(Number(s.tiltLevel)||0),0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
  const balance=optionalStat(s,["balance","balanceStat"],0.70),attack=optionalStat(s,["attack","attackStat"],0.70),knockback=optionalStat(s,["knockback","knockbackStat"],0.70);
- const centerX=-p.x,centerY=-p.y,centerLen=Math.hypot(centerX,centerY)||1,centerDir={x:centerX/centerLen,y:centerY/centerLen},tangent={x:p.tx,y:p.ty};
- const interiorWeight=clamp(0.68+rpm*0.10+grip*0.10+balance*0.08+Math.min(railSpeed/0.075,1)*0.06-tilt*0.16,0.56,0.92);
- let dx=tangent.x*(1-interiorWeight)+centerDir.x*interiorWeight,dy=tangent.y*(1-interiorWeight)+centerDir.y*interiorWeight;
+ const exit=exitRampGeometry();
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
- const spread=0.22+(1-quality)*0.38+(attack*0.5+knockback*0.5)*0.12+tilt*0.18;
- const seedBase=(hashString(s.name||s.comboName||s.id||s.beyName||"xrail")+hashString(`${Math.round(railSpeed*10000)}:${Math.round((s.railUses||0)+1)}`)*0.71)%1;
- const randomBias=Math.sin(seedBase*Math.PI*2*3.17+0.91);
- const mouthOffset=clamp((s.x-p.x)*2.2,-1,1),lateral={x:-centerDir.y,y:centerDir.x};
- const lateralAmount=clamp(randomBias*spread+mouthOffset*0.18+(tangent.x*centerDir.y-tangent.y*centerDir.x)*0.08,-0.68,0.68);
- dx+=lateral.x*lateralAmount;dy+=lateral.y*lateralAmount;
- let len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;
- if(dy<0.08){dx*=0.82;dy=Math.abs(dy)+0.22;len=Math.hypot(dx,dy)||1;dx/=len;dy/=len;}
  const attackRailFactor=clamp(1+attack*0.12+Math.max(0,railSpeed-0.075)*1.6,1,1.20);
  const exitEnergyFactor=clamp(1.03+quality*0.14,1.03,1.17);
  const rawSpeed=railSpeed*(1.04+rpm*0.06+attack*0.055+knockback*0.025-tilt*0.05)*exitEnergyFactor*attackRailFactor;
  const exitSpeed=Math.min(0.160,Math.max(0.018,rawSpeed));
- return{x:dx,y:dy,speed:exitSpeed,lateralAmount,quality,spread,seed:seedBase,exitEnergyFactor};
+ /*
+  * The X-Exit lane is the visual V into the bowl. Exit heading is that
+  * lane, not a blend of the curling rail tangent (which pointed into the
+  * gap and caused the leftward wiggle).
+  */
+ return{x:exit.inward.x,y:exit.inward.y,speed:exitSpeed,lateralAmount:0,quality,spread:0,seed:0,exitEnergyFactor};
 }
 function beginExitRamp(s,p){
  if(s.xrailExitRampActive)return true;
  const heading=chooseExitHeading(s,p),speed=Math.hypot(s.vx,s.vy);
- const rampTime=clamp(0.105+(1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.065+Math.abs(Number(s.tiltLevel)||0)*0.025,0.10,0.20);
- s.xrailExitRampActive=true;s.xrailExitRampTime=0;s.xrailExitRampDuration=rampTime;s.xrailExitRampStart={x:s.x,y:s.y};s.xrailExitRampHeading=heading;
+ const exit=exitRampGeometry();
+ const rampTime=clamp(0.09+(1-clamp01((Number(s.railSpeed)||speed)/0.075))*0.04,0.09,0.14);
+ const start={x:s.x,y:s.y};
+ const end={x:exit.apex.x+exit.inward.x*0.10,y:exit.apex.y+exit.inward.y*0.10};
+ const control={x:start.x*0.22+end.x*0.78,y:start.y*0.55+end.y*0.45};
+ s.xrailExitRampActive=true;s.xrailExitRampTime=0;s.xrailExitRampDuration=rampTime;s.xrailExitRampStart=start;s.xrailExitRampHeading=heading;
+ s.xrailExitRampControl=control;s.xrailExitRampEnd=end;
  s.xrailExitRampStartSpeed=Math.max(0.004,speed);s.xrailExitRampSpeed=heading.speed;
- s.xrailExitTarget={x:s.x+heading.x*heading.speed*rampTime*1.8,y:s.y+heading.y*heading.speed*rampTime*1.8};
- s.xrailExitTargetBias=heading.lateralAmount;s.railExitQuality=heading.quality;s.railExitEnergyFactor=heading.exitEnergyFactor;
+ s.xrailExitTarget=end;s.xrailExitTargetBias=0;s.railExitQuality=heading.quality;s.railExitEnergyFactor=heading.exitEnergyFactor;
  s.railExitKnockbackMultiplier=1+0.10*heading.quality;s.lastXRailResult="x-exit-ramp";s.railExitForce=heading.speed;
  return true;
 }
 function exitRampStep(s,dt){
  const heading=s.xrailExitRampHeading;
- if(!heading){s.xrailExitRampActive=false;release(s,"x-exit");return false;}
- const duration=Math.max(0.08,Number(s.xrailExitRampDuration)||0.14);
+ const start=s.xrailExitRampStart,control=s.xrailExitRampControl,end=s.xrailExitRampEnd;
+ if(!heading||!start||!control||!end){s.xrailExitRampActive=false;release(s,"x-exit");return false;}
+ const duration=Math.max(0.08,Number(s.xrailExitRampDuration)||0.11);
  s.xrailExitRampTime=(s.xrailExitRampTime||0)+dt;const t=clamp(s.xrailExitRampTime/duration,0,1);
- const startSpeed=Math.max(0.004,Number(s.xrailExitRampStartSpeed)||0.004),targetSpeed=Math.max(startSpeed,Number(s.xrailExitRampSpeed)||startSpeed),smooth=t*t*(3-2*t);
- let vx0=s.vx,vy0=s.vy,v0=Math.hypot(vx0,vy0)||startSpeed;vx0/=v0;vy0/=v0;
- let dx=vx0*(1-smooth)+heading.x*smooth,dy=vy0*(1-smooth)+heading.y*smooth,dlen=Math.hypot(dx,dy)||1;dx/=dlen;dy/=dlen;
- const speed=startSpeed+(targetSpeed-startSpeed)*smooth;s.vx=dx*speed;s.vy=dy*speed;s.x+=s.vx*dt*60;s.y+=s.vy*dt*60;s.railSpeed=speed;s.lastXRailResult="x-exit-ramp";
- if(t>=1){s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;s.xrailExitRampActive=false;s.lastXRailResult="x-exit";release(s,"x-exit");s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;s.railExitForce=targetSpeed;s.railExitVector={x:heading.x,y:heading.y};s.railExitBias=heading.lateralAmount;s.railExitRampCompleted=true;return false;}
+ const smooth=t*t*(3-2*t);
+ const u=1-smooth;
+ const x=u*u*start.x+2*u*smooth*control.x+smooth*smooth*end.x;
+ const y=u*u*start.y+2*u*smooth*control.y+smooth*smooth*end.y;
+ const dx=2*u*(control.x-start.x)+2*smooth*(end.x-control.x);
+ const dy=2*u*(control.y-start.y)+2*smooth*(end.y-control.y);
+ let dlen=Math.hypot(dx,dy)||1;
+ let hx=dx/dlen,hy=dy/dlen;
+ if(hx*heading.x+hy*heading.y<0.15){hx=heading.x;hy=heading.y;}
+ const startSpeed=Math.max(0.004,Number(s.xrailExitRampStartSpeed)||0.004);
+ const targetSpeed=Math.max(startSpeed,Number(s.xrailExitRampSpeed)||startSpeed);
+ const speed=startSpeed+(targetSpeed-startSpeed)*smooth;
+ s.x=x;s.y=y;s.vx=hx*speed;s.vy=hy*speed;s.railSpeed=speed;s.lastXRailResult="x-exit-ramp";
+ if(t>=1){
+  s.xrailExitRampActive=false;s.lastXRailResult="x-exit";
+  release(s,"x-exit");
+  s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;
+  s.railExitForce=targetSpeed;s.railExitVector={x:heading.x,y:heading.y};s.railExitBias=0;s.railExitRampCompleted=true;
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.88);
+  return false;
+ }
  return true;
 }
 function riderStep(s,dt){
@@ -310,9 +318,9 @@ function riderStep(s,dt){
  const radius=beyRadius(s),distance=Math.sqrt(Math.max(0,p.dist2)),contactLimit=radius+RAIL_HALF_WIDTH+0.012;
  if(distance>contactLimit){release(s,"lost-contact");return false;}
  const lastDistance=s._xrailLastDistance;if(Number.isFinite(lastDistance)&&p.distance<lastDistance-0.040){release(s,"lost-forward-progress");return false;}
- const exitPoint=g.rightExit,endpointDistance=Math.hypot(s.x-exitPoint.x,s.y-exitPoint.y),nearExit=p.distance>=g.total-0.22,exitForward=s.vx*exitPoint.tx+s.vy*exitPoint.ty,speed=Math.hypot(s.vx,s.vy);
- const centerX=-exitPoint.x,centerY=-exitPoint.y,centerLen=Math.hypot(centerX,centerY)||1,centerDot=(s.vx*(centerX/centerLen)+s.vy*(centerY/centerLen))/Math.max(speed,0.0001);
- if(nearExit&&endpointDistance<=0.28&&exitForward>0.004&&centerDot>0.25){beginExitRamp(s,exitPoint);return true;}
+ const exitPoint=g.rightExit,endpointDistance=Math.hypot(s.x-exitPoint.x,s.y-exitPoint.y);
+ const nearExit=p.distance>=g.total-0.16;
+ if(nearExit&&endpointDistance<=0.18){beginExitRamp(s,exitPoint);return true;}
  const tx=p.tx,ty=p.ty,tangentSpeed=s.vx*tx+s.vy*ty;if(!Number.isFinite(tangentSpeed)||tangentSpeed<=0.0020){release(s,"lost-tangent");return false;}
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
  const movementStat=clamp(Number(s.movement ?? s.stats?.movement ?? 0.70),0,1);
@@ -342,8 +350,13 @@ function step(s,dt){
  }
  if((s.railExitRefractory||0)>0)s.railExitRefractory=Math.max(0,s.railExitRefractory-dt);
  if((s.railCaptureCooldown||0)>0)s.railCaptureCooldown=Math.max(0,s.railCaptureCooldown-dt);
+ if(s.railExitSurfaceHit){
+  s.railExitSurfaceHitTime=(s.railExitSurfaceHitTime||0)+dt;
+  if(s.railExitSurfaceHitTime>0.22)s.railExitSurfaceHit=false;
+ }
  if(!Number.isFinite(s._xrailPrevX)){s._xrailPrevX=s.x;s._xrailPrevY=s.y;}
- const exitSurface=exitSurfaceContact(s);
+ const justRodeExit=!!s.railExited||(s.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0);
+ const exitSurface=justRodeExit?null:exitSurfaceContact(s);
  if(exitSurface?.actualImpact){
    bounceFromExit(s,exitSurface);
  }else{
@@ -361,5 +374,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),exitSurface=exitSurfaceContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,exitSurfaceContact:!!exitSurface,exitSurfaceImpact:!!exitSurface?.actualImpact,exitSurfaceDistance:exitSurface?.distance??null,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"4.4-exit-surface-and-attack-momentum",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
+global.SpinWarsXRailEngine={version:"4.5-smooth-x-exit",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect};
 })(window);
