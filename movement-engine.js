@@ -82,12 +82,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*1.55,
+        (s.impactMomentumState||0)-dt*0.62,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.88*s.impactMomentumState;
+    1-0.95*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -397,9 +397,9 @@ if(
 */
 const desiredRadialSpeed=
     clamp(
-        (preferredRadius-rNow)*0.42,
-        -0.028,
-        0.028
+        (preferredRadius-rNow)*0.18,
+        -0.014,
+        0.014
     );
 
 const desiredVX=
@@ -412,24 +412,24 @@ const desiredVY=
 
 const responseRate=
     (
-        0.055+
-        control*0.030+
-        bitPrecession*0.010+
-        movement*0.008
+        0.024+
+        control*0.014+
+        bitPrecession*0.006+
+        movement*0.004
     )*
-    (0.45+0.55*rpm)*
+    (0.40+0.60*rpm)*
     mobilityResponse;
 
 const responseAmount=clamp(
     responseRate*dt*60*orbitSteeringAvailability,
     0,
-    0.13
+    0.055
 );
 
-if((s.impactMomentumState||0)<=0.35){
-    s.vx+=(desiredVX-s.vx)*responseAmount;
-    s.vy+=(desiredVY-s.vy)*responseAmount;
-}
+// Always blend, but impact ownership starves this toward zero so a
+// knock keeps its path. Orbit is a later tendency, not a snap-back.
+s.vx+=(desiredVX-s.vx)*responseAmount;
+s.vy+=(desiredVY-s.vy)*responseAmount;
 
 /*
   LOW RPM

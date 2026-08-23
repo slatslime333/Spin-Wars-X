@@ -3295,50 +3295,38 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     },2000);
 }
 
-function tryFinishZoneRecovery(s,zone){
+function finishRecoveryChance(s,zone,knockForce){
+    const rpm=newBattleClamp(s?.rpm,0,1);
+    const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
+    const force=Math.max(0, Number(knockForce)||0);
+    const speed=Math.hypot(s?.vx||0,s?.vy||0);
+    const hitHard=newBattleClamp(force/0.042,0,1.45);
+    const pocket=zone==="Pocket"||zone==="Over";
+    const tiltWeight=pocket?0.54:0.36;
+    return newBattleClamp(
+        0.11+
+        rpm*0.52+
+        (1-Math.min(hitHard,1))*0.24-
+        tilt*tiltWeight-
+        hitHard*0.26-
+        Math.max(0,speed-0.058)*1.5,
+        0.04,
+        0.70
+    );
+}
+
+function tryFinishZoneRecovery(s,zone,knockForce){
     if(!s || s.finishRecoveryUsed) return false;
     const now=performance.now();
     const rpm=newBattleClamp(s.rpm,0,1);
-    const stamina=getBattleStat(s,"stamina");
-    const defense=getBattleStat(s,"defense");
     const balance=getBattleStat(s,"balance");
-    const stability=newBattleClamp(s.stability||0,0,1);
-    const tilt=newBattleClamp(s.tiltLevel||0,0,1);
-    const force=newBattleClamp((s.lastImpactForce||0)/0.018,0,1.8);
-    const speed=newBattleClamp(speedOf(s)/0.075,0,1.5);
     const impactAge=now-(s.lastImpactAt||0);
+    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce);
 
-    // Recovery is a real contest, not a fixed escape chance. Stronger hits,
-    // heavy tilt and low stability suppress it; remaining RPM/stamina,
-    // balance and defense preserve a path out.
-    const impactPenalty=newBattleClamp(
-        Math.pow(newBattleClamp(force/1.55,0,1.55),1.18)*0.34,
-        0,0.34
-    );
-    const tiltPenalty=Math.pow(tilt,1.22)*0.12;
-    const instabilityPenalty=(1-stability)*0.10;
-    const speedPenalty=Math.max(0,speed-0.95)*0.08;
-
-    const earlyRecoveryBoost=
-        0.035*Math.pow(rpm,1.65);
-
-    const base=
-        0.16+
-        stamina*0.28+
-        defense*0.07+
-        balance*0.24+
-        stability*0.20+
-        rpm*0.15+
-        earlyRecoveryBoost;
-
-    const chance=newBattleClamp(
-        base-impactPenalty-tiltPenalty-instabilityPenalty-speedPenalty,
-        0.08,0.78
-    );
-
-    // A recovery is only rolled when the Bey was actually driven into the
-    // finish area by a recent impact/rail event.
-    if(impactAge>700) return false;
+    // Only a Bey that was just driven in can recover. The roll then
+    // follows knock hardness, remaining RPM, and tilt: high RPM can
+    // climb out of a medium hit; a hard, tilted knock stays pocketed.
+    if(impactAge>900) return false;
     if(Math.random()>chance) return false;
 
     s.finishRecoveryUsed=true;
@@ -3408,18 +3396,17 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.034) return null;
+    if(speed<0.032) return null;
 
-    const recentImpact=age<=450;
-    const recentRailExit=!!s.railExited && age<=650;
+    const recentImpact=age<=520;
+    const recentRailExit=!!s.railExited && age<=700;
 
-    // Normal finishes are collision-driven. High speed alone is NOT enough.
-    // This specifically reduces accidental/self-KOs.
-    // A finish needs a real smash, not a light tap that happens to
-    // drift into a pocket. X-Rail exit still has its own stored-momentum path.
-    const impactEntry=recentImpact && force>=0.028;
+    // Finishes need a real knock into the opening, not a graze or a
+    // slow drift. They should be available in a fight without needing
+    // a once-a-match super smash. X-Rail exit still uses stored rail speed.
+    const impactEntry=recentImpact && force>=0.012;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.078 && (force>=0.0028 || railExitForce>=0.0028);
+    const railEntry=recentRailExit && speed>=0.066 && (force>=0.0024 || railExitForce>=0.0024);
 
     // V55 FINISH QUALIFICATION
     // A Bey must actually enter the finish zone with meaningful momentum
@@ -3440,7 +3427,6 @@ function checkForcedStadiumFinish(s){
     const enteredXtreme=!wasXtreme && inXtreme;
 
     if(enteredXtreme){
-        if(tryFinishZoneRecovery(s,"Xtreme")) return "Recovered";
         const dx=-s.x;
         const dy=0.91-s.y;
         const d=Math.hypot(dx,dy)||1;
@@ -3451,15 +3437,17 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.055 &&
-            alignment>=0.38;
+            speed>=0.042 &&
+            alignment>=0.28;
 
         const railQualified=
             railEntry &&
-            speed>=0.077 &&
-            alignment>=0.395;
+            speed>=0.068 &&
+            alignment>=0.32;
 
         if(impactQualified||railQualified){
+            const recoveryForce=Math.max(force,railExitForce,speed*0.32);
+            if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce)) return "Recovered";
             s.finishDebug=
                 `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -3478,7 +3466,6 @@ function checkForcedStadiumFinish(s){
         (!wasRightPocket && rightPocket);
 
     if(enteredPocket){
-        if(tryFinishZoneRecovery(s,"Pocket")) return "Recovered";
         const targetX=leftPocket ? -0.84 : 0.84;
         const targetY=0.90;
         const dx=targetX-s.x;
@@ -3495,17 +3482,19 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.053 &&
-            outward>=0.0044 &&
-            alignment>=0.38;
+            speed>=0.040 &&
+            outward>=0.0032 &&
+            alignment>=0.26;
 
         const railQualified=
             railEntry &&
-            speed>=0.075 &&
-            outward>=0.0054 &&
-            alignment>=0.395;
+            speed>=0.064 &&
+            outward>=0.0040 &&
+            alignment>=0.30;
 
         if(impactQualified||railQualified){
+            const recoveryForce=Math.max(force,railExitForce,speed*0.32);
+            if(tryFinishZoneRecovery(s,"Pocket",recoveryForce)) return "Recovered";
             s.finishDebug=
                 `OVER CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -4525,7 +4514,7 @@ function newPhysicsStep(s,dt){
                     : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
-        const keepImpactSpeed=(s.impactMomentumState||0)>0.22;
+        const keepImpactSpeed=(s.impactMomentumState||0)>0.12;
 
         if(!keepImpactSpeed && rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
             const floor=attackBit?0.60:0.40;
@@ -5230,8 +5219,9 @@ function newPhysicsCollision(dt){
     const pImpactMomentumState=
         newBattleClamp(
             Math.max(
-                pKnockback/0.028,
-                effectiveImpact/0.022
+                pKnockback/0.016,
+                effectiveImpact/0.014,
+                0.62
             ),
             0,1
         );
@@ -5239,8 +5229,9 @@ function newPhysicsCollision(dt){
     const cImpactMomentumState=
         newBattleClamp(
             Math.max(
-                cKnockback/0.028,
-                effectiveImpact/0.022
+                cKnockback/0.016,
+                effectiveImpact/0.014,
+                0.62
             ),
             0,1
         );
