@@ -3303,15 +3303,17 @@ function finishRecoveryChance(s,zone,knockForce){
     const hitHard=newBattleClamp(force/0.042,0,1.45);
     const pocket=zone==="Pocket"||zone==="Over";
     const tiltWeight=pocket?0.54:0.36;
+    // High RPM should often climb out of a medium knock. A hard,
+    // well-aimed smash still pockets even a healthy Bey.
     return newBattleClamp(
-        0.11+
-        rpm*0.52+
-        (1-Math.min(hitHard,1))*0.24-
+        0.16+
+        rpm*0.62+
+        (1-Math.min(hitHard,1))*0.18-
         tilt*tiltWeight-
-        hitHard*0.26-
-        Math.max(0,speed-0.058)*1.5,
-        0.04,
-        0.70
+        hitHard*0.22-
+        Math.max(0,speed-0.070)*1.1,
+        0.08,
+        0.78
     );
 }
 
@@ -3326,7 +3328,7 @@ function tryFinishZoneRecovery(s,zone,knockForce){
     // Only a Bey that was just driven in can recover. The roll then
     // follows knock hardness, remaining RPM, and tilt: high RPM can
     // climb out of a medium hit; a hard, tilted knock stays pocketed.
-    if(impactAge>900) return false;
+    if(impactAge>1100) return false;
     if(Math.random()>chance) return false;
 
     s.finishRecoveryUsed=true;
@@ -3354,6 +3356,8 @@ function tryFinishZoneRecovery(s,zone,knockForce){
     }
     s.vx=(dx/len)*escapeSpeed;
     s.vy=(dy/len)*escapeSpeed;
+    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.62);
+    s.finishDebug=`RECOVERED · ${Math.round(rpm*100)}% RPM climbs out`;
     s.stability=newBattleClamp(s.stability+0.035+balance*0.025,0,1);
     s.axisStability=newBattleClamp((s.axisStability||0.70)+0.035,0.15,1);
     s.tiltLevel=newBattleClamp((s.tiltLevel||0)-0.12,0,1);
@@ -3398,15 +3402,17 @@ function checkForcedStadiumFinish(s){
 
     if(speed<0.030) return null;
 
-    const recentImpact=age<=560;
-    const recentRailExit=!!s.railExited && age<=700;
+    const recentImpact=age<=900;
+    const recentRailExit=!!s.railExited && age<=900;
 
     // Finishes need a committed knock into the opening. Light rim
     // clips should not score; a real smash still can. X-Rail exit
-    // still uses stored rail speed.
-    const impactEntry=recentImpact && force>=0.011;
+    // still uses stored rail speed. The window is long enough that a
+    // smash can travel to the pocket and still count, so recovery can
+    // roll on the same event.
+    const impactEntry=recentImpact && force>=0.008;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.058 && (force>=0.0024 || railExitForce>=0.0024);
+    const railEntry=recentRailExit && speed>=0.048 && (force>=0.0020 || railExitForce>=0.0020);
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3440,13 +3446,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.038 &&
-            alignment>=0.24;
+            speed>=0.030 &&
+            alignment>=0.14;
 
         const railQualified=
             railEntry &&
-            speed>=0.060 &&
-            alignment>=0.28;
+            speed>=0.048 &&
+            alignment>=0.16;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3485,15 +3491,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.036 &&
-            outward>=0.0028 &&
-            alignment>=0.20;
+            speed>=0.028 &&
+            outward>=0.0018 &&
+            alignment>=0.12;
 
         const railQualified=
             railEntry &&
-            speed>=0.056 &&
-            outward>=0.0032 &&
-            alignment>=0.24;
+            speed>=0.046 &&
+            outward>=0.0020 &&
+            alignment>=0.14;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3820,6 +3826,11 @@ function newBattleFrame(now){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
                     `${rider.blade.name} is riding the X Rail and building speed.`;
+            }else if((p.recoveredFlashUntil||0)>performance.now() || (c.recoveredFlashUntil||0)>performance.now()){
+                const recovered=(p.recoveredFlashUntil||0)>=(c.recoveredFlashUntil||0)?p:c;
+                commentary.textContent=
+                    recovered.finishDebug ||
+                    `${recovered.blade.name} climbs out of the finish zone!`;
             }else if(p.finishDebug || c.finishDebug){
                 commentary.textContent=p.finishDebug || c.finishDebug;
             }else if(NEW_BATTLE.finishPending){
@@ -4531,9 +4542,10 @@ function newPhysicsStep(s,dt){
         const speedNow=Math.hypot(s.vx,s.vy);
         const keepImpactSpeed=(s.impactMomentumState||0)>0.16;
 
-        if(!keepImpactSpeed && rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
-            const floor=attackBit?0.60:0.40;
-            const lowRpmBrake=(0.0010+(floor-rpm)*0.0030)*dt*60;
+        // Attack Bits keep circling as RPM falls. Extra low-RPM braking
+        // was wiping their tangent and leaving a straight shuttle.
+        if(!keepImpactSpeed && !attackBit && rpm<0.40 && speedNow>physicalSpeedTarget){
+            const lowRpmBrake=(0.0010+(0.40-rpm)*0.0030)*dt*60;
             const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
             s.vx*=brakeScale;
             s.vy*=brakeScale;

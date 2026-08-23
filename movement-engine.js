@@ -307,9 +307,15 @@ if(movement<0.80){
         0.34+
         0.66*rpmRadiusFactor;
 }else{
+    /*
+      Attack must keep circling as RPM falls. Shrinking this too far
+      leaves mostly radial correction, which looks like a straight
+      shuttle through the stadium. Keep enough tangent that a tighter
+      ring is still a ring.
+    */
     orbitSpeedTightness=
-        0.48+
-        0.52*rpmRadiusFactor;
+        0.58+
+        0.42*rpmRadiusFactor;
 }
 
 const targetOrbitSpeed=
@@ -393,12 +399,12 @@ if(
   allowing collisions to take control immediately after impact.
 */
 const radialGain=movement>=0.80
-    ? 0.30+rpm*0.16
+    ? 0.28+(1-rpm)*0.24
     : 0.46;
 const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
-        movement>=0.80 ? -0.032 : -0.038,
+        movement>=0.80 ? -0.038 : -0.038,
         movement>=0.80 ? 0.024 : 0.028
     );
 
@@ -412,7 +418,7 @@ const desiredVY=
 
 const responseRate=
     (
-        (movement>=0.80 ? 0.018 : 0.040)+
+        (movement>=0.80 ? 0.028 : 0.040)+
         control*0.010+
         bitPrecession*0.005+
         movement*0.003
@@ -439,7 +445,12 @@ s.vy+=(desiredVY-s.vy)*responseAmount;
   lateral damping prevents a dying Bey from retaining an attack-like
   sweep while preserving radial momentum after impacts.
 */
-if(rpm<0.52){
+/*
+  Non-Attack Bits can shed leftover sweep as they die.
+  Attack Bits keep their tangent — only a near-dead Attack bit
+  gets a light trim, never enough to collapse the orbit into a line.
+*/
+if(rpm<0.52 && movement<0.80){
     const lowRpm=
         clamp(
             (0.52-rpm)/0.52,
@@ -462,6 +473,19 @@ if(rpm<0.52){
 
         s.vx=ix*rv+tvx*lateralDamp;
         s.vy=iy*rv+tvy*lateralDamp;
+    }
+}else if(rpm<0.18 && movement>=0.80){
+    const dying=clamp((0.18-rpm)/0.18,0,1);
+    const currentR=Math.hypot(s.x,s.y);
+    if(currentR>0.045){
+        const ix=s.x/currentR;
+        const iy=s.y/currentR;
+        const rv=s.vx*ix+s.vy*iy;
+        const tvx=s.vx-ix*rv;
+        const tvy=s.vy-iy*rv;
+        const damp=Math.pow(0.988, dying*dt*60);
+        s.vx=ix*rv+tvx*damp;
+        s.vy=iy*rv+tvy*damp;
     }
 }
 
@@ -534,8 +558,8 @@ if(radius>wall){
         outward>0.012 &&
         radius>=0.72 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.011 &&
-        (s.impactMomentumState||0)>0.45 &&
+        (s.lastImpactForce||0)>=0.008 &&
+        (s.impactMomentumState||0)>0.38 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){
