@@ -1009,6 +1009,9 @@ footer{
   line-height:.95;
   font-weight:400;
 }
+.vs-copy{
+  min-width:0;
+}
 .vs-copy p{color:var(--muted);font-size:12px;margin-top:4px}
 .vs-parts{
   display:flex;
@@ -1073,6 +1076,7 @@ footer{
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:4px;
+  width:100%;
   font-size:11px;
   color:var(--muted);
 }
