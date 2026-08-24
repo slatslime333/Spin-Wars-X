@@ -31,15 +31,15 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
   const center=clamp01(centerAffinity);
   const stab=clamp01(bitStability);
   /*
-    Mid-outer bowl, not the X-Rail. Flat tips want to walk wide, but a
-    launch should circle first and only graze the rail when leftover
-    speed or a clash carries them out.
+    High-RPM Attack lives on the X-Rail ring. They should be wide enough
+    to kiss the rail, not parked in the mid bowl. RPM contraction — not
+    this base — is what walks them in after the opening laps.
   */
-  return Math.max(0.52,Math.min(0.64,
-    0.54+
-    (1-center)*0.08+
-    (move-0.80)*0.10+
-    (1-stab)*0.03
+  return Math.max(0.74,Math.min(0.82,
+    0.76+
+    (1-center)*0.04+
+    (move-0.80)*0.06+
+    (1-stab)*0.02
   ));
 }
 
@@ -59,8 +59,12 @@ function stableOrbitBase(movement,centerAffinity){
 
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
-  if(kind==="attack") return 0.70+0.30*Math.pow(s,0.78);
-  if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.40);
+  /*
+    Attack starts on the rail ring and walks in a decent amount as
+    spin falls: ~100% stays wide, ~70% is mid-outer, ~50% is inner.
+  */
+  if(kind==="attack") return 0.38+0.62*Math.pow(s,1.32);
+  if(kind==="hybrid") return 0.40+0.60*Math.pow(s,1.45);
   return 0.36+0.64*Math.pow(s,2.00);
 }
 
@@ -78,11 +82,12 @@ function bitOrbitProfile(opts){
   let attackWeight;
 
   if(klass==="attack"){
-    home=Math.max(0.30,Math.min(0.64,attack));
+    const rideShrink=Math.min(0.12,(Number(opts.railUses)||0)*0.055);
+    home=Math.max(0.28,Math.min(0.82,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
-    home=Math.max(0.20,Math.min(0.50,stable*(1-mix)+attack*mix));
+    home=Math.max(0.22,Math.min(0.70,stable*(1-mix)+attack*mix));
     attackWeight=mix;
   }else if(klass==="gimmick"){
     const mix=0.14+0.72*gimmick;
@@ -228,7 +233,8 @@ const orbit=bitOrbitProfile({
     bitType:ctx.bitType||s.bitType||(s.bit&&s.bit.type)||"",
     attackGimmick:Number.isFinite(ctx.attackGimmick)
         ? ctx.attackGimmick
-        : (Number(s.dynamicBitAggression)||0)
+        : (Number(s.dynamicBitAggression)||0),
+    railUses:Number(s.railUses)||0
 });
 const preferredRadius=orbit.home;
 const omega=orbit.omega;
@@ -245,7 +251,7 @@ let targetOrbitSpeed;
 if(circleR<preferredRadius){
     targetOrbitSpeed=Math.max(
         0.008,
-        circleR*omega+(preferredRadius-circleR)*(0.004+0.005*attackWeight)
+        circleR*omega+(preferredRadius-circleR)*(0.004+0.010*attackWeight)
     );
 }else{
     /*
@@ -365,14 +371,21 @@ const currentRadial=s.vx*radialX+s.vy*radialY;
 */
 const slopeGain=orbit.slopeGain;
 let slope=(preferredRadius-rNow)*(inImpact?0.012:slopeGain);
-if(rNow>0.68){
-    slope-=(rNow-0.68)*0.22;
+/*
+  Rim gravity used to start at 0.68, which yanked Attack off the
+  X-Rail ring. Keep the rail-width lap; only plant harder near the wall.
+*/
+if(rNow>0.82){
+    slope-=(rNow-0.82)*(0.10+0.10*(1-attackWeight));
+}
+if(rNow>0.90){
+    slope-=(rNow-0.90)*0.22;
 }
 if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
     slope*=0.45;
 }
 const eulerLeak=(currentTangent*currentTangent)/Math.max(0.08,rNow);
-const desiredRadialSpeed=clamp(slope,-0.012,0.005);
+const desiredRadialSpeed=clamp(slope,-0.012,0.005+0.007*attackWeight);
 const newTangent=
     currentTangent+
     (targetOrbitSpeed-currentTangent)*
@@ -741,7 +754,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.2",
+    version:"1.2.3",
     step,
     homeOrbitRadius,
     orbitOmega,

@@ -4474,7 +4474,8 @@ function newPhysicsStep(s,dt){
                     rpm,
                     bitName,
                     bitType,
-                    attackGimmick
+                    attackGimmick,
+                    railUses:Number(s.railUses)||0
                 })
                 : {attackWeight:movement>=0.80?1:0};
         const attackBit=orbitPreview.attackWeight>=0.70;
