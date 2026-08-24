@@ -1088,77 +1088,24 @@ function renderMainMenu(){
 
     app.innerHTML=`
     <div class="background"></div>
-    <main class="main-menu-shell">
-        <section class="main-menu-hero">
-            <div class="hero-mark">
-                <div class="hero-ring hero-ring-a"></div>
-                <div class="hero-ring hero-ring-b"></div>
-                <div class="hero-core"></div>
-            </div>
-            <div class="hero-copy">
-                <h1>SPIN WARS <em>X</em></h1>
-                <p>Choose your launch. LET IT RIP.</p>
-            </div>
-        </section>
-
-        <section class="battle-select">
-            <div class="section-head">
-                <div>
-                    <span class="section-kicker">BATTLE SELECT</span>
-                    <h2>Choose your battle pool</h2>
-                </div>
-                <span class="section-count">04 MODES</span>
-            </div>
-
-            <div class="tier-menu-grid">
-                <button class="tier-menu-card tier-menu-bronze" data-mode="bronze">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">01 · BRONZE</span>
-                    <strong>BRONZE</strong>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-silver" data-mode="silver">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">02 · SILVER</span>
-                    <strong>SILVER</strong>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-gold" data-mode="gold">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">03 · GOLD / DIAMOND</span>
-                    <strong>GOLD / DIAMOND</strong>
-                    <span class="tier-arrow">→</span>
-                </button>
-
-                <button class="tier-menu-card tier-menu-custom" data-mode="custom">
-                    <div class="tier-card-glow"></div>
-                    <span class="tier-code">04 · CUSTOM LAB</span>
-                    <strong>CUSTOM</strong>
-                    <span class="tier-arrow">→</span>
-                </button>
-            </div>
-        </section>
-
-        <section class="main-menu-lower">
-            <div class="menu-feature">
-                <span class="feature-icon">◈</span>
-                <div><b>PHYSICS SIMULATION</b><small>Movement, impact, RPM and X-Rail behavior</small></div>
-            </div>
-            <div class="menu-feature">
-                <span class="feature-icon">◎</span>
-                <div><b>REAL COMBO STATS</b><small>Blade × ratchet × height × Bit synergy</small></div>
-            </div>
-            <div class="menu-version">V99 · MOVEMENT CORE REBUILD</div>
-        </section>
+    <main class="home">
+        <header class="home-mark">
+            <span class="home-x" aria-hidden="true">X</span>
+            <h1>SPIN WARS</h1>
+        </header>
+        <div class="home-modes">
+            <button class="home-mode bronze" data-mode="bronze" type="button"><b>BRONZE</b></button>
+            <button class="home-mode silver" data-mode="silver" type="button"><b>SILVER</b></button>
+            <button class="home-mode gold" data-mode="gold" type="button"><b>GOLD</b></button>
+            <button class="home-mode custom" data-mode="custom" type="button"><b>CUSTOM</b></button>
+        </div>
     </main>`;
 }
 
 function hookMenuButtons(){
     renderMainMenu();
 
-    document.querySelectorAll(".tier-menu-card[data-mode]").forEach(button=>{
+    document.querySelectorAll(".home-mode[data-mode], .tier-menu-card[data-mode]").forEach(button=>{
         button.onclick=()=>{
             Game.mode=button.dataset.mode;
             startDraft();
@@ -1177,41 +1124,14 @@ function startDraft(){
     const app=document.getElementById("app");
 
     app.innerHTML=`
-
     <div class="background"></div>
-
-    <main class="menu">
-
-        <div class="logo">
-
-            <div class="logo-icon">🎴</div>
-
-            <h1>GENERATING DRAFT</h1>
-
-            <p>Please Wait...</p>
-
-        </div>
-
-        <section class="menu-card">
-
-            <div class="loading">
-
-                <div class="loading-fill"
-                id="loadingFill"></div>
-
-            </div>
-
-            <h2 id="loadingText">
-
-                Preparing Blade Pool...
-
-            </h2>
-
-        </section>
-
-    </main>
-
-    `;
+    <main class="home home-load">
+        <header class="home-mark compact">
+            <span class="home-x" aria-hidden="true">X</span>
+            <h1>SPIN WARS</h1>
+        </header>
+        <div class="loading"><div class="loading-fill" id="loadingFill"></div></div>
+    </main>`;
 
     animateLoading();
 
@@ -1971,21 +1891,20 @@ function createComboSummaryCard(side,combo){
     for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
-    return `<article class="combo-summary-card ${isPlayer?"combo-side-player":"combo-side-cpu"}">
-      <div class="combo-summary-head">
-        ${sprite?`<img class="combo-blade-sprite" src="${sprite}" alt="${combo.blade.name}">`:""}
-        <div><span class="combo-summary-label">${isPlayer?"PLAYER COMBO":"CPU COMBO"}</span>
-          <h2>${combo.blade.name}</h2>
-          <div class="combo-summary-parts"><span>${combo.blade.type}</span><span>${combo.ratchet.name}</span><span>${combo.bit.name}</span></div>
+    const tier=tierClass(combo.blade?.tier);
+    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}">
+      <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+      <div class="vs-copy">
+        <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
+        <h2>${combo.blade.name}</h2>
+        <p>${combo.ratchet.name} · ${combo.bit.name}</p>
+        <b class="vs-ovr">${combo.ovr}</b>
+        <div class="vs-stats">
+          <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
+          <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
         </div>
-        <div class="combo-summary-ratings"><div><small>OVR</small><b>${combo.ovr}</b></div><div><small>META</small><b>${combo.meta}</b></div></div>
       </div>
-      <div class="combo-summary-stats">
-        <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
-        <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
-      </div>
-      ${!isPlayer && Game.mode==="custom" ? `
-        <button class="cpu-reroll-btn" id="cpuRerollBtn" type="button">↻ REROLL CPU COMBO</button>` : ""}
+      ${!isPlayer && Game.mode==="custom" ? `<button class="vs-reroll" id="cpuRerollBtn" type="button">REROLL</button>` : ""}
     </article>`;
 }
 function showComboCard(){
@@ -1993,13 +1912,13 @@ function showComboCard(){
     generateCPUCombo();
     const cpuCombo=calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu combo-review-screen">
-      <div class="selection-header combo-review-header"><div class="selection-icon">⚔</div><div><span class="eyebrow">BATTLE REVIEW</span><h1>COMBO CHECK</h1><p>Know the matchup before you launch.</p></div></div>
-      <section class="combo-matchup-grid">
+    app.innerHTML=`<div class="background"></div><main class="vs-screen">
+      <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta})}
+        <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta})}
       </section>
-      <section class="combo-review-actions"><button class="menu-btn gold" id="battleButton" type="button">START BATTLE</button></section>
+      <button class="rip-btn" id="battleButton" type="button">LET IT RIP</button>
     </main>`;
     const battleButton=document.getElementById("battleButton");
     if(battleButton) battleButton.onclick=(event)=>{
@@ -2019,7 +1938,7 @@ function showComboCard(){
         };
     }
 
-    const menu=document.querySelector(".combo-review-screen");
+    const menu=document.querySelector(".vs-screen");
     if(menu) menu.appendChild(createBackButton(()=>showBitDraft()));
 }
 
@@ -2163,8 +2082,7 @@ function showLetItRip(){
 
     const controls=document.createElement("div");
     controls.id="launchControls";
-    controls.style.cssText=
-        "margin:0 0 8px;position:sticky;top:0;z-index:20;";
+    controls.className="launch-panel";
 
     const angleButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.angle===value?"gold":"silver"}"
@@ -2181,9 +2099,9 @@ function showLetItRip(){
     if(stage==="qualityReveal"){
         controls.innerHTML=`
           <div class="launch-quality-reveal">
-            <div class="launch-quality-column player-quality-reveal"><span>YOUR LAUNCH</span><strong>${Game.player.launch.quality}</strong><small>${Game.player.launch.qualityMode==="Roll" ? "ROLLED QUALITY" : "FIXED QUALITY"}</small></div>
+            <div class="launch-quality-column player-quality-reveal"><strong>${Game.player.launch.quality}</strong></div>
             <div class="launch-quality-divider">VS</div>
-            <div class="launch-quality-column cpu-quality-reveal"><span>CPU LAUNCH</span><strong>${Game.cpu.launch?.quality||"Okay"}</strong><small>CPU ROLL</small></div>
+            <div class="launch-quality-column cpu-quality-reveal"><strong>${Game.cpu.launch?.quality||"Okay"}</strong></div>
           </div>
         `;
 
@@ -2201,66 +2119,42 @@ function showLetItRip(){
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
-          <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="launch-pad">
+            <div class="launch-row">
               <button class="menu-btn silver" id="fixedQualityBtn" type="button">
                 ${Game.player.launch.fixedQualityPreview || "Okay"}
               </button>
-              <button class="menu-btn gold" id="rollQualityBtn" type="button">
-                ROLL QUALITY
-              </button>
+              <button class="menu-btn gold" id="rollQualityBtn" type="button">ROLL</button>
             </div>
-
-            <div style="font-size:11px;opacity:.60;text-align:center;margin-top:8px;">
-              Left = shown quality · Roll = random quality
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:6px;">
-              <button class="menu-btn silver" id="backToVS" type="button" style="flex:1;">
-                ← BACK
-              </button>
-            </div>
+            <button class="menu-btn silver" id="backToVS" type="button">BACK</button>
           </div>
         `;
     }else{
         controls.innerHTML=`
-          <div style="padding:8px;background:rgba(0,0,0,.20);border-radius:9px;">
-            <div style="font-size:12px;opacity:.72;margin-bottom:7px;">LAUNCH ANGLE</div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">
+          <div class="launch-pad">
+            <div class="launch-row three">
               ${angleButton("FLAT","Flat","launchFlat")}
-              ${angleButton("SLIGHT TILT","Slight Tilt","launchSlight")}
-              ${angleButton("HARD TILT","Hard Tilt","launchHard")}
+              ${angleButton("SLIGHT","Slight Tilt","launchSlight")}
+              ${angleButton("HARD","Hard Tilt","launchHard")}
             </div>
-
-            <div style="font-size:12px;opacity:.72;margin:7px 0 5px;">LAUNCH TECHNIQUE</div>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:5px;">
+            <div class="launch-row four">
               ${techButton("CENTER","Center","launchCenter")}
               ${techButton("X-RAIL","X-Rail","launchRail")}
-              ${techButton("DIRECT CLASH","Direct Clash","launchClash")}
-              ${techButton("DROP LAUNCH","Drop Launch","launchDrop")}
+              ${techButton("CLASH","Direct Clash","launchClash")}
+              ${techButton("DROP","Drop Launch","launchDrop")}
             </div>
-
-            <div id="launchInfo" style="margin-top:6px;font-size:12px;opacity:.82;text-align:center;">
-              ${Game.player.launch.angle} · ${Game.player.launch.technique}
-              <br>
-              <strong>LAUNCH QUALITY: ${Game.player.launch.quality || "Okay"}</strong>
-              · ${Game.player.launch.qualityMode==="Roll" ? "ROLLED" : "FIXED"}
-              · START RPM: ${qualityRPM}%
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:6px;">
-              <button class="menu-btn gold" id="startBattleNow" type="button" style="flex:1;">
-                LET IT RIP
-              </button>
-              <button class="menu-btn silver" id="backToQuality" type="button" style="flex:1;">
-                ← QUALITY
-              </button>
+            <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
+            <div class="launch-row">
+              <button class="rip-btn compact" id="startBattleNow" type="button">LET IT RIP</button>
+              <button class="menu-btn silver" id="backToQuality" type="button">BACK</button>
             </div>
           </div>
         `;
     }
 
-    card.insertBefore(controls,document.getElementById("newStadium"));
+    const dock=document.getElementById("launchDock");
+    if(dock) dock.replaceChildren(controls);
+    else document.getElementById("newStadium")?.parentNode?.appendChild(controls);
 
     const rebuildAngleTechnique=(angle,technique)=>{
         Game.player.launch.angle=angle;
@@ -3020,20 +2914,18 @@ function renderNewBattle(){
 
     app.innerHTML=`
       <div class="background"></div>
-      <main class="menu" style="max-width:920px;">
-        <section class="menu-card" style="padding:12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <strong>BATTLE</strong>
-            <span style="font-weight:700;">${Game.battle.score?.player||0} — ${Game.battle.score?.cpu||0}</span>
-            <span style="opacity:.65;font-size:12px;">FIRST TO 7</span>
-          </div>
+      <main class="battle-shell">
+        <p class="battle-callout" id="newCommentary">${p.blade.name} ${
+    p.launchPlan.technique==="Direct Clash" ? "comes out aggressively." :
+    p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
+    "settles into its opening line."
+} ${c.blade.name} ${
+                c.launchPlan?.technique==="Direct Clash"
+                    ? "answers with an aggressive launch."
+                    : "is waiting for your launch."
+            }</p>
 
-          <div id="newStadium" style="
-            position:relative;width:min(68vw,58vh,560px);aspect-ratio:1/1;
-            margin:7px auto;background:#c9cdd0;
-            border:2px solid #6d757b;overflow:hidden;
-            clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
-            box-shadow:0 10px 28px rgba(0,0,0,.38);">
+          <div id="newStadium">
 
             <svg id="newBattleSvg" viewBox="0 0 100 100"
                  preserveAspectRatio="none"
@@ -3201,40 +3093,32 @@ function renderNewBattle(){
               <text id="cpuRecoveredText" x="50" y="46"
                     text-anchor="middle" font-size="6.4" font-weight="1000"
                     fill="#8bdcff" stroke="#041018" stroke-width="0.45"
-                    fill="#8bdcff" opacity="0">RECOVERED</text>
+                    opacity="0">RECOVERED</text>
             </svg>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
-            <div class="battle-hud-card battle-hud-player">
-              <div class="battle-hud-top"><div><strong>${p.blade.name}</strong><span class="battle-side-label">${playerSideLabel}</span></div><span class="battle-hud-role">PLAYER</span></div>
-              <div class="battle-combo-line">${p.blade.name} / ${p.ratchet?.name||""} / ${p.bit.name} <b>OVERALL ${p.comboMeta||Game.player.comboMeta||"—"}</b></div>
-              <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em>%</em></div>
-              <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
-              <div class="stability-readout">STABILITY <b id="newPlayerStability">${Math.round(p.stability*100)}</b>%</div>
+          <div class="battle-dock">
+            <div class="battle-fighters">
+              <div class="battle-hud-card battle-hud-player">
+                <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
+                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
+                <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
+                <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
+              </div>
+              <div class="battle-score">
+                <b>${Game.battle.score?.player||0}</b>
+                <span>FT7</span>
+                <b>${Game.battle.score?.cpu||0}</b>
+              </div>
+              <div class="battle-hud-card battle-hud-cpu">
+                <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
+                <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
+                <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
+                <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
+              </div>
             </div>
-            <div class="battle-hud-card battle-hud-cpu">
-              <div class="battle-hud-top"><div><strong>${c.blade.name}</strong><span class="battle-side-label">${cpuSideLabel}</span></div><span class="battle-hud-role">CPU</span></div>
-              <div class="battle-combo-line">${c.blade.name} / ${c.ratchet?.name||""} / ${c.bit.name} <b>OVERALL ${c.comboMeta||Game.cpu.comboMeta||"—"}</b></div>
-              <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b><em>%</em></div>
-              <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
-              <div class="stability-readout">STABILITY <b id="newCpuStability">${Math.round(c.stability*100)}</b>%</div>
-            </div>
+            <div id="launchDock"></div>
           </div>
-
-          <div id="newCommentary" style="margin-top:8px;padding:10px;background:rgba(0,0,0,.22);border-radius:8px;font-size:13px;">
-            ${p.blade.name} ${
-    p.launchPlan.technique==="Direct Clash" ? "comes out aggressively." :
-    p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
-    "settles into its opening line."
-}
-            ${c.blade.name} ${
-                c.launchPlan?.technique==="Direct Clash"
-                    ? "answers with an aggressive launch."
-                    : "is waiting for your launch."
-            }
-          </div>
-        </section>
       </main>`;
     updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",0);
     updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
@@ -3327,17 +3211,13 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
             if(app){
                 app.innerHTML=`
                   <div class="background"></div>
-                  <main class="menu">
-                    <div class="logo">
-                      <div class="logo-icon">⚔</div>
-                      <h1>${finalWinner.blade.name}</h1>
-                      <p>WINS THE MATCH</p>
-                    </div>
-                    <section class="menu-card" style="text-align:center;">
-                      <h2>${playerScore} — ${cpuScore}</h2>
-                      <p>${finishType.toUpperCase()} · +${finishPoints} POINTS · FIRST TO 7</p>
-                      <p style="opacity:.65;font-size:12px;">Returning to main menu...</p>
-                    </section>
+                  <main class="home home-win">
+                    <header class="home-mark compact">
+                      <span class="home-x" aria-hidden="true">X</span>
+                      <h1>SPIN WARS</h1>
+                    </header>
+                    <p class="win-name">${finalWinner.blade.name}</p>
+                    <p class="win-score">${playerScore} — ${cpuScore}</p>
                   </main>`;
             }
             setTimeout(()=>location.reload(),1800);
