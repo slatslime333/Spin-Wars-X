@@ -4774,9 +4774,9 @@ function newPhysicsStep(s,dt){
                     const d=Math.hypot(dx,dy);
 
                     if(
-                        d>0.14 &&
-                        d<(bothNonAttack ? 0.58 : 0.43) &&
-                        s.rpm>0.20 &&
+                        d>0.06 &&
+                        d<(bothNonAttack ? 0.62 : 0.43) &&
+                        s.rpm>0.18 &&
                         opponent.rpm>0.05
                     ){
                         const invD=1/Math.max(d,0.001);
@@ -4824,7 +4824,7 @@ function newPhysicsStep(s,dt){
                             );
 
                         const threshold=
-                            bothNonAttack ? 0.53 : 0.47;
+                            bothNonAttack ? 0.40 : 0.47;
 
                         if(readiness>threshold){
 
@@ -4841,7 +4841,7 @@ function newPhysicsStep(s,dt){
                                 base*
                                 distanceFactor*
                                 (0.72+0.28*s.rpm)*
-                                (bothNonAttack?1.68:1.12);
+                                (bothNonAttack?2.15:1.12);
 
                             /*
                               The old gravity/crossing system is removed.
