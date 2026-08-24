@@ -1084,6 +1084,17 @@ function getBitPhysics(blader){
 
 
 
+function homeMarkHTML(opts){
+    opts=opts||{};
+    const compact=opts.compact?" compact":"";
+    const tag=opts.tag?`<p class="home-tag">${opts.tag}</p>`:"";
+    return `<header class="home-mark${compact}">
+        <p class="home-kicker">STADIUM BATTLE</p>
+        <h1>SPIN WARS<i>X</i></h1>
+        ${tag}
+    </header>`;
+}
+
 function renderMainMenu(){
     Game.screen="menu";
     const app=document.getElementById("app");
@@ -1092,23 +1103,38 @@ function renderMainMenu(){
     app.innerHTML=`
     <div class="background"></div>
     <main class="home">
-        <header class="home-mark">
-            <span class="home-x" aria-hidden="true">X</span>
-            <h1>SPIN WARS</h1>
-        </header>
-        <div class="home-modes">
-            <button class="home-mode bronze" data-mode="bronze" type="button"><b>BRONZE</b></button>
-            <button class="home-mode silver" data-mode="silver" type="button"><b>SILVER</b></button>
-            <button class="home-mode gold" data-mode="gold" type="button"><b>GOLD</b></button>
-            <button class="home-mode custom" data-mode="custom" type="button"><b>CUSTOM</b></button>
-        </div>
+        <div class="home-ring" aria-hidden="true"></div>
+        ${homeMarkHTML({tag:"First to 7 · Xtreme · Over · Spin"})}
+        <nav class="home-leagues" aria-label="Choose a league">
+            <p class="home-leagues-label">SELECT LEAGUE</p>
+            <button class="home-league bronze" data-mode="bronze" type="button">
+                <span class="home-league-rank">01</span>
+                <span class="home-league-copy"><b>BRONZE</b><small>Starter blade pool</small></span>
+                <span class="home-league-go">PLAY</span>
+            </button>
+            <button class="home-league silver" data-mode="silver" type="button">
+                <span class="home-league-rank">02</span>
+                <span class="home-league-copy"><b>SILVER</b><small>Mid-tier blade pool</small></span>
+                <span class="home-league-go">PLAY</span>
+            </button>
+            <button class="home-league gold" data-mode="gold" type="button">
+                <span class="home-league-rank">03</span>
+                <span class="home-league-copy"><b>GOLD</b><small>Top-tier blade pool</small></span>
+                <span class="home-league-go">PLAY</span>
+            </button>
+            <button class="home-league custom" data-mode="custom" type="button">
+                <span class="home-league-rank">04</span>
+                <span class="home-league-copy"><b>CUSTOM</b><small>Full garage · every part</small></span>
+                <span class="home-league-go">BUILD</span>
+            </button>
+        </nav>
     </main>`;
 }
 
 function hookMenuButtons(){
     renderMainMenu();
 
-    document.querySelectorAll(".home-mode[data-mode], .tier-menu-card[data-mode]").forEach(button=>{
+    document.querySelectorAll(".home-league[data-mode], .home-mode[data-mode], .tier-menu-card[data-mode]").forEach(button=>{
         button.onclick=()=>{
             Game.mode=button.dataset.mode;
             startDraft();
@@ -1129,10 +1155,7 @@ function startDraft(){
     app.innerHTML=`
     <div class="background"></div>
     <main class="home home-load">
-        <header class="home-mark compact">
-            <span class="home-x" aria-hidden="true">X</span>
-            <h1>SPIN WARS</h1>
-        </header>
+        ${homeMarkHTML({compact:true})}
         <div class="loading"><div class="loading-fill" id="loadingFill"></div></div>
     </main>`;
 
@@ -3347,10 +3370,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                 app.innerHTML=`
                   <div class="background"></div>
                   <main class="home home-win">
-                    <header class="home-mark compact">
-                      <span class="home-x" aria-hidden="true">X</span>
-                      <h1>SPIN WARS</h1>
-                    </header>
+                    ${homeMarkHTML({compact:true})}
                     <p class="win-name">${finalWinner.blade.name}</p>
                     <p class="win-score">${playerScore} — ${cpuScore}</p>
                   </main>`;
