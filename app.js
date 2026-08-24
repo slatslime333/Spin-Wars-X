@@ -5210,23 +5210,46 @@ function newPhysicsCollision(dt){
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
     /*
-      Knockback is a bounce from closing speed. Stats/momentum do not
-      invent extra shove. A real smash (fast, head-on) can still fly.
+      Knockback is the existing clash shove: incoming momentum plus the
+      Bey's Knockback/Attack stats. Do not zero their speed, and do not
+      invent a second impact system.
     */
-    const flyHit=impactSpeed>=0.040 && directness>=0.55;
-    const bounceRest=flyHit?0.42:0.16;
-    const bounceCap=flyHit?0.048:0.018;
-    const pKnockback=Math.min(bounceCap, impactSpeed*bounceRest);
-    const cKnockback=Math.min(bounceCap, impactSpeed*bounceRest);
+    const bounceSep=Math.max(0,-closing)*(0.48+directness*0.22);
+    const pSpinPower=
+        (0.004+pAttack*0.006+pKB*0.016)*
+        (0.22+0.78*pRPM)*
+        Math.max(0.14, Math.min(1, pSpeed/0.038));
+    const cSpinPower=
+        (0.004+cAttack*0.006+cKB*0.016)*
+        (0.22+0.78*cRPM)*
+        Math.max(0.14, Math.min(1, cSpeed/0.038));
+    const pKnockback=Math.min(
+        0.068,
+        Math.max(
+            0.005+pKB*0.008+pRPM*0.003,
+            (bounceSep*0.28+pSpinPower+pMomentum*0.18+pForce*0.004)*
+            (0.94+(1-cDef)*0.14)*
+            (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
+        )
+    );
+    const cKnockback=Math.min(
+        0.068,
+        Math.max(
+            0.005+cKB*0.008+cRPM*0.003,
+            (bounceSep*0.28+cSpinPower+cMomentum*0.18+cForce*0.004)*
+            (0.94+(1-pDef)*0.14)*
+            (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
+        )
+    );
     const pRailBreakForce=cKnockback;
     const cRailBreakForce=pKnockback;
 
-    // Stop walking into each other, then shove apart. Adding a tiny delta
-    // on top of inbound speed looked like "damage with no impact".
+    const pSpeedBefore=Math.hypot(p.vx,p.vy);
+    const cSpeedBefore=Math.hypot(c.vx,c.vy);
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
-    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
+    if(pNormal>0){p.vx-=nx*pNormal*0.42;p.vy-=ny*pNormal*0.42;}
+    if(cNormal<0){c.vx-=nx*cNormal*0.42;c.vy-=ny*cNormal*0.42;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
 
@@ -5242,16 +5265,10 @@ function newPhysicsCollision(dt){
       a temporary reduction in orbital steering after a real collision.
     */
     const pImpactMomentumState=
-        newBattleClamp(
-            flyHit?Math.max(0.62,pKnockback/0.048):pKnockback/0.040,
-            0,1
-        );
+        newBattleClamp(pKnockback/0.055, 0.16, 0.84);
 
     const cImpactMomentumState=
-        newBattleClamp(
-            flyHit?Math.max(0.62,cKnockback/0.048):cKnockback/0.040,
-            0,1
-        );
+        newBattleClamp(cKnockback/0.055, 0.16, 0.84);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
@@ -5262,8 +5279,8 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    const recoilP=pKnockback*(0.03+0.04*pDef);
-    const recoilC=cKnockback*(0.03+0.04*cDef);
+    const recoilP=pKnockback*(0.05+0.06*pDef);
+    const recoilC=cKnockback*(0.05+0.06*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
@@ -5320,6 +5337,22 @@ function newPhysicsCollision(dt){
             rider.railContactPoint=null;
         }
     }
+
+    const keepSpeed=(s,before)=>{
+        const sp=Math.hypot(s.vx,s.vy);
+        const floor=Math.max(0.012, before*0.80);
+        if(sp<floor){
+            if(sp<1e-6){
+                s.vx=-nx*floor;
+                s.vy=-ny*floor;
+                return;
+            }
+            s.vx*=floor/sp;
+            s.vy*=floor/sp;
+        }
+    };
+    keepSpeed(p,pSpeedBefore);
+    keepSpeed(c,cSpeedBefore);
 
     const rocketCap=(s)=>{
         const sp=Math.hypot(s.vx,s.vy);
