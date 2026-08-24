@@ -228,6 +228,21 @@ function engage(s,contact){
  if(p.distance<gap&&len>1e-8){const push=gap-p.distance;s.x+=(nx/len)*push;s.y+=(ny/len)*push;}
  return true;
 }
+function restoreBounceSpeed(s,incoming,keep,minKeep){
+ const want=Math.max(minKeep,incoming*keep);
+ const now=Math.hypot(s.vx,s.vy);
+ if(now<1e-8){
+  const r=Math.hypot(s.x,s.y)||1;
+  s.vx=-(s.x/r)*want;
+  s.vy=-(s.y/r)*want;
+  return want;
+ }
+ if(now<want){
+  s.vx*=want/now;
+  s.vy*=want/now;
+ }
+ return Math.hypot(s.vx,s.vy);
+}
 function separateFromSolid(s,p){
  if(!s||!p)return false;
  const gap=contactRadius(s);
@@ -237,8 +252,6 @@ function separateFromSolid(s,p){
  if(len<1e-9){nx=-p.ty;ny=p.tx;len=1;}else{nx/=len;ny/=len;}
  const push=gap-d+0.001;
  s.x+=nx*push;s.y+=ny*push;
- const vn=s.vx*nx+s.vy*ny;
- if(vn<0){s.vx-=nx*vn;s.vy-=ny*vn;}
  return true;
 }
 function bounce(s,p){
@@ -252,12 +265,13 @@ function bounce(s,p){
  const incoming=Math.hypot(s.vx,s.vy);
  const gap=contactRadius(s);
  const d=Number.isFinite(p.distance)?p.distance:Math.sqrt(Math.max(0,p.dist2||0));
+ const fromExit=!!s.railExited||s.lastXRailExitReason==="x-exit"||(s.railExitRefractory||0)>0;
  setContactDebug(s,p,d,"surface");
 
  /*
   * The X-Exit closer is part of the one solid rail. Unhooked hits there
-  * fall back toward stadium middle. The rest of the rail uses a normal
-  * surface bounce so X-Rail launches can still approach and ride.
+  * bounce toward stadium middle with leftover speed so they can still
+  * tag a Bey in the center. Do not dump them to a dead stop.
   */
  if(p.closer){
   const toX=0-s.x,toY=0-s.y,toLen=Math.hypot(toX,toY)||1;
@@ -266,12 +280,15 @@ function bounce(s,p){
    s.x+=cx*(gap-d+0.008);
    s.y+=cy*(gap-d+0.008);
   }
-  const speed=incoming>1e-6?incoming*0.55:0;
-  s.vx=cx*speed;
-  s.vy=cy*speed;
+  const speed=Math.max(incoming*0.90,0.036);
+  const spin=(Number(s.spinDirection)||1)>=0?1:-1;
+  const tx=-s.y/toLen,ty=s.x/toLen;
+  s.vx=cx*speed*0.86+tx*spin*speed*0.48;
+  s.vy=cy*speed*0.86+ty*spin*speed*0.48;
+  restoreBounceSpeed(s,incoming,0.90,0.036);
   s.surfaceBounce=Math.max(s.surfaceBounce||0,0.12);
   s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.08);
-  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,Math.min(0.32,incoming*4));
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.82);
   s.lastXRailResult="bounce";
   s.railBounceCooldown=0.10;
   s.railExitForce=0;
@@ -290,11 +307,13 @@ function bounce(s,p){
   s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
   return false;
  }
- const restitution=0.46,reflected=-normal*restitution;
+ const restitution=fromExit?0.78:0.72;
+ const reflected=-normal*restitution;
  s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
+ restoreBounceSpeed(s,incoming,fromExit?0.88:0.82,fromExit?0.036:0.030);
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
  s.lastXRailResult="bounce";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.22);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.78:0.58);
  s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.20);
  return true;
 }
@@ -510,5 +529,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.2-exit-lanes",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading};
+global.SpinWarsXRailEngine={version:"6.3-keep-momentum",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading};
 })(typeof window!=="undefined"?window:globalThis);
