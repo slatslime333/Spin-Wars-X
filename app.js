@@ -5636,8 +5636,22 @@ function newPhysicsCollision(dt){
     const cTangent=c.vx*tx+c.vy*ty;
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
-    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
+    const pSpeedPre=Math.hypot(p.vx,p.vy);
+    const cSpeedPre=Math.hypot(c.vx,c.vy);
+    /*
+      Cancel the approaching contact, then bounce that component back
+      so a head-on up-vs-down clash does not zero both Beys. Keep each
+      orbit tangent. Knock still adds the shove.
+    */
+    const clashBounce=0.46;
+    if(pNormal>0){
+        p.vx-=nx*pNormal*(1+clashBounce);
+        p.vy-=ny*pNormal*(1+clashBounce);
+    }
+    if(cNormal<0){
+        c.vx-=nx*cNormal*(1+clashBounce);
+        c.vy-=ny*cNormal*(1+clashBounce);
+    }
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
     /*
@@ -5646,10 +5660,21 @@ function newPhysicsCollision(dt){
     */
     const pTanNow=p.vx*tx+p.vy*ty;
     const cTanNow=c.vx*tx+c.vy*ty;
-    p.vx+=tx*(pTangent*0.86-pTanNow);
-    p.vy+=ty*(pTangent*0.86-pTanNow);
-    c.vx+=tx*(cTangent*0.86-cTanNow);
-    c.vy+=ty*(cTangent*0.86-cTanNow);
+    p.vx+=tx*(pTangent*0.90-pTanNow);
+    p.vy+=ty*(pTangent*0.90-pTanNow);
+    c.vx+=tx*(cTangent*0.90-cTanNow);
+    c.vy+=ty*(cTangent*0.90-cTanNow);
+    const keepClashSpeed=(s,pre)=>{
+        const now=Math.hypot(s.vx,s.vy);
+        const want=Math.max(0.012, pre*(0.48+0.30*(1-directness)));
+        if(now<want && now>1e-8){
+            const sc=Math.min(want/now,1.55);
+            s.vx*=sc;
+            s.vy*=sc;
+        }
+    };
+    keepClashSpeed(p,pSpeedPre);
+    keepClashSpeed(c,cSpeedPre);
 
     /*
       PHASE A — IMPACT MOMENTUM OWNERSHIP
