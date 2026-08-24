@@ -2621,8 +2621,16 @@ function newBattleLaunchState(side){
     let vy=tiltSign*tilt.lateral*launchSpeed;
 
     if(isCenterLaunch){
-        vx=0;
-        vy=0;
+        /*
+          Center starts in the bowl and winds into the Bit's orbit.
+          Give a small spin-correct tangent so the first frame is not a
+          standstill dump that can look like a random throw.
+        */
+        const spinDir=combo.blade?.spin==="Left" ? -1 : 1;
+        const windTangent=getSpinOrbitTangent(startX,startY,spinDir);
+        const windSpeed=launchSpeed*0.22;
+        vx=windTangent.x*windSpeed;
+        vy=windTangent.y*windSpeed;
     }
 
     if(isXRailLaunch){
@@ -2716,12 +2724,12 @@ function newBattleLaunchState(side){
         const railTangentY=railTarget.ty*railTravelDirection;
 
         const tangentWeight=
-            plan.quality==="Perfect" ? 0.72 :
-            plan.quality==="Good" ? 0.64 :
-            plan.quality==="Okay" ? 0.54 :
-            plan.quality==="Bad" ? 0.42 : 0.28;
+            plan.quality==="Perfect" ? 0.86 :
+            plan.quality==="Good" ? 0.80 :
+            plan.quality==="Okay" ? 0.74 :
+            plan.quality==="Bad" ? 0.64 : 0.54;
         const approachWeight=1-tangentWeight;
-        const railLaunchSpeed=launchSpeed*(1.03+0.07*qualityFactor);
+        const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
 
         vx=
             (railTangentX*tangentWeight+
@@ -2818,6 +2826,8 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
+        centerLaunchWindup:isCenterLaunch?0.70:0,
+        nonAttackOrbitAngle:Math.atan2(startY,startX),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
         railLoops:0,
