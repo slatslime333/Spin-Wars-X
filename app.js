@@ -2844,6 +2844,42 @@ function newBattleLaunchState(side){
     };
 }
 
+function dropLaunchMissRadians(quality){
+    return {
+        Perfect:0.04,
+        Great:0.07,
+        Good:0.10,
+        Okay:0.18,
+        Bad:0.30,
+        Poor:0.30,
+        Horrible:0.48,
+        Terrible:0.48
+    }[quality]||0.18;
+}
+
+function applyDropLaunchShot(s, missOverride){
+    if(!s) return;
+    const dx=0-s.x;
+    const dy=0-s.y;
+    const dist=Math.hypot(dx,dy)||1;
+    const quality=s.launchQuality || s.launchPlan?.quality || "Okay";
+    const miss=Number.isFinite(missOverride)
+        ? missOverride
+        : (Math.random()*2-1)*dropLaunchMissRadians(quality);
+    const ux=dx/dist;
+    const uy=dy/dist;
+    const cos=Math.cos(miss);
+    const sin=Math.sin(miss);
+    const ax=ux*cos-uy*sin;
+    const ay=ux*sin+uy*cos;
+    const speed=Math.max(Number(s.launchSpeed)||0, 0.036)*1.12;
+    s.vx=ax*speed;
+    s.vy=ay*speed;
+    s.launchDropReleased=true;
+    s.launchDropFalling=true;
+    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.88);
+}
+
 function applyDirectClashAim(self, other){
     if(!self || !other) return;
     if(self.launchPlan?.technique!=="Direct Clash") return;
@@ -4514,10 +4550,10 @@ function newPhysicsStep(s,dt){
 
         /*
           DROP LAUNCH:
-          Hang still at the top of the stadium, then fall straight toward
-          the center. Harder tilt stalls longer. A real collision from
-          another Bey interrupts the stall by ending it; this block must
-          not overwrite that knockback.
+          Hang still at the top of the stadium, then shoot straight toward
+          the middle. Launch quality is aim accuracy. Harder tilt stalls
+          longer. A real collision from another Bey interrupts the stall
+          by ending it; this block must not overwrite that knockback.
         */
         if(s.launchDropActive && !s.launchDropReleased){
             s.launchStallElapsed=(s.launchStallElapsed||0)+dt;
@@ -4533,15 +4569,7 @@ function newPhysicsStep(s,dt){
                 return;
             }
 
-            const dropSide=-(s.launchSideSign || (s.side==="player" ? -1 : 1));
-            const dropTilt=
-                s.launchTilt==="Hard Tilt" ? 0.12 :
-                s.launchTilt==="Slight Tilt" ? 0.06 : 0.0;
-
-            s.vx=dropSide*dropTilt*0.018;
-            s.vy=0.022;
-            s.launchDropReleased=true;
-            s.launchDropFalling=true;
+            applyDropLaunchShot(s);
         }
 
         /*
@@ -4577,7 +4605,8 @@ function newPhysicsStep(s,dt){
             (s.railExitRefractory||0)>0 ||
             !!s.railExited ||
             !!s.xrailExitRampActive ||
-            !!s.railEngaged;
+            !!s.railEngaged ||
+            !!s.launchDropFalling;
 
         /*
           physicalSpeedTarget owns cruise: accelerate up to it, bleed
@@ -4757,7 +4786,7 @@ function newPhysicsStep(s,dt){
           does not create a timer. Attack Bits get stronger convergence;
           non-attack Bits get a gentler version so they actually engage.
         */
-        {
+        if(!s.launchDropFalling){
             const opponent =
                 s===NEW_BATTLE.player
                     ? NEW_BATTLE.cpu
@@ -4916,6 +4945,14 @@ function newPhysicsStep(s,dt){
           movement-engine.js. app.js handles battle/rail/collision orchestration
           and delegates free-space movement here.
         */
+        if(s.launchDropFalling){
+            if(Math.hypot(s.x,s.y)<0.24){
+                s.launchDropFalling=false;
+            }else{
+                return;
+            }
+        }
+
         return SpinWarsMovementEngine.step(s,dt,{
             clamp:newBattleClamp,
             getSpinOrbitTangent,
