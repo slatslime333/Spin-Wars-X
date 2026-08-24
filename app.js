@@ -5235,27 +5235,27 @@ function newPhysicsCollision(dt){
     */
     const bounceSep=Math.max(0,-closing)*(0.48+directness*0.22);
     const pSpinPower=
-        (0.004+pAttack*0.006+pKB*0.016)*
+        (0.004+pAttack*0.009+pKB*0.022)*
         (0.22+0.78*pRPM)*
         Math.max(0.14, Math.min(1, pSpeed/0.038));
     const cSpinPower=
-        (0.004+cAttack*0.006+cKB*0.016)*
+        (0.004+cAttack*0.009+cKB*0.022)*
         (0.22+0.78*cRPM)*
         Math.max(0.14, Math.min(1, cSpeed/0.038));
     const pKnockback=Math.min(
-        0.068,
+        0.090,
         Math.max(
-            0.005+pKB*0.008+pRPM*0.003,
-            (bounceSep*0.28+pSpinPower+pMomentum*0.18+pForce*0.004)*
+            0.006+pKB*0.010+pRPM*0.004,
+            (bounceSep*0.40+pSpinPower+pMomentum*0.26+pForce*0.009)*
             (0.94+(1-cDef)*0.14)*
             (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
         )
     );
     const cKnockback=Math.min(
-        0.068,
+        0.090,
         Math.max(
-            0.005+cKB*0.008+cRPM*0.003,
-            (bounceSep*0.28+cSpinPower+cMomentum*0.18+cForce*0.004)*
+            0.006+cKB*0.010+cRPM*0.004,
+            (bounceSep*0.40+cSpinPower+cMomentum*0.26+cForce*0.009)*
             (0.94+(1-pDef)*0.14)*
             (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
         )
@@ -5294,10 +5294,10 @@ function newPhysicsCollision(dt){
       a temporary reduction in orbital steering after a real collision.
     */
     const pImpactMomentumState=
-        newBattleClamp(pKnockback/0.070, 0.10, 0.58);
+        newBattleClamp(pKnockback/0.082, 0.14, 0.76);
 
     const cImpactMomentumState=
-        newBattleClamp(cKnockback/0.070, 0.10, 0.58);
+        newBattleClamp(cKnockback/0.082, 0.14, 0.76);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
