@@ -195,6 +195,15 @@ function sweptContact(s,findNearest,prevDistance){
 }
 function sweptRailContact(s){return sweptContact(s,nearest,s._xrailPrevDistance);}
 function sweptSolidContact(s){return sweptContact(s,nearestSolid,s._xrailSolidPrevDistance);}
+function isExitZone(s,p){
+ if(p?.closer) return true;
+ if(!s) return false;
+ const g=buildGeometry();
+ const apex=toGame([50,21.0]);
+ return Math.hypot(s.x-apex.x,s.y-apex.y)<0.20
+  || Math.hypot(s.x-g.rightExit.x,s.y-g.rightExit.y)<0.16
+  || Math.hypot(s.x-g.leftExit.x,s.y-g.leftExit.y)<0.16;
+}
 function captureDecision(s,p,contact){
  const c=getContact(s,p);
  // Catch from remaining CCW bite, not peak RPM. ~70% RPM with real
@@ -211,6 +220,15 @@ function captureDecision(s,p,contact){
  if(c.tangential<0.0036||c.tangentRatio<0.20)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
  if(c.approachRatio>0.92)return{ok:false,reason:"too-direct",contact:c};
  if(c.tilt>0.38)return{ok:false,reason:"tilt-too-high",contact:c};
+ /*
+   Free hits on the X-Exit bounce to center unless they are a real
+   hook: strong CCW and speed into the rail, not a bump on the V.
+ */
+ if(isExitZone(s,p)||p?.closer){
+  if(c.speed<0.012||c.tangential<0.010||c.tangentRatio<0.32){
+   return{ok:false,reason:"exit-not-a-hook",contact:c};
+  }
+ }
  return{ok:true,contact:c,grip:clamp(0.72+(1-c.tilt)*0.14+c.tangentRatio*0.10,0.72,0.96)};
 }
 function engage(s,contact){
@@ -269,28 +287,29 @@ function bounce(s,p){
  setContactDebug(s,p,d,"surface");
 
  /*
-  * The X-Exit closer is part of the one solid rail. Unhooked hits there
-  * bounce toward stadium middle with leftover speed so they can still
-  * tag a Bey in the center. Do not dump them to a dead stop.
+  * Unhooked X-Exit hits bounce toward stadium middle and keep their
+  * speed. Riding the exit is only for a real CCW hook (handled before
+  * bounce). Do not dump them or let them skim along the V.
   */
- if(p.closer){
+ if(p.closer||isExitZone(s,p)){
   const toX=0-s.x,toY=0-s.y,toLen=Math.hypot(toX,toY)||1;
   const cx=toX/toLen,cy=toY/toLen;
   if(d<gap){
    s.x+=cx*(gap-d+0.008);
    s.y+=cy*(gap-d+0.008);
   }
-  const speed=Math.max(incoming*0.90,0.036);
+  const speed=Math.max(incoming,0.036);
   const spin=(Number(s.spinDirection)||1)>=0?1:-1;
   const tx=-s.y/toLen,ty=s.x/toLen;
-  s.vx=cx*speed*0.86+tx*spin*speed*0.48;
-  s.vy=cy*speed*0.86+ty*spin*speed*0.48;
-  restoreBounceSpeed(s,incoming,0.90,0.036);
+  s.vx=cx*speed*0.97+tx*spin*speed*0.18;
+  s.vy=cy*speed*0.97+ty*spin*speed*0.18;
+  restoreBounceSpeed(s,incoming,1,0.036);
   s.surfaceBounce=Math.max(s.surfaceBounce||0,0.12);
   s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.08);
   s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.82);
-  s.lastXRailResult="bounce";
+  s.lastXRailResult="bounce-center";
   s.railBounceCooldown=0.10;
+  s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.22);
   s.railExitForce=0;
   s.railExitKnockbackMultiplier=1;
   s.railExited=false;
@@ -500,7 +519,7 @@ function step(s,dt){
  if(solid){
   const overlapping=solid.distance<=contactRadius(s);
   if(solid.impact||overlapping){
-   if(!mouthPass && !justRodeExit && !solid.closer && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
+   if(!mouthPass && !justRodeExit && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
     const rail=sweptRailContact(s);
     if(rail && (rail.impact||rail.distance<=contactRadius(s)) && engage(s,rail)){
      s._xrailPrevX=s.x;s._xrailPrevY=s.y;
@@ -529,5 +548,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.3-keep-momentum",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading};
+global.SpinWarsXRailEngine={version:"6.4-exit-center",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading,isExitZone};
 })(typeof window!=="undefined"?window:globalThis);
