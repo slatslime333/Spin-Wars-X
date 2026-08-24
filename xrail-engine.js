@@ -162,7 +162,9 @@ function release(s,reason){
  s.railExitRefractory=reason==="x-exit"?0.22:0.08;
  s.railCaptureCooldown=reason==="x-exit"?0.16:0.08;
  s.railCaptureCooldownPoint={x:s.x,y:s.y};s.railExitRefractoryPoint={x:s.x,y:s.y};
- s.lastXRailExitReason=reason||"release";if(p)s.railDistance=p.distance;return true;
+ s.lastXRailExitReason=reason||"release";
+ s.railExitAt=(typeof performance!=="undefined"&&typeof performance.now==="function")?performance.now():Date.now();
+ if(p)s.railDistance=p.distance;return true;
 }
 function getContact(s,p){
  if(!s||!p)return null;
