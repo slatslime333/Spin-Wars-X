@@ -1346,17 +1346,56 @@ footer{
   align-items:stretch;
 }
 .battle-score{
-  min-width:84px;
+  min-width:96px;
+  padding:6px 10px;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:4px;
   font-family:Staatliches,Impact,sans-serif;
   background:#0b0908;
   border:2px solid var(--gold);
 }
+.battle-score-line{
+  display:flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:8px;
+}
 .battle-score b{font-size:28px;line-height:1;font-weight:400}
-.battle-score span{color:var(--gold);letter-spacing:.16em;font-size:12px}
+.battle-score-vs{
+  color:var(--gold);
+  letter-spacing:.10em;
+  font-size:16px;
+}
+.battle-score-ft{
+  color:var(--muted);
+  letter-spacing:.10em;
+  font-size:9px;
+  text-transform:uppercase;
+  font-family:Kanit,sans-serif;
+  font-weight:700;
+}
+
+.battle-hud-parts{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:4px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.04em;
+  line-height:1.2;
+  min-height:18px;
+}
+.battle-hud-bit{
+  width:18px;
+  height:18px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
 
 .battle-hud-card{
   min-width:0;
@@ -1624,7 +1663,9 @@ footer{
 
   .battle-hud-card{padding:8px}
   .battle-hud-top strong{font-size:11px}
+  .battle-hud-parts{font-size:10px}
   .rpm-readout b{font-size:22px}
+  .battle-score b{font-size:22px}
 }
 
 @media(prefers-reduced-motion:reduce){

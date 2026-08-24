@@ -305,15 +305,15 @@ function bounce(s,p){
    s.x+=cx*(gap-d+0.008);
    s.y+=cy*(gap-d+0.008);
   }
-  const speed=Math.max(incoming,0.036);
+  const speed=Math.max(incoming,0.032);
   const spin=(Number(s.spinDirection)||1)>=0?1:-1;
   const tx=-s.y/toLen,ty=s.x/toLen;
-  s.vx=cx*speed*0.97+tx*spin*speed*0.18;
-  s.vy=cy*speed*0.97+ty*spin*speed*0.18;
-  restoreBounceSpeed(s,incoming,1,0.036);
+  s.vx=cx*speed*0.84+tx*spin*speed*0.30;
+  s.vy=cy*speed*0.84+ty*spin*speed*0.30;
+  restoreBounceSpeed(s,incoming,0.88,0.030);
   s.surfaceBounce=Math.max(s.surfaceBounce||0,0.12);
   s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.08);
-  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.82);
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.58);
   s.lastXRailResult="bounce-center";
   s.railBounceCooldown=0.10;
   s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.22);
@@ -333,14 +333,19 @@ function bounce(s,p){
   s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
   return false;
  }
- const restitution=fromExit?0.64:0.56;
+ const restitution=fromExit?0.52:0.44;
  const reflected=-normal*restitution;
  s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
- restoreBounceSpeed(s,incoming,fromExit?0.74:0.68,fromExit?0.028:0.024);
+ const r=Math.hypot(s.x,s.y)||1;
+ const spin=(Number(s.spinDirection)||1)>=0?1:-1;
+ const tx=-s.y/r,ty=s.x/r;
+ s.vx+=tx*spin*incoming*0.12;
+ s.vy+=ty*spin*incoming*0.12;
+ restoreBounceSpeed(s,incoming,fromExit?0.66:0.58,fromExit?0.024:0.020);
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
  s.lastXRailResult="bounce";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.62:0.42);
- s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.16);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.48:0.28);
+ s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.10);
  return true;
 }
 function contactSafety(s,p){return bounce(s,p);}

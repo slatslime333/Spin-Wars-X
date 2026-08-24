@@ -201,7 +201,7 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.55,
+        (s.impactMomentumState||0)-dt*0.72,
         0,1
     );
 
@@ -241,8 +241,8 @@ const preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?1.35:1.50)*s.impactMomentumState,
-    attackLike?0.05:0.03,
+    1-(attackLike?1.12:1.22)*s.impactMomentumState,
+    attackLike?0.14:0.12,
     1
 );
 
@@ -381,8 +381,8 @@ s.vy+=(desiredVY-s.vy)*responseAmount;
 */
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
-        ? (impactHold>0.12?0.0007:0.0032)
-        : (impactHold>0.12?0.0005:0.0024);
+        ? (impactHold>0.12?0.0018:0.0032)
+        : (impactHold>0.12?0.0014:0.0024);
     const bowl=clamp(
         (rNow-preferredRadius)*bowlGain,
         attackLike?-0.0010:-0.0008,

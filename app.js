@@ -1276,6 +1276,13 @@ function bitSpritePath(bit){
     const path=bitSpriteFile(bit);
     return path ? encodeURI(path) : "";
 }
+function battleHudPartsLine(s){
+    const ratchet=s?.ratchet?.name || "";
+    const bit=s?.bit?.name || "";
+    const bitArt=bitSpritePath(s?.bit);
+    const parts=[ratchet,bit].filter(Boolean).join(" · ");
+    return `<p class="battle-hud-parts">${parts||"—"}${bitArt?`<img class="battle-hud-bit" src="${bitArt}" alt="">`:""}</p>`;
+}
 function createBladeCard(blade){
     const card=document.createElement("button");
     card.type="button";
@@ -2833,7 +2840,7 @@ function newBattleLaunchState(side){
         // collision energy; it does not replace Attack/Knockback stats.
         mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
         hitFlash:0,impactScale:1,lastKnockback:0,
-        stats,blade:combo.blade,bit:combo.bit,
+        stats,blade:combo.blade,ratchet:combo.ratchet,bit:combo.bit,
         launchPlan:plan,
         launchQuality:plan.quality,
         launchSpeed,
@@ -3259,17 +3266,22 @@ function renderNewBattle(){
             <div class="battle-fighters">
               <div class="battle-hud-card battle-hud-player">
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
+                ${battleHudPartsLine(p)}
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
               </div>
               <div class="battle-score">
-                <b>${Game.battle.score?.player||0}</b>
-                <span>FT7</span>
-                <b>${Game.battle.score?.cpu||0}</b>
+                <div class="battle-score-line">
+                  <b>${Game.battle.score?.player||0}</b>
+                  <span class="battle-score-vs">VS</span>
+                  <b>${Game.battle.score?.cpu||0}</b>
+                </div>
+                <small class="battle-score-ft">first to 7</small>
               </div>
               <div class="battle-hud-card battle-hud-cpu">
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
+                ${battleHudPartsLine(c)}
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
@@ -5442,10 +5454,10 @@ function newPhysicsCollision(dt){
       a temporary reduction in orbital steering after a real collision.
     */
     const pImpactMomentumState=
-        newBattleClamp(pKnockback/0.090, 0.22, 0.86);
+        newBattleClamp(pKnockback/0.090, 0.18, 0.70);
 
     const cImpactMomentumState=
-        newBattleClamp(cKnockback/0.090, 0.22, 0.86);
+        newBattleClamp(cKnockback/0.090, 0.18, 0.70);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
