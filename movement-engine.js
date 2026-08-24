@@ -206,7 +206,7 @@ s.impactMomentumState=
     );
 
 const orbitSteeringAvailability=
-    1-0.92*s.impactMomentumState;
+    1-0.70*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -345,26 +345,34 @@ const desiredVY=
     radialY*desiredRadialSpeed;
 const responseRate=
     (
-        (attackLike ? 0.028 : 0.046)+
+        (attackLike ? 0.034 : 0.052)+
         control*0.014+
         bitPrecession*0.006+
         movement*0.004
     )*
     (0.42+0.58*rpm)*
     mobilityResponse;
-const skipOrbit=
-    impactHold>0.12 ||
-    (s.railExitRefractory||0)>0 ||
-    s.xrailExitRampActive;
-const responseAmount=skipOrbit
-    ? 0
-    : clamp(
-        responseRate*dt*60*orbitSteeringAvailability,
-        0,
-        attackLike ? 0.070 : 0.10
-    );
+const responseAmount=clamp(
+    responseRate*dt*60*Math.max(0.16,orbitSteeringAvailability),
+    0,
+    attackLike ? 0.078 : 0.11
+);
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
+
+/*
+  Planted stadium. Soft bowl pull toward the home ring so a bounce
+  settles back into orbit instead of skating, without rewriting heading.
+*/
+if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
+    const bowl=clamp(
+        (rNow-preferredRadius)*(impactHold>0.18?0.0022:0.0065),
+        -0.0018,
+        0.0075
+    );
+    s.vx-=radialX*bowl;
+    s.vy-=radialY*bowl;
+}
 
 /*
   LOW RPM
@@ -461,7 +469,7 @@ s.vy +=
   Skip while knockback owns the path — stripping the "wrong" tangent
   as the Bey flies is the post-hit wiggle.
 */
-if(impactHold<=0.28){
+if(impactHold<=0.10){
     enforceDirection(s);
 }
 
@@ -695,7 +703,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.0",
+    version:"1.3.1",
     step,
     homeOrbitRadius,
     orbitOmega,

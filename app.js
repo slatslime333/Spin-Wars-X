@@ -5013,10 +5013,23 @@ function newPhysicsCollision(dt){
     const dist=Math.hypot(dx,dy);
     const minDist=p.radius+c.radius;
 
-    if(dist>minDist || dist<0.0001) return;
-
-    const nx=dx/dist, ny=dy/dist;
+    if(dist>minDist) return;
+    const nx=dist>1e-6?dx/dist:1;
+    const ny=dist>1e-6?dy/dist:0;
     const tx=-ny, ty=nx;
+
+    /*
+      Always un-overlap first. Returning on lock/separating without a
+      push is how they phased through each other.
+    */
+    const overlap=minDist-Math.max(dist,1e-6);
+    if(overlap>0){
+        p.x-=nx*(overlap*0.52+0.0035);
+        p.y-=ny*(overlap*0.52+0.0035);
+        c.x+=nx*(overlap*0.52+0.0035);
+        c.y+=ny*(overlap*0.52+0.0035);
+    }
+
     const rvx=c.vx-p.vx, rvy=c.vy-p.vy;
     const closing=rvx*nx+rvy*ny;
     const relativeSpeed=Math.hypot(rvx,rvy);
@@ -5028,7 +5041,7 @@ function newPhysicsCollision(dt){
 
     const now=performance.now();
     if(now<(NEW_BATTLE.collisionLockUntil||0)) return;
-    NEW_BATTLE.collisionLockUntil=now+120;
+    NEW_BATTLE.collisionLockUntil=now+70;
 
     if(p.launchDropActive && !p.launchDropReleased){
         p.launchDropReleased=true;
@@ -5244,14 +5257,24 @@ function newPhysicsCollision(dt){
     const pRailBreakForce=cKnockback;
     const cRailBreakForce=pKnockback;
 
-    const pSpeedBefore=Math.hypot(p.vx,p.vy);
-    const cSpeedBefore=Math.hypot(c.vx,c.vy);
+    const pTangent=p.vx*tx+p.vy*ty;
+    const cTangent=c.vx*tx+c.vy*ty;
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal*0.42;p.vy-=ny*pNormal*0.42;}
-    if(cNormal<0){c.vx-=nx*cNormal*0.42;c.vy-=ny*cNormal*0.42;}
+    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
+    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
+    /*
+      Bounce off, keep your own orbit tangent. Scaling the whole vector
+      along the contact line made them follow the same path or tunnel.
+    */
+    const pTanNow=p.vx*tx+p.vy*ty;
+    const cTanNow=c.vx*tx+c.vy*ty;
+    p.vx+=tx*(pTangent*0.92-pTanNow);
+    p.vy+=ty*(pTangent*0.92-pTanNow);
+    c.vx+=tx*(cTangent*0.92-cTanNow);
+    c.vy+=ty*(cTangent*0.92-cTanNow);
 
     /*
       PHASE A — IMPACT MOMENTUM OWNERSHIP
@@ -5265,10 +5288,10 @@ function newPhysicsCollision(dt){
       a temporary reduction in orbital steering after a real collision.
     */
     const pImpactMomentumState=
-        newBattleClamp(pKnockback/0.055, 0.16, 0.84);
+        newBattleClamp(pKnockback/0.070, 0.10, 0.58);
 
     const cImpactMomentumState=
-        newBattleClamp(cKnockback/0.055, 0.16, 0.84);
+        newBattleClamp(cKnockback/0.070, 0.10, 0.58);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
@@ -5338,22 +5361,6 @@ function newPhysicsCollision(dt){
         }
     }
 
-    const keepSpeed=(s,before)=>{
-        const sp=Math.hypot(s.vx,s.vy);
-        const floor=Math.max(0.012, before*0.80);
-        if(sp<floor){
-            if(sp<1e-6){
-                s.vx=-nx*floor;
-                s.vy=-ny*floor;
-                return;
-            }
-            s.vx*=floor/sp;
-            s.vy*=floor/sp;
-        }
-    };
-    keepSpeed(p,pSpeedBefore);
-    keepSpeed(c,cSpeedBefore);
-
     const rocketCap=(s)=>{
         const sp=Math.hypot(s.vx,s.vy);
         if(sp>0.19){
@@ -5363,14 +5370,6 @@ function newPhysicsCollision(dt){
     };
     rocketCap(p);
     rocketCap(c);
-
-    // Separate them so the same collision cannot fire repeatedly on adjacent
-    // frames while they are still overlapping.
-    const separation=minDist-dist;
-    p.x-=nx*(separation*0.62+0.0040);
-    p.y-=ny*(separation*0.62+0.0040);
-    c.x+=nx*(separation*0.62+0.0040);
-    c.y+=ny*(separation*0.62+0.0040);
 
     // A collision can otherwise push a Bey deep into the rail in one frame.
     // Resolve that immediately. The bottom finish corridor remains the only
