@@ -208,7 +208,7 @@ function captureDecision(s,p,contact){
  const c=getContact(s,p);
  // Catch from remaining CCW bite, not peak RPM. ~70% RPM with real
  // speed/momentum should still hook; dead or too-direct hits still fail.
- if(!c||c.speed<0.0040)return{ok:false,reason:"low-speed",contact:c};
+ if(!c||c.speed<0.0034)return{ok:false,reason:"low-speed",contact:c};
  if(s.spinDirection!==1)return{ok:false,reason:"wrong-spin",contact:c};
  /*
    A wide Attack orbit can sit on the X-Rail ring. Circling there is a
@@ -216,16 +216,16 @@ function captureDecision(s,p,contact){
    launch width or a clash, not every lap of a rail-width circle.
  */
  if(!contact?.entering)return{ok:false,reason:"no-rail-entry",contact:c};
- if(c.inward<0.0046)return{ok:false,reason:"weak-impact",contact:c};
- if(c.tangential<0.0036||c.tangentRatio<0.20)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
- if(c.approachRatio>0.92)return{ok:false,reason:"too-direct",contact:c};
- if(c.tilt>0.38)return{ok:false,reason:"tilt-too-high",contact:c};
+ if(c.inward<0.0038)return{ok:false,reason:"weak-impact",contact:c};
+ if(c.tangential<0.0028||c.tangentRatio<0.16)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
+ if(c.approachRatio>0.95)return{ok:false,reason:"too-direct",contact:c};
+ if(c.tilt>0.44)return{ok:false,reason:"tilt-too-high",contact:c};
  /*
    Free hits on the X-Exit bounce to center unless they are a real
    hook: strong CCW and speed into the rail, not a bump on the V.
  */
  if(isExitZone(s,p)||p?.closer){
-  if(c.speed<0.012||c.tangential<0.010||c.tangentRatio<0.32){
+  if(c.speed<0.009||c.tangential<0.0075||c.tangentRatio<0.26){
    return{ok:false,reason:"exit-not-a-hook",contact:c};
   }
  }
@@ -240,7 +240,7 @@ function engage(s,contact){
  const incoming=Math.hypot(s.vx,s.vy);
  if(c.normal<0){s.vx-=c.nx*c.normal;s.vy-=c.ny*c.normal;}
  const tangential=s.vx*p.tx+s.vy*p.ty;
- if(!Number.isFinite(tangential)||tangential<=0.0035){s.lastXRailResult="capture-lost-tangent";return false;}
+ if(!Number.isFinite(tangential)||tangential<=0.0026){s.lastXRailResult="capture-lost-tangent";return false;}
  s.railEngaged=true;s.railExited=false;s.railDirection=1;s.railGrip=decision.grip;s.railContactPoint={x:p.x,y:p.y};
  /*
    Ride the rail with the speed you arrived with. Keep the CCW tangent,
@@ -333,14 +333,14 @@ function bounce(s,p){
   s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
   return false;
  }
- const restitution=fromExit?0.78:0.72;
+ const restitution=fromExit?0.64:0.56;
  const reflected=-normal*restitution;
  s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
- restoreBounceSpeed(s,incoming,fromExit?0.88:0.82,fromExit?0.036:0.030);
+ restoreBounceSpeed(s,incoming,fromExit?0.74:0.68,fromExit?0.028:0.024);
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
  s.lastXRailResult="bounce";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.78:0.58);
- s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.20);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.62:0.42);
+ s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.16);
  return true;
 }
 function contactSafety(s,p){return bounce(s,p);}
