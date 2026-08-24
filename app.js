@@ -1279,9 +1279,14 @@ function bitSpritePath(bit){
 function battleHudPartsLine(s){
     const ratchet=s?.ratchet?.name || "";
     const bit=s?.bit?.name || "";
-    const bitArt=bitSpritePath(s?.bit);
     const parts=[ratchet,bit].filter(Boolean).join(" · ");
-    return `<p class="battle-hud-parts">${parts||"—"}${bitArt?`<img class="battle-hud-bit" src="${bitArt}" alt="">`:""}</p>`;
+    return `<p class="battle-hud-parts">${parts||"—"}</p>`;
+}
+function battleHudMetaValue(s,side){
+    const live=Number(s?.comboMeta);
+    const stored=Number(Game[side]?.comboMeta);
+    const raw=Number.isFinite(live)?live:stored;
+    return Number.isFinite(raw) ? Math.round(raw) : "—";
 }
 function createBladeCard(blade){
     const card=document.createElement("button");
@@ -2863,6 +2868,8 @@ function newBattleLaunchState(side){
         mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,ratchet:combo.ratchet,bit:combo.bit,
+        comboOVR:Number(stats.ovr ?? combo.comboOVR),
+        comboMeta:Number(stats.meta ?? combo.comboMeta),
         launchPlan:plan,
         launchQuality:plan.quality,
         launchSpeed,
@@ -3290,7 +3297,10 @@ function renderNewBattle(){
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
-                <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
+                <div class="rpm-bar-row">
+                  <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
+                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
+                </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
               </div>
               <div class="battle-score">
@@ -3305,7 +3315,10 @@ function renderNewBattle(){
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
                 ${battleHudPartsLine(c)}
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
-                <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
+                <div class="rpm-bar-row">
+                  <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
+                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
+                </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
               </div>
             </div>
