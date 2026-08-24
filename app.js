@@ -5148,16 +5148,12 @@ function newPhysicsCollision(dt){
         cSpinBite
     )*cContactEfficiency;
 
-    const statDrivenContact=
-        (0.0016+Math.min(pCombatRating,cCombatRating)*0.00115)*
-        Math.pow(Math.max(0.28,(pRPM+cRPM)*0.5),0.55);
-
-    const effectiveImpact=Math.max(
-        impactSpeed,
-        grazingEnergy,
-        statDrivenContact,
-        Math.sqrt(Math.max(pEnergy,cEnergy))*0.62
-    );
+    /*
+      Contact energy still feeds RPM damage. Knockback itself is not
+      created from stats, mass, or a second energy formula — only from
+      how hard they actually closed.
+    */
+    const effectiveImpact=impactSpeed;
 
     const directness=newBattleClamp(
         impactSpeed/Math.max(totalRelative,0.0001),
@@ -5211,46 +5207,19 @@ function newPhysicsCollision(dt){
         (0.84+heavyFactor*0.25)*
         hitRoll;
 
-    // Knockback stays one physical system: closing speed, Attack/KB stats,
-    // and remaining RPM. No extra bit-pair or rail-exit multipliers.
-    const extremeSpeedScale=
-        relativeSpeed>0.40 ? 0.40/relativeSpeed : 1;
-
-    const pRailBreakForce=cForce;
-    const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const bounceSep=Math.max(0,-closing)*(0.70+directness*0.30);
-    const pSpinPower=
-        (0.018+pAttack*0.024+pKB*0.026)*
-        (0.18+0.82*pRPM)*
-        Math.max(0.12, Math.min(1, pSpeed/0.038))*
-        (pParked&&cParked?0.34:1);
-    const cSpinPower=
-        (0.018+cAttack*0.024+cKB*0.026)*
-        (0.18+0.82*cRPM)*
-        Math.max(0.12, Math.min(1, cSpeed/0.038))*
-        (pParked&&cParked?0.34:1);
-    const pKnockback=Math.min(
-        0.128,
-        Math.max(
-            0.0035+avgRPM*0.007,
-            (bounceSep*0.82+pSpinPower+pForce*0.022)*
-            extremeSpeedScale*
-            (0.94+(1-cDef)*0.24)*
-            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
-        )
-    );
-    const cKnockback=Math.min(
-        0.128,
-        Math.max(
-            0.0035+avgRPM*0.007,
-            (bounceSep*0.82+cSpinPower+cForce*0.022)*
-            extremeSpeedScale*
-            (0.94+(1-pDef)*0.24)*
-            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
-        )
-    );
+    /*
+      Knockback is a bounce from closing speed. Stats/momentum do not
+      invent extra shove. A real smash (fast, head-on) can still fly.
+    */
+    const flyHit=impactSpeed>=0.040 && directness>=0.55;
+    const bounceRest=flyHit?0.42:0.16;
+    const bounceCap=flyHit?0.048:0.018;
+    const pKnockback=Math.min(bounceCap, impactSpeed*bounceRest);
+    const cKnockback=Math.min(bounceCap, impactSpeed*bounceRest);
+    const pRailBreakForce=cKnockback;
+    const cRailBreakForce=pKnockback;
 
     // Stop walking into each other, then shove apart. Adding a tiny delta
     // on top of inbound speed looked like "damage with no impact".
@@ -5274,21 +5243,13 @@ function newPhysicsCollision(dt){
     */
     const pImpactMomentumState=
         newBattleClamp(
-            Math.max(
-                pKnockback/0.018,
-                effectiveImpact/0.016,
-                0.68
-            ),
+            flyHit?Math.max(0.62,pKnockback/0.048):pKnockback/0.040,
             0,1
         );
 
     const cImpactMomentumState=
         newBattleClamp(
-            Math.max(
-                cKnockback/0.018,
-                effectiveImpact/0.016,
-                0.68
-            ),
+            flyHit?Math.max(0.62,cKnockback/0.048):cKnockback/0.040,
             0,1
         );
 
@@ -5301,8 +5262,8 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    const recoilP=pKnockback*(0.08+0.10*pDef);
-    const recoilC=cKnockback*(0.08+0.10*cDef);
+    const recoilP=pKnockback*(0.03+0.04*pDef);
+    const recoilC=cKnockback*(0.03+0.04*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
