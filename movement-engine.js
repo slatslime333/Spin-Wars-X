@@ -35,11 +35,11 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
     to kiss the rail, not parked in the mid bowl. RPM contraction — not
     this base — is what walks them in after the opening laps.
   */
-  return Math.max(0.76,Math.min(0.84,
-    0.78+
-    (1-center)*0.04+
-    (move-0.80)*0.05+
-    (1-stab)*0.02
+  return Math.max(0.72,Math.min(0.78,
+    0.74+
+    (1-center)*0.03+
+    (move-0.80)*0.04+
+    (1-stab)*0.015
   ));
 }
 
@@ -60,11 +60,14 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
   /*
-    Attack is rail-wide at full spin. By ~65% RPM it should already sit
-    inside the rail ring — a little tighter, not still rail-wide — so
-    tired Attack bits cannot cruise the X-Rail all match.
+    Attack is slightly inside the rail at full spin. By 50% RPM it
+    should sit just under the X-Rail/X-Exit so laps miss the ring,
+    then keep walking in.
   */
-  if(kind==="attack") return 0.40+0.60*Math.pow(s,1.70);
+  if(kind==="attack"){
+    if(s>=0.50) return 0.84+0.16*((s-0.50)/0.50);
+    return 0.48+0.36*(s/0.50);
+  }
   if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.45);
   /*
     Non-Attack stays a little wider through high RPM, then drops hard
@@ -88,7 +91,7 @@ function bitOrbitProfile(opts){
 
   if(klass==="attack"){
     const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
-    home=Math.max(0.30,Math.min(0.84,attack-rideShrink));
+    home=Math.max(0.28,Math.min(0.78,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -264,7 +267,7 @@ const orbitSpeedFraction=
     0.28*movement+
     0.10*(1-centerAffinity);
 const orbitSpeedTightness=attackLike
-    ? 1
+    ? clamp(0.60+0.40*(preferredRadius/0.76),0.60,1)
     : Math.min(1,0.34+0.66*Math.max(0.12,preferredRadius/0.52));
 let targetOrbitSpeed=
     physicalSpeedTarget*
@@ -283,6 +286,10 @@ if(centerWinding && !attackLike){
     */
     const ring=Math.max(0.14,windingHome);
     targetOrbitSpeed*=clamp(rNow/ring,0.28,1);
+}else if(attackLike){
+    const ring=Math.max(0.28,preferredRadius);
+    if(rNow>ring) targetOrbitSpeed*=clamp(ring/rNow,0.50,1);
+    else targetOrbitSpeed*=clamp(rNow/ring,0.52,1);
 }
 
 /*
@@ -355,19 +362,19 @@ if(
   orbitSteeringAvailability starves this so knockback keeps flying.
 */
 const impactHold=s.impactMomentumState||0;
-const radialGain=attackLike ? 0.14 : 0.26;
 const steerRadius=windingHome;
-const outsideHome=!attackLike && rNow>preferredRadius+0.02;
+const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
+const radialGain=attackLike ? (outsideHome?0.22:0.14) : 0.26;
 const windingOutwardCap=attackLike
     ? 0.006
     : (rNow>=steerRadius-0.01 ? 0.0008 : 0.0034);
 const desiredRadialSpeed=
     clamp(
         (steerRadius-rNow)*radialGain,
-        attackLike ? -0.014 : (outsideHome ? -0.038 : -0.020),
+        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.038 : -0.020),
         centerWinding
             ? windingOutwardCap
-            : (attackLike ? 0.014 : 0.016)
+            : (attackLike ? 0.006 : 0.016)
     );
 const desiredVX=
     tangentX*targetOrbitSpeed+
@@ -389,20 +396,23 @@ const responseAmount=clamp(
     (centerWinding?(attackLike?1.55:0.92):1)*
     (outsideHome?1.85:1),
     0,
-    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.046:(outsideHome?0.11:0.056))
+    attackLike ? (centerWinding?0.070:(outsideHome?0.078:0.048)) : (centerWinding?0.046:(outsideHome?0.11:0.056))
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
 
 if(
-    !attackLike &&
-    rNow>preferredRadius*1.04 &&
+    rNow>preferredRadius*(attackLike?1.06:1.04) &&
     impactHold<0.18 &&
     !s.railEngaged
 ){
     const outward=s.vx*radialX+s.vy*radialY;
     if(outward>0){
-        const cut=clamp((rNow/Math.max(0.12,preferredRadius)-1.04)*3.4,0,0.88);
+        const cut=clamp(
+            (rNow/Math.max(0.12,preferredRadius)-(attackLike?1.06:1.04))*(attackLike?2.2:3.4),
+            0,
+            attackLike?0.58:0.88
+        );
         s.vx-=radialX*outward*cut;
         s.vy-=radialY*outward*cut;
     }
@@ -415,12 +425,14 @@ if(
 */
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
-        ? (impactHold>0.12?0.0018:0.0032)
+        ? (impactHold>0.12?0.0018:(outsideHome?0.022:0.0032))
         : (impactHold>0.12?0.0022:0.0042);
-    const bowl=clamp(
-        (rNow-preferredRadius)*bowlGain,
+    let bowl=(rNow-preferredRadius)*bowlGain;
+    if(attackLike && outsideHome) bowl=Math.max(bowl,0.0034);
+    bowl=clamp(
+        bowl,
         attackLike?-0.0010:-0.0014,
-        attackLike?0.0036:(outsideHome?0.0090:0.0044)
+        attackLike?(outsideHome?0.012:0.0036):(outsideHome?0.0090:0.0044)
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
