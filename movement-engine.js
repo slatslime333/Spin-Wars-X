@@ -66,7 +66,13 @@ function orbitRpmFactor(spin,kind){
   */
   if(kind==="attack"){
     if(s>=0.50) return 0.84+0.16*((s-0.50)/0.50);
-    return 0.48+0.36*(s/0.50);
+    /*
+      From 50% down they sit under the rail. By the last 20% RPM
+      they pull into a tight ring like Non-Attack, with a little
+      leftover Attack width.
+    */
+    if(s>=0.20) return 0.32+0.52*((s-0.20)/0.30);
+    return 0.22+0.10*(s/0.20);
   }
   if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.45);
   /*
@@ -91,7 +97,8 @@ function bitOrbitProfile(opts){
 
   if(klass==="attack"){
     const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
-    home=Math.max(0.28,Math.min(0.78,attack-rideShrink));
+    const floor=rpm>=0.22?0.26:0.14;
+    home=Math.max(floor,Math.min(0.78,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -383,7 +390,7 @@ const impactHold=s.impactMomentumState||0;
 const steerRadius=windingHome;
 const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
 const radialGain=attackLike
-    ? (outsideHome?0.22:0.14)
+    ? (outsideHome?(rpm<0.20?0.34:0.22):0.14)
     : (0.16+0.06*plant);
 const windingOutwardCap=attackLike
     ? 0.006
@@ -801,7 +808,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.5",
+    version:"1.3.6",
     step,
     homeOrbitRadius,
     orbitOmega,

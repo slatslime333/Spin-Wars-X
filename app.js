@@ -3505,24 +3505,53 @@ function finishRecoveryChance(s,zone,knockForce,source){
     }
     if(kind==="rail"){
         /*
-          High RPM X-Rail carries into Over/Xtreme should usually climb.
-          Low RPM self-entries should stay pocketed much more often.
+          High RPM X-Rail / X-Exit carries into Over/Xtreme should usually
+          climb. A hard opponent knock uses smash odds, not these.
         */
-        let chance=0.08+Math.pow(rpm,0.70)*0.82-tilt*0.05;
-        if(rpm>=0.55) chance=Math.max(chance,0.86);
+        let chance=0.10+Math.pow(rpm,0.70)*0.84-tilt*0.05;
+        if(rpm>=0.55) chance=Math.max(chance,0.90);
         if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.14, 0.94);
+        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.14, 0.96);
     }
+    /*
+      Real smash into the opening: usually stays scored. High RPM does
+      not buy a self-KO save here.
+    */
     let chance=
-        0.03+
-        Math.pow(rpm,1.55)*0.32*(1-smash*0.82)-
+        0.02+
+        Math.pow(rpm,1.55)*0.22*(1-smash*0.90)-
         tilt*((zone==="Pocket"||zone==="Over")?0.06:0.04);
     if(rpm<0.18) chance*=0.28;
-    return newBattleClamp(chance, 0.02, 0.38);
+    return newBattleClamp(chance, 0.02, 0.22);
+}
+
+function recentOpponentSmash(s,now){
+    const hitAt=Number(s?.lastImpactAt)||0;
+    const force=Number(s?.lastImpactForce)||0;
+    if(hitAt<=0) return false;
+    if((now-hitAt)>1400) return false;
+    return force>=0.024 && (
+        (Number(s.impactMomentumState)||0)>0.16 ||
+        (now-hitAt)<=500
+    );
 }
 
 function railCarryIntoFinish(s,now){
     if(!s) return false;
+    /*
+      A committed opponent smash into the pocket is a KO attempt, even
+      if they were on the X-Rail a moment ago. Self-KO recovery is only
+      for a rail ride / X-Exit dump that was not put there by a hit.
+    */
+    if(recentOpponentSmash(s,now)){
+        const hitAt=Number(s.lastImpactAt)||0;
+        const exitAt=Number(s.railExitAt)||0;
+        const rehooked=
+            !!s.railEngaged ||
+            !!s.xrailExitRampActive ||
+            ((s.railExitRefractory||0)>0 && exitAt>hitAt+60);
+        if(!rehooked) return false;
+    }
     const exitAt=Number(s.railExitAt)||0;
     const hitAt=Number(s.lastImpactAt)||0;
     if(exitAt>0 && hitAt>exitAt+60) return false;
@@ -3533,6 +3562,11 @@ function railCarryIntoFinish(s,now){
 }
 
 function finishEntrySource(impactQualified,railQualified,s,force){
+    /*
+      Smash wins over rail. A hard knock into Over/Xtreme is not a
+      self-KO just because they touched the X-Rail this lap.
+    */
+    if(impactQualified && force>=0.024) return "smash";
     if(railQualified) return "rail";
     const rpm=newBattleClamp(s?.rpm,0,1);
     /*
