@@ -973,7 +973,7 @@ footer{
   box-shadow:0 10px 0 #000;
   overflow:hidden;
   display:grid;
-  grid-template-columns:96px 1fr;
+  grid-template-columns:88px 1fr;
   gap:10px;
   clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
 }
@@ -1021,22 +1021,79 @@ footer{
   height:42px;
   object-fit:contain;
 }
-.vs-ovr{
-  position:absolute;
-  right:10px;top:10px;
+.vs-ratings{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+  margin-top:10px;
+}
+.vs-rating{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:6px 8px;
+  border:1px solid rgba(240,180,41,.4);
+  background:rgba(0,0,0,.32);
+}
+.vs-rating small{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+.vs-rating b{
   font-family:Staatliches,Impact,sans-serif;
-  font-size:36px;
+  font-size:30px;
+  line-height:1;
+  font-weight:400;
   color:var(--gold);
+}
+.vs-rating.meta{border-color:rgba(26,209,90,.45)}
+.vs-rating.meta b{color:var(--green)}
+.vs-stat-groups{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+}
+.vs-stat-group{
+  padding:7px;
+  border:1px solid rgba(240,180,41,.32);
+  background:rgba(8,6,5,.55);
+}
+.vs-stat-group-label{
+  display:block;
+  margin-bottom:5px;
+  color:var(--gold);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.18em;
 }
 .vs-stats{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:4px;
-  margin-top:8px;
   font-size:11px;
   color:var(--muted);
 }
-.vs-stats b{color:#fff;margin-left:4px}
+.vs-stats.pair{grid-template-columns:repeat(2,minmax(0,1fr))}
+.vs-stat{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:6px;
+  min-width:0;
+  padding:6px 7px;
+  border:1px solid #53483c;
+  background:#16110d;
+}
+.vs-stat small{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.vs-stat b{color:#fff;font-family:Staatliches,Impact,sans-serif;font-size:16px;font-weight:400}
 
 .vs-reroll{
   grid-column:1 / -1;

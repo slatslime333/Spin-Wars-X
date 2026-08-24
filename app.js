@@ -1938,20 +1938,42 @@ function createComboSummaryCard(side,combo){
     const stats=combo.stats||{};
     const sprite=bladeSpritePath(combo.blade);
     const bitArt=bitSpritePath(combo.bit);
-    for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
+    for(const key of ["attack","knockback","defense","mobility","balance","stamina","burst"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
+    const ovr=Number.isFinite(Number(combo.ovr))?combo.ovr:60;
+    const meta=Number.isFinite(Number(combo.meta))?combo.meta:60;
     const tier=tierClass(combo.blade?.tier);
+    const statBox=(label,value)=>`<span class="vs-stat"><small>${label}</small><b>${value}</b></span>`;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}">
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
         <h2>${combo.blade.name}</h2>
         <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
-        <b class="vs-ovr">${combo.ovr}</b>
-        <div class="vs-stats">
-          <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
-          <span>MOB <b>${stats.mobility}</b></span><span>BAL <b>${stats.balance}</b></span><span>STA <b>${stats.stamina}</b></span>
+        <div class="vs-ratings">
+          <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
+          <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
+        </div>
+        <div class="vs-stat-groups">
+          <div class="vs-stat-group">
+            <span class="vs-stat-group-label">HIT</span>
+            <div class="vs-stats pair">
+              ${statBox("ATK",stats.attack)}${statBox("KB",stats.knockback)}
+            </div>
+          </div>
+          <div class="vs-stat-group">
+            <span class="vs-stat-group-label">HOLD</span>
+            <div class="vs-stats">
+              ${statBox("DEF",stats.defense)}${statBox("BAL",stats.balance)}${statBox("BST",stats.burst)}
+            </div>
+          </div>
+          <div class="vs-stat-group">
+            <span class="vs-stat-group-label">MOVE</span>
+            <div class="vs-stats pair">
+              ${statBox("MOB",stats.mobility)}${statBox("STA",stats.stamina)}
+            </div>
+          </div>
         </div>
       </div>
       ${!isPlayer && Game.mode==="custom" ? `<button class="vs-reroll" id="cpuRerollBtn" type="button">REROLL</button>` : ""}
