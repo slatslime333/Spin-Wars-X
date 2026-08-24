@@ -4555,7 +4555,7 @@ function newPhysicsStep(s,dt){
                     : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
-        const keepImpactSpeed=(s.impactMomentumState||0)>0.16;
+        const keepImpactSpeed=(s.impactMomentumState||0)>0.28;
 
         /*
           Orbit speed is owned by the home-ring driver in movement-engine.
@@ -4565,6 +4565,13 @@ function newPhysicsStep(s,dt){
         const cruiseCap=0.052+0.036*(orbitPreview.attackWeight||0);
         const rNow=Math.hypot(s.x,s.y);
         const nearRailRing=rNow>0.70 && rNow<0.90;
+        if(speedNow>0.086 && !s.railEngaged && !s.xrailExitRampActive){
+            const cap=keepImpactSpeed?0.084:0.078;
+            if(speedNow>cap){
+                s.vx*=cap/speedNow;
+                s.vy*=cap/speedNow;
+            }
+        }
         if(!keepImpactSpeed && !s.railEngaged && !s.xrailExitRampActive && !nearRailRing && speedNow>cruiseCap){
             const excessRatio=newBattleClamp(
                 (speedNow-cruiseCap)/Math.max(speedNow,0.0001),
@@ -5011,7 +5018,7 @@ function newPhysicsCollision(dt){
 
     const now=performance.now();
     if(now<(NEW_BATTLE.collisionLockUntil||0)) return;
-    NEW_BATTLE.collisionLockUntil=now+90;
+    NEW_BATTLE.collisionLockUntil=now+120;
 
     if(p.launchDropActive && !p.launchDropReleased){
         p.launchDropReleased=true;
@@ -5203,35 +5210,35 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const bounceSep=Math.max(0,-closing)*(0.70+directness*0.30);
+    const bounceSep=Math.max(0,-closing)*(0.55+directness*0.22);
     const pSpinPower=
-        (0.018+pAttack*0.024+pKB*0.026)*
+        (0.014+pAttack*0.018+pKB*0.020)*
         (0.18+0.82*pRPM)*
         Math.max(0.12, Math.min(1, pSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const cSpinPower=
-        (0.018+cAttack*0.024+cKB*0.026)*
+        (0.014+cAttack*0.018+cKB*0.020)*
         (0.18+0.82*cRPM)*
         Math.max(0.12, Math.min(1, cSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const pKnockback=Math.min(
-        0.128,
+        0.070,
         Math.max(
-            0.0035+avgRPM*0.007,
-            (bounceSep*0.82+pSpinPower+pForce*0.022)*
+            0.0032+avgRPM*0.0055,
+            (bounceSep*0.62+pSpinPower+pForce*0.014)*
             extremeSpeedScale*
-            (0.94+(1-cDef)*0.24)*
-            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
+            (0.94+(1-cDef)*0.20)*
+            (1.04+newBattleClamp(momentumFactor/2.0,0,0.28))
         )
     );
     const cKnockback=Math.min(
-        0.128,
+        0.070,
         Math.max(
-            0.0035+avgRPM*0.007,
-            (bounceSep*0.82+cSpinPower+cForce*0.022)*
+            0.0032+avgRPM*0.0055,
+            (bounceSep*0.62+cSpinPower+cForce*0.014)*
             extremeSpeedScale*
-            (0.94+(1-pDef)*0.24)*
-            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
+            (0.94+(1-pDef)*0.20)*
+            (1.04+newBattleClamp(momentumFactor/2.0,0,0.28))
         )
     );
 
@@ -5258,21 +5265,19 @@ function newPhysicsCollision(dt){
     const pImpactMomentumState=
         newBattleClamp(
             Math.max(
-                pKnockback/0.018,
-                effectiveImpact/0.016,
-                0.68
+                pKnockback/0.065,
+                effectiveImpact/0.030
             ),
-            0,1
+            0.24,0.82
         );
 
     const cImpactMomentumState=
         newBattleClamp(
             Math.max(
-                cKnockback/0.018,
-                effectiveImpact/0.016,
-                0.68
+                cKnockback/0.065,
+                effectiveImpact/0.030
             ),
-            0,1
+            0.24,0.82
         );
 
     p.impactMomentumState=Math.max(
@@ -5284,8 +5289,8 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    const recoilP=pKnockback*(0.08+0.10*pDef);
-    const recoilC=cKnockback*(0.08+0.10*cDef);
+    const recoilP=pKnockback*(0.04+0.06*pDef);
+    const recoilC=cKnockback*(0.04+0.06*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
@@ -5342,6 +5347,16 @@ function newPhysicsCollision(dt){
             rider.railContactPoint=null;
         }
     }
+
+    const capHitSpeed=(s)=>{
+        const sp=Math.hypot(s.vx,s.vy);
+        if(sp>0.084){
+            s.vx*=0.084/sp;
+            s.vy*=0.084/sp;
+        }
+    };
+    capHitSpeed(p);
+    capHitSpeed(c);
 
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
