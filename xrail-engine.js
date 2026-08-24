@@ -33,14 +33,14 @@ const RIDE_MAX_STEP=0.010;
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
-  (Number(s.lastImpactForce)||0)>=0.0044 &&
-  (Number(s.impactMomentumState)||0)>0.20;
+  (Number(s.lastImpactForce)||0)>=0.0058 &&
+  (Number(s.impactMomentumState)||0)>0.26;
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
- if(outward<0.0048 || r<0.66)return false;
- const xtreme=s.y>=0.56 && Math.abs(s.x)<=0.29;
- const pocket=s.y>=0.52 && Math.abs(s.x)>=0.46;
+ if(outward<0.0062 || r<0.68)return false;
+ const xtreme=s.y>=0.58 && Math.abs(s.x)<=0.26;
+ const pocket=s.y>=0.54 && Math.abs(s.x)>=0.50;
  return xtreme||pocket;
 }
 
@@ -308,12 +308,12 @@ function bounce(s,p){
   const speed=Math.max(incoming,0.032);
   const spin=(Number(s.spinDirection)||1)>=0?1:-1;
   const tx=-s.y/toLen,ty=s.x/toLen;
-  s.vx=cx*speed*0.84+tx*spin*speed*0.30;
-  s.vy=cy*speed*0.84+ty*spin*speed*0.30;
-  restoreBounceSpeed(s,incoming,0.88,0.030);
+  s.vx=cx*speed*0.78+tx*spin*speed*0.34;
+  s.vy=cy*speed*0.78+ty*spin*speed*0.34;
+  restoreBounceSpeed(s,incoming,0.72,0.026);
   s.surfaceBounce=Math.max(s.surfaceBounce||0,0.12);
   s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.08);
-  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.58);
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.42);
   s.lastXRailResult="bounce-center";
   s.railBounceCooldown=0.10;
   s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.22);
@@ -333,7 +333,7 @@ function bounce(s,p){
   s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
   return false;
  }
- const restitution=fromExit?0.52:0.44;
+ const restitution=fromExit?0.44:0.36;
  const reflected=-normal*restitution;
  s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
  const r=Math.hypot(s.x,s.y)||1;
@@ -341,10 +341,10 @@ function bounce(s,p){
  const tx=-s.y/r,ty=s.x/r;
  s.vx+=tx*spin*incoming*0.12;
  s.vy+=ty*spin*incoming*0.12;
- restoreBounceSpeed(s,incoming,fromExit?0.66:0.58,fromExit?0.024:0.020);
+ restoreBounceSpeed(s,incoming,fromExit?0.58:0.50,fromExit?0.020:0.018);
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
  s.lastXRailResult="bounce";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.48:0.28);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.36:0.22);
  s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.10);
  return true;
 }
@@ -377,9 +377,9 @@ function chooseExitHeading(s,p){
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
  const exitEnergyFactor=1;
  const rawSpeed=railSpeed*(1.12-tilt*0.03);
- const exitSpeed=Math.min(0.19,Math.max(0.072,rawSpeed));
+ const exitSpeed=Math.min(0.14,Math.max(0.062,rawSpeed));
  const lane=pickExitLane(s);
- const yaw=lane*0.20;
+ const yaw=lane*0.12;
  const ix=exit.inward.x,iy=exit.inward.y;
  const cs=Math.cos(yaw),sn=Math.sin(yaw);
  const hx=ix*cs-iy*sn,hy=ix*sn+iy*cs;
@@ -431,7 +431,7 @@ function exitRampStep(s,dt){
   release(s,"x-exit");
   s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;
   s.railExitForce=targetSpeed;s.railExitVector={x:heading.x,y:heading.y};s.railExitBias=0;s.railExitRampCompleted=true;
-  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.88);
+  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.46);
   s.xExitCenterLock=0.12;
   s.xrailExitForceCenter=false;
   return false;
@@ -499,7 +499,7 @@ function stepCenterLock(s,dt){
  s.x+=s.vx*dt*60;
  s.y+=s.vy*dt*60;
  s.lastXRailResult="x-exit-center";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,1);
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.38);
  return true;
 }
 function step(s,dt){

@@ -50,10 +50,10 @@ function stableOrbitBase(movement,centerAffinity){
     A real launch circle — smaller than Attack, not a parked center pin.
     RPM contraction (not this base) is what walks them in.
   */
-  return Math.max(0.40,Math.min(0.52,
-    0.42+
-    move*0.10+
-    (1-center)*0.05
+  return Math.max(0.28,Math.min(0.40,
+    0.30+
+    move*0.08+
+    (1-center)*0.04
   ));
 }
 
@@ -69,7 +69,7 @@ function orbitRpmFactor(spin,kind){
     Non-Attack stays a little wider through high RPM, then drops hard
     into a tight center so two stamina Beys can actually meet.
   */
-  return 0.10+0.90*Math.pow(s,1.55);
+  return 0.08+0.70*Math.pow(s,1.20);
 }
 
 function bitOrbitProfile(opts){
@@ -97,10 +97,10 @@ function bitOrbitProfile(opts){
     const mix=0.14+0.72*gimmick;
     const openRpm=Math.max(rpm,0.50+0.50*gimmick);
     const attackOpen=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(openRpm,"attack");
-    home=Math.max(0.16,Math.min(0.54,stable*(1-mix)+attackOpen*mix));
+    home=Math.max(0.12,Math.min(0.38,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.08,Math.min(0.52,stable));
+    home=Math.max(0.06,Math.min(0.36,stable));
     attackWeight=0.08;
   }
 
@@ -241,8 +241,8 @@ const preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?1.12:1.22)*s.impactMomentumState,
-    attackLike?0.14:0.12,
+    1-(attackLike?1.05:1.10)*s.impactMomentumState,
+    attackLike?0.18:0.22,
     1
 );
 
@@ -341,14 +341,14 @@ if(
   orbitSteeringAvailability starves this so knockback keeps flying.
 */
 const impactHold=s.impactMomentumState||0;
-const radialGain=attackLike ? 0.14 : 0.16;
+const radialGain=attackLike ? 0.14 : 0.26;
 const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
-        attackLike ? -0.014 : -0.014,
+        attackLike ? -0.014 : -0.020,
         centerWinding
             ? (attackLike ? 0.006 : 0.005)
-            : (attackLike ? 0.014 : 0.012)
+            : (attackLike ? 0.014 : 0.016)
     );
 const desiredVX=
     tangentX*targetOrbitSpeed+
@@ -369,7 +369,7 @@ const responseAmount=clamp(
     responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
     (centerWinding?1.55:1),
     0,
-    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.062:0.042)
+    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.074:0.056)
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
@@ -382,11 +382,11 @@ s.vy+=(desiredVY-s.vy)*responseAmount;
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
         ? (impactHold>0.12?0.0018:0.0032)
-        : (impactHold>0.12?0.0014:0.0024);
+        : (impactHold>0.12?0.0022:0.0042);
     const bowl=clamp(
         (rNow-preferredRadius)*bowlGain,
-        attackLike?-0.0010:-0.0008,
-        attackLike?0.0036:0.0028
+        attackLike?-0.0010:-0.0014,
+        attackLike?0.0036:0.0044
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
@@ -514,14 +514,14 @@ if(radius>wall){
       Finish openings sit on the lower rim. A real outward knock that
       reaches that lip can leave the bowl; a normal orbit still bounces.
     */
-    const inXtremeGate=s.y>=0.56 && Math.abs(s.x)<=0.29;
-    const inPocketGate=s.y>=0.52 && Math.abs(s.x)>=0.46;
+    const inXtremeGate=s.y>=0.58 && Math.abs(s.x)<=0.26;
+    const inPocketGate=s.y>=0.54 && Math.abs(s.x)>=0.50;
     const finishEscape=
-        outward>0.0048 &&
-        radius>=0.66 &&
+        outward>0.0062 &&
+        radius>=0.68 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.0044 &&
-        (s.impactMomentumState||0)>0.20 &&
+        (s.lastImpactForce||0)>=0.0058 &&
+        (s.impactMomentumState||0)>0.26 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){
@@ -569,12 +569,12 @@ if(radius>wall){
 
         const restitution=
             clamp(
-                0.42+
-                balance*0.16+
-                control*0.08+
-                wallImpactQuality*0.06+
+                0.36+
+                balance*0.12+
+                control*0.06+
+                wallImpactQuality*0.04+
                 ((s.mass||1)-1)*0.02,
-                0.40,0.70
+                0.34,0.56
             );
 
         const tangentRetention =
@@ -597,13 +597,13 @@ if(radius>wall){
             tangentY*tangent*tangentRetention;
 
         const bouncedSpeed=Math.hypot(s.vx,s.vy);
-        const wallFloor=Math.max(0.028,incomingWall*0.78);
+        const wallFloor=Math.max(0.022,incomingWall*0.62);
         if(bouncedSpeed<wallFloor){
             const boost=wallFloor/Math.max(bouncedSpeed,1e-8);
             s.vx*=boost;
             s.vy*=boost;
         }
-        s.impactMomentumState=Math.max(s.impactMomentumState||0,0.62);
+        s.impactMomentumState=Math.max(s.impactMomentumState||0,0.42);
 
         s.surfaceRecovery=0.20;
         s.tiltLevel=clamp(
