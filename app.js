@@ -2569,8 +2569,14 @@ function newBattleLaunchState(side){
       upper rail rather than at the normal center-entry lane, then let the
       physical rail-capture test decide whether the Bey actually latches.
     */
+    /*
+      Center still means the middle of the bowl, but each Bey sits a
+      little toward its own stadium side so two Center launches cannot
+      spawn on top of each other.
+    */
+    const centerSideOffset=0.16;
     let startX=isCenterLaunch
-        ? 0
+        ? sideXSign*centerSideOffset
         : isDropLaunch
             ? sideXSign*(0.28 + placementJitter*0.05)
             : isXRailLaunch
