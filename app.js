@@ -5687,11 +5687,16 @@ function newPhysicsCollision(dt){
       This is not a teleport, scripted path, or finish override. It is simply
       a temporary reduction in orbital steering after a real collision.
     */
+    /*
+      Hit-stun follows the shove that actually landed on that Bey.
+      Using its own outgoing knock left tanks glued: they hit weakly,
+      so they recovered orbit before the incoming smash could travel.
+    */
     const pImpactMomentumState=
-        newBattleClamp(pKnockback/0.090, 0.14, 0.52);
+        newBattleClamp(cKnockback/0.090, 0.14, pAttackBit?0.52:0.58);
 
     const cImpactMomentumState=
-        newBattleClamp(cKnockback/0.090, 0.14, 0.52);
+        newBattleClamp(pKnockback/0.090, 0.14, cAttackBit?0.52:0.58);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
