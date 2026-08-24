@@ -2926,7 +2926,7 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        centerLaunchWindup:isCenterLaunch?(String(combo.bit?.type||"").toLowerCase()==="attack"?0.70:0.40):0,
+        centerLaunchWindup:isCenterLaunch?(String(combo.bit?.type||"").toLowerCase()==="attack"?0.70:1.55):0,
         nonAttackOrbitAngle:Math.atan2(startY,startX),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
@@ -5609,13 +5609,13 @@ function newPhysicsCollision(dt){
         (0.22+0.78*pRPM)*
         Math.max(0.16, Math.min(1, pSpeed/0.034))*
         (0.42+0.58*directness)*
-        (pAttackBit && !cAttackBit ? 1.16 : 1);
+        (pAttackBit && !cAttackBit ? 1.20 : 1);
     const cSpinPower=
         (0.004+cAttack*0.004+cKB*0.026)*
         (0.22+0.78*cRPM)*
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
         (0.42+0.58*directness)*
-        (cAttackBit && !pAttackBit ? 1.16 : 1);
+        (cAttackBit && !pAttackBit ? 1.20 : 1);
     const pDefenseSoak=(pAttackBit && !cAttackBit
         ? (1.04+(1-cDef)*0.26+(1-cBal)*0.08)
         : (0.92+(1-cDef)*0.28+(1-cBal)*0.08))*(1+(1-cRPM)*0.20);
@@ -5635,11 +5635,11 @@ function newPhysicsCollision(dt){
         (1.02+newBattleClamp(momentumFactor/2.4,0,0.16))
     );
     if(pAttackBit && !cAttackBit){
-        pKnockRaw*=1.18;
-        cKnockRaw*=0.84;
+        pKnockRaw*=1.24;
+        cKnockRaw*=0.82;
     }else if(cAttackBit && !pAttackBit){
-        cKnockRaw*=1.18;
-        pKnockRaw*=0.84;
+        cKnockRaw*=1.24;
+        pKnockRaw*=0.82;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
@@ -5713,10 +5713,10 @@ function newPhysicsCollision(dt){
       so they recovered orbit before the incoming smash could travel.
     */
     const pImpactMomentumState=
-        newBattleClamp(cKnockback/0.090, 0.14, pAttackBit?0.52:0.58);
+        newBattleClamp(cKnockback/0.090, 0.14, pAttackBit?0.52:0.68);
 
     const cImpactMomentumState=
-        newBattleClamp(pKnockback/0.090, 0.14, cAttackBit?0.52:0.58);
+        newBattleClamp(pKnockback/0.090, 0.14, cAttackBit?0.52:0.68);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,

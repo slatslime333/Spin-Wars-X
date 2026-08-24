@@ -70,10 +70,10 @@ function orbitRpmFactor(spin,kind){
   }
   if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.45);
   /*
-    Non-Attack stays a little wider through high RPM, then drops hard
-    into a tight center so two stamina Beys can actually meet.
+    After the opening mix, Non-Attack lives inner. High RPM is not a
+    locked mid-bowl circle — they walk in as spin drops.
   */
-  return 0.08+0.70*Math.pow(s,1.20);
+  return 0.12+0.46*Math.pow(s,1.55);
 }
 
 function bitOrbitProfile(opts){
@@ -104,7 +104,7 @@ function bitOrbitProfile(opts){
     home=Math.max(0.12,Math.min(0.38,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.06,Math.min(0.36,stable));
+    home=Math.max(0.08,Math.min(0.28,stable));
     attackWeight=0.08;
   }
 
@@ -231,7 +231,7 @@ const orbit=bitOrbitProfile({
         : (Number(s.dynamicBitAggression)||0),
     railUses:Number(s.railUses)||0
 });
-const preferredRadius=orbit.home;
+let preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
 /*
@@ -252,12 +252,12 @@ const plant=clamp(
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*(attackLike?0.72:0.64),
+        (s.impactMomentumState||0)-dt*(attackLike?0.72:0.48),
         0,1
     );
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?1.05:1.18)*s.impactMomentumState,
-    attackLike?0.18:0.16,
+    1-(attackLike?1.05:1.32)*s.impactMomentumState,
+    attackLike?0.18:0.07,
     1
 );
 
@@ -268,6 +268,15 @@ const centerWinding=
     (s.centerLaunchWindup||0)>0 &&
     s.launchPlan &&
     s.launchPlan.technique==="Center";
+/*
+  Non-Attack Center starts a bit wide (under the X-Rail), then walks
+  in. Ball stays shorter/tighter than Point. Never mix out to rail.
+*/
+if(!attackLike && centerWinding){
+    const open=Math.min(0.50, 0.36+0.14*(1-plant));
+    const wind=clamp((s.centerLaunchWindup||0)/1.55, 0, 1);
+    preferredRadius=preferredRadius*(1-wind)+open*wind;
+}
 
 /*
   Speed is owned by launch + RPM (physicalSpeedTarget), not by a
@@ -285,18 +294,16 @@ let targetOrbitSpeed=
     orbitSpeedFraction*
     (0.72+0.28*(s.movementEnergy||1))*
     orbitSpeedTightness;
-const windingHome=centerWinding && !attackLike
-    ? Math.min(preferredRadius,0.38)
-    : preferredRadius;
+const windingHome=preferredRadius;
 if(centerWinding && !attackLike){
     /*
       A Center launch starts in the middle. Giving a stamina/defense
       Bit a full ring speed there slings it out to the X-Rail like
       Attack. Grow speed with current radius so it winds into its
-      own home ring.
+      own home ring, then tightens.
     */
-    const ring=Math.max(0.14,windingHome);
-    targetOrbitSpeed*=clamp(rNow/ring,0.28,1);
+    const ring=Math.max(0.16, Math.min(preferredRadius, 0.48));
+    targetOrbitSpeed*=clamp(rNow/ring, 0.22, 1);
 }else if(attackLike){
     const ring=Math.max(0.28,preferredRadius);
     if(rNow>ring) targetOrbitSpeed*=clamp(ring/rNow,0.50,1);
@@ -377,14 +384,14 @@ const steerRadius=windingHome;
 const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
 const radialGain=attackLike
     ? (outsideHome?0.22:0.14)
-    : (0.20+0.06*plant);
+    : (0.16+0.06*plant);
 const windingOutwardCap=attackLike
     ? 0.006
     : (rNow>=steerRadius-0.01 ? 0.0008 : 0.0034);
 const desiredRadialSpeed=
     clamp(
         (steerRadius-rNow)*radialGain,
-        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.030 : -0.018),
+        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.022 : -0.012),
         centerWinding
             ? windingOutwardCap
             : (attackLike ? 0.006 : 0.016)
@@ -397,29 +404,29 @@ const desiredVY=
     radialY*desiredRadialSpeed;
 const responseRate=
     (
-        (attackLike ? 0.022 : 0.018)+
-        control*0.014+
+        (attackLike ? 0.022 : 0.010)+
+        control*(attackLike?0.014:0.006)+
         bitPrecession*0.006+
         movement*0.004
     )*
     (0.42+0.58*rpm)*
     mobilityResponse;
 /*
-  Outside-home snap used to be 1.85x with a 0.11 cap, which glued
-  Ball/stamina rings after a hit. Yield while impact owns the path,
-  then settle — Ball still a bit heavier than Point.
+  Do not compass-lock Non-Attack onto a perfect ring. After a hit,
+  yield completely so a smash can travel toward Over/Xtreme. Settle
+  is a walk-in, not a rubber band.
 */
 const outsideSnap=attackLike
     ? 1.85
-    : (impactHold>0.14 ? (1.12+0.12*plant) : (1.42+0.28*plant));
+    : (impactHold>0.12 ? 1.0 : (1.10+0.18*plant));
 const responseAmount=clamp(
     responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
-    (centerWinding?(attackLike?1.55:0.92):1)*
+    (centerWinding?(attackLike?1.55:0.88):1)*
     (outsideHome?outsideSnap:1),
     0,
     attackLike
         ? (centerWinding?0.070:(outsideHome?0.078:0.048))
-        : (centerWinding?0.046:(outsideHome?0.086:0.054))
+        : (centerWinding?0.040:(outsideHome?0.052:0.022))
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
@@ -432,11 +439,11 @@ if(
     const outward=s.vx*radialX+s.vy*radialY;
     if(outward>0){
         const cut=clamp(
-            (rNow/Math.max(0.12,preferredRadius)-(attackLike?1.06:1.04))*(attackLike?2.2:3.0),
+            (rNow/Math.max(0.12,preferredRadius)-(attackLike?1.06:1.04))*(attackLike?2.2:2.2),
             0,
             attackLike
                 ? 0.58
-                : (impactHold>0.14 ? (0.26+0.08*plant) : (0.62+0.16*plant))
+                : (impactHold>0.20 ? (0.07+0.04*plant) : (0.36+0.12*plant))
         );
         s.vx-=radialX*outward*cut;
         s.vy-=radialY*outward*cut;
@@ -451,7 +458,7 @@ if(
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
         ? (impactHold>0.12?0.0018:(outsideHome?0.022:0.0032))
-        : (impactHold>0.14?0.0018:(0.0036+0.0010*plant));
+        : (impactHold>0.12?0.0010:(0.0024+0.0010*plant));
     let bowl=(rNow-preferredRadius)*bowlGain;
     if(attackLike && outsideHome) bowl=Math.max(bowl,0.0034);
     bowl=clamp(
@@ -459,7 +466,7 @@ if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
         attackLike?-0.0010:-0.0012,
         attackLike
             ? (outsideHome?0.012:0.0036)
-            : (outsideHome?(0.0060+0.0018*plant):0.0042)
+            : (outsideHome?(0.0042+0.0016*plant):0.0030)
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
@@ -537,11 +544,11 @@ const disturbance =
     (
         0.000026 +
         (1-control)*0.000040 +
-        (1-attackWeight)*0.000018
+        (1-attackWeight)*0.000070
     ) *
     (
-        0.45 +
-        (1-rpm)*0.55
+        0.55 +
+        (1-rpm)*0.45
     );
 
 s.vx +=
@@ -794,7 +801,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.4",
+    version:"1.3.5",
     step,
     homeOrbitRadius,
     orbitOmega,
