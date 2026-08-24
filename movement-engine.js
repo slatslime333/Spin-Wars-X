@@ -201,12 +201,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.62,
+        (s.impactMomentumState||0)-dt*0.78,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.86*s.impactMomentumState;
+    1-0.92*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -241,47 +241,25 @@ const orbit=bitOrbitProfile({
     railUses:Number(s.railUses)||0
 });
 const preferredRadius=orbit.home;
-const omega=orbit.omega;
 const attackWeight=orbit.attackWeight;
+const attackLike=attackWeight>=0.70;
 
 /*
-  Hold the circle you are actually on. Giving a center launch the
-  outer-ring speed is what slammed Attack into the X-Rail and left
-  stamina looking parked. Too wide and too fast: slow down so the
-  bowl walks them in. Too tight: a little extra tangent to spiral out.
+  Speed is owned by launch + RPM (physicalSpeedTarget), not by a
+  scripted r*omega ring. Home radius is only a soft radial tendency.
 */
-const circleR=Math.max(0.07,rNow);
-let targetOrbitSpeed;
-if(circleR<preferredRadius){
-    targetOrbitSpeed=Math.max(
-        0.008,
-        circleR*omega+(preferredRadius-circleR)*(0.004+0.010*attackWeight)
-    );
-}else{
-    /*
-      Stay on the home ring. Keeping r*omega outside home is what walked
-      Attack into the wall. A short linger just outside home lets Attack
-      hold width; far outside, drop to home speed so the bowl can walk in.
-    */
-    const over=Math.min(1,(circleR-preferredRadius)/0.14);
-    const linger=(0.06+0.16*attackWeight)*(1-over);
-    targetOrbitSpeed=Math.max(
-        0.008,
-        preferredRadius*omega*(1-linger)+circleR*omega*linger
-    );
-}
-
-if((s.impactMomentumState||0)>0.18){
-    /*
-      A hit must not stall them down to cruise and then wind a new
-      orbit. Keep the carried speed; only clip rocket launches.
-    */
-    const hitSpeed=Math.hypot(s.vx,s.vy);
-    targetOrbitSpeed=Math.max(
-        targetOrbitSpeed,
-        Math.min(hitSpeed,0.090)
-    );
-}
+const orbitSpeedFraction=
+    (attackLike ? 0.62 : 0.38)+
+    0.28*movement+
+    0.10*(1-centerAffinity);
+const orbitSpeedTightness=attackLike
+    ? 1
+    : 0.34+0.66*Math.max(0.12,preferredRadius/0.52);
+const targetOrbitSpeed=
+    physicalSpeedTarget*
+    orbitSpeedFraction*
+    (0.72+0.28*(s.movementEnergy||1))*
+    orbitSpeedTightness;
 
 /*
   Authoritative direction convention:
@@ -347,118 +325,46 @@ if(
 }
 
 /*
-  LOCAL VELOCITY RESPONSE
-  ------------------------
-  Instead of adding a permanent tangent acceleration, calculate the
-  local velocity a healthy Bit wants from its current radius and spin.
-
-  Radial velocity is derived from the radius error. Tangential velocity
-  comes from the Bit's natural movement speed. We then blend the CURRENT
-  velocity toward that local physical response.
-
-  This gives us a real curved trajectory while preserving momentum and
-  allowing collisions to take control immediately after impact.
+  LOCAL VELOCITY RESPONSE — cartesian blend, not polar rewrite.
+  Nudge current vx/vy toward a desired tangent+radial. After a hit,
+  orbitSteeringAvailability starves this so knockback keeps flying.
 */
 const impactHold=s.impactMomentumState||0;
-const inImpact=impactHold>0.22;
-const tangentFollow=inImpact?0.028:0.10;
-const radialFollow=inImpact?0.03:orbit.radialFollow;
-const follow=
-    orbitSteeringAvailability*
-    mobilityResponse*
-    (0.85+control*0.15);
-const tangentBlend=clamp(tangentFollow*follow,0,0.45);
-const radialBlend=clamp(radialFollow*follow,0,0.28);
-
-const currentTangent=s.vx*tangentX+s.vy*tangentY;
-const currentRadial=s.vx*radialX+s.vy*radialY;
-/*
-  Soft bowl slope, not a magnet. Rim gravity is stronger so a wide
-  lap still feels planted instead of floating onto the rail.
-*/
-const slopeGain=orbit.slopeGain;
-let slope=(preferredRadius-rNow)*(inImpact?0.012:slopeGain);
-/*
-  Rim gravity used to start at 0.68, which yanked Attack off the
-  X-Rail ring. Keep the rail-width lap; only plant harder near the wall.
-*/
-if(rNow>0.86){
-    slope-=(rNow-0.86)*(0.08+0.14*(1-attackWeight));
-}
-if(rNow>0.92){
-    slope-=(rNow-0.92)*0.22;
-}
-if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
-    slope*=0.45;
-}
-const eulerLeak=(currentTangent*currentTangent)/Math.max(0.08,rNow);
-const desiredRadialSpeed=clamp(slope,-0.012,0.005+0.007*attackWeight);
-const newTangent=
-    currentTangent+
-    (targetOrbitSpeed-currentTangent)*
-    tangentBlend;
-const newRadial=inImpact
-    ? currentRadial+(desiredRadialSpeed-currentRadial)*radialBlend*0.35
-    : currentRadial+
-      (desiredRadialSpeed-currentRadial)*
-      radialBlend-
-      eulerLeak*0.95;
-
-/*
-  Polar reconstruction rotates leftover knockback onto the orbit
-  tangent — that is the post-hit sway. Keep cartesian flight while
-  the hit is fresh, then ease orbit response back in.
-*/
-const polarMix=
-    ((s.railExitRefractory||0)>0 || s.xrailExitRampActive)
-        ? 0
-        : clamp((0.32-impactHold)/0.32,0,1)*0.58;
-if(polarMix>0.02){
-    const polarX=tangentX*newTangent+radialX*newRadial;
-    const polarY=tangentY*newTangent+radialY*newRadial;
-    const carry=Math.hypot(s.vx,s.vy);
-    const polarSp=Math.hypot(polarX,polarY)||0.0001;
-    const keepSp=Math.max(polarSp, carry*(0.74+0.20*impactHold));
-    const scale=keepSp/polarSp;
-    s.vx=s.vx*(1-polarMix)+polarX*scale*polarMix;
-    s.vy=s.vy*(1-polarMix)+polarY*scale*polarMix;
-}
-
-/*
-  Polar mix is no longer 100%, so leftover cartesian tangent still
-  leaks outward each frame. Cancel that leak here or Attack walks
-  through the rail into the wall.
-*/
-if(rNow>0.08){
-    const liveTangent=s.vx*tangentX+s.vy*tangentY;
-    const leak=(liveTangent*liveTangent)/Math.max(0.08,rNow);
-    const hold=inImpact?0.38:(1-polarMix)*0.92;
-    s.vx-=radialX*leak*hold;
-    s.vy-=radialY*leak*hold;
-}
-
-/*
-  Planted dish. Knockback may still fly free, but the bowl keeps a
-  grip so the Bey does not ice-skate or get bullied across the stadium.
-  This is radial gravity only — it does not rewrite heading.
-*/
-if(!inImpact && polarMix<0.92 && rNow>0.08){
-    const grip=1-polarMix;
-    const bowl=clamp((rNow-preferredRadius)*0.005,-0.0016,0.006);
-    const rimStart=0.78+0.06*attackWeight;
-    const rim=rNow>rimStart?(rNow-rimStart)*0.10:0;
-    const wallHold=rNow>0.88?(rNow-0.88)*0.26:0;
-    const pull=(bowl+rim+wallHold)*grip;
-    s.vx-=radialX*pull;
-    s.vy-=radialY*pull;
-    const spd=Math.hypot(s.vx,s.vy);
-    const cap=Math.max(0.086,targetOrbitSpeed*1.85);
-    if(spd>cap){
-        const bleed=Math.min(spd-cap,0.0010+0.0018*grip);
-        s.vx-=(s.vx/spd)*bleed;
-        s.vy-=(s.vy/spd)*bleed;
-    }
-}
+const radialGain=attackLike ? 0.20 : 0.46;
+const desiredRadialSpeed=
+    clamp(
+        (preferredRadius-rNow)*radialGain,
+        attackLike ? -0.018 : -0.038,
+        attackLike ? 0.018 : 0.028
+    );
+const desiredVX=
+    tangentX*targetOrbitSpeed+
+    radialX*desiredRadialSpeed;
+const desiredVY=
+    tangentY*targetOrbitSpeed+
+    radialY*desiredRadialSpeed;
+const responseRate=
+    (
+        (attackLike ? 0.028 : 0.046)+
+        control*0.014+
+        bitPrecession*0.006+
+        movement*0.004
+    )*
+    (0.42+0.58*rpm)*
+    mobilityResponse;
+const skipOrbit=
+    impactHold>0.12 ||
+    (s.railExitRefractory||0)>0 ||
+    s.xrailExitRampActive;
+const responseAmount=skipOrbit
+    ? 0
+    : clamp(
+        responseRate*dt*60*orbitSteeringAvailability,
+        0,
+        attackLike ? 0.070 : 0.10
+    );
+s.vx+=(desiredVX-s.vx)*responseAmount;
+s.vy+=(desiredVY-s.vy)*responseAmount;
 
 /*
   LOW RPM
@@ -789,7 +695,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.6",
+    version:"1.3.0",
     step,
     homeOrbitRadius,
     orbitOmega,

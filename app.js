@@ -4557,39 +4557,43 @@ function newPhysicsStep(s,dt){
 
         const speedNow=Math.hypot(s.vx,s.vy);
         const keepImpactSpeed=
-            (s.impactMomentumState||0)>0.18 ||
+            (s.impactMomentumState||0)>0.12 ||
             (s.railExitRefractory||0)>0 ||
             !!s.railExited ||
-            !!s.xrailExitRampActive;
+            !!s.xrailExitRampActive ||
+            !!s.railEngaged;
 
         /*
-          Orbit speed is owned by the home-ring driver in movement-engine.
-          Do not accelerate up to a separate cruise target — that is what
-          pushed Attack onto the X-Rail. Only bleed runaway leftover speed.
-          Never clip X-Exit, bounce, or clash carry down to cruise.
+          physicalSpeedTarget owns cruise: accelerate up to it, bleed
+          excess. Do not hard-clip exit/clash speed, and do not run this
+          while impact or the X-Rail owns the Bey.
         */
-        const cruiseCap=0.052+0.036*(orbitPreview.attackWeight||0);
-        const rNow=Math.hypot(s.x,s.y);
-        const nearRailRing=rNow>0.70 && rNow<0.90;
-        if(speedNow>0.16 && !s.railEngaged && !s.xrailExitRampActive && !keepImpactSpeed){
-            const cap=0.14;
-            if(speedNow>cap){
-                s.vx*=cap/speedNow;
-                s.vy*=cap/speedNow;
+        if(!keepImpactSpeed){
+            if(rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
+                const floor=attackBit?0.60:0.40;
+                const lowRpmBrake=(0.0010+(floor-rpm)*0.0030)*dt*60;
+                const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
+                s.vx*=brakeScale;
+                s.vy*=brakeScale;
             }
-        }
-        if(!keepImpactSpeed && !s.railEngaged && !s.xrailExitRampActive && !nearRailRing && speedNow>cruiseCap){
-            const excessRatio=newBattleClamp(
-                (speedNow-cruiseCap)/Math.max(speedNow,0.0001),
-                0,
-                0.24
-            );
-            const decay=
-                (0.0010+bitFriction*0.0014+excessRatio*0.0028)*
-                dt*60;
-            const scale=newBattleClamp(1-decay,0.90,1);
-            s.vx*=scale;
-            s.vy*=scale;
+            if(speedNow>physicalSpeedTarget*1.08){
+                const excessRatio=newBattleClamp(
+                    (speedNow-physicalSpeedTarget)/
+                    Math.max(speedNow,0.0001),0,0.24
+                );
+                const decay=
+                    (0.0012+bitFriction*0.0018+excessRatio*0.0035)*
+                    dt*60;
+                const scale=newBattleClamp(1-decay,0.90,1);
+                s.vx*=scale;
+                s.vy*=scale;
+            }else if(speedNow>0.001 && speedNow<physicalSpeedTarget){
+                const acceleration=
+                    (0.00035+bitAcceleration*0.0010)*
+                    (0.45+0.55*rpm)*dt*60;
+                s.vx+=(s.vx/speedNow)*acceleration;
+                s.vy+=(s.vy/speedNow)*acceleration;
+            }
         }
 
         const workRate=
@@ -5216,46 +5220,44 @@ function newPhysicsCollision(dt){
     const cRailBreakForce=pForce;
     const railBreakThreshold=0.0068;
     const railCollisionBreakThreshold=0.0014;
-    const bounceSep=Math.max(0,-closing)*(0.55+directness*0.22);
+    const bounceSep=Math.max(0,-closing)*(0.70+directness*0.30);
     const pSpinPower=
-        (0.014+pAttack*0.018+pKB*0.020)*
+        (0.018+pAttack*0.024+pKB*0.026)*
         (0.18+0.82*pRPM)*
         Math.max(0.12, Math.min(1, pSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const cSpinPower=
-        (0.014+cAttack*0.018+cKB*0.020)*
+        (0.018+cAttack*0.024+cKB*0.026)*
         (0.18+0.82*cRPM)*
         Math.max(0.12, Math.min(1, cSpeed/0.038))*
         (pParked&&cParked?0.34:1);
     const pKnockback=Math.min(
-        0.070,
+        0.128,
         Math.max(
-            0.0032+avgRPM*0.0055,
-            (bounceSep*0.62+pSpinPower+pForce*0.014)*
+            0.0035+avgRPM*0.007,
+            (bounceSep*0.82+pSpinPower+pForce*0.022)*
             extremeSpeedScale*
-            (0.94+(1-cDef)*0.20)*
-            (1.04+newBattleClamp(momentumFactor/2.0,0,0.28))
+            (0.94+(1-cDef)*0.24)*
+            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
         )
     );
     const cKnockback=Math.min(
-        0.070,
+        0.128,
         Math.max(
-            0.0032+avgRPM*0.0055,
-            (bounceSep*0.62+cSpinPower+cForce*0.014)*
+            0.0035+avgRPM*0.007,
+            (bounceSep*0.82+cSpinPower+cForce*0.022)*
             extremeSpeedScale*
-            (0.94+(1-pDef)*0.20)*
-            (1.04+newBattleClamp(momentumFactor/2.0,0,0.28))
+            (0.94+(1-pDef)*0.24)*
+            (1.08+newBattleClamp(momentumFactor/2.0,0,0.40))
         )
     );
 
     // Stop walking into each other, then shove apart. Adding a tiny delta
     // on top of inbound speed looked like "damage with no impact".
-    const pSpeedBefore=Math.hypot(p.vx,p.vy);
-    const cSpeedBefore=Math.hypot(c.vx,c.vy);
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal*0.55;p.vy-=ny*pNormal*0.55;}
-    if(cNormal<0){c.vx-=nx*cNormal*0.55;c.vy-=ny*cNormal*0.55;}
+    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
+    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
 
@@ -5273,19 +5275,21 @@ function newPhysicsCollision(dt){
     const pImpactMomentumState=
         newBattleClamp(
             Math.max(
-                pKnockback/0.065,
-                effectiveImpact/0.030
+                pKnockback/0.018,
+                effectiveImpact/0.016,
+                0.68
             ),
-            0.28,0.92
+            0,1
         );
 
     const cImpactMomentumState=
         newBattleClamp(
             Math.max(
-                cKnockback/0.065,
-                effectiveImpact/0.030
+                cKnockback/0.018,
+                effectiveImpact/0.016,
+                0.68
             ),
-            0.28,0.92
+            0,1
         );
 
     p.impactMomentumState=Math.max(
@@ -5297,8 +5301,8 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    const recoilP=pKnockback*(0.04+0.06*pDef);
-    const recoilC=cKnockback*(0.04+0.06*cDef);
+    const recoilP=pKnockback*(0.08+0.10*pDef);
+    const recoilC=cKnockback*(0.08+0.10*cDef);
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
@@ -5356,31 +5360,15 @@ function newPhysicsCollision(dt){
         }
     }
 
-    const keepCarry=(s,before)=>{
+    const rocketCap=(s)=>{
         const sp=Math.hypot(s.vx,s.vy);
-        const floor=Math.min(0.12, Math.max(0.022, before*0.78));
-        if(sp<1e-6){
-            s.vx=-nx*floor;s.vy=-ny*floor;
-            return;
-        }
-        if(sp<floor){
-            s.vx*=floor/sp;
-            s.vy*=floor/sp;
+        if(sp>0.19){
+            s.vx*=0.19/sp;
+            s.vy*=0.19/sp;
         }
     };
-    keepCarry(p,pSpeedBefore);
-    keepCarry(c,cSpeedBefore);
-
-    const capHitSpeed=(s)=>{
-        const sp=Math.hypot(s.vx,s.vy);
-        const cap=(s.impactMomentumState||0)>0.18?0.13:0.10;
-        if(sp>cap){
-            s.vx*=cap/sp;
-            s.vy*=cap/sp;
-        }
-    };
-    capHitSpeed(p);
-    capHitSpeed(c);
+    rocketCap(p);
+    rocketCap(c);
 
     // Separate them so the same collision cannot fire repeatedly on adjacent
     // frames while they are still overlapping.
