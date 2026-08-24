@@ -301,13 +301,22 @@ const spinTangent=
 const tangentX=spinTangent.x;
 const tangentY=spinTangent.y;
 
+if((s.centerLaunchWindup||0)>0){
+    s.centerLaunchWindup=Math.max(0,(s.centerLaunchWindup||0)-dt);
+}
+const centerWinding=
+    (s.centerLaunchWindup||0)>0 &&
+    s.launchPlan &&
+    s.launchPlan.technique==="Center";
+
 /*
   CENTER-LAUNCH START
   -------------------
   A Center launch begins with almost no translational velocity. A
   Bit/stadium contact response must therefore establish a small
   initial velocity. This changes velocity only; position remains
-  untouched.
+  untouched. During wind-up, feed the orbit gradually so they curve
+  into the ring instead of getting thrown on a random heading.
 */
 if(
     Math.hypot(s.vx,s.vy)<0.0028 &&
@@ -319,7 +328,7 @@ if(
 ){
     const seedStrength=
         targetOrbitSpeed*
-        0.70*
+        (centerWinding?0.18:0.70)*
         mobilityResponse;
 
     s.vx+=tangentX*seedStrength;
@@ -337,7 +346,9 @@ const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
         attackLike ? -0.014 : -0.014,
-        attackLike ? 0.014 : 0.012
+        centerWinding
+            ? (attackLike ? 0.006 : 0.005)
+            : (attackLike ? 0.014 : 0.012)
     );
 const desiredVX=
     tangentX*targetOrbitSpeed+
@@ -355,9 +366,10 @@ const responseRate=
     (0.42+0.58*rpm)*
     mobilityResponse;
 const responseAmount=clamp(
-    responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability),
+    responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
+    (centerWinding?1.55:1),
     0,
-    attackLike ? 0.048 : 0.042
+    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.062:0.042)
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
@@ -447,7 +459,7 @@ s.motionPhase2 +=
   It is deliberately tiny. It breaks perfectly mathematical paths
   without becoming visible RNG movement.
 */
-if(impactHold<=0.16){
+if(impactHold<=0.16 && !centerWinding){
 const disturbance =
     (
         0.000026 +

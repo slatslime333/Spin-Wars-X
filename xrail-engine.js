@@ -236,11 +236,18 @@ function engage(s,contact){
  if((s.railExitRefractory||0)>0||(s.railCaptureCooldown||0)>0)return false;
  const p=contact,decision=captureDecision(s,p,contact);s.lastXRailResult=decision.reason||"rejected";setContactDebug(s,p,p.distance,"impact");
  if(!decision.ok)return false;
- const c=decision.contact;if(c.normal<0){s.vx-=c.nx*c.normal;s.vy-=c.ny*c.normal;}
+ const c=decision.contact;
+ const incoming=Math.hypot(s.vx,s.vy);
+ if(c.normal<0){s.vx-=c.nx*c.normal;s.vy-=c.ny*c.normal;}
  const tangential=s.vx*p.tx+s.vy*p.ty;
  if(!Number.isFinite(tangential)||tangential<=0.0035){s.lastXRailResult="capture-lost-tangent";return false;}
  s.railEngaged=true;s.railExited=false;s.railDirection=1;s.railGrip=decision.grip;s.railContactPoint={x:p.x,y:p.y};
- s.railDistance=p.distance;s.railSpeed=Math.max(0.042,tangential);s.railRideTime=0;s.railTravelDistance=0;s._xrailLastDistance=p.distance;s._xrailPrevDistance=p.distance;
+ /*
+   Ride the rail with the speed you arrived with. Keep the CCW tangent,
+   but do not throw away the rest of the incoming smash/launch so the
+   lap and X-Exit still have real momentum.
+ */
+ s.railDistance=p.distance;s.railSpeed=Math.min(0.155,Math.max(0.078,Math.max(tangential,incoming*0.90)));s.railRideTime=0;s.railTravelDistance=0;s._xrailLastDistance=p.distance;s._xrailPrevDistance=p.distance;
  s.railUses=(s.railUses||0)+1;s.lastXRailResult="capture";
  const gap=contactRadius(s),nx=s.x-p.x,ny=s.y-p.y,len=Math.hypot(nx,ny);
  if(p.distance<gap&&len>1e-8){const push=gap-p.distance;s.x+=(nx/len)*push;s.y+=(ny/len)*push;}
@@ -364,8 +371,8 @@ function chooseExitHeading(s,p){
  const exit=exitRampGeometry();
  const quality=clamp(0.45*grip+0.25*balance+0.20*rpm+0.10*(1-tilt),0,1);
  const exitEnergyFactor=1;
- const rawSpeed=railSpeed*(1.06-tilt*0.03);
- const exitSpeed=Math.min(0.19,Math.max(0.028,rawSpeed));
+ const rawSpeed=railSpeed*(1.12-tilt*0.03);
+ const exitSpeed=Math.min(0.19,Math.max(0.072,rawSpeed));
  const lane=pickExitLane(s);
  const yaw=lane*0.20;
  const ix=exit.inward.x,iy=exit.inward.y;
@@ -442,8 +449,8 @@ function riderStep(s,dt){
  );
  if(!Number.isFinite(carried)||carried<=0.0020){release(s,"lost-tangent");return false;}
  const rpm=clamp(Number(s.rpm)||0,0,1),grip=clamp(Number(s.railGrip)||0.75,0.65,0.96);
- const friction=(0.00008+(1-rpm)*0.00032-grip*0.00008)*dt*60;
- const railSpeed=Math.max(0.042,carried-Math.max(0.00002,friction));
+ const drive=(rpm*0.00072+grip*0.00010-(1-rpm)*0.00012)*dt*60;
+ const railSpeed=Math.min(0.155,Math.max(0.078,carried+drive));
  s.railSpeed=railSpeed;
  const travel=railSpeed*dt*60;
  const steps=Math.max(1,Math.ceil(travel/RIDE_MAX_STEP));
@@ -470,7 +477,7 @@ function stepCenterLock(s,dt){
  const lock=Number(s.xExitCenterLock)||0;
  if(lock<=0)return false;
  s.xExitCenterLock=Math.max(0,lock-dt);
- const speed=Math.max(0.018,Math.hypot(s.vx,s.vy));
+ const speed=Math.max(0.060,Math.hypot(s.vx,s.vy));
  const laneX=Number(s.xExitLaneX)||0;
  const heading=s.xrailExitRampHeading||s.railExitVector;
  s.x+=(laneX-s.x)*Math.min(1,dt*10);
