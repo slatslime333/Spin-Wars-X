@@ -4,7 +4,7 @@ Vanilla HTML/CSS/JS Beyblade X–style stadium game. There is no package manager
 
 ## Cursor Cloud specific instructions
 
-- Serve the repo root over HTTP (`python3 -m http.server 8080`) and open `index.html`. Scripts are cache-busted (`style.css?v=8.14`, `xrail-engine.js?v=8.14`, `app.js?v=8.14`, `movement-engine.js?v=8.14`); hard-refresh after pulling.
+- Serve the repo root over HTTP (`python3 -m http.server 8080`) and open `index.html`. Scripts are cache-busted (`style.css?v=8.15`, `xrail-engine.js?v=8.15`, `app.js?v=8.15`, `movement-engine.js?v=8.15`); hard-refresh after pulling.
 - Blade art is optional. If `BLADE_ENGINE` has a `sprite` path, combo cards and the battle model use that PNG; otherwise the gold/silver circle stays. Phoenix Wing stays on `assets/blades/phienix_wing1.png`. Other blades map to the PNGs in `assets/blades/` (Leon Claw uses `Leonfang.png`). Shelter Drake and Dran Sword still have no art. Battle sprites are sized to the circle (`r=4.85`) and spin clockwise from live RPM until 0.
 - Bit art lives in `assets/blades/png bit/`. Flat, Rush, Point, Hexa, Level, and Wedge show on bit pick cards and the VS combo plates. Other bits keep the PART IMAGE placeholder.
 - Blade pick cards tint by `tier` (gold / silver / bronze). Home is the SPIN WARS wordmark plus four mode tiles. Combo check is the VS plates plus LET IT RIP. Battle chrome is commentary, then stadium, then names/RPM, then launch controls in `#launchDock`.
@@ -19,4 +19,5 @@ Vanilla HTML/CSS/JS Beyblade X–style stadium game. There is no package manager
 - Direct Clash aims at the opponent after both Beys spawn. Launch quality is aim accuracy (Perfect is tight, Horrible is wide). `impactMomentumState` stays high so they fly at each other instead of immediately orbiting.
 - Center launches stay in the middle of the bowl but sit slightly toward that player's stadium side so two Center picks cannot spawn on top of each other. They wind into the Bit's orbit from that offset — a small spin-correct tangent, not a random throw.
 - X-Rail launches still start at the live lower corner via `SpinWarsXRailEngine.nearest`. Do not add a second invisible wall.
+- CPU launch is locked at round start from the player's past techniques/tilts, never the live pick. Center-heavy habits get more X-Rail/Drop/Clash; X-Rail habits get rail contests and clashes, not Center; Clash habits get Center/rail/drop answers; Drop habits get Center and clash. CPU also avoids repeating itself.
 - Lint/test/build: there is no project linter or test runner. Prove changes with a browser battle (Drop, Direct Clash, and X-Rail) plus any one-off `node` geometry asserts against `xrail-engine.js`.

@@ -80,6 +80,9 @@ battle:{
 
     exchange:0,
 
+    playerLaunchHistory:[],
+    cpuLaunchHistory:[],
+
     finished:false,
     matchStarted:false,
     matchFinished:false,
@@ -2023,6 +2026,9 @@ function showVS(){
     // matchup; individual battle sequences preserve the score.
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
     Game.battle.round=1;
+    Game.battle.playerLaunchHistory=Game.battle.playerLaunchHistory||[];
+    Game.battle.cpuLaunchHistory=Game.battle.cpuLaunchHistory||[];
+    Game.cpu.lockedLaunchPlan=null;
 
     // NEW BATTLE FLOW:
     // VS screen is the final setup screen. CONTINUE enters the new
@@ -2055,9 +2061,9 @@ function showLetItRip(){
         Game.player.launch.fixedQualityPreview=rollRandomLaunchQuality();
     }
 
-    // Do not reveal or physically commence the CPU launch while the player
-    // is still choosing. The CPU plan is generated again when LET IT RIP is
-    // pressed, after the player's final technique is locked.
+    // CPU launch is locked from the player's PAST habits, not this round's
+    // pick. Lock it here so later LET IT RIP cannot read the live choice.
+    ensureCpuLaunchPlan();
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
 
@@ -2355,64 +2361,166 @@ function ensureLaunchQuality(side){
     return Game[side].launch.quality;
 }
 
+function summarizeLaunchHabits(history){
+    const techniques=["Center","X-Rail","Direct Clash","Drop Launch"];
+    const angles=["Flat","Slight Tilt","Hard Tilt"];
+    const tech={}; const ang={};
+    techniques.forEach(k=>tech[k]=0);
+    angles.forEach(k=>ang[k]=0);
+    const rows=Array.isArray(history)?history: [];
+    rows.forEach((h,i)=>{
+        const w=1+i*0.5;
+        if(h?.technique && tech[h.technique]!=null) tech[h.technique]+=w;
+        if(h?.angle && ang[h.angle]!=null) ang[h.angle]+=w;
+    });
+    const tSum=techniques.reduce((s,k)=>s+tech[k],0);
+    const aSum=angles.reduce((s,k)=>s+ang[k],0);
+    const techniqueShare={}; const angleShare={};
+    techniques.forEach(k=>techniqueShare[k]=tSum?tech[k]/tSum:0);
+    angles.forEach(k=>angleShare[k]=aSum?ang[k]/aSum:0);
+    const last=rows.length?rows[rows.length-1]:null;
+    let streak=0;
+    if(last?.technique){
+        for(let i=rows.length-1;i>=0;i--){
+            if(rows[i].technique===last.technique) streak++;
+            else break;
+        }
+    }
+    return {techniqueShare,angleShare,last,streak,count:rows.length};
+}
+
+function pickWeightedKey(weights){
+    const keys=Object.keys(weights);
+    let total=0;
+    for(const k of keys) total+=Math.max(0.001,Number(weights[k])||0);
+    let roll=Math.random()*total;
+    for(const k of keys){
+        roll-=Math.max(0.001,Number(weights[k])||0);
+        if(roll<=0) return k;
+    }
+    return keys[keys.length-1];
+}
+
+function cpuCounterLaunchWeights(cpuBlade, playerHabits, cpuHabits){
+    const type=cpuBlade?.type||"Balance";
+    const personality=cpuBlade?.personality||{};
+    const t=playerHabits?.techniqueShare||{};
+    const a=playerHabits?.angleShare||{};
+    const w={
+        Center:20,
+        "X-Rail":20,
+        "Direct Clash":18,
+        "Drop Launch":16
+    };
+    if(type==="Attack"){
+        w["Direct Clash"]+=8;
+        w["X-Rail"]+=7;
+        w.Center-=7;
+        if((personality.aggression||50)>=85) w["Direct Clash"]+=5;
+    }else if(type==="Defense"||type==="Stamina"){
+        w.Center+=6;
+        w["Direct Clash"]-=4;
+        w["Drop Launch"]+=3;
+    }
+
+    if((playerHabits?.count||0)>0){
+        w["X-Rail"]+= (t.Center||0)*32;
+        w["Drop Launch"]+= (t.Center||0)*22;
+        w["Direct Clash"]+= (t.Center||0)*14;
+        w.Center-= (t.Center||0)*28;
+
+        w["X-Rail"]+= (t["X-Rail"]||0)*26;
+        w["Direct Clash"]+= (t["X-Rail"]||0)*24;
+        w["Drop Launch"]+= (t["X-Rail"]||0)*14;
+        w.Center-= (t["X-Rail"]||0)*30;
+
+        w.Center+= (t["Direct Clash"]||0)*20;
+        w["X-Rail"]+= (t["Direct Clash"]||0)*18;
+        w["Drop Launch"]+= (t["Direct Clash"]||0)*12;
+        w["Direct Clash"]+= (t["Direct Clash"]||0)*8;
+
+        w.Center+= (t["Drop Launch"]||0)*24;
+        w["Direct Clash"]+= (t["Drop Launch"]||0)*20;
+        w["X-Rail"]+= (t["Drop Launch"]||0)*12;
+        w["Drop Launch"]-= (t["Drop Launch"]||0)*16;
+    }
+
+    const lastOwn=cpuHabits?.last?.technique;
+    if(lastOwn && w[lastOwn]!=null) w[lastOwn]-=12;
+    if((cpuHabits?.streak||0)>=2 && lastOwn && w[lastOwn]!=null) w[lastOwn]-=14;
+    for(const k of Object.keys(w)) w[k]=Math.max(4,w[k]);
+
+    const aw={Flat:18,"Slight Tilt":16,"Hard Tilt":12};
+    if(type==="Defense"||type==="Stamina"){
+        aw["Slight Tilt"]+=8;
+        aw["Hard Tilt"]-=4;
+    }
+    if(type==="Attack"){
+        aw.Flat+=4;
+        aw["Hard Tilt"]+=4;
+    }
+    if((playerHabits?.count||0)>0){
+        aw.Flat+= (a["Hard Tilt"]||0)*16;
+        aw["Hard Tilt"]+= (a["Hard Tilt"]||0)*10;
+        aw["Slight Tilt"]+= (a["Slight Tilt"]||0)*14;
+        aw["Hard Tilt"]+= (a.Flat||0)*12;
+        aw["Slight Tilt"]+= (a.Flat||0)*8;
+        aw.Flat+= (a.Flat||0)*6;
+    }
+    const lastAngle=cpuHabits?.last?.angle;
+    if(lastAngle && aw[lastAngle]!=null) aw[lastAngle]-=8;
+    for(const k of Object.keys(aw)) aw[k]=Math.max(4,aw[k]);
+
+    return {technique:w,angle:aw};
+}
+
+function rememberLaunch(side,plan){
+    Game.battle=Game.battle||{};
+    const key=side==="cpu"?"cpuLaunchHistory":"playerLaunchHistory";
+    const list=Game.battle[key]=Game.battle[key]||[];
+    list.push({
+        technique:plan?.technique||"Center",
+        angle:plan?.angle||"Flat"
+    });
+    if(list.length>12) list.splice(0,list.length-12);
+}
+
+function ensureCpuLaunchPlan(){
+    Game.cpu=Game.cpu||{};
+    if(Game.cpu.lockedLaunchPlan?.technique) return Game.cpu.lockedLaunchPlan;
+    const plan=getAutomaticLaunchPlan("cpu");
+    Game.cpu.lockedLaunchPlan={technique:plan.technique,angle:plan.angle};
+    return Game.cpu.lockedLaunchPlan;
+}
+
 function getAutomaticLaunchPlan(side){
     const combo=Game[side];
     const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
-    const type=combo.blade.type;
-    const bitName=combo.bit.name;
     const personality=combo.blade.personality||{aggression:50,control:50,risk:50};
 
-    /*
-      CPU launch is adaptive, not permanently Center.
-      It reads the player's locked technique when available, then chooses
-      from several physically sensible responses with personality weighting.
-    */
-    const playerLaunch=Game.player?.launch||{};
-    const playerTechnique=playerLaunch.technique||"Center";
-    const attackBits=["Flat","Low Flat","Low Rush","Rush","Kick","Quake"];
-    const isAttackBit=attackBits.includes(bitName);
-    const roll=Math.random();
-
     let technique="Center";
-
-    if(type==="Attack" && isAttackBit){
-        if(playerTechnique==="X-Rail"){
-            technique=roll<0.34 ? "X-Rail" :
-                      roll<0.64 ? "Direct Clash" :
-                      roll<0.84 ? "Center" : "Drop Launch";
-        }else if(playerTechnique==="Direct Clash"){
-            technique=roll<0.48 ? "Direct Clash" :
-                      roll<0.68 ? "Center" :
-                      roll<0.88 ? "X-Rail" : "Drop Launch";
-        }else if(playerTechnique==="Drop Launch"){
-            technique=roll<0.30 ? "Direct Clash" :
-                      roll<0.58 ? "X-Rail" :
-                      roll<0.82 ? "Center" : "Drop Launch";
-        }else{
-            technique=roll<0.28 ? "Direct Clash" :
-                      roll<0.52 ? "X-Rail" :
-                      roll<0.78 ? "Center" : "Drop Launch";
-        }
-    }else if(type==="Attack"){
-        technique=roll<0.24 ? "Direct Clash" :
-                  roll<0.48 ? "X-Rail" :
-                  roll<0.82 ? "Center" : "Drop Launch";
-    }else if(type==="Defense" || type==="Stamina"){
-        // Defensive/stamina CPU still varies, but favors neutral starts.
-        technique=roll<0.16 ? "X-Rail" :
-                  roll<0.30 ? "Drop Launch" :
-                  roll<0.46 ? "Direct Clash" : "Center";
-    }else{
-        technique=roll<0.20 ? "X-Rail" :
-                  roll<0.38 ? "Direct Clash" :
-                  roll<0.55 ? "Drop Launch" : "Center";
-    }
-
     let angle="Flat";
-    if(type==="Defense" || type==="Stamina") angle=roll<0.72 ? "Slight Tilt" : "Flat";
-    if(type==="Attack" && personality.aggression>=90) angle="Flat";
-    if(playerLaunch.angle==="Hard Tilt" && roll<0.35) angle="Hard Tilt";
-    else if(playerLaunch.angle==="Slight Tilt" && roll<0.45) angle="Slight Tilt";
+
+    if(side==="cpu"){
+        const playerHabits=summarizeLaunchHabits(Game.battle?.playerLaunchHistory);
+        const cpuHabits=summarizeLaunchHabits(Game.battle?.cpuLaunchHistory);
+        const weights=cpuCounterLaunchWeights(combo.blade,playerHabits,cpuHabits);
+        technique=pickWeightedKey(weights.technique);
+        angle=pickWeightedKey(weights.angle);
+    }else{
+        const roll=Math.random();
+        const type=combo.blade.type;
+        if(type==="Attack"){
+            technique=roll<0.28?"Direct Clash":roll<0.54?"X-Rail":roll<0.78?"Center":"Drop Launch";
+        }else if(type==="Defense"||type==="Stamina"){
+            technique=roll<0.16?"X-Rail":roll<0.32?"Drop Launch":roll<0.48?"Direct Clash":"Center";
+        }else{
+            technique=roll<0.22?"X-Rail":roll<0.42?"Direct Clash":roll<0.62?"Drop Launch":"Center";
+        }
+        angle=type==="Defense"||type==="Stamina"
+            ?(roll<0.72?"Slight Tilt":"Flat")
+            :(personality.aggression>=90?"Flat":roll<0.55?"Flat":roll<0.82?"Slight Tilt":"Hard Tilt");
+    }
 
     const qualityBase=
         (stats.balance||70)*0.25 +
@@ -2441,7 +2549,12 @@ function newBattleLaunchState(side){
                 quality:Game.player.launch.quality ||
                     ensureLaunchQuality("player")
               }
-            : getAutomaticLaunchPlan(side);
+            : side==="cpu"
+                ? {
+                    ...ensureCpuLaunchPlan(),
+                    quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu")
+                  }
+                : getAutomaticLaunchPlan(side);
 
     const qualityFactor={
         Horrible:0.72,Bad:0.86,Okay:1.00,Good:1.08,Perfect:1.15
@@ -2886,6 +2999,9 @@ function startNewBattle(){
     Game.cpu.launch.technique=NEW_BATTLE.cpu.launchPlan?.technique||"Center";
     Game.cpu.launch.quality=NEW_BATTLE.cpu.launchPlan?.quality||"Okay";
 
+    rememberLaunch("player",NEW_BATTLE.player.launchPlan);
+    rememberLaunch("cpu",NEW_BATTLE.cpu.launchPlan);
+
         NEW_BATTLE.elapsed=0;
         NEW_BATTLE.active=true;
         NEW_BATTLE.last=performance.now();
@@ -2937,9 +3053,11 @@ function renderNewBattle(){
     p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
     "settles into its opening line."
 } ${c.blade.name} ${
-                c.launchPlan?.technique==="Direct Clash"
-                    ? "answers with an aggressive launch."
-                    : "is waiting for your launch."
+                c.launchPlan?.technique==="Direct Clash" ? "answers with a clash." :
+                c.launchPlan?.technique==="X-Rail" ? "takes the X-Rail." :
+                c.launchPlan?.technique==="Drop Launch" ? "drops from the X-Exit." :
+                c.launchPlan?.technique==="Center" ? "opens from center." :
+                "is waiting for your launch."
             }</p>
 
           <div id="newStadium">
@@ -3258,6 +3376,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.qualityRevealStarted=0;
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
+        Game.cpu.lockedLaunchPlan=null;
 
         NEW_BATTLE.finishPending=false;
         NEW_BATTLE.active=false;
@@ -3811,10 +3930,10 @@ function newBattleFrame(now){
                 commentary.textContent=
                     `${p.blade.name}: READY · ${p.launchQuality || "QUALITY LOCKED"} | `+
                     `${c.blade.name}: READY — CPU launch hidden`;
-            }else if(NEW_BATTLE.elapsed<0.55){
+            }else if(NEW_BATTLE.elapsed<2.4){
                 commentary.textContent=
-                    `${p.blade.name}: ${p.launchQuality} launch · ${Math.round(p.rpm*100)}% RPM | `+
-                    `${c.blade.name}: ${c.launchQuality} launch · ${Math.round(c.rpm*100)}% RPM`;
+                    `${p.blade.name} ${p.launchPlan?.technique||"Center"} · ${p.launchQuality} | `+
+                    `${c.blade.name} ${c.launchPlan?.technique||"Center"} · ${c.launchQuality}`;
             }else if(NEW_BATTLE.lastImpact && performance.now()-(NEW_BATTLE.lastImpact.time||0)<900){
                 commentary.textContent=
                     `IMPACT ${NEW_BATTLE.lastImpact.impactClass} · knockback ${Number(NEW_BATTLE.lastImpact.kb||0).toFixed(3)}`;
