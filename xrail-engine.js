@@ -33,14 +33,14 @@ const RIDE_MAX_STEP=0.010;
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
-  (Number(s.lastImpactForce)||0)>=0.008 &&
-  (Number(s.impactMomentumState)||0)>0.38;
+  (Number(s.lastImpactForce)||0)>=0.007 &&
+  (Number(s.impactMomentumState)||0)>0.24;
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
- if(outward<0.012 || r<0.72)return false;
- const xtreme=s.y>=0.62 && Math.abs(s.x)<=0.22;
- const pocket=s.y>=0.58 && Math.abs(s.x)>=0.50;
+ if(outward<0.0075 || r<0.70)return false;
+ const xtreme=s.y>=0.58 && Math.abs(s.x)<=0.24;
+ const pocket=s.y>=0.54 && Math.abs(s.x)>=0.48;
  return xtreme||pocket;
 }
 
