@@ -518,11 +518,11 @@ if(radius>wall){
     const inXtremeGate=s.y>=0.58 && Math.abs(s.x)<=0.26;
     const inPocketGate=s.y>=0.54 && Math.abs(s.x)>=0.50;
     const finishEscape=
-        outward>0.0062 &&
+        outward>0.0054 &&
         radius>=0.68 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.0058 &&
-        (s.impactMomentumState||0)>0.26 &&
+        (s.lastImpactForce||0)>=0.0046 &&
+        (s.impactMomentumState||0)>0.22 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){

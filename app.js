@@ -3447,41 +3447,60 @@ function isAttackTypeBit(s){
     return String(s?.bit?.type||"").toLowerCase()==="attack";
 }
 
-function finishRecoveryChance(s,zone,knockForce){
+function finishRecoveryChance(s,zone,knockForce,source){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
     const smash=newBattleClamp(force/0.086,0,1.15);
-    // RPM owns the climb. High RPM usually walks out even of a heavy
-    // smash. A miss or X-Exit dump into a pocket should usually climb
-    // too; a real smash on dying spin still stays pocketed.
-    const tiltWeight=(zone==="Pocket"||zone==="Over")?0.08:0.05;
-    let chance=
-        0.02+
-        Math.pow(rpm,0.82)*0.90-
-        smash*(0.04+0.12*(1-rpm))-
-        tilt*tiltWeight;
-    if(rpm<0.14) chance*=0.32;
-    const missDump=force<0.0065;
-    if(missDump && rpm>=0.30){
-        chance=Math.max(chance, 0.58+rpm*0.30-tilt*0.06);
+    const kind=source||"smash";
+    /*
+      Recovery is for the cases that feel unfair: a self rail carry, an
+      X-Exit dump, or a graze that sat in the pocket and did nothing.
+      A real opponent smash into the opening should usually stay scored.
+    */
+    if(kind==="dump"){
+        return newBattleClamp(0.48+rpm*0.44-tilt*0.06, 0.22, 0.94);
     }
-    return newBattleClamp(chance, rpm<0.14 ? 0.03 : 0.16, 0.94);
+    if(kind==="rail"){
+        let chance=0.16+rpm*0.70-tilt*0.08-(rpm<0.22?0.10:0);
+        return newBattleClamp(chance, rpm<0.18 ? 0.08 : 0.20, 0.90);
+    }
+    let chance=
+        0.03+
+        Math.pow(rpm,1.55)*0.32*(1-smash*0.82)-
+        tilt*((zone==="Pocket"||zone==="Over")?0.06:0.04);
+    if(rpm<0.18) chance*=0.28;
+    return newBattleClamp(chance, 0.02, 0.38);
 }
 
-function tryFinishZoneRecovery(s,zone,knockForce){
-    if(!s || s.finishRecoveryUsed) return false;
+function bounceFromFinishZone(s,zone){
+    if(!s) return;
+    if(zone==="Xtreme"){
+        s.y=Math.min(s.y,0.58);
+        s.x=newBattleClamp(s.x,-0.16,0.16);
+        s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.018;
+        return;
+    }
+    s.y=Math.min(s.y,0.62);
+    s.x=s.x<0 ? -0.46 : 0.46;
+    s.vx+=s.x<0?0.012:-0.012;
+    s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.016;
+}
+
+function tryFinishZoneRecovery(s,zone,knockForce,source){
+    const kind=source||"smash";
+    if(!s || (kind!=="dump" && s.finishRecoveryUsed)) return false;
     const now=performance.now();
     const rpm=newBattleClamp(s.rpm,0,1);
     const balance=getBattleStat(s,"balance");
-    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce);
+    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce,kind);
 
     // A qualified zone entry already proved this was a real smash or
     // rail carry. Do not drop the climb because the clash timestamp
     // aged out while the Bey was still flying into the pocket.
     if(Math.random()>chance) return false;
 
-    s.finishRecoveryUsed=true;
+    if(kind!=="dump") s.finishRecoveryUsed=true;
     s.recoveredFlashUntil=now+2400;
 
     const centerX=0;
@@ -3552,24 +3571,30 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.017) return null;
-
     const recentImpact=age<=1800;
-    const recentRailExit=
-        !!s.railExited ||
-        (s.lastXRailExitReason==="x-exit" && (s.railExitRefractory||0)>0);
+    /*
+      A finished X-Exit must not stay "rail exited" for the rest of the
+      round. Only a live refractory window, or a release in the lower
+      bowl, counts as a rail-sourced pocket. Leftover ride speed is not
+      a smash.
+    */
+    const liveRailWindow=(s.railExitRefractory||0)>0;
+    const lowerRailRelease=liveRailWindow && s.y>=0.50;
+    const recentXExit=
+        liveRailWindow && s.lastXRailExitReason==="x-exit";
+    const recentRailExit=lowerRailRelease || recentXExit;
 
     // Finishes need a committed knock into the opening. Light rim
     // clips and a missed X-Exit dump should not auto-score; a real
-    // smash still can. X-Rail exit still uses stored rail speed.
-    const impactEntry=recentImpact && force>=0.0058;
+    // smash still can. Fresh lower-rail releases can still pocket.
+    const impactEntry=recentImpact && force>=0.0046;
     const railExitForce=s.railExitForce||0;
     const railEntry=
         recentRailExit &&
-        speed>=0.036 &&
+        speed>=0.034 &&
         (
-            (force>=0.0055 && age<=1800) ||
-            railExitForce>=0.092
+            (force>=0.0046 && age<=1800) ||
+            lowerRailRelease
         );
 
     const lip=s.finishLipContact||null;
@@ -3595,9 +3620,7 @@ function checkForcedStadiumFinish(s){
 
     if(enteredXtreme){
         if((NEW_BATTLE.elapsed||0)<1.20){
-            s.y=Math.min(s.y,0.58);
-            s.x=newBattleClamp(s.x,-0.16,0.16);
-            s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.018;
+            bounceFromFinishZone(s,"Xtreme");
             return null;
         }
         const dx=-s.x;
@@ -3610,22 +3633,28 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.018 &&
-            alignment>=0.06;
+            speed>=0.016 &&
+            alignment>=0.04;
 
         const railQualified=
             railEntry &&
-            speed>=0.036 &&
-            alignment>=0.10;
+            speed>=0.034 &&
+            alignment>=0.08;
 
         if(impactQualified||railQualified){
-            const recoveryForce=Math.max(force,railExitForce,speed*0.32);
-            if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce)) return "Recovered";
+            const source=impactQualified?"smash":"rail";
+            const recoveryForce=impactQualified
+                ? force
+                : Math.max(force,railExitForce*0.08,speed*0.18);
+            if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce,source)) return "Recovered";
             s.finishDebug=
                 `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
             return "Xtreme";
         }
+        if(tryFinishZoneRecovery(s,"Xtreme",force,"dump")) return "Recovered";
+        bounceFromFinishZone(s,"Xtreme");
+        return null;
     }
 
     // ---------- OVER / POCKET ----------
@@ -3640,10 +3669,7 @@ function checkForcedStadiumFinish(s){
 
     if(enteredPocket){
         if((NEW_BATTLE.elapsed||0)<1.20){
-            s.y=Math.min(s.y,0.62);
-            s.x=s.x<0 ? -0.46 : 0.46;
-            s.vx+=s.x<0?0.012:-0.012;
-            s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.016;
+            bounceFromFinishZone(s,"Over");
             return null;
         }
         const targetX=(leftPocket || s.x<0) ? -0.84 : 0.84;
@@ -3662,24 +3688,30 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.017 &&
-            outward>=0.00080 &&
-            alignment>=0.038;
+            speed>=0.015 &&
+            outward>=0.00070 &&
+            alignment>=0.028;
 
         const railQualified=
             railEntry &&
-            speed>=0.034 &&
-            outward>=0.00090 &&
-            alignment>=0.06;
+            speed>=0.032 &&
+            outward>=0.00080 &&
+            alignment>=0.05;
 
         if(impactQualified||railQualified){
-            const recoveryForce=Math.max(force,railExitForce,speed*0.32);
-            if(tryFinishZoneRecovery(s,"Pocket",recoveryForce)) return "Recovered";
+            const source=impactQualified?"smash":"rail";
+            const recoveryForce=impactQualified
+                ? force
+                : Math.max(force,railExitForce*0.08,speed*0.18);
+            if(tryFinishZoneRecovery(s,"Pocket",recoveryForce,source)) return "Recovered";
             s.finishDebug=
                 `OVER CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
             return "Over";
         }
+        if(tryFinishZoneRecovery(s,"Pocket",force,"dump")) return "Recovered";
+        bounceFromFinishZone(s,"Over");
+        return null;
     }
 
     if(typeof window!=="undefined" && (lip || enteredXtreme || enteredPocket)){
@@ -5441,13 +5473,13 @@ function newPhysicsCollision(dt){
         (0.22+0.78*pRPM)*
         Math.max(0.16, Math.min(1, pSpeed/0.034))*
         (0.42+0.58*directness)*
-        (pAttackBit && !cAttackBit ? 1.10 : 1);
+        (pAttackBit && !cAttackBit ? 1.16 : 1);
     const cSpinPower=
         (0.004+cAttack*0.008+cKB*0.018)*
         (0.22+0.78*cRPM)*
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
         (0.42+0.58*directness)*
-        (cAttackBit && !pAttackBit ? 1.10 : 1);
+        (cAttackBit && !pAttackBit ? 1.16 : 1);
     const pDefenseSoak=(pAttackBit && !cAttackBit
         ? (1.04+(1-cDef)*0.16)
         : (0.96+(1-cDef)*0.10))*(1+(1-cRPM)*0.20);
@@ -5467,11 +5499,11 @@ function newPhysicsCollision(dt){
         (1.02+newBattleClamp(momentumFactor/2.4,0,0.16))
     );
     if(pAttackBit && !cAttackBit){
-        pKnockRaw*=1.10;
-        cKnockRaw*=0.88;
+        pKnockRaw*=1.18;
+        cKnockRaw*=0.84;
     }else if(cAttackBit && !pAttackBit){
-        cKnockRaw*=1.10;
-        pKnockRaw*=0.88;
+        cKnockRaw*=1.18;
+        pKnockRaw*=0.84;
     }
     const pKnockback=Math.min(0.086, pKnockRaw*0.82);
     const cKnockback=Math.min(0.086, cKnockRaw*0.82);
