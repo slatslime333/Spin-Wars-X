@@ -3694,8 +3694,8 @@ function newBattleFrame(now){
             const imp=NEW_BATTLE.lastImpact;
             const age=Math.max(0,(performance.now()-imp.time)/1000);
             const life=
-                imp.impactClass==="heavy" ? 0.92 :
-                imp.impactClass==="medium" ? 0.76 : 0.60;
+                imp.impactClass==="heavy" ? 1.05 :
+                imp.impactClass==="medium" ? 0.86 : 0.68;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -5317,31 +5317,33 @@ function newPhysicsCollision(dt){
       Bey's Knockback/Attack stats. Do not zero their speed, and do not
       invent a second impact system.
     */
-    const bounceSep=Math.max(0,-closing)*(0.48+directness*0.22);
+    const bounceSep=Math.max(0,-closing)*(0.62+directness*0.28);
     const pSpinPower=
-        (0.004+pAttack*0.009+pKB*0.022)*
+        (0.005+pAttack*0.010+pKB*0.024)*
         (0.22+0.78*pRPM)*
-        Math.max(0.14, Math.min(1, pSpeed/0.038));
+        Math.max(0.16, Math.min(1, pSpeed/0.034))*
+        (0.42+0.58*directness);
     const cSpinPower=
-        (0.004+cAttack*0.009+cKB*0.022)*
+        (0.005+cAttack*0.010+cKB*0.024)*
         (0.22+0.78*cRPM)*
-        Math.max(0.14, Math.min(1, cSpeed/0.038));
+        Math.max(0.16, Math.min(1, cSpeed/0.034))*
+        (0.42+0.58*directness);
     const pKnockback=Math.min(
-        0.090,
+        0.108,
         Math.max(
-            0.006+pKB*0.010+pRPM*0.004,
-            (bounceSep*0.40+pSpinPower+pMomentum*0.26+pForce*0.009)*
-            (0.94+(1-cDef)*0.14)*
-            (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
+            0.010+pKB*0.014+pRPM*0.005,
+            (bounceSep*0.50+pSpinPower+pMomentum*0.30+pForce*0.018)*
+            (0.98+(1-cDef)*0.12)*
+            (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
         )
     );
     const cKnockback=Math.min(
-        0.090,
+        0.108,
         Math.max(
-            0.006+cKB*0.010+cRPM*0.004,
-            (bounceSep*0.40+cSpinPower+cMomentum*0.26+cForce*0.009)*
-            (0.94+(1-pDef)*0.14)*
-            (1.02+newBattleClamp(momentumFactor/2.8,0,0.18))
+            0.010+cKB*0.014+cRPM*0.005,
+            (bounceSep*0.50+cSpinPower+cMomentum*0.30+cForce*0.018)*
+            (0.98+(1-pDef)*0.12)*
+            (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
         )
     );
     const pRailBreakForce=cKnockback;
@@ -5378,10 +5380,10 @@ function newPhysicsCollision(dt){
       a temporary reduction in orbital steering after a real collision.
     */
     const pImpactMomentumState=
-        newBattleClamp(pKnockback/0.082, 0.14, 0.76);
+        newBattleClamp(pKnockback/0.090, 0.22, 0.86);
 
     const cImpactMomentumState=
-        newBattleClamp(cKnockback/0.082, 0.14, 0.76);
+        newBattleClamp(cKnockback/0.090, 0.22, 0.86);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
@@ -5743,10 +5745,10 @@ function newPhysicsCollision(dt){
         visualStrength>=1.22 ? "heavy" :
         visualStrength>=0.96 ? "medium" : "light";
 
-    p.hitFlash=0.27*visualStrength;
-    c.hitFlash=0.27*visualStrength;
-    p.impactScale=1.13+0.38*visualStrength;
-    c.impactScale=1.13+0.38*visualStrength;
+    p.hitFlash=0.36*visualStrength;
+    c.hitFlash=0.36*visualStrength;
+    p.impactScale=1.18+0.46*visualStrength;
+    c.impactScale=1.18+0.46*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={
