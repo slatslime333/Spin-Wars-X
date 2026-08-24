@@ -3222,12 +3222,12 @@ function renderNewBattle(){
                       font-weight="900" fill="#ff4b4b" opacity="0"></text>
               </g>
               <text id="playerRecoveredText" x="50" y="46"
-                    text-anchor="middle" font-size="6.4" font-weight="1000"
-                    fill="#8bdcff" stroke="#041018" stroke-width="0.45"
+                    text-anchor="middle" font-size="8.6" font-weight="1000"
+                    fill="#7ef0ff" stroke="#041018" stroke-width="0.55"
                     opacity="0">RECOVERED</text>
               <text id="cpuRecoveredText" x="50" y="46"
-                    text-anchor="middle" font-size="6.4" font-weight="1000"
-                    fill="#8bdcff" stroke="#041018" stroke-width="0.45"
+                    text-anchor="middle" font-size="8.6" font-weight="1000"
+                    fill="#7ef0ff" stroke="#041018" stroke-width="0.55"
                     opacity="0">RECOVERED</text>
             </svg>
           </div>
@@ -3389,23 +3389,25 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     },2000);
 }
 
+function isAttackTypeBit(s){
+    return String(s?.bit?.type||"").toLowerCase()==="attack";
+}
+
 function finishRecoveryChance(s,zone,knockForce){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
-    const smash=newBattleClamp(force/0.095,0,1.2);
+    const smash=newBattleClamp(force/0.108,0,1.15);
     // RPM owns the climb. High RPM usually walks out even of a heavy
-    // smash (low chance to stay pocketed). Low RPM plus a hard hit
-    // almost never climbs. Zone only tweaks tilt weight.
-    const tiltWeight=(zone==="Pocket"||zone==="Over")?0.10:0.06;
-    return newBattleClamp(
-        0.12+
-        Math.pow(rpm,0.90)*0.74-
-        smash*(0.08+0.32*(1-rpm))-
-        tilt*tiltWeight,
-        0.06,
-        0.86
-    );
+    // smash. Near-dead spin almost never climbs, even on a soft fall-in.
+    const tiltWeight=(zone==="Pocket"||zone==="Over")?0.08:0.05;
+    let chance=
+        0.02+
+        Math.pow(rpm,0.82)*0.90-
+        smash*(0.04+0.12*(1-rpm))-
+        tilt*tiltWeight;
+    if(rpm<0.14) chance*=0.32;
+    return newBattleClamp(chance, rpm<0.14 ? 0.03 : 0.16, 0.94);
 }
 
 function tryFinishZoneRecovery(s,zone,knockForce){
@@ -3413,40 +3415,39 @@ function tryFinishZoneRecovery(s,zone,knockForce){
     const now=performance.now();
     const rpm=newBattleClamp(s.rpm,0,1);
     const balance=getBattleStat(s,"balance");
-    const impactAge=now-(s.lastImpactAt||0);
     const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce);
 
-    // Only a Bey that was just driven in can recover. The roll then
-    // follows knock hardness and remaining RPM.
-    if(impactAge>1400) return false;
+    // A qualified zone entry already proved this was a real smash or
+    // rail carry. Do not drop the climb because the clash timestamp
+    // aged out while the Bey was still flying into the pocket.
     if(Math.random()>chance) return false;
 
     s.finishRecoveryUsed=true;
-    s.recoveredFlashUntil=now+1800;
+    s.recoveredFlashUntil=now+2400;
 
     const centerX=0;
-    const centerY=0.48;
+    const centerY=0.42;
     const dx=centerX-s.x;
     const dy=centerY-s.y;
     const len=Math.hypot(dx,dy)||1;
     const escapeSpeed=
-        0.038+
-        0.020*newBattleClamp(rpm,0,1)+
-        0.010*balance+
-        0.003*Math.pow(rpm,1.6);
+        0.050+
+        0.028*newBattleClamp(rpm,0,1)+
+        0.012*balance+
+        0.006*Math.pow(rpm,1.4);
 
-    // Put the Bey just back inside the finish boundary and give it a real
-    // outward-from-pocket / toward-stadium velocity instead of teleporting it.
+    // Put the Bey clearly back inside the finish boundary and drive it
+    // toward stadium middle so the climb is visible.
     if(zone==="Xtreme"){
-        s.y=0.675;
-        s.x=newBattleClamp(s.x,-0.20,0.20);
+        s.y=0.62;
+        s.x=newBattleClamp(s.x,-0.18,0.18);
     }else{
-        s.y=Math.min(0.71,s.y);
-        s.x=s.x<0 ? -0.52 : 0.52;
+        s.y=Math.min(0.64,s.y);
+        s.x=s.x<0 ? -0.46 : 0.46;
     }
     s.vx=(dx/len)*escapeSpeed;
     s.vy=(dy/len)*escapeSpeed;
-    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.62);
+    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.78);
     s.lastImpactAt=0;
     s.lastImpactForce=Math.min(Number(s.lastImpactForce)||0, 0.004);
     s.finishDebug=`RECOVERED · ${Math.round(rpm*100)}% RPM climbs out`;
@@ -3492,19 +3493,21 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.020) return null;
+    if(speed<0.014) return null;
 
-    const recentImpact=age<=1200;
-    const recentRailExit=!!s.railExited && age<=1200;
+    const recentImpact=age<=2800;
+    const recentRailExit=
+        !!s.railExited ||
+        (s.lastXRailExitReason==="x-exit" && (s.railExitRefractory||0)>0);
 
     // Finishes need a committed knock into the opening. Light rim
     // clips should not score; a real smash still can. X-Rail exit
     // still uses stored rail speed. The window is long enough that a
     // smash can travel to the pocket and still count, so recovery can
     // roll on the same event.
-    const impactEntry=recentImpact && force>=0.007;
+    const impactEntry=recentImpact && force>=0.0044;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.040 && (force>=0.0020 || railExitForce>=0.0020);
+    const railEntry=recentRailExit && speed>=0.028 && (force>=0.0014 || railExitForce>=0.0014);
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3516,14 +3519,14 @@ function checkForcedStadiumFinish(s){
 
     // ---------- XTREME ----------
     const wasXtreme=
-        prevY>=0.71 &&
+        prevY>=0.685 &&
         prevY<=1.01 &&
-        Math.abs(prevX)<=0.255;
+        Math.abs(prevX)<=0.285;
 
     const inXtreme=
-        s.y>=0.71 &&
+        s.y>=0.685 &&
         s.y<=1.01 &&
-        Math.abs(s.x)<=0.255;
+        Math.abs(s.x)<=0.285;
 
     const enteredXtreme=(!wasXtreme && inXtreme);
 
@@ -3538,13 +3541,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.022 &&
-            alignment>=0.08;
+            speed>=0.015 &&
+            alignment>=0.04;
 
         const railQualified=
             railEntry &&
-            speed>=0.040 &&
-            alignment>=0.10;
+            speed>=0.028 &&
+            alignment>=0.06;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3557,10 +3560,10 @@ function checkForcedStadiumFinish(s){
     }
 
     // ---------- OVER / POCKET ----------
-    const wasLeftPocket=prevX<=-0.575 && prevY>=0.72;
-    const wasRightPocket=prevX>=0.575 && prevY>=0.72;
-    const leftPocket=s.x<=-0.575 && s.y>=0.72;
-    const rightPocket=s.x>=0.575 && s.y>=0.72;
+    const wasLeftPocket=prevX<=-0.545 && prevY>=0.695;
+    const wasRightPocket=prevX>=0.545 && prevY>=0.695;
+    const leftPocket=s.x<=-0.545 && s.y>=0.695;
+    const rightPocket=s.x>=0.545 && s.y>=0.695;
 
     const enteredPocket=
         (!wasLeftPocket && leftPocket) ||
@@ -3583,15 +3586,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.020 &&
-            outward>=0.0012 &&
-            alignment>=0.05;
+            speed>=0.014 &&
+            outward>=0.00045 &&
+            alignment>=0.025;
 
         const railQualified=
             railEntry &&
-            speed>=0.038 &&
-            outward>=0.0014 &&
-            alignment>=0.08;
+            speed>=0.026 &&
+            outward>=0.00055 &&
+            alignment>=0.04;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3856,9 +3859,9 @@ function newBattleFrame(now){
             if(el && s.recoveredFlashUntil>nowRecovery){
                 el.setAttribute("x",String(50+s.x*39));
                 el.setAttribute("y",String(46+s.y*39-8));
-                const ru=1-(s.recoveredFlashUntil-nowRecovery)/1800;
-                el.setAttribute("opacity",String(Math.max(0,1-ru*0.85)));
-                el.setAttribute("font-size",String(6.4+ru*1.4));
+                const ru=1-(s.recoveredFlashUntil-nowRecovery)/2400;
+                el.setAttribute("opacity",String(Math.max(0,1-ru*0.72)));
+                el.setAttribute("font-size",String(8.6+ru*2.2));
                 el.setAttribute("stroke","#041018");
                 el.setAttribute("stroke-width","0.45");
             }else if(el){
@@ -3930,6 +3933,11 @@ function newBattleFrame(now){
                 commentary.textContent=
                     `${p.blade.name}: READY · ${p.launchQuality || "QUALITY LOCKED"} | `+
                     `${c.blade.name}: READY — CPU launch hidden`;
+            }else if((p.recoveredFlashUntil||0)>performance.now() || (c.recoveredFlashUntil||0)>performance.now()){
+                const recovered=(p.recoveredFlashUntil||0)>=(c.recoveredFlashUntil||0)?p:c;
+                commentary.textContent=
+                    recovered.finishDebug ||
+                    `${recovered.blade.name} climbs out of the finish zone!`;
             }else if(NEW_BATTLE.elapsed<2.4){
                 commentary.textContent=
                     `${p.blade.name} ${p.launchPlan?.technique||"Center"} · ${p.launchQuality} | `+
@@ -3941,11 +3949,6 @@ function newBattleFrame(now){
                 const rider=p.railEngaged?p:c;
                 commentary.textContent=
                     `${rider.blade.name} is riding the X Rail and building speed.`;
-            }else if((p.recoveredFlashUntil||0)>performance.now() || (c.recoveredFlashUntil||0)>performance.now()){
-                const recovered=(p.recoveredFlashUntil||0)>=(c.recoveredFlashUntil||0)?p:c;
-                commentary.textContent=
-                    recovered.finishDebug ||
-                    `${recovered.blade.name} climbs out of the finish zone!`;
             }else if(p.finishDebug || c.finishDebug){
                 commentary.textContent=p.finishDebug || c.finishDebug;
             }else if(NEW_BATTLE.finishPending){
@@ -5344,34 +5347,47 @@ function newPhysicsCollision(dt){
       invent a second impact system.
     */
     const bounceSep=Math.max(0,-closing)*(0.62+directness*0.28);
+    const pAttackBit=isAttackTypeBit(p);
+    const cAttackBit=isAttackTypeBit(c);
     const pSpinPower=
         (0.005+pAttack*0.010+pKB*0.024)*
         (0.22+0.78*pRPM)*
         Math.max(0.16, Math.min(1, pSpeed/0.034))*
-        (0.42+0.58*directness);
+        (0.42+0.58*directness)*
+        (pAttackBit && !cAttackBit ? 1.16 : 1);
     const cSpinPower=
         (0.005+cAttack*0.010+cKB*0.024)*
         (0.22+0.78*cRPM)*
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
-        (0.42+0.58*directness);
-    const pKnockback=Math.min(
-        0.108,
-        Math.max(
-            0.010+pKB*0.014+pRPM*0.005,
-            (bounceSep*0.50+pSpinPower+pMomentum*0.30+pForce*0.018)*
-            (0.98+(1-cDef)*0.12)*
-            (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
-        )
+        (0.42+0.58*directness)*
+        (cAttackBit && !pAttackBit ? 1.16 : 1);
+    const pDefenseSoak=pAttackBit && !cAttackBit
+        ? (1.10+(1-cDef)*0.22)
+        : (0.98+(1-cDef)*0.12);
+    const cDefenseSoak=cAttackBit && !pAttackBit
+        ? (1.10+(1-pDef)*0.22)
+        : (0.98+(1-pDef)*0.12);
+    let pKnockRaw=Math.max(
+        0.010+pKB*0.014+pRPM*0.005,
+        (bounceSep*0.50+pSpinPower+pMomentum*0.30+pForce*0.018)*
+        pDefenseSoak*
+        (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
     );
-    const cKnockback=Math.min(
-        0.108,
-        Math.max(
-            0.010+cKB*0.014+cRPM*0.005,
-            (bounceSep*0.50+cSpinPower+cMomentum*0.30+cForce*0.018)*
-            (0.98+(1-pDef)*0.12)*
-            (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
-        )
+    let cKnockRaw=Math.max(
+        0.010+cKB*0.014+cRPM*0.005,
+        (bounceSep*0.50+cSpinPower+cMomentum*0.30+cForce*0.018)*
+        cDefenseSoak*
+        (1.04+newBattleClamp(momentumFactor/2.4,0,0.22))
     );
+    if(pAttackBit && !cAttackBit){
+        pKnockRaw*=1.18;
+        cKnockRaw*=0.82;
+    }else if(cAttackBit && !pAttackBit){
+        cKnockRaw*=1.18;
+        pKnockRaw*=0.82;
+    }
+    const pKnockback=Math.min(0.108, pKnockRaw);
+    const cKnockback=Math.min(0.108, cKnockRaw);
     const pRailBreakForce=cKnockback;
     const cRailBreakForce=pKnockback;
 
@@ -5420,8 +5436,15 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    const recoilP=pKnockback*(0.05+0.06*pDef);
-    const recoilC=cKnockback*(0.05+0.06*cDef);
+    let recoilP=pKnockback*(0.05+0.06*pDef);
+    let recoilC=cKnockback*(0.05+0.06*cDef);
+    if(pAttackBit && !cAttackBit){
+        recoilC*=0.36;
+        recoilP*=0.88;
+    }else if(cAttackBit && !pAttackBit){
+        recoilP*=0.36;
+        recoilC*=0.88;
+    }
     p.vx-=nx*recoilC; p.vy-=ny*recoilC;
     c.vx+=nx*recoilP; c.vy+=ny*recoilP;
 
