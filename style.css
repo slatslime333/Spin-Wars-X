@@ -515,6 +515,30 @@ footer{
     #0c1116;
   border-bottom:1px solid #303b47;
 }
+.blade-card.game-blade-card.has-sprite:before{
+  content:none;
+  background:
+    radial-gradient(circle at 50% 42%,rgba(255,255,255,.04),transparent 34%),
+    #0c1116;
+}
+.blade-card-sprite{
+  position:absolute;
+  left:50%;
+  top:14px;
+  z-index:1;
+  width:176px;
+  height:176px;
+  transform:translateX(-50%);
+  object-fit:contain;
+  pointer-events:none;
+}
+.combo-blade-sprite{
+  width:72px;
+  height:72px;
+  flex:0 0 72px;
+  object-fit:contain;
+  margin-right:10px;
+}
 
 .blade-card.game-blade-card:hover{
   transform:translateY(-3px);
@@ -814,6 +838,9 @@ footer{
   align-items:flex-start;
   padding-bottom:8px;
   border-bottom:1px solid var(--line);
+}
+.combo-summary-head .combo-blade-sprite{
+  align-self:center;
 }
 
 .combo-summary-label{

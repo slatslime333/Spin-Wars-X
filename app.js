@@ -214,6 +214,7 @@ const BLADE_ENGINE = {
         tier:"Gold",
         spin:"Right",
         weight:38.0,
+        sprite:"assets/blades/phoenix_wing.png",
 
         card:{ovr:94,attack:94,knockback:94,defense:86,mobility:82,balance:86,stamina:82,burst:87},
 
@@ -1304,11 +1305,17 @@ function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",descr
     card.onclick=onClick;
     return card;
 }
+function bladeSpritePath(blade){
+    const path=blade && typeof blade.sprite==="string" ? blade.sprite.trim() : "";
+    return path || "";
+}
 function createBladeCard(blade){
     const card=document.createElement("button");
     card.type="button";
-    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}`;
+    const sprite=bladeSpritePath(blade);
+    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}`;
     card.innerHTML=`
+        ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
         <div class="blade-card-head">
             <div class="blade-card-title">
                 <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
@@ -1954,11 +1961,13 @@ function calculateComboStats(blade,ratchet,bit){
 function createComboSummaryCard(side,combo){
     const isPlayer=side==="player";
     const stats=combo.stats||{};
+    const sprite=bladeSpritePath(combo.blade);
     for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
     return `<article class="combo-summary-card ${isPlayer?"combo-side-player":"combo-side-cpu"}">
       <div class="combo-summary-head">
+        ${sprite?`<img class="combo-blade-sprite" src="${sprite}" alt="${combo.blade.name}">`:""}
         <div><span class="combo-summary-label">${isPlayer?"PLAYER COMBO":"CPU COMBO"}</span>
           <h2>${combo.blade.name}</h2>
           <div class="combo-summary-parts"><span>${combo.blade.type}</span><span>${combo.ratchet.name}</span><span>${combo.bit.name}</span></div>
@@ -2840,7 +2849,8 @@ function newBattleLaunchState(side){
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
         surfaceRecovery:0,
-        surfaceBounce:0
+        surfaceBounce:0,
+        spriteAngle:0
     };
 }
 
@@ -3019,7 +3029,7 @@ function renderNewBattle(){
             clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
             box-shadow:0 10px 28px rgba(0,0,0,.38);">
 
-            <svg viewBox="0 0 100 100"
+            <svg id="newBattleSvg" viewBox="0 0 100 100"
                  preserveAspectRatio="none"
                  style="position:absolute;inset:0;width:100%;height:100%;">
 
@@ -3112,6 +3122,12 @@ function renderNewBattle(){
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
               <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
                       fill="#aeb7c0" stroke="#ffffff" stroke-width=".65"/>
+              <image id="newPlayerBeySprite" href="" x="${px-4.85}" y="${py-4.85}"
+                     width="9.7" height="9.7" preserveAspectRatio="xMidYMid meet"
+                     style="display:none"/>
+              <image id="newCpuBeySprite" href="" x="${cx-4.85}" y="${cy-4.85}"
+                     width="9.7" height="9.7" preserveAspectRatio="xMidYMid meet"
+                     style="display:none"/>
 
               <!-- Actual battle impact renderer. These IDs are the targets
                    updated by newBattleFrame() on every collision. -->
@@ -3212,6 +3228,8 @@ function renderNewBattle(){
           </div>
         </section>
       </main>`;
+    updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",0);
+    updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
 }
 
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
@@ -3588,6 +3606,43 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
+function updateBeyBattleVisual(state, circleId, spriteId, dt){
+    const circle=document.getElementById(circleId);
+    const spriteEl=document.getElementById(spriteId);
+    if(!state){
+        if(circle) circle.style.display="none";
+        if(spriteEl) spriteEl.style.display="none";
+        return;
+    }
+    const cx=50+state.x*39;
+    const cy=46+state.y*39;
+    const r=4.85*(state.hitFlash>0?(state.impactScale||1):1);
+    // Right spin is CCW from above; SVG positive rotation is clockwise.
+    state.spriteAngle=(state.spriteAngle||0)+
+        (-(state.spinDirection||1))*(state.rpm||0)*dt*2160;
+    const sprite=bladeSpritePath(state.blade);
+    if(sprite && spriteEl){
+        if(circle) circle.style.display="none";
+        spriteEl.style.display="";
+        if(spriteEl.getAttribute("href")!==sprite){
+            spriteEl.setAttribute("href",sprite);
+        }
+        spriteEl.setAttribute("x",String(cx-r));
+        spriteEl.setAttribute("y",String(cy-r));
+        spriteEl.setAttribute("width",String(r*2));
+        spriteEl.setAttribute("height",String(r*2));
+        spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
+    }else{
+        if(spriteEl) spriteEl.style.display="none";
+        if(circle){
+            circle.style.display="";
+            circle.setAttribute("cx",String(cx));
+            circle.setAttribute("cy",String(cy));
+            circle.setAttribute("r",String(r));
+        }
+    }
+}
+
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
@@ -3631,26 +3686,8 @@ function newBattleFrame(now){
             throw new Error("Non-finite collision result.");
         }
 
-        const pe=document.getElementById("newPlayerBey");
-        const ce=document.getElementById("newCpuBey");
-
-        if(pe){
-            pe.setAttribute("cx",50+p.x*39);
-            pe.setAttribute("cy",46+p.y*39);
-        }
-        if(ce){
-            ce.setAttribute("cx",50+c.x*39);
-            ce.setAttribute("cy",46+c.y*39);
-        }
-
-        if(pe){
-            const ps=4.85*(p.hitFlash>0?(p.impactScale||1):1);
-            pe.setAttribute("r",ps);
-        }
-        if(ce){
-            const cs=4.85*(c.hitFlash>0?(c.impactScale||1):1);
-            ce.setAttribute("r",cs);
-        }
+        updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",dt);
+        updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",dt);
 
         const impactGroup=document.getElementById("impactEffect");
         if(impactGroup && NEW_BATTLE.lastImpact){
