@@ -208,16 +208,20 @@ function captureDecision(s,p,contact){
  const c=getContact(s,p);
  // Catch from remaining CCW bite, not peak RPM. ~70% RPM with real
  // speed/momentum should still hook; dead or too-direct hits still fail.
- if(!c||c.speed<0.0034)return{ok:false,reason:"low-speed",contact:c};
+ const rpm=clamp01(s.rpm);
+ const tired=1-Math.max(0.22,rpm);
+ if(!c||c.speed<0.0034+tired*0.0020)return{ok:false,reason:"low-speed",contact:c};
  if(s.spinDirection!==1)return{ok:false,reason:"wrong-spin",contact:c};
  /*
    A wide Attack orbit can sit on the X-Rail ring. Circling there is a
    graze, not a ride. Only a real entry with CCW bite hooks — leftover
    launch width or a clash, not every lap of a rail-width circle.
+   Tired Beys need a cleaner hook; lingering rail-width laps at low RPM
+   should bounce instead of riding out the rest of the match.
  */
  if(!contact?.entering)return{ok:false,reason:"no-rail-entry",contact:c};
- if(c.inward<0.0038)return{ok:false,reason:"weak-impact",contact:c};
- if(c.tangential<0.0028||c.tangentRatio<0.16)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
+ if(c.inward<0.0038+tired*0.0014)return{ok:false,reason:"weak-impact",contact:c};
+ if(c.tangential<0.0028+tired*0.0016||c.tangentRatio<0.16+tired*0.09)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
  if(c.approachRatio>0.95)return{ok:false,reason:"too-direct",contact:c};
  if(c.tilt>0.44)return{ok:false,reason:"tilt-too-high",contact:c};
  /*

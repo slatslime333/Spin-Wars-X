@@ -60,11 +60,12 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
   /*
-    Attack stays rail-wide at high RPM, then walks in as spin drops so
-    they are not stuck hugging the rail with no tightening at all.
+    Attack is rail-wide at full spin. By ~65% RPM it should already sit
+    inside the rail ring — a little tighter, not still rail-wide — so
+    tired Attack bits cannot cruise the X-Rail all match.
   */
-  if(kind==="attack") return 0.46+0.54*Math.pow(s,1.15);
-  if(kind==="hybrid") return 0.50+0.50*Math.pow(s,1.25);
+  if(kind==="attack") return 0.40+0.60*Math.pow(s,1.70);
+  if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.45);
   /*
     Non-Attack stays a little wider through high RPM, then drops hard
     into a tight center so two stamina Beys can actually meet.
@@ -87,7 +88,7 @@ function bitOrbitProfile(opts){
 
   if(klass==="attack"){
     const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
-    home=Math.max(0.36,Math.min(0.84,attack-rideShrink));
+    home=Math.max(0.30,Math.min(0.84,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
