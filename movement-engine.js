@@ -35,10 +35,10 @@ function attackOrbitBase(movement,centerAffinity,bitStability){
     to kiss the rail, not parked in the mid bowl. RPM contraction — not
     this base — is what walks them in after the opening laps.
   */
-  return Math.max(0.74,Math.min(0.82,
-    0.76+
+  return Math.max(0.76,Math.min(0.84,
+    0.78+
     (1-center)*0.04+
-    (move-0.80)*0.06+
+    (move-0.80)*0.05+
     (1-stab)*0.02
   ));
 }
@@ -50,8 +50,8 @@ function stableOrbitBase(movement,centerAffinity){
     A real launch circle — smaller than Attack, not a parked center pin.
     RPM contraction (not this base) is what walks them in.
   */
-  return Math.max(0.34,Math.min(0.46,
-    0.36+
+  return Math.max(0.40,Math.min(0.52,
+    0.42+
     move*0.10+
     (1-center)*0.05
   ));
@@ -60,13 +60,17 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
   /*
-    Attack stays on the rail ring through high/mid RPM and only walks
-    in a decent amount once spin is actually falling off. The previous
-    curve dumped them to mid-bowl by ~70%.
+    Attack hugs the X-Rail ring through most of a battle. Walking in
+    only happens once spin is actually dying — otherwise they clip the
+    X-Exit tip instead of riding higher on the rail.
   */
-  if(kind==="attack") return 0.58+0.42*Math.pow(s,1.12);
-  if(kind==="hybrid") return 0.44+0.56*Math.pow(s,1.40);
-  return 0.36+0.64*Math.pow(s,2.00);
+  if(kind==="attack") return 0.80+0.20*Math.pow(s,0.90);
+  if(kind==="hybrid") return 0.50+0.50*Math.pow(s,1.25);
+  /*
+    Non-Attack stays a little wider through high RPM, then drops hard
+    into a tight center so two stamina Beys can actually meet.
+  */
+  return 0.10+0.90*Math.pow(s,1.55);
 }
 
 function bitOrbitProfile(opts){
@@ -83,8 +87,8 @@ function bitOrbitProfile(opts){
   let attackWeight;
 
   if(klass==="attack"){
-    const rideShrink=Math.min(0.08,(Number(opts.railUses)||0)*0.035);
-    home=Math.max(0.28,Math.min(0.82,attack-rideShrink));
+    const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
+    home=Math.max(0.52,Math.min(0.84,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -97,7 +101,7 @@ function bitOrbitProfile(opts){
     home=Math.max(0.16,Math.min(0.54,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.16,Math.min(0.46,stable));
+    home=Math.max(0.08,Math.min(0.52,stable));
     attackWeight=0.08;
   }
 
@@ -110,8 +114,8 @@ function bitOrbitProfile(opts){
     attackWeight,
     home,
     omega,
-    slopeGain:0.055-0.012*attackWeight,
-    radialFollow:0.12+0.04*attackWeight,
+    slopeGain:0.032-0.006*attackWeight,
+    radialFollow:0.07+0.03*attackWeight,
     radialBleed:0.988-0.008*attackWeight
   };
 }
@@ -357,7 +361,7 @@ if(
 */
 const impactHold=s.impactMomentumState||0;
 const inImpact=impactHold>0.22;
-const tangentFollow=inImpact?0.035:0.18;
+const tangentFollow=inImpact?0.028:0.10;
 const radialFollow=inImpact?0.03:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
@@ -378,11 +382,11 @@ let slope=(preferredRadius-rNow)*(inImpact?0.012:slopeGain);
   Rim gravity used to start at 0.68, which yanked Attack off the
   X-Rail ring. Keep the rail-width lap; only plant harder near the wall.
 */
-if(rNow>0.82){
-    slope-=(rNow-0.82)*(0.10+0.10*(1-attackWeight));
+if(rNow>0.86){
+    slope-=(rNow-0.86)*(0.08+0.14*(1-attackWeight));
 }
-if(rNow>0.90){
-    slope-=(rNow-0.90)*0.22;
+if(rNow>0.92){
+    slope-=(rNow-0.92)*0.22;
 }
 if(!inImpact && rNow>preferredRadius && currentRadial<-0.002){
     slope*=0.45;
@@ -405,16 +409,29 @@ const newRadial=inImpact
   tangent — that is the post-hit sway. Keep cartesian flight while
   the hit is fresh, then ease orbit response back in.
 */
-const polarMix=clamp((0.28-impactHold)/0.28,0,1);
+const polarMix=clamp((0.32-impactHold)/0.32,0,1)*0.58;
 if(polarMix>0.02){
     const polarX=tangentX*newTangent+radialX*newRadial;
     const polarY=tangentY*newTangent+radialY*newRadial;
     const carry=Math.hypot(s.vx,s.vy);
     const polarSp=Math.hypot(polarX,polarY)||0.0001;
-    const keepSp=Math.max(polarSp, carry*(0.70+0.22*impactHold));
+    const keepSp=Math.max(polarSp, carry*(0.74+0.20*impactHold));
     const scale=keepSp/polarSp;
     s.vx=s.vx*(1-polarMix)+polarX*scale*polarMix;
     s.vy=s.vy*(1-polarMix)+polarY*scale*polarMix;
+}
+
+/*
+  Polar mix is no longer 100%, so leftover cartesian tangent still
+  leaks outward each frame. Cancel that leak here or Attack walks
+  through the rail into the wall.
+*/
+if(rNow>0.08){
+    const liveTangent=s.vx*tangentX+s.vy*tangentY;
+    const leak=(liveTangent*liveTangent)/Math.max(0.08,rNow);
+    const hold=inImpact?0.38:(1-polarMix)*0.92;
+    s.vx-=radialX*leak*hold;
+    s.vy-=radialY*leak*hold;
 }
 
 /*
@@ -424,9 +441,11 @@ if(polarMix>0.02){
 */
 if(polarMix<0.92 && rNow>0.08){
     const grip=1-polarMix;
-    const bowl=clamp((rNow-preferredRadius)*0.007,-0.0020,0.008);
-    const rim=rNow>0.64?(rNow-0.64)*0.09:0;
-    const pull=(bowl+rim)*grip;
+    const bowl=clamp((rNow-preferredRadius)*0.005,-0.0016,0.006);
+    const rimStart=0.78+0.06*attackWeight;
+    const rim=rNow>rimStart?(rNow-rimStart)*0.10:0;
+    const wallHold=rNow>0.88?(rNow-0.88)*0.26:0;
+    const pull=(bowl+rim+wallHold)*grip;
     s.vx-=radialX*pull;
     s.vy-=radialY*pull;
     const spd=Math.hypot(s.vx,s.vy);
@@ -508,12 +527,13 @@ s.motionPhase2 +=
 if(impactHold<=0.16){
 const disturbance =
     (
-        0.000012 +
-        (1-control)*0.000025
+        0.000026 +
+        (1-control)*0.000040 +
+        (1-attackWeight)*0.000018
     ) *
     (
-        0.35 +
-        (1-rpm)*0.65
+        0.45 +
+        (1-rpm)*0.55
     );
 
 s.vx +=
@@ -761,7 +781,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.4",
+    version:"1.2.5",
     step,
     homeOrbitRadius,
     orbitOmega,
