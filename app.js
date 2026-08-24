@@ -214,7 +214,7 @@ const BLADE_ENGINE = {
         tier:"Gold",
         spin:"Right",
         weight:38.0,
-        sprite:"assets/blades/phoenix_wing.png",
+        sprite:"assets/blades/phienix_wing1.png",
 
         card:{ovr:94,attack:94,knockback:94,defense:86,mobility:82,balance:86,stamina:82,burst:87},
 
@@ -3618,8 +3618,11 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const cy=46+state.y*39;
     const r=4.85*(state.hitFlash>0?(state.impactScale||1):1);
     // Right spin is CCW from above; SVG positive rotation is clockwise.
+    // Scale with RPM, keep a visible turn until RPM actually hits 0.
+    const rpm=newBattleClamp(Number(state.rpm)||0,0,1);
+    const visualSpin=rpm<=0.0005?0:Math.max(0.16, Math.pow(rpm,0.55));
     state.spriteAngle=(state.spriteAngle||0)+
-        (-(state.spinDirection||1))*(state.rpm||0)*dt*2160;
+        (-(state.spinDirection||1))*visualSpin*dt*2160;
     const sprite=bladeSpritePath(state.blade);
     if(sprite && spriteEl){
         if(circle) circle.style.display="none";
