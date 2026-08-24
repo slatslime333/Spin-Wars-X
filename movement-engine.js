@@ -199,16 +199,6 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
   separate Attack/Non-Attack movement engine exists.
 */
 
-/*
-  A real collision owns the Bey's trajectory briefly. Orbit response
-  fades back in as the impact momentum dissipates.
-*/
-s.impactMomentumState=
-    clamp(
-        (s.impactMomentumState||0)-dt*0.72,
-        0,1
-    );
-
 const rNow=Math.hypot(s.x,s.y);
 
 /*
@@ -244,9 +234,30 @@ const orbit=bitOrbitProfile({
 const preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
+/*
+  Existing bit traits decide how planted a settle feels. Ball/Orb
+  (high friction, high center, low movement) still sit heavier than
+  Point/Level. This is not a second knock layer.
+*/
+const plant=clamp(
+    bitFriction*0.40+
+    centerAffinity*0.35+
+    (1-clamp(movement,0,1))*0.25,
+    0,1
+);
+/*
+  A real collision owns the trajectory briefly. Attack sheds hit-stun
+  a little faster so it can re-hook the rail. Non-Attack keeps the
+  shove longer so the ring cannot rubber-band them back first.
+*/
+s.impactMomentumState=
+    clamp(
+        (s.impactMomentumState||0)-dt*(attackLike?0.72:0.64),
+        0,1
+    );
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?1.05:1.10)*s.impactMomentumState,
-    attackLike?0.18:0.22,
+    1-(attackLike?1.05:1.18)*s.impactMomentumState,
+    attackLike?0.18:0.16,
     1
 );
 
@@ -364,14 +375,16 @@ if(
 const impactHold=s.impactMomentumState||0;
 const steerRadius=windingHome;
 const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
-const radialGain=attackLike ? (outsideHome?0.22:0.14) : 0.26;
+const radialGain=attackLike
+    ? (outsideHome?0.22:0.14)
+    : (0.20+0.06*plant);
 const windingOutwardCap=attackLike
     ? 0.006
     : (rNow>=steerRadius-0.01 ? 0.0008 : 0.0034);
 const desiredRadialSpeed=
     clamp(
         (steerRadius-rNow)*radialGain,
-        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.038 : -0.020),
+        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.030 : -0.018),
         centerWinding
             ? windingOutwardCap
             : (attackLike ? 0.006 : 0.016)
@@ -391,27 +404,39 @@ const responseRate=
     )*
     (0.42+0.58*rpm)*
     mobilityResponse;
+/*
+  Outside-home snap used to be 1.85x with a 0.11 cap, which glued
+  Ball/stamina rings after a hit. Yield while impact owns the path,
+  then settle — Ball still a bit heavier than Point.
+*/
+const outsideSnap=attackLike
+    ? 1.85
+    : (impactHold>0.14 ? (1.12+0.12*plant) : (1.42+0.28*plant));
 const responseAmount=clamp(
     responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
     (centerWinding?(attackLike?1.55:0.92):1)*
-    (outsideHome?1.85:1),
+    (outsideHome?outsideSnap:1),
     0,
-    attackLike ? (centerWinding?0.070:(outsideHome?0.078:0.048)) : (centerWinding?0.046:(outsideHome?0.11:0.056))
+    attackLike
+        ? (centerWinding?0.070:(outsideHome?0.078:0.048))
+        : (centerWinding?0.046:(outsideHome?0.086:0.054))
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
 
 if(
     rNow>preferredRadius*(attackLike?1.06:1.04) &&
-    impactHold<0.18 &&
-    !s.railEngaged
+    !s.railEngaged &&
+    (attackLike ? impactHold<0.18 : true)
 ){
     const outward=s.vx*radialX+s.vy*radialY;
     if(outward>0){
         const cut=clamp(
-            (rNow/Math.max(0.12,preferredRadius)-(attackLike?1.06:1.04))*(attackLike?2.2:3.4),
+            (rNow/Math.max(0.12,preferredRadius)-(attackLike?1.06:1.04))*(attackLike?2.2:3.0),
             0,
-            attackLike?0.58:0.88
+            attackLike
+                ? 0.58
+                : (impactHold>0.14 ? (0.26+0.08*plant) : (0.62+0.16*plant))
         );
         s.vx-=radialX*outward*cut;
         s.vy-=radialY*outward*cut;
@@ -426,13 +451,15 @@ if(
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
         ? (impactHold>0.12?0.0018:(outsideHome?0.022:0.0032))
-        : (impactHold>0.12?0.0022:0.0042);
+        : (impactHold>0.14?0.0018:(0.0036+0.0010*plant));
     let bowl=(rNow-preferredRadius)*bowlGain;
     if(attackLike && outsideHome) bowl=Math.max(bowl,0.0034);
     bowl=clamp(
         bowl,
-        attackLike?-0.0010:-0.0014,
-        attackLike?(outsideHome?0.012:0.0036):(outsideHome?0.0090:0.0044)
+        attackLike?-0.0010:-0.0012,
+        attackLike
+            ? (outsideHome?0.012:0.0036)
+            : (outsideHome?(0.0060+0.0018*plant):0.0042)
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
@@ -767,7 +794,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.3",
+    version:"1.3.4",
     step,
     homeOrbitRadius,
     orbitOmega,
