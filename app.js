@@ -4493,20 +4493,49 @@ function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
     return null;
 }
 
-function getBattleStat(s,key,fallback=70){
+function getBattleStatPoints(s,key,fallback=70){
     const value=Number(s?.stats?.[key]);
-
     if(!Number.isFinite(value)){
-        return Math.max(
-            60,
-            Math.min(99,fallback)
-        )/99;
+        return Math.max(50,Math.min(99,fallback));
     }
+    return Math.max(50,Math.min(99,value));
+}
 
-    return Math.max(
-        60,
-        Math.min(99,value)
-    )/99;
+function battleFoe(s){
+    if(!s || typeof NEW_BATTLE==="undefined" || !NEW_BATTLE) return null;
+    if(s===NEW_BATTLE.player) return NEW_BATTLE.cpu||null;
+    if(s===NEW_BATTLE.cpu) return NEW_BATTLE.player||null;
+    return null;
+}
+
+function matchStatCounter(key){
+    if(key==="knockback" || key==="attack") return "defense";
+    if(key==="defense") return "knockback";
+    return key;
+}
+
+/*
+  Match-relative card term. 70 vs 70 and 94 vs 94 both play at the same
+  par intensity. The clash cares about the ratio (99 knock vs 88 defense
+  ≈ 60 knock vs 50 defense), not how big the numbers are versus 99.
+  OVR never enters this. Soft-clamp the ratio so a 99 vs 75 is favored,
+  not a bye.
+*/
+function matchScaledStat(myPoints,theirPoints){
+    const mine=Math.max(50,Math.min(99,Number(myPoints)||70));
+    const theirs=Math.max(50,Math.min(99,Number(theirPoints)||70));
+    const mean=Math.max(1,(mine+theirs)*0.5);
+    const rel=newBattleClamp(mine/mean,0.83,1.17);
+    return newBattleClamp(0.90*rel,0.70,1.05);
+}
+
+function getBattleStat(s,key,fallback=70){
+    const mine=getBattleStatPoints(s,key,fallback);
+    const foe=battleFoe(s);
+    const theirs=foe
+        ? getBattleStatPoints(foe,matchStatCounter(key),fallback)
+        : mine;
+    return matchScaledStat(mine,theirs);
 }
 
 function bitPhysics(s){
@@ -5127,17 +5156,8 @@ function newPhysicsStep(s,dt){
                         const ax=dx*invD;
                         const ay=dy*invD;
 
-                        const attackStat=
-                            newBattleClamp(
-                                Number(s.stats && s.stats.attack || 70)/99,
-                                0,1
-                            );
-
-                        const kbStat=
-                            newBattleClamp(
-                                Number(s.stats && s.stats.knockback || 70)/99,
-                                0,1
-                            );
+                        const attackStat=getBattleStat(s,"attack");
+                        const kbStat=getBattleStat(s,"knockback");
 
                         /*
                           The wave creates windows of engagement. It is not a
@@ -5412,7 +5432,7 @@ function newPhysicsCollision(dt){
     */
     const liveDefense=(cardDef,rpm)=>newBattleClamp(
         cardDef*(0.40+0.60*Math.pow(Math.max(0.08,rpm),1.05)),
-        0,1
+        0,1.05
     );
     const pDef=liveDefense(pCardDef,pRPM);
     const cDef=liveDefense(cCardDef,cRPM);
@@ -5545,15 +5565,15 @@ function newPhysicsCollision(dt){
     const pHit =
         contactEnergy *
         pEnergyScale *
-        (0.90+pKB*0.52) *
-        (0.97+pAttack*0.12) *
+        (0.90+pKB*0.58) *
+        (0.97+pAttack*0.14) *
         (0.90+pRPM*0.16);
 
     const cHit =
         contactEnergy *
         cEnergyScale *
-        (0.90+cKB*0.52) *
-        (0.97+cAttack*0.12) *
+        (0.90+cKB*0.58) *
+        (0.97+cAttack*0.14) *
         (0.90+cRPM*0.16);
 
     const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
@@ -5597,11 +5617,11 @@ function newPhysicsCollision(dt){
         (0.42+0.58*directness)*
         (cAttackBit && !pAttackBit ? 1.16 : 1);
     const pDefenseSoak=(pAttackBit && !cAttackBit
-        ? (1.04+(1-cDef)*0.20+(1-cBal)*0.08)
-        : (0.92+(1-cDef)*0.22+(1-cBal)*0.08))*(1+(1-cRPM)*0.20);
+        ? (1.04+(1-cDef)*0.26+(1-cBal)*0.08)
+        : (0.92+(1-cDef)*0.28+(1-cBal)*0.08))*(1+(1-cRPM)*0.20);
     const cDefenseSoak=(cAttackBit && !pAttackBit
-        ? (1.04+(1-pDef)*0.20+(1-pBal)*0.08)
-        : (0.92+(1-pDef)*0.22+(1-pBal)*0.08))*(1+(1-pRPM)*0.20);
+        ? (1.04+(1-pDef)*0.26+(1-pBal)*0.08)
+        : (0.92+(1-pDef)*0.28+(1-pBal)*0.08))*(1+(1-pRPM)*0.20);
     let pKnockRaw=Math.max(
         0.007+pKB*0.010+pRPM*0.004,
         (bounceSep*0.42+pSpinPower+pMomentum*0.22+pForce*0.014)*
@@ -5863,11 +5883,11 @@ function newPhysicsCollision(dt){
     */
     /*
       Attack converts contact into RPM loss. Knockback is displacement,
-      not a second melt stat. 70 vs 99 Attack is a noticeable chip gap,
-      not an instant spin-out.
+      not a second melt stat. Match-relative Attack vs Defense is a
+      chip gap, not an instant spin-out.
     */
-    const pStatDamageFactor=0.47+0.61*pAttack;
-    const cStatDamageFactor=0.47+0.61*cAttack;
+    const pStatDamageFactor=0.45+0.66*pAttack;
+    const cStatDamageFactor=0.45+0.66*cAttack;
 
     const nonAttackRPMMultiplier=1.0;
 
@@ -5954,7 +5974,7 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         pRailAttackMultiplier*
-        (1.10-0.38*newBattleClamp(cDef,0,1))*
+        (1.10-0.44*newBattleClamp(cDef,0,1.05))*
         (1+(1-cRPM)*0.32);
 
     const cToPDamageRaw=
@@ -5965,7 +5985,7 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         cRailAttackMultiplier*
-        (1.10-0.38*newBattleClamp(pDef,0,1))*
+        (1.10-0.44*newBattleClamp(pDef,0,1.05))*
         (1+(1-pRPM)*0.32);
 
     /*
