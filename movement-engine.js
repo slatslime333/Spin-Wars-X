@@ -241,8 +241,8 @@ const preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?0.55:1.50)*s.impactMomentumState,
-    attackLike?0.16:0.03,
+    1-(attackLike?1.35:1.50)*s.impactMomentumState,
+    attackLike?0.05:0.03,
     1
 );
 
@@ -332,12 +332,12 @@ if(
   orbitSteeringAvailability starves this so knockback keeps flying.
 */
 const impactHold=s.impactMomentumState||0;
-const radialGain=attackLike ? 0.20 : 0.16;
+const radialGain=attackLike ? 0.14 : 0.16;
 const desiredRadialSpeed=
     clamp(
         (preferredRadius-rNow)*radialGain,
-        attackLike ? -0.018 : -0.014,
-        attackLike ? 0.018 : 0.012
+        attackLike ? -0.014 : -0.014,
+        attackLike ? 0.014 : 0.012
     );
 const desiredVX=
     tangentX*targetOrbitSpeed+
@@ -347,7 +347,7 @@ const desiredVY=
     radialY*desiredRadialSpeed;
 const responseRate=
     (
-        (attackLike ? 0.034 : 0.018)+
+        (attackLike ? 0.022 : 0.018)+
         control*0.014+
         bitPrecession*0.006+
         movement*0.004
@@ -355,9 +355,9 @@ const responseRate=
     (0.42+0.58*rpm)*
     mobilityResponse;
 const responseAmount=clamp(
-    responseRate*dt*60*Math.max(attackLike?0.16:0.04,orbitSteeringAvailability),
+    responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability),
     0,
-    attackLike ? 0.078 : 0.042
+    attackLike ? 0.048 : 0.042
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
@@ -365,16 +365,16 @@ s.vy+=(desiredVY-s.vy)*responseAmount;
 /*
   Planted stadium. Soft bowl pull toward the home ring so a bounce
   settles back into orbit instead of skating, without rewriting heading.
-  Non-Attack uses a weaker bowl so knockback can actually move them.
+  After a hit the bowl eases off so knockback can actually move them.
 */
 if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowlGain=attackLike
-        ? (impactHold>0.18?0.0022:0.0065)
+        ? (impactHold>0.18?0.0010:0.0032)
         : (impactHold>0.18?0.0008:0.0024);
     const bowl=clamp(
         (rNow-preferredRadius)*bowlGain,
-        attackLike?-0.0018:-0.0008,
-        attackLike?0.0075:0.0028
+        attackLike?-0.0010:-0.0008,
+        attackLike?0.0036:0.0028
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
@@ -709,7 +709,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.2",
+    version:"1.3.3",
     step,
     homeOrbitRadius,
     orbitOmega,
