@@ -725,6 +725,16 @@ footer{
   font-weight:950;
   letter-spacing:1.4px;
 }
+.part-select-card.has-sprite:before{display:none}
+.part-card-sprite{
+  display:block;
+  width:100%;
+  height:168px;
+  object-fit:contain;
+  background:#0b1015;
+  border-bottom:1px solid #303b46;
+  pointer-events:none;
+}
 
 .part-select-card:hover{
   transform:translateY(-3px);
@@ -886,6 +896,17 @@ footer{
   font-weight:400;
 }
 .vs-copy p{color:var(--muted);font-size:12px;margin-top:4px}
+.vs-parts{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.vs-bit-sprite{
+  width:42px;
+  height:42px;
+  object-fit:contain;
+}
 .vs-ovr{
   position:absolute;
   right:10px;top:10px;
