@@ -3189,10 +3189,12 @@ function renderNewBattle(){
                       font-weight="900" fill="#ff4b4b" opacity="0"></text>
               </g>
               <text id="playerRecoveredText" x="50" y="46"
-                    text-anchor="middle" font-size="4.0" font-weight="1000"
-                    fill="#8bdcff" opacity="0">RECOVERED</text>
+                    text-anchor="middle" font-size="6.4" font-weight="1000"
+                    fill="#8bdcff" stroke="#041018" stroke-width="0.45"
+                    opacity="0">RECOVERED</text>
               <text id="cpuRecoveredText" x="50" y="46"
-                    text-anchor="middle" font-size="4.0" font-weight="1000"
+                    text-anchor="middle" font-size="6.4" font-weight="1000"
+                    fill="#8bdcff" stroke="#041018" stroke-width="0.45"
                     fill="#8bdcff" opacity="0">RECOVERED</text>
             </svg>
           </div>
@@ -3369,21 +3371,18 @@ function finishRecoveryChance(s,zone,knockForce){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
-    const speed=Math.hypot(s?.vx||0,s?.vy||0);
-    const hitHard=newBattleClamp(force/0.042,0,1.45);
-    const pocket=zone==="Pocket"||zone==="Over";
-    const tiltWeight=pocket?0.54:0.36;
-    // High RPM should often climb out of a medium knock. A hard,
-    // well-aimed smash still pockets even a healthy Bey.
+    const smash=newBattleClamp(force/0.095,0,1.2);
+    // RPM owns the climb. High RPM usually walks out even of a heavy
+    // smash (low chance to stay pocketed). Low RPM plus a hard hit
+    // almost never climbs. Zone only tweaks tilt weight.
+    const tiltWeight=(zone==="Pocket"||zone==="Over")?0.10:0.06;
     return newBattleClamp(
-        0.16+
-        rpm*0.62+
-        (1-Math.min(hitHard,1))*0.18-
-        tilt*tiltWeight-
-        hitHard*0.22-
-        Math.max(0,speed-0.070)*1.1,
-        0.08,
-        0.78
+        0.12+
+        Math.pow(rpm,0.90)*0.74-
+        smash*(0.08+0.32*(1-rpm))-
+        tilt*tiltWeight,
+        0.06,
+        0.86
     );
 }
 
@@ -3396,13 +3395,12 @@ function tryFinishZoneRecovery(s,zone,knockForce){
     const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce);
 
     // Only a Bey that was just driven in can recover. The roll then
-    // follows knock hardness, remaining RPM, and tilt: high RPM can
-    // climb out of a medium hit; a hard, tilted knock stays pocketed.
-    if(impactAge>1100) return false;
+    // follows knock hardness and remaining RPM.
+    if(impactAge>1400) return false;
     if(Math.random()>chance) return false;
 
     s.finishRecoveryUsed=true;
-    s.recoveredFlashUntil=now+1150;
+    s.recoveredFlashUntil=now+1800;
 
     const centerX=0;
     const centerY=0.48;
@@ -3427,6 +3425,8 @@ function tryFinishZoneRecovery(s,zone,knockForce){
     s.vx=(dx/len)*escapeSpeed;
     s.vy=(dy/len)*escapeSpeed;
     s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.62);
+    s.lastImpactAt=0;
+    s.lastImpactForce=Math.min(Number(s.lastImpactForce)||0, 0.004);
     s.finishDebug=`RECOVERED · ${Math.round(rpm*100)}% RPM climbs out`;
     s.stability=newBattleClamp(s.stability+0.035+balance*0.025,0,1);
     s.axisStability=newBattleClamp((s.axisStability||0.70)+0.035,0.15,1);
@@ -3470,19 +3470,19 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    if(speed<0.030) return null;
+    if(speed<0.020) return null;
 
-    const recentImpact=age<=900;
-    const recentRailExit=!!s.railExited && age<=900;
+    const recentImpact=age<=1200;
+    const recentRailExit=!!s.railExited && age<=1200;
 
     // Finishes need a committed knock into the opening. Light rim
     // clips should not score; a real smash still can. X-Rail exit
     // still uses stored rail speed. The window is long enough that a
     // smash can travel to the pocket and still count, so recovery can
     // roll on the same event.
-    const impactEntry=recentImpact && force>=0.008;
+    const impactEntry=recentImpact && force>=0.007;
     const railExitForce=s.railExitForce||0;
-    const railEntry=recentRailExit && speed>=0.048 && (force>=0.0020 || railExitForce>=0.0020);
+    const railEntry=recentRailExit && speed>=0.040 && (force>=0.0020 || railExitForce>=0.0020);
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3516,13 +3516,13 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.030 &&
-            alignment>=0.14;
+            speed>=0.022 &&
+            alignment>=0.08;
 
         const railQualified=
             railEntry &&
-            speed>=0.048 &&
-            alignment>=0.16;
+            speed>=0.040 &&
+            alignment>=0.10;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3561,15 +3561,15 @@ function checkForcedStadiumFinish(s){
 
         const impactQualified=
             impactEntry &&
-            speed>=0.028 &&
-            outward>=0.0018 &&
-            alignment>=0.12;
+            speed>=0.020 &&
+            outward>=0.0012 &&
+            alignment>=0.05;
 
         const railQualified=
             railEntry &&
-            speed>=0.046 &&
-            outward>=0.0020 &&
-            alignment>=0.14;
+            speed>=0.038 &&
+            outward>=0.0014 &&
+            alignment>=0.08;
 
         if(impactQualified||railQualified){
             const recoveryForce=Math.max(force,railExitForce,speed*0.32);
@@ -3835,9 +3835,11 @@ function newBattleFrame(now){
             if(el && s.recoveredFlashUntil>nowRecovery){
                 el.setAttribute("x",String(50+s.x*39));
                 el.setAttribute("y",String(46+s.y*39-8));
-                const ru=1-(s.recoveredFlashUntil-nowRecovery)/1150;
-                el.setAttribute("opacity",String(Math.max(0,1-ru)));
-                el.setAttribute("font-size",String(3.8+ru*0.9));
+                const ru=1-(s.recoveredFlashUntil-nowRecovery)/1800;
+                el.setAttribute("opacity",String(Math.max(0,1-ru*0.85)));
+                el.setAttribute("font-size",String(6.4+ru*1.4));
+                el.setAttribute("stroke","#041018");
+                el.setAttribute("stroke-width","0.45");
             }else if(el){
                 el.setAttribute("opacity","0");
             }

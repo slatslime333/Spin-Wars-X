@@ -514,14 +514,14 @@ if(radius>wall){
       Finish openings sit on the lower rim. A real outward knock that
       reaches that lip can leave the bowl; a normal orbit still bounces.
     */
-    const inXtremeGate=s.y>=0.62 && Math.abs(s.x)<=0.22;
-    const inPocketGate=s.y>=0.58 && Math.abs(s.x)>=0.50;
+    const inXtremeGate=s.y>=0.58 && Math.abs(s.x)<=0.24;
+    const inPocketGate=s.y>=0.54 && Math.abs(s.x)>=0.48;
     const finishEscape=
-        outward>0.012 &&
-        radius>=0.72 &&
+        outward>0.0075 &&
+        radius>=0.70 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.008 &&
-        (s.impactMomentumState||0)>0.38 &&
+        (s.lastImpactForce||0)>=0.007 &&
+        (s.impactMomentumState||0)>0.24 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){
