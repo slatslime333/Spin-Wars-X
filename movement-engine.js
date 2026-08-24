@@ -60,11 +60,12 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
   /*
-    Attack starts on the rail ring and walks in a decent amount as
-    spin falls: ~100% stays wide, ~70% is mid-outer, ~50% is inner.
+    Attack stays on the rail ring through high/mid RPM and only walks
+    in a decent amount once spin is actually falling off. The previous
+    curve dumped them to mid-bowl by ~70%.
   */
-  if(kind==="attack") return 0.38+0.62*Math.pow(s,1.32);
-  if(kind==="hybrid") return 0.40+0.60*Math.pow(s,1.45);
+  if(kind==="attack") return 0.58+0.42*Math.pow(s,1.12);
+  if(kind==="hybrid") return 0.44+0.56*Math.pow(s,1.40);
   return 0.36+0.64*Math.pow(s,2.00);
 }
 
@@ -82,7 +83,7 @@ function bitOrbitProfile(opts){
   let attackWeight;
 
   if(klass==="attack"){
-    const rideShrink=Math.min(0.12,(Number(opts.railUses)||0)*0.055);
+    const rideShrink=Math.min(0.08,(Number(opts.railUses)||0)*0.035);
     home=Math.max(0.28,Math.min(0.82,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
@@ -197,12 +198,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.78,
+        (s.impactMomentumState||0)-dt*0.62,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.72*s.impactMomentumState;
+    1-0.86*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -267,15 +268,16 @@ if(circleR<preferredRadius){
     );
 }
 
-if((s.impactMomentumState||0)>0.22){
+if((s.impactMomentumState||0)>0.18){
     /*
-      Keep a little of the hit's extra speed, but do not promote the
-      whole knockback into cruise speed. That is the lifeless ice-skate.
+      A hit must not stall them down to cruise and then wind a new
+      orbit. Keep the carried speed; only clip rocket launches.
     */
     const hitSpeed=Math.hypot(s.vx,s.vy);
-    targetOrbitSpeed=
-        targetOrbitSpeed*0.62+
-        Math.min(hitSpeed,targetOrbitSpeed*1.45)*0.38;
+    targetOrbitSpeed=Math.max(
+        targetOrbitSpeed,
+        Math.min(hitSpeed,0.090)
+    );
 }
 
 /*
@@ -328,6 +330,7 @@ if(
     Math.hypot(s.vx,s.vy)<0.0028 &&
     rpm>0.22 &&
     !s.railEngaged &&
+    (s.impactMomentumState||0)<0.12 &&
     !(s.surfaceRecovery>0 && s.lastImpactForce>0.006)
 ){
     const seedStrength=
@@ -354,8 +357,8 @@ if(
 */
 const impactHold=s.impactMomentumState||0;
 const inImpact=impactHold>0.22;
-const tangentFollow=inImpact?0.08:0.18;
-const radialFollow=inImpact?0.05:orbit.radialFollow;
+const tangentFollow=inImpact?0.035:0.18;
+const radialFollow=inImpact?0.03:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
@@ -402,12 +405,16 @@ const newRadial=inImpact
   tangent — that is the post-hit sway. Keep cartesian flight while
   the hit is fresh, then ease orbit response back in.
 */
-const polarMix=clamp((0.40-impactHold)/0.40,0,1);
+const polarMix=clamp((0.28-impactHold)/0.28,0,1);
 if(polarMix>0.02){
     const polarX=tangentX*newTangent+radialX*newRadial;
     const polarY=tangentY*newTangent+radialY*newRadial;
-    s.vx=s.vx*(1-polarMix)+polarX*polarMix;
-    s.vy=s.vy*(1-polarMix)+polarY*polarMix;
+    const carry=Math.hypot(s.vx,s.vy);
+    const polarSp=Math.hypot(polarX,polarY)||0.0001;
+    const keepSp=Math.max(polarSp, carry*(0.70+0.22*impactHold));
+    const scale=keepSp/polarSp;
+    s.vx=s.vx*(1-polarMix)+polarX*scale*polarMix;
+    s.vy=s.vy*(1-polarMix)+polarY*scale*polarMix;
 }
 
 /*
@@ -423,9 +430,9 @@ if(polarMix<0.92 && rNow>0.08){
     s.vx-=radialX*pull;
     s.vy-=radialY*pull;
     const spd=Math.hypot(s.vx,s.vy);
-    const cap=targetOrbitSpeed*1.62+0.012;
+    const cap=Math.max(0.086,targetOrbitSpeed*1.85);
     if(spd>cap){
-        const bleed=Math.min(spd-cap,0.0016+0.0030*grip);
+        const bleed=Math.min(spd-cap,0.0010+0.0018*grip);
         s.vx-=(s.vx/spd)*bleed;
         s.vy-=(s.vy/spd)*bleed;
     }
@@ -754,7 +761,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.3",
+    version:"1.2.4",
     step,
     homeOrbitRadius,
     orbitOmega,

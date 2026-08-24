@@ -5245,10 +5245,12 @@ function newPhysicsCollision(dt){
 
     // Stop walking into each other, then shove apart. Adding a tiny delta
     // on top of inbound speed looked like "damage with no impact".
+    const pSpeedBefore=Math.hypot(p.vx,p.vy);
+    const cSpeedBefore=Math.hypot(c.vx,c.vy);
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal;p.vy-=ny*pNormal;}
-    if(cNormal<0){c.vx-=nx*cNormal;c.vy-=ny*cNormal;}
+    if(pNormal>0){p.vx-=nx*pNormal*0.70;p.vy-=ny*pNormal*0.70;}
+    if(cNormal<0){c.vx-=nx*cNormal*0.70;c.vy-=ny*cNormal*0.70;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
 
@@ -5348,6 +5350,21 @@ function newPhysicsCollision(dt){
             rider.railContactPoint=null;
         }
     }
+
+    const keepCarry=(s,before)=>{
+        const sp=Math.hypot(s.vx,s.vy);
+        const floor=Math.min(0.080, Math.max(0.016, before*0.64));
+        if(sp<1e-6){
+            s.vx=-nx*floor;s.vy=-ny*floor;
+            return;
+        }
+        if(sp<floor){
+            s.vx*=floor/sp;
+            s.vy*=floor/sp;
+        }
+    };
+    keepCarry(p,pSpeedBefore);
+    keepCarry(c,cSpeedBefore);
 
     const capHitSpeed=(s)=>{
         const sp=Math.hypot(s.vx,s.vy);
