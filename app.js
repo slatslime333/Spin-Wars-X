@@ -4556,18 +4556,23 @@ function newPhysicsStep(s,dt){
                     : 1.0));
 
         const speedNow=Math.hypot(s.vx,s.vy);
-        const keepImpactSpeed=(s.impactMomentumState||0)>0.28;
+        const keepImpactSpeed=
+            (s.impactMomentumState||0)>0.18 ||
+            (s.railExitRefractory||0)>0 ||
+            !!s.railExited ||
+            !!s.xrailExitRampActive;
 
         /*
           Orbit speed is owned by the home-ring driver in movement-engine.
           Do not accelerate up to a separate cruise target — that is what
           pushed Attack onto the X-Rail. Only bleed runaway leftover speed.
+          Never clip X-Exit, bounce, or clash carry down to cruise.
         */
         const cruiseCap=0.052+0.036*(orbitPreview.attackWeight||0);
         const rNow=Math.hypot(s.x,s.y);
         const nearRailRing=rNow>0.70 && rNow<0.90;
-        if(speedNow>0.086 && !s.railEngaged && !s.xrailExitRampActive){
-            const cap=keepImpactSpeed?0.084:0.078;
+        if(speedNow>0.16 && !s.railEngaged && !s.xrailExitRampActive && !keepImpactSpeed){
+            const cap=0.14;
             if(speedNow>cap){
                 s.vx*=cap/speedNow;
                 s.vy*=cap/speedNow;
@@ -5249,8 +5254,8 @@ function newPhysicsCollision(dt){
     const cSpeedBefore=Math.hypot(c.vx,c.vy);
     const pNormal=p.vx*nx+p.vy*ny;
     const cNormal=c.vx*nx+c.vy*ny;
-    if(pNormal>0){p.vx-=nx*pNormal*0.70;p.vy-=ny*pNormal*0.70;}
-    if(cNormal<0){c.vx-=nx*cNormal*0.70;c.vy-=ny*cNormal*0.70;}
+    if(pNormal>0){p.vx-=nx*pNormal*0.55;p.vy-=ny*pNormal*0.55;}
+    if(cNormal<0){c.vx-=nx*cNormal*0.55;c.vy-=ny*cNormal*0.55;}
     c.vx+=nx*pKnockback; c.vy+=ny*pKnockback;
     p.vx-=nx*cKnockback; p.vy-=ny*cKnockback;
 
@@ -5271,7 +5276,7 @@ function newPhysicsCollision(dt){
                 pKnockback/0.065,
                 effectiveImpact/0.030
             ),
-            0.24,0.82
+            0.28,0.92
         );
 
     const cImpactMomentumState=
@@ -5280,7 +5285,7 @@ function newPhysicsCollision(dt){
                 cKnockback/0.065,
                 effectiveImpact/0.030
             ),
-            0.24,0.82
+            0.28,0.92
         );
 
     p.impactMomentumState=Math.max(
@@ -5353,7 +5358,7 @@ function newPhysicsCollision(dt){
 
     const keepCarry=(s,before)=>{
         const sp=Math.hypot(s.vx,s.vy);
-        const floor=Math.min(0.080, Math.max(0.016, before*0.64));
+        const floor=Math.min(0.12, Math.max(0.022, before*0.78));
         if(sp<1e-6){
             s.vx=-nx*floor;s.vy=-ny*floor;
             return;
@@ -5368,9 +5373,10 @@ function newPhysicsCollision(dt){
 
     const capHitSpeed=(s)=>{
         const sp=Math.hypot(s.vx,s.vy);
-        if(sp>0.084){
-            s.vx*=0.084/sp;
-            s.vy*=0.084/sp;
+        const cap=(s.impactMomentumState||0)>0.18?0.13:0.10;
+        if(sp>cap){
+            s.vx*=cap/sp;
+            s.vy*=cap/sp;
         }
     };
     capHitSpeed(p);

@@ -60,11 +60,10 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const s=Math.max(0.12,clamp01(spin));
   /*
-    Attack hugs the X-Rail ring through most of a battle. Walking in
-    only happens once spin is actually dying — otherwise they clip the
-    X-Exit tip instead of riding higher on the rail.
+    Attack stays rail-wide at high RPM, then walks in as spin drops so
+    they are not stuck hugging the rail with no tightening at all.
   */
-  if(kind==="attack") return 0.80+0.20*Math.pow(s,0.90);
+  if(kind==="attack") return 0.46+0.54*Math.pow(s,1.15);
   if(kind==="hybrid") return 0.50+0.50*Math.pow(s,1.25);
   /*
     Non-Attack stays a little wider through high RPM, then drops hard
@@ -88,7 +87,7 @@ function bitOrbitProfile(opts){
 
   if(klass==="attack"){
     const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
-    home=Math.max(0.52,Math.min(0.84,attack-rideShrink));
+    home=Math.max(0.36,Math.min(0.84,attack-rideShrink));
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -335,6 +334,7 @@ if(
     rpm>0.22 &&
     !s.railEngaged &&
     (s.impactMomentumState||0)<0.12 &&
+    (s.railExitRefractory||0)<=0 &&
     !(s.surfaceRecovery>0 && s.lastImpactForce>0.006)
 ){
     const seedStrength=
@@ -409,7 +409,10 @@ const newRadial=inImpact
   tangent — that is the post-hit sway. Keep cartesian flight while
   the hit is fresh, then ease orbit response back in.
 */
-const polarMix=clamp((0.32-impactHold)/0.32,0,1)*0.58;
+const polarMix=
+    ((s.railExitRefractory||0)>0 || s.xrailExitRampActive)
+        ? 0
+        : clamp((0.32-impactHold)/0.32,0,1)*0.58;
 if(polarMix>0.02){
     const polarX=tangentX*newTangent+radialX*newRadial;
     const polarY=tangentY*newTangent+radialY*newRadial;
@@ -439,7 +442,7 @@ if(rNow>0.08){
   grip so the Bey does not ice-skate or get bullied across the stadium.
   This is radial gravity only — it does not rewrite heading.
 */
-if(polarMix<0.92 && rNow>0.08){
+if(!inImpact && polarMix<0.92 && rNow>0.08){
     const grip=1-polarMix;
     const bowl=clamp((rNow-preferredRadius)*0.005,-0.0016,0.006);
     const rimStart=0.78+0.06*attackWeight;
@@ -601,6 +604,7 @@ if(radius>wall){
     s.y=ny*(wall-0.002);
 
     if(outward>0){
+        const incomingWall=Math.hypot(s.vx,s.vy);
 
         /*
           Use the authoritative spin-direction tangent. The old
@@ -625,33 +629,28 @@ if(radius>wall){
         );
 
         /*
-          Hard impact:
-          - reverse outward velocity
-          - reduce it heavily
-          - preserve only some tangent
-          - create a recovery state
+          Bounce off the wall. Keep most of the speed so this is not a
+          dead stop that then snaps back onto an orbit.
         */
         const wallImpactQuality=
             clamp(outward/0.045,0,2.2);
 
         const restitution=
             clamp(
-                0.12+
-                balance*0.10+
-                control*0.045+
-                wallImpactQuality*0.035+
-                ((s.mass||1)-1)*0.025,
-                0.12,0.34
+                0.42+
+                balance*0.16+
+                control*0.08+
+                wallImpactQuality*0.06+
+                ((s.mass||1)-1)*0.02,
+                0.40,0.70
             );
 
-        // Wall friction makes the impact feel planted instead of
-        // turning a hard strike into a long floating glide.
         const tangentRetention =
             clamp(
-                0.38+
-                control*0.12,
-                0.38,
-                0.52
+                0.70+
+                control*0.14,
+                0.70,
+                0.88
             );
 
         const bouncedNormal =
@@ -664,6 +663,15 @@ if(radius>wall){
         s.vy =
             ny*bouncedNormal+
             tangentY*tangent*tangentRetention;
+
+        const bouncedSpeed=Math.hypot(s.vx,s.vy);
+        const wallFloor=Math.max(0.028,incomingWall*0.78);
+        if(bouncedSpeed<wallFloor){
+            const boost=wallFloor/Math.max(bouncedSpeed,1e-8);
+            s.vx*=boost;
+            s.vy*=boost;
+        }
+        s.impactMomentumState=Math.max(s.impactMomentumState||0,0.62);
 
         s.surfaceRecovery=0.20;
         s.tiltLevel=clamp(
@@ -781,7 +789,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.5",
+    version:"1.2.6",
     step,
     homeOrbitRadius,
     orbitOmega,
