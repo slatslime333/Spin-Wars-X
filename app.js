@@ -5253,10 +5253,21 @@ function newPhysicsCollision(dt){
     const cAttack=getBattleStat(c,"attack");
     const pKB=getBattleStat(p,"knockback");
     const cKB=getBattleStat(c,"knockback");
-    const pDef=getBattleStat(p,"defense");
-    const cDef=getBattleStat(c,"defense");
+    const pCardDef=getBattleStat(p,"defense");
+    const cCardDef=getBattleStat(c,"defense");
     const pRPM=newBattleClamp(p.rpm,0,1);
     const cRPM=newBattleClamp(c.rpm,0,1);
+    /*
+      Card Defense is the high-RPM wall. As remaining RPM drops, that wall
+      comes down so dying Beys take a little more knockback and RPM loss
+      instead of stalling in a low-spin chip war.
+    */
+    const liveDefense=(cardDef,rpm)=>newBattleClamp(
+        cardDef*(0.40+0.60*Math.pow(Math.max(0.08,rpm),1.05)),
+        0,1
+    );
+    const pDef=liveDefense(pCardDef,pRPM);
+    const cDef=liveDefense(cCardDef,cRPM);
 
     const impactSpeed=Math.abs(closing);
     const tangentRelative=rvx*tx+rvy*ty;
@@ -5437,12 +5448,12 @@ function newPhysicsCollision(dt){
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
         (0.42+0.58*directness)*
         (cAttackBit && !pAttackBit ? 1.10 : 1);
-    const pDefenseSoak=pAttackBit && !cAttackBit
+    const pDefenseSoak=(pAttackBit && !cAttackBit
         ? (1.04+(1-cDef)*0.16)
-        : (0.96+(1-cDef)*0.10);
-    const cDefenseSoak=cAttackBit && !pAttackBit
+        : (0.96+(1-cDef)*0.10))*(1+(1-cRPM)*0.20);
+    const cDefenseSoak=(cAttackBit && !pAttackBit
         ? (1.04+(1-pDef)*0.16)
-        : (0.96+(1-pDef)*0.10);
+        : (0.96+(1-pDef)*0.10))*(1+(1-pRPM)*0.20);
     let pKnockRaw=Math.max(
         0.007+pKB*0.010+pRPM*0.004,
         (bounceSep*0.42+pSpinPower+pMomentum*0.22+pForce*0.014)*
@@ -5758,7 +5769,8 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         pRailAttackMultiplier*
-        (0.82+0.18*(1-newBattleClamp(cDef/100,0,1)));
+        (0.82+0.18*(1-newBattleClamp(cDef/100,0,1)))*
+        (1+(1-cRPM)*0.32);
 
     const cToPDamageRaw=
         cDamageCurve*
@@ -5768,7 +5780,8 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         cRailAttackMultiplier*
-        (0.82+0.18*(1-newBattleClamp(pDef/100,0,1)));
+        (0.82+0.18*(1-newBattleClamp(pDef/100,0,1)))*
+        (1+(1-pRPM)*0.32);
 
     /*
       Small guaranteed floor: a real contact always matters, including at
