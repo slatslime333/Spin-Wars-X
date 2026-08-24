@@ -247,6 +247,14 @@ const orbitSteeringAvailability=clamp(
     1
 );
 
+if((s.centerLaunchWindup||0)>0){
+    s.centerLaunchWindup=Math.max(0,(s.centerLaunchWindup||0)-dt);
+}
+const centerWinding=
+    (s.centerLaunchWindup||0)>0 &&
+    s.launchPlan &&
+    s.launchPlan.technique==="Center";
+
 /*
   Speed is owned by launch + RPM (physicalSpeedTarget), not by a
   scripted r*omega ring. Home radius is only a soft radial tendency.
@@ -257,12 +265,25 @@ const orbitSpeedFraction=
     0.10*(1-centerAffinity);
 const orbitSpeedTightness=attackLike
     ? 1
-    : 0.34+0.66*Math.max(0.12,preferredRadius/0.52);
-const targetOrbitSpeed=
+    : Math.min(1,0.34+0.66*Math.max(0.12,preferredRadius/0.52));
+let targetOrbitSpeed=
     physicalSpeedTarget*
     orbitSpeedFraction*
     (0.72+0.28*(s.movementEnergy||1))*
     orbitSpeedTightness;
+const windingHome=centerWinding && !attackLike
+    ? Math.min(preferredRadius,0.38)
+    : preferredRadius;
+if(centerWinding && !attackLike){
+    /*
+      A Center launch starts in the middle. Giving a stamina/defense
+      Bit a full ring speed there slings it out to the X-Rail like
+      Attack. Grow speed with current radius so it winds into its
+      own home ring.
+    */
+    const ring=Math.max(0.14,windingHome);
+    targetOrbitSpeed*=clamp(rNow/ring,0.28,1);
+}
 
 /*
   Authoritative direction convention:
@@ -302,14 +323,6 @@ const spinTangent=
 const tangentX=spinTangent.x;
 const tangentY=spinTangent.y;
 
-if((s.centerLaunchWindup||0)>0){
-    s.centerLaunchWindup=Math.max(0,(s.centerLaunchWindup||0)-dt);
-}
-const centerWinding=
-    (s.centerLaunchWindup||0)>0 &&
-    s.launchPlan &&
-    s.launchPlan.technique==="Center";
-
 /*
   CENTER-LAUNCH START
   -------------------
@@ -329,7 +342,7 @@ if(
 ){
     const seedStrength=
         targetOrbitSpeed*
-        (centerWinding?0.18:0.70)*
+        (centerWinding?(attackLike?0.18:0.10):0.70)*
         mobilityResponse;
 
     s.vx+=tangentX*seedStrength;
@@ -343,12 +356,17 @@ if(
 */
 const impactHold=s.impactMomentumState||0;
 const radialGain=attackLike ? 0.14 : 0.26;
+const steerRadius=windingHome;
+const outsideHome=!attackLike && rNow>preferredRadius+0.02;
+const windingOutwardCap=attackLike
+    ? 0.006
+    : (rNow>=steerRadius-0.01 ? 0.0008 : 0.0034);
 const desiredRadialSpeed=
     clamp(
-        (preferredRadius-rNow)*radialGain,
-        attackLike ? -0.014 : -0.020,
+        (steerRadius-rNow)*radialGain,
+        attackLike ? -0.014 : (outsideHome ? -0.038 : -0.020),
         centerWinding
-            ? (attackLike ? 0.006 : 0.005)
+            ? windingOutwardCap
             : (attackLike ? 0.014 : 0.016)
     );
 const desiredVX=
@@ -368,12 +386,27 @@ const responseRate=
     mobilityResponse;
 const responseAmount=clamp(
     responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
-    (centerWinding?1.55:1),
+    (centerWinding?(attackLike?1.55:0.92):1)*
+    (outsideHome?1.85:1),
     0,
-    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.074:0.056)
+    attackLike ? (centerWinding?0.070:0.048) : (centerWinding?0.046:(outsideHome?0.11:0.056))
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
+
+if(
+    !attackLike &&
+    rNow>preferredRadius*1.04 &&
+    impactHold<0.18 &&
+    !s.railEngaged
+){
+    const outward=s.vx*radialX+s.vy*radialY;
+    if(outward>0){
+        const cut=clamp((rNow/Math.max(0.12,preferredRadius)-1.04)*3.4,0,0.88);
+        s.vx-=radialX*outward*cut;
+        s.vy-=radialY*outward*cut;
+    }
+}
 
 /*
   Planted stadium. Soft bowl pull toward the home ring so a bounce
@@ -387,7 +420,7 @@ if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
     const bowl=clamp(
         (rNow-preferredRadius)*bowlGain,
         attackLike?-0.0010:-0.0014,
-        attackLike?0.0036:0.0044
+        attackLike?0.0036:(outsideHome?0.0090:0.0044)
     );
     s.vx-=radialX*bowl;
     s.vy-=radialY*bowl;
