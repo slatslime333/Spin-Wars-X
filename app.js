@@ -2939,7 +2939,8 @@ function newBattleLaunchState(side){
         recoveredFlashUntil:0,
         surfaceRecovery:0,
         surfaceBounce:0,
-        spriteAngle:0
+        spriteAngle:0,
+        motionTrail:[]
     };
 }
 
@@ -3209,6 +3210,18 @@ function renderNewBattle(){
                     stroke-linecap="round"
                     stroke-linejoin="round"/>
 
+              <!-- Motion trails sit under the Beys. Visual-only. -->
+              <g id="playerMotionTrail" class="bey-motion-trail player" pointer-events="none">
+                <polyline fill="none" stroke="#c79212" stroke-width="1.55"
+                          stroke-linecap="round" stroke-linejoin="round"
+                          stroke-opacity="0.42" points=""/>
+              </g>
+              <g id="cpuMotionTrail" class="bey-motion-trail cpu" pointer-events="none">
+                <polyline fill="none" stroke="#4e5964" stroke-width="1.55"
+                          stroke-linecap="round" stroke-linejoin="round"
+                          stroke-opacity="0.38" points=""/>
+              </g>
+
               <!-- Beys -->
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
@@ -3327,6 +3340,8 @@ function renderNewBattle(){
       </main>`;
     updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",0);
     updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
+    updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
+    updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
 }
 
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
@@ -3789,6 +3804,50 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
+function updateBeyMotionTrail(state, groupId, now){
+    const group=document.getElementById(groupId);
+    if(!group) return;
+    const line=group.querySelector("polyline");
+    if(!state){
+        if(line) line.setAttribute("points","");
+        while(group.children.length>1) group.removeChild(group.lastElementChild);
+        return;
+    }
+    const cx=50+state.x*39;
+    const cy=46+state.y*39;
+    if(!Array.isArray(state.motionTrail)) state.motionTrail=[];
+    const trail=state.motionTrail;
+    const last=trail[trail.length-1];
+    const moved=!last || Math.hypot(cx-last.x,cy-last.y)>=0.40;
+    if(moved) trail.push({x:cx,y:cy,t:now});
+    const keepMs=220;
+    while(trail.length>1 && now-trail[0].t>keepMs) trail.shift();
+    if(trail.length>12) trail.splice(0,trail.length-12);
+
+    if(line){
+        line.setAttribute(
+            "points",
+            trail.map(pt=>pt.x.toFixed(2)+","+pt.y.toFixed(2)).join(" ")
+        );
+    }
+
+    const dots=Math.max(0, trail.length-1);
+    while(group.children.length<dots+1){
+        group.appendChild(document.createElementNS("http://www.w3.org/2000/svg","circle"));
+    }
+    while(group.children.length>dots+1) group.removeChild(group.lastElementChild);
+    for(let i=0;i<dots;i++){
+        const dot=group.children[i+1];
+        const life=1-((now-trail[i].t)/keepMs);
+        const fade=Math.max(0, life)*((i+1)/Math.max(1,dots));
+        dot.setAttribute("cx", trail[i].x.toFixed(2));
+        dot.setAttribute("cy", trail[i].y.toFixed(2));
+        dot.setAttribute("r", (0.45+0.95*fade).toFixed(2));
+        dot.setAttribute("fill", group.classList.contains("cpu")?"#4e5964":"#c79212");
+        dot.setAttribute("fill-opacity", (0.08+0.28*fade).toFixed(3));
+    }
+}
+
 function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const circle=document.getElementById(circleId);
     const spriteEl=document.getElementById(spriteId);
@@ -3873,6 +3932,8 @@ function newBattleFrame(now){
 
         updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",dt);
         updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",dt);
+        updateBeyMotionTrail(p,"playerMotionTrail",now);
+        updateBeyMotionTrail(c,"cpuMotionTrail",now);
 
         const impactGroup=document.getElementById("impactEffect");
         if(impactGroup && NEW_BATTLE.lastImpact){
