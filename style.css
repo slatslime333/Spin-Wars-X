@@ -131,88 +131,202 @@ footer{
    ========================================================= */
 
 .home{
+  position:relative;
   min-height:100vh;
   display:flex;
   flex-direction:column;
   justify-content:center;
   align-items:center;
-  gap:36px;
-  padding:28px 16px 40px;
-  animation:screenIn .2s ease-out;
+  gap:28px;
+  padding:36px 16px 44px;
+  overflow:hidden;
+  animation:screenIn .22s ease-out;
+}
+
+.home-ring{
+  position:absolute;
+  width:min(560px,94vw);
+  height:min(560px,94vw);
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-54%);
+  border-radius:50%;
+  border:3px solid rgba(26,209,90,.22);
+  box-shadow:
+    0 0 48px rgba(26,209,90,.12),
+    inset 0 0 90px rgba(26,209,90,.06);
+  pointer-events:none;
+  z-index:0;
+}
+.home-ring:before,
+.home-ring:after{
+  content:"";
+  position:absolute;
+  border-radius:50%;
+  inset:22px;
+  border:1px solid rgba(240,180,41,.16);
+}
+.home-ring:after{
+  inset:auto;
+  width:42%;
+  height:18%;
+  left:29%;
+  top:-2%;
+  border:none;
+  border-radius:0 0 60% 60%;
+  background:linear-gradient(180deg,rgba(7,6,10,0),rgba(7,6,10,.85));
 }
 
 .home-mark{
   position:relative;
+  z-index:1;
   text-align:center;
 }
 
-.home-x{
-  position:absolute;
-  left:50%;
-  top:46%;
-  transform:translate(-50%,-52%) rotate(-18deg);
-  font-family:Staatliches,Impact,sans-serif;
-  font-size:clamp(140px,28vw,240px);
-  line-height:.8;
-  color:var(--green);
-  text-shadow:0 0 28px rgba(26,209,90,.35);
-  pointer-events:none;
-  user-select:none;
-  z-index:0;
+.home-kicker{
+  color:var(--gold);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.34em;
+  margin-bottom:8px;
 }
 
 .home-mark h1{
-  position:relative;
-  z-index:1;
   font-family:Staatliches,Impact,sans-serif;
-  font-size:clamp(52px,12vw,92px);
-  letter-spacing:.06em;
-  line-height:.9;
+  font-size:clamp(56px,14vw,92px);
+  letter-spacing:.08em;
+  line-height:.88;
   font-weight:400;
-  text-shadow:0 4px 0 #000, 0 10px 24px rgba(0,0,0,.55);
-}
-.home-mark h1:after{
-  content:"";
-  display:block;
-  width:42%;
-  height:5px;
-  margin:10px auto 0;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);
-  clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);
+  text-shadow:0 4px 0 #000, 0 12px 28px rgba(0,0,0,.6);
 }
 
+.home-mark h1 i{
+  display:inline-block;
+  margin-left:10px;
+  padding:2px 11px 4px;
+  font-style:normal;
+  font-size:.62em;
+  vertical-align:12px;
+  color:#04140a;
+  background:var(--green);
+  transform:rotate(-8deg);
+  box-shadow:0 0 22px rgba(26,209,90,.5);
+}
+
+.home-tag{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+
+.home-mark.compact{margin-bottom:4px}
+.home-mark.compact .home-kicker{font-size:9px;letter-spacing:.28em}
 .home-mark.compact h1{font-size:42px}
-.home-mark.compact .home-x{font-size:96px}
+.home-mark.compact h1 i{font-size:.58em;vertical-align:6px;padding:1px 8px 2px}
+.home-mark.compact .home-tag{display:none}
 
-.home-modes{
-  width:min(520px,100%);
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
+.home-leagues{
   position:relative;
   z-index:1;
+  width:min(440px,100%);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
-.home-mode{
-  min-height:86px;
+.home-leagues-label{
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.28em;
+  margin:0 0 4px 2px;
+}
+
+.home-league{
+  display:grid;
+  grid-template-columns:44px 1fr auto;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  min-height:72px;
+  padding:12px 14px;
+  text-align:left;
+  color:var(--text);
+  cursor:pointer;
   border:2px solid #2a241c;
+  background:
+    linear-gradient(90deg,rgba(255,255,255,.04),transparent 42%),
+    #120e0c;
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
-  color:#fff;
+  box-shadow:0 8px 0 #000;
+  transition:transform .12s ease,filter .12s ease,border-color .12s ease;
+}
+
+.home-league:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.08);
+}
+.home-league:active{
+  transform:translateY(2px);
+  box-shadow:0 3px 0 #000;
+}
+.home-league:focus-visible{
+  outline:2px solid #69bfff;
+  outline-offset:3px;
+}
+
+.home-league-rank{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:22px;
+  color:rgba(246,240,230,.38);
+  letter-spacing:.06em;
+}
+
+.home-league-copy{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+.home-league-copy b{
   font-family:Staatliches,Impact,sans-serif;
   font-size:28px;
+  font-weight:400;
   letter-spacing:.08em;
-  cursor:pointer;
-  box-shadow:0 10px 0 #000;
-  transition:transform .12s ease,filter .12s ease;
+  line-height:1;
+}
+.home-league-copy small{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.06em;
 }
 
-.home-mode:hover{transform:translateY(-3px);filter:brightness(1.08)}
-.home-mode:active{transform:translateY(2px);box-shadow:0 4px 0 #000}
+.home-league-go{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+  color:var(--gold);
+}
 
-.home-mode.bronze{background:linear-gradient(160deg,#a15a32,#5a2e18);border-color:#c07a4a}
-.home-mode.silver{background:linear-gradient(160deg,#8d99a8,#3d4652);border-color:#c5ced8}
-.home-mode.gold{background:linear-gradient(160deg,#e3b53a,#8a5a10);border-color:#f3d36a;color:#1a1204}
-.home-mode.custom{background:linear-gradient(160deg,#1ad15a,#0c6b32);border-color:#7dff9f;color:#04140a}
+.home-league.bronze{border-color:#c07a4a;box-shadow:0 8px 0 #3a1c0e}
+.home-league.bronze .home-league-rank{color:#c07a4a}
+.home-league.silver{border-color:#c5ced8;box-shadow:0 8px 0 #1c2228}
+.home-league.silver .home-league-rank{color:#c5ced8}
+.home-league.gold{border-color:#f3d36a;box-shadow:0 8px 0 #3a2a08}
+.home-league.gold .home-league-rank{color:#f3d36a}
+.home-league.custom{
+  border-color:#7dff9f;
+  background:
+    linear-gradient(90deg,rgba(26,209,90,.16),transparent 48%),
+    #0c140e;
+  box-shadow:0 8px 0 #042010;
+}
+.home-league.custom .home-league-rank,
+.home-league.custom .home-league-go{color:var(--green)}
 
 .home-load .loading{width:min(420px,90%)}
 .win-name{
@@ -1511,8 +1625,9 @@ footer{
 @media(max-width:760px){
   .menu{padding:11px 8px 20px!important}
 
-  .home-modes{grid-template-columns:1fr 1fr}
-  .home-mode{min-height:72px;font-size:24px}
+  .home-leagues{width:min(440px,100%)}
+  .home-league{min-height:66px}
+  .home-league-copy b{font-size:24px}
   .vs-board{grid-template-columns:1fr}
 
   .selection-card{
