@@ -3460,6 +3460,14 @@ function isAttackTypeBit(s){
     return String(s?.bit?.type||"").toLowerCase()==="attack";
 }
 
+function recentXExitSwing(s){
+    if(!s || s.railEngaged || s.xrailExitRampActive) return false;
+    if(s.lastXRailExitReason!=="x-exit") return false;
+    const exitAt=Number(s.railExitAt)||0;
+    if(exitAt<=0) return false;
+    return (performance.now()-exitAt)<=1000;
+}
+
 function finishRecoveryChance(s,zone,knockForce,source){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
@@ -3472,17 +3480,21 @@ function finishRecoveryChance(s,zone,knockForce,source){
       A real opponent smash into the opening should usually stay scored.
     */
     if(kind==="dump"){
-        return newBattleClamp(0.52+rpm*0.42-tilt*0.05, 0.24, 0.94);
+        return newBattleClamp(
+            0.04+Math.pow(rpm,1.25)*0.86-tilt*0.05,
+            rpm<0.28 ? 0.04 : 0.10,
+            0.94
+        );
     }
     if(kind==="rail"){
         /*
           High RPM X-Rail carries into Over/Xtreme should usually climb.
-          That is the recovery system's job. Dying spin can still pocket.
+          Low RPM self-entries should stay pocketed much more often.
         */
-        let chance=0.18+Math.pow(rpm,0.62)*0.76-tilt*0.05;
+        let chance=0.08+Math.pow(rpm,0.70)*0.82-tilt*0.05;
         if(rpm>=0.55) chance=Math.max(chance,0.86);
-        if(rpm<0.22) chance*=0.50;
-        return newBattleClamp(chance, rpm<0.18 ? 0.10 : 0.22, 0.94);
+        if(rpm<0.28) chance*=0.42;
+        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.14, 0.94);
     }
     let chance=
         0.03+
@@ -3659,15 +3671,16 @@ function checkForcedStadiumFinish(s){
             (s.vx*dx+s.vy*dy)/
             Math.max(speed*d,0.0001);
 
+        const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=0.016 &&
-            alignment>=0.04;
+            speed>=(tired?0.011:0.016) &&
+            alignment>=(tired?0.018:0.04);
 
         const railQualified=
             railEntry &&
-            speed>=0.028 &&
-            alignment>=0.06;
+            speed>=(tired?0.020:0.028) &&
+            alignment>=(tired?0.03:0.06);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3675,7 +3688,7 @@ function checkForcedStadiumFinish(s){
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
             if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce,source)) return "Recovered";
-            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.52){
+            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.62){
                 bounceFromFinishZone(s,"Xtreme");
                 return null;
             }
@@ -3718,17 +3731,18 @@ function checkForcedStadiumFinish(s){
             (s.vx*s.x+s.vy*s.y)/
             Math.max(Math.hypot(s.x,s.y),0.0001);
 
+        const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=0.015 &&
-            outward>=0.00070 &&
-            alignment>=0.028;
+            speed>=(tired?0.011:0.015) &&
+            outward>=(tired?0.00045:0.00070) &&
+            alignment>=(tired?0.016:0.028);
 
         const railQualified=
             railEntry &&
-            speed>=0.028 &&
-            outward>=0.00070 &&
-            alignment>=0.04;
+            speed>=(tired?0.020:0.028) &&
+            outward>=(tired?0.00045:0.00070) &&
+            alignment>=(tired?0.022:0.04);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3736,7 +3750,7 @@ function checkForcedStadiumFinish(s){
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
             if(tryFinishZoneRecovery(s,"Pocket",recoveryForce,source)) return "Recovered";
-            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.52){
+            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.62){
                 bounceFromFinishZone(s,"Over");
                 return null;
             }
@@ -5544,6 +5558,12 @@ function newPhysicsCollision(dt){
         cKnockRaw*=1.18;
         pKnockRaw*=0.84;
     }
+    /*
+      Swinging off the X-Exit into a clash gets a small extra shove so
+      Over/Xtreme are a bit more reachable. Cap still owns the ceiling.
+    */
+    if(recentXExitSwing(p)) pKnockRaw*=1.11;
+    if(recentXExitSwing(c)) cKnockRaw*=1.11;
     const pKnockback=Math.min(0.086, pKnockRaw*0.82);
     const cKnockback=Math.min(0.086, cKnockRaw*0.82);
     const pRailBreakForce=cKnockback;
