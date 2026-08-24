@@ -192,12 +192,12 @@ function newBattleClampLocal(v,a,b){return Math.max(a,Math.min(b,v));}
 */
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*0.48,
+        (s.impactMomentumState||0)-dt*0.78,
         0,1
     );
 
 const orbitSteeringAvailability=
-    1-0.92*s.impactMomentumState;
+    1-0.72*s.impactMomentumState;
 
 const rNow=Math.hypot(s.x,s.y);
 
@@ -262,10 +262,14 @@ if(circleR<preferredRadius){
 }
 
 if((s.impactMomentumState||0)>0.22){
-    targetOrbitSpeed=Math.max(
-        targetOrbitSpeed,
-        Math.hypot(s.vx,s.vy)
-    );
+    /*
+      Keep a little of the hit's extra speed, but do not promote the
+      whole knockback into cruise speed. That is the lifeless ice-skate.
+    */
+    const hitSpeed=Math.hypot(s.vx,s.vy);
+    targetOrbitSpeed=
+        targetOrbitSpeed*0.62+
+        Math.min(hitSpeed,targetOrbitSpeed*1.45)*0.38;
 }
 
 /*
@@ -344,8 +348,8 @@ if(
 */
 const impactHold=s.impactMomentumState||0;
 const inImpact=impactHold>0.22;
-const tangentFollow=inImpact?0.04:0.18;
-const radialFollow=inImpact?0.02:orbit.radialFollow;
+const tangentFollow=inImpact?0.08:0.18;
+const radialFollow=inImpact?0.05:orbit.radialFollow;
 const follow=
     orbitSteeringAvailability*
     mobilityResponse*
@@ -360,7 +364,7 @@ const currentRadial=s.vx*radialX+s.vy*radialY;
   lap still feels planted instead of floating onto the rail.
 */
 const slopeGain=orbit.slopeGain;
-let slope=(preferredRadius-rNow)*(inImpact?0.010:slopeGain);
+let slope=(preferredRadius-rNow)*(inImpact?0.012:slopeGain);
 if(rNow>0.68){
     slope-=(rNow-0.68)*0.22;
 }
@@ -374,7 +378,7 @@ const newTangent=
     (targetOrbitSpeed-currentTangent)*
     tangentBlend;
 const newRadial=inImpact
-    ? currentRadial
+    ? currentRadial+(desiredRadialSpeed-currentRadial)*radialBlend*0.35
     : currentRadial+
       (desiredRadialSpeed-currentRadial)*
       radialBlend-
@@ -382,15 +386,36 @@ const newRadial=inImpact
 
 /*
   Polar reconstruction rotates leftover knockback onto the orbit
-  tangent — that is the post-hit sway. Keep cartesian flight until
-  impact fades, then ease orbit response back in.
+  tangent — that is the post-hit sway. Keep cartesian flight while
+  the hit is fresh, then ease orbit response back in.
 */
-const polarMix=clamp((0.26-impactHold)/0.26,0,1);
+const polarMix=clamp((0.40-impactHold)/0.40,0,1);
 if(polarMix>0.02){
     const polarX=tangentX*newTangent+radialX*newRadial;
     const polarY=tangentY*newTangent+radialY*newRadial;
     s.vx=s.vx*(1-polarMix)+polarX*polarMix;
     s.vy=s.vy*(1-polarMix)+polarY*polarMix;
+}
+
+/*
+  Planted dish. Knockback may still fly free, but the bowl keeps a
+  grip so the Bey does not ice-skate or get bullied across the stadium.
+  This is radial gravity only — it does not rewrite heading.
+*/
+if(polarMix<0.92 && rNow>0.08){
+    const grip=1-polarMix;
+    const bowl=clamp((rNow-preferredRadius)*0.007,-0.0020,0.008);
+    const rim=rNow>0.64?(rNow-0.64)*0.09:0;
+    const pull=(bowl+rim)*grip;
+    s.vx-=radialX*pull;
+    s.vy-=radialY*pull;
+    const spd=Math.hypot(s.vx,s.vy);
+    const cap=targetOrbitSpeed*1.62+0.012;
+    if(spd>cap){
+        const bleed=Math.min(spd-cap,0.0016+0.0030*grip);
+        s.vx-=(s.vx/spd)*bleed;
+        s.vy-=(s.vy/spd)*bleed;
+    }
 }
 
 /*
@@ -487,7 +512,7 @@ s.vy +=
   Skip while knockback owns the path — stripping the "wrong" tangent
   as the Bey flies is the post-hit wiggle.
 */
-if(impactHold<=0.16){
+if(impactHold<=0.28){
     enforceDirection(s);
 }
 
@@ -716,7 +741,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.2.1",
+    version:"1.2.2",
     step,
     homeOrbitRadius,
     orbitOmega,
