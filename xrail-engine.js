@@ -201,10 +201,15 @@ function captureDecision(s,p,contact){
  // speed/momentum should still hook; dead or too-direct hits still fail.
  if(!c||c.speed<0.0040)return{ok:false,reason:"low-speed",contact:c};
  if(s.spinDirection!==1)return{ok:false,reason:"wrong-spin",contact:c};
- if(!contact?.impact)return{ok:false,reason:"no-rail-impact",contact:c};
- if(c.inward<0.0026)return{ok:false,reason:"weak-impact",contact:c};
- if(c.tangential<0.0032||c.tangentRatio<0.15)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
- if(c.approachRatio>0.945)return{ok:false,reason:"too-direct",contact:c};
+ /*
+   A wide Attack orbit can sit on the X-Rail ring. Circling there is a
+   graze, not a ride. Only a real entry with CCW bite hooks — leftover
+   launch width or a clash, not every lap of a rail-width circle.
+ */
+ if(!contact?.entering)return{ok:false,reason:"no-rail-entry",contact:c};
+ if(c.inward<0.0046)return{ok:false,reason:"weak-impact",contact:c};
+ if(c.tangential<0.0036||c.tangentRatio<0.20)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
+ if(c.approachRatio>0.92)return{ok:false,reason:"too-direct",contact:c};
  if(c.tilt>0.38)return{ok:false,reason:"tilt-too-high",contact:c};
  return{ok:true,contact:c,grip:clamp(0.72+(1-c.tilt)*0.14+c.tangentRatio*0.10,0.72,0.96)};
 }
@@ -290,6 +295,7 @@ function bounce(s,p){
  s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
  s.lastXRailResult="bounce";
  s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.22);
+ s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.20);
  return true;
 }
 function contactSafety(s,p){return bounce(s,p);}
