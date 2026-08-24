@@ -224,7 +224,7 @@ const mobilityStat=
     );
 
 const mobilityResponse=
-    0.55+0.45*clamp(mobilityStat/100,0,1);
+    0.50+0.56*clamp(mobilityStat/100,0,1);
 
 const orbit=bitOrbitProfile({
     movement,
@@ -570,12 +570,12 @@ if(radius>wall){
 
         const restitution=
             clamp(
-                0.36+
-                balance*0.12+
+                0.32+
+                balance*0.22+
                 control*0.06+
                 wallImpactQuality*0.04+
                 ((s.mass||1)-1)*0.02,
-                0.34,0.56
+                0.34,0.58
             );
 
         const tangentRetention =
@@ -688,7 +688,7 @@ s.rpm =
 const recovery =
     (bp.recovery||60)/100;
 
-const staminaRecovery=0.78+stamina*0.34;
+const staminaRecovery=0.70+stamina*0.48;
 
 s.stability =
     clamp(

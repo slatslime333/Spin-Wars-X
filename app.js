@@ -2704,7 +2704,7 @@ function newBattleLaunchState(side){
     }[plan.technique]||1;
 
     const launchSpeed=
-        (0.0420+(stats.mobility||70)*0.000110)*
+        (0.0400+(stats.mobility||70)*0.000165)*
         qualityFactor*techniqueSpeed*tilt.speed;
 
     const tiltSign=side==="player"?-1:1;
@@ -2887,9 +2887,9 @@ function newBattleLaunchState(side){
         movementNoiseY:(Math.random()-0.5)*0.0002,
         movementNoiseTimer:0.25+Math.random()*0.35,
         movementEnergy:newBattleClamp(
-            0.92+
-            getBattleStat({stats},"stamina")*0.08,
-            0.92,1.0
+            0.88+
+            getBattleStat({stats},"stamina")*0.14,
+            0.88,1.0
         ),
         statProfile:{
             attack:getBattleStat({stats},"attack"),
@@ -4663,7 +4663,7 @@ function newPhysicsStep(s,dt){
         const control = (bp.control||60)/100;
 
         // Stamina is spin efficiency, not a free speed bonus.
-        const staminaEfficiency=(0.70+stamina*0.52)*
+        const staminaEfficiency=(0.55+stamina*0.82)*
             (s.dynamicBitStaminaEfficiency||1);
         const centerAffinity = (bp.centerAffinity||60)/100;
         let movement = (bp.movement||60)/100;
@@ -4753,8 +4753,8 @@ function newPhysicsStep(s,dt){
           This prevents a Bey from retaining "100% RPM movement" at low RPM.
         */
         const launchMobility=
-            0.0385+
-            (stats.mobility||70)*0.000095;
+            0.0355+
+            (stats.mobility||70)*0.000145;
 
         const rpmSpeedFactor=attackBit
             ? 0.28+0.72*Math.pow(rpm,0.70)
@@ -4765,7 +4765,7 @@ function newPhysicsStep(s,dt){
             (0.98+0.34*bitAcceleration)*
             rpmSpeedFactor*
             (0.86+0.24*bitStability)*
-            (1.04+0.30*movement+0.08*attackStat)*
+            (1.02+0.30*movement+0.20*mobility+0.04*attackStat)*
             attackSpeedBoost*
             (attackBit && rpm<0.60
                 ? 0.76+0.40*(rpm/0.60)
@@ -5287,6 +5287,8 @@ function newPhysicsCollision(dt){
     const cKB=getBattleStat(c,"knockback");
     const pCardDef=getBattleStat(p,"defense");
     const cCardDef=getBattleStat(c,"defense");
+    const pBal=getBattleStat(p,"balance");
+    const cBal=getBattleStat(c,"balance");
     const pRPM=newBattleClamp(p.rpm,0,1);
     const cRPM=newBattleClamp(c.rpm,0,1);
     /*
@@ -5375,12 +5377,12 @@ function newPhysicsCollision(dt){
     const cParked=cSpeed<0.007;
     const bothParked=pParked&&cParked;
     const pSpinBite=
-        (0.00052+pAttack*0.00070+pKB*0.00086)*
+        (0.00048+pAttack*0.00092+pKB*0.00062)*
         (0.12+0.88*pRPM)*
         (pParked?0.72:1)*
         (bothParked?0.34:1);
     const cSpinBite=
-        (0.00052+cAttack*0.00070+cKB*0.00086)*
+        (0.00048+cAttack*0.00092+cKB*0.00062)*
         (0.12+0.88*cRPM)*
         (cParked?0.72:1)*
         (bothParked?0.34:1);
@@ -5429,15 +5431,15 @@ function newPhysicsCollision(dt){
     const pHit =
         contactEnergy *
         pEnergyScale *
-        (0.96+pKB*0.38) *
-        (0.94+pAttack*0.32) *
+        (0.90+pKB*0.52) *
+        (0.97+pAttack*0.12) *
         (0.90+pRPM*0.16);
 
     const cHit =
         contactEnergy *
         cEnergyScale *
-        (0.96+cKB*0.38) *
-        (0.94+cAttack*0.32) *
+        (0.90+cKB*0.52) *
+        (0.97+cAttack*0.12) *
         (0.90+cRPM*0.16);
 
     const momentumFactor=newBattleClamp(effectiveImpact/0.020,0,4.0);
@@ -5469,23 +5471,23 @@ function newPhysicsCollision(dt){
     const pAttackBit=isAttackTypeBit(p);
     const cAttackBit=isAttackTypeBit(c);
     const pSpinPower=
-        (0.004+pAttack*0.008+pKB*0.018)*
+        (0.004+pAttack*0.004+pKB*0.026)*
         (0.22+0.78*pRPM)*
         Math.max(0.16, Math.min(1, pSpeed/0.034))*
         (0.42+0.58*directness)*
         (pAttackBit && !cAttackBit ? 1.16 : 1);
     const cSpinPower=
-        (0.004+cAttack*0.008+cKB*0.018)*
+        (0.004+cAttack*0.004+cKB*0.026)*
         (0.22+0.78*cRPM)*
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
         (0.42+0.58*directness)*
         (cAttackBit && !pAttackBit ? 1.16 : 1);
     const pDefenseSoak=(pAttackBit && !cAttackBit
-        ? (1.04+(1-cDef)*0.16)
-        : (0.96+(1-cDef)*0.10))*(1+(1-cRPM)*0.20);
+        ? (1.04+(1-cDef)*0.20+(1-cBal)*0.08)
+        : (0.92+(1-cDef)*0.22+(1-cBal)*0.08))*(1+(1-cRPM)*0.20);
     const cDefenseSoak=(cAttackBit && !pAttackBit
-        ? (1.04+(1-pDef)*0.16)
-        : (0.96+(1-pDef)*0.10))*(1+(1-pRPM)*0.20);
+        ? (1.04+(1-pDef)*0.20+(1-pBal)*0.08)
+        : (0.92+(1-pDef)*0.22+(1-pBal)*0.08))*(1+(1-pRPM)*0.20);
     let pKnockRaw=Math.max(
         0.007+pKB*0.010+pRPM*0.004,
         (bounceSep*0.42+pSpinPower+pMomentum*0.22+pForce*0.014)*
@@ -5555,8 +5557,8 @@ function newPhysicsCollision(dt){
         cImpactMomentumState
     );
 
-    let recoilP=pKnockback*(0.05+0.06*pDef);
-    let recoilC=cKnockback*(0.05+0.06*cDef);
+    let recoilP=pKnockback*(0.04+0.05*pDef+0.08*pBal);
+    let recoilC=cKnockback*(0.04+0.05*cDef+0.08*cBal);
     if(pAttackBit && !cAttackBit){
         recoilC*=0.36;
         recoilP*=0.88;
@@ -5576,13 +5578,13 @@ function newPhysicsCollision(dt){
 
     const pFollow=
         followThrough*
-        (0.84+0.24*pAttack)*
-        (0.82+0.20*pKB);
+        (0.88+0.14*pAttack)*
+        (0.80+0.28*pKB);
 
     const cFollow=
         followThrough*
-        (0.84+0.24*cAttack)*
-        (0.82+0.20*cKB);
+        (0.88+0.14*cAttack)*
+        (0.80+0.28*cKB);
 
     p.vx+=tx*pFollow;
     p.vy+=ty*pFollow;
@@ -5709,12 +5711,13 @@ function newPhysicsCollision(dt){
         Attack = ability to convert contact into offensive damage.
         Knockback = ability to deliver displacement/impact.
     */
-    const pStatDamageFactor=
-        (0.88+pAttack*0.0016)*
-        (0.92+pKB*0.0010);
-    const cStatDamageFactor=
-        (0.88+cAttack*0.0016)*
-        (0.92+cKB*0.0010);
+    /*
+      Attack converts contact into RPM loss. Knockback is displacement,
+      not a second melt stat. 70 vs 99 Attack is a noticeable chip gap,
+      not an instant spin-out.
+    */
+    const pStatDamageFactor=0.47+0.61*pAttack;
+    const cStatDamageFactor=0.47+0.61*cAttack;
 
     const nonAttackRPMMultiplier=1.0;
 
@@ -5801,7 +5804,7 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         pRailAttackMultiplier*
-        (0.82+0.18*(1-newBattleClamp(cDef/100,0,1)))*
+        (1.10-0.38*newBattleClamp(cDef,0,1))*
         (1+(1-cRPM)*0.32);
 
     const cToPDamageRaw=
@@ -5812,7 +5815,7 @@ function newPhysicsCollision(dt){
         nonAttackRPMMultiplier*
         attackVsAttackRPMMultiplier*
         cRailAttackMultiplier*
-        (0.82+0.18*(1-newBattleClamp(pDef/100,0,1)))*
+        (1.10-0.38*newBattleClamp(pDef,0,1))*
         (1+(1-pRPM)*0.32);
 
     /*
@@ -5857,22 +5860,22 @@ function newPhysicsCollision(dt){
         heavyFactor*0.006;
 
     p.stability=newBattleClamp(
-        p.stability-stabilityHit*(1-pDef*0.36),
+        p.stability-stabilityHit*(1-pBal*0.42-pDef*0.14),
         0,1
     );
     c.stability=newBattleClamp(
-        c.stability-stabilityHit*(1-cDef*0.36),
+        c.stability-stabilityHit*(1-cBal*0.42-cDef*0.14),
         0,1
     );
 
     p.axisStability=newBattleClamp(
         (p.axisStability||0.70)-
-        stabilityHit*(0.42-pDef*0.18),
+        stabilityHit*(0.44-pBal*0.22-pDef*0.08),
         0.15,1
     );
     c.axisStability=newBattleClamp(
         (c.axisStability||0.70)-
-        stabilityHit*(0.42-cDef*0.18),
+        stabilityHit*(0.44-cBal*0.22-cDef*0.08),
         0.15,1
     );
 
