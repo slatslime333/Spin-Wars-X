@@ -4,8 +4,8 @@ Vanilla HTML/CSS/JS Beyblade X–style stadium game. There is no package manager
 
 ## Cursor Cloud specific instructions
 
-- Serve the repo root over HTTP (`python3 -m http.server 8080`) and open `index.html`. Scripts are cache-busted (`style.css?v=8.12`, `xrail-engine.js?v=8.12`, `app.js?v=8.12`, `movement-engine.js?v=8.12`); hard-refresh after pulling.
-- Blade art is optional. If `BLADE_ENGINE` has a `sprite` path, combo cards and the battle model use that PNG; otherwise the gold/silver circle stays. Phoenix Wing stays on `assets/blades/phienix_wing1.png`. Other blades map to the PNGs in `assets/blades/` (Leon Claw uses `Leonfang.png`). Shelter Drake and Dran Sword still have no art. Battle sprites are sized to the circle (`r=4.85`) and spin from live RPM until 0.
+- Serve the repo root over HTTP (`python3 -m http.server 8080`) and open `index.html`. Scripts are cache-busted (`style.css?v=8.13`, `xrail-engine.js?v=8.13`, `app.js?v=8.13`, `movement-engine.js?v=8.13`); hard-refresh after pulling.
+- Blade art is optional. If `BLADE_ENGINE` has a `sprite` path, combo cards and the battle model use that PNG; otherwise the gold/silver circle stays. Phoenix Wing stays on `assets/blades/phienix_wing1.png`. Other blades map to the PNGs in `assets/blades/` (Leon Claw uses `Leonfang.png`). Shelter Drake and Dran Sword still have no art. Battle sprites are sized to the circle (`r=4.85`) and spin clockwise from live RPM until 0.
 - Blade pick cards tint by `tier` (gold / silver / bronze). Home is the SPIN WARS wordmark plus four mode tiles. Combo check is the VS plates plus LET IT RIP. Battle chrome is commentary, then stadium, then names/RPM, then launch controls in `#launchDock`.
 - If a requested feel tweak can be done by retuning an existing system, retune that system. Do not add another movement, knockback, or rail layer on top.
 - Drop launches hang **under the top X-Rail, beside the X-Exit** (not on the rail lip and not inside the V), then shoot straight toward stadium middle. Launch quality is that shot's accuracy (Perfect is tight, Horrible is wide). Stadium side still picks left vs right. Rail contact is skipped only while the drop is stalling.
