@@ -2719,12 +2719,14 @@ function newBattleLaunchState(side){
     if(isCenterLaunch){
         /*
           Center starts in the bowl and winds into the Bit's orbit.
-          Give a small spin-correct tangent so the first frame is not a
-          standstill dump that can look like a random throw.
+          Attack bits still need a bit of throw to reach the wide ring.
+          Non-Attack bits must not get that same throw or they sling
+          out to the X-Rail instead of their own orbit.
         */
         const spinDir=combo.blade?.spin==="Left" ? -1 : 1;
         const windTangent=getSpinOrbitTangent(startX,startY,spinDir);
-        const windSpeed=launchSpeed*0.22;
+        const attackTypeBit=String(combo.bit?.type||"").toLowerCase()==="attack";
+        const windSpeed=launchSpeed*(attackTypeBit?0.22:0.10);
         vx=windTangent.x*windSpeed;
         vy=windTangent.y*windSpeed;
     }
@@ -2924,7 +2926,7 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        centerLaunchWindup:isCenterLaunch?0.70:0,
+        centerLaunchWindup:isCenterLaunch?(String(combo.bit?.type||"").toLowerCase()==="attack"?0.70:0.40):0,
         nonAttackOrbitAngle:Math.atan2(startY,startX),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
