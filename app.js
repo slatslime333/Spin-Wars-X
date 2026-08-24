@@ -1221,11 +1221,12 @@ function tierClass(tier){
 function statMini(label,value){
     return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
 }
-function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description=""}){
+function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description="",sprite=""}){
     const card=document.createElement("button");
     card.type="button";
-    card.className=`part-select-card ${accentClass||""}`;
-    card.innerHTML=`<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
+    const art=sprite?encodeURI(sprite):"";
+    card.className=`part-select-card ${accentClass||""}${art?" has-sprite":""}`;
+    card.innerHTML=`${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
     ${description?`<p class="part-description">${description}</p>`:""}
     <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
     card.onclick=onClick;
@@ -1233,6 +1234,20 @@ function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",descr
 }
 function bladeSpritePath(blade){
     const path=blade && typeof blade.sprite==="string" ? blade.sprite.trim() : "";
+    return path ? encodeURI(path) : "";
+}
+function bitSpriteFile(bit){
+    return ({
+        Flat:"assets/blades/png bit/Flat.png",
+        Rush:"assets/blades/png bit/Rush.png",
+        Point:"assets/blades/png bit/Point.png",
+        Hexa:"assets/blades/png bit/Hexa.png",
+        Level:"assets/blades/png bit/Level.png",
+        Wedge:"assets/blades/png bit/Wedge.png"
+    }[bit?.name]) || (typeof bit?.sprite==="string" ? bit.sprite.trim() : "") || "";
+}
+function bitSpritePath(bit){
+    const path=bitSpriteFile(bit);
     return path ? encodeURI(path) : "";
 }
 function createBladeCard(blade){
@@ -1363,6 +1378,7 @@ function bitCard(bit){
             ["CONTROL",bp.control>.85?"HIGH":bp.control>.65?"MEDIUM":"LOW"]],
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
         description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
+        sprite:bitSpriteFile(bit),
         onClick:()=>{Game.player.bit=bit;showComboCard();}});
 }
 
@@ -1888,6 +1904,7 @@ function createComboSummaryCard(side,combo){
     const isPlayer=side==="player";
     const stats=combo.stats||{};
     const sprite=bladeSpritePath(combo.blade);
+    const bitArt=bitSpritePath(combo.bit);
     for(const key of ["attack","knockback","defense","mobility","balance","stamina"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
@@ -1897,7 +1914,7 @@ function createComboSummaryCard(side,combo){
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
         <h2>${combo.blade.name}</h2>
-        <p>${combo.ratchet.name} · ${combo.bit.name}</p>
+        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
         <b class="vs-ovr">${combo.ovr}</b>
         <div class="vs-stats">
           <span>ATK <b>${stats.attack}</b></span><span>KB <b>${stats.knockback}</b></span><span>DEF <b>${stats.defense}</b></span>
