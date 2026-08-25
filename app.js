@@ -1097,6 +1097,40 @@ function homeMarkHTML(opts){
 
 function renderMainMenu(){
     Game.screen="menu";
+    Game.quickMatch=false;
+    const app=document.getElementById("app");
+    if(!app) return;
+
+    app.innerHTML=`
+    <div class="background"></div>
+    <main class="home">
+        <div class="home-ring" aria-hidden="true"></div>
+        ${homeMarkHTML({tag:"First to 7 · Xtreme · Over · Spin"})}
+        <nav class="home-leagues" aria-label="Choose a mode">
+            <p class="home-leagues-label">SELECT MODE</p>
+            <button class="home-league quick" data-home="quick" type="button">
+                <span class="home-league-rank">01</span>
+                <span class="home-league-copy"><b>QUICK PLAY</b><small>Bronze to Custom leagues</small></span>
+                <span class="home-league-go">PLAY</span>
+            </button>
+            <button class="home-league locked" type="button" aria-disabled="true">
+                <span class="home-league-rank">02</span>
+                <span class="home-league-copy"><b>CAMPAIGN</b><small>Coming soon</small></span>
+                <span class="home-league-go lock">LOCKED</span>
+            </button>
+            <button class="home-league locked" type="button" aria-disabled="true">
+                <span class="home-league-rank">03</span>
+                <span class="home-league-copy"><b>ROGUE</b><small>Coming soon</small></span>
+                <span class="home-league-go lock">LOCKED</span>
+            </button>
+        </nav>
+    </main>`;
+    document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
+}
+
+function renderLeagueSelect(){
+    Game.screen="league";
+    Game.quickMatch=false;
     const app=document.getElementById("app");
     if(!app) return;
 
@@ -1107,6 +1141,11 @@ function renderMainMenu(){
         ${homeMarkHTML({tag:"First to 7 · Xtreme · Over · Spin"})}
         <nav class="home-leagues" aria-label="Choose a league">
             <p class="home-leagues-label">SELECT LEAGUE</p>
+            <button class="home-league quick" data-quick-match="1" type="button">
+                <span class="home-league-rank">00</span>
+                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random combos · reroll both sides</small></span>
+                <span class="home-league-go">FIGHT</span>
+            </button>
             <button class="home-league bronze" data-mode="bronze" type="button">
                 <span class="home-league-rank">01</span>
                 <span class="home-league-copy"><b>BRONZE</b><small>Starter blade pool</small></span>
@@ -1129,17 +1168,52 @@ function renderMainMenu(){
             </button>
         </nav>
     </main>`;
-}
-
-function hookMenuButtons(){
-    renderMainMenu();
-
-    document.querySelectorAll(".home-league[data-mode], .home-mode[data-mode], .tier-menu-card[data-mode]").forEach(button=>{
+    document.querySelectorAll(".home-league[data-mode]").forEach(button=>{
         button.onclick=()=>{
+            Game.quickMatch=false;
             Game.mode=button.dataset.mode;
             startDraft();
         };
     });
+    document.querySelector("[data-quick-match]")?.addEventListener("click",startQuickMatch);
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
+}
+
+function pickDifferentPart(pool,avoidName){
+    const list=Array.isArray(pool)?pool:[];
+    const filtered=list.filter(part=>part && part.name!==avoidName);
+    const source=filtered.length?filtered:list;
+    return source[Math.floor(Math.random()*source.length)]||null;
+}
+
+function randomizeCombo(side){
+    const other=side==="player"?Game.cpu:Game.player;
+    const target=Game[side];
+    if(!target) return;
+    target.blade=pickDifferentPart(Object.values(BLADE_ENGINE),other?.blade?.name);
+    target.ratchet=pickDifferentPart(RATCHETS,other?.ratchet?.name);
+    target.bit=pickDifferentPart(Object.values(BIT_ENGINE),other?.bit?.name);
+    target.spin=target.blade?.spin||"Right";
+    target.launch={angle:null,technique:null,quality:null};
+    syncComboStats(side);
+}
+
+function startQuickMatch(){
+    Game.quickMatch=true;
+    Game.mode="custom";
+    Game.battle={score:{player:0,cpu:0},round:1};
+    Game.player.launch={angle:null,technique:null,quality:null};
+    Game.cpu.launch={angle:null,technique:null,quality:null};
+    Game.cpu.blade=null;
+    Game.cpu.ratchet=null;
+    Game.cpu.bit=null;
+    randomizeCombo("player");
+    randomizeCombo("cpu");
+    showComboCard();
+}
+
+function hookMenuButtons(){
+    renderMainMenu();
 }
 
 //=========================
@@ -1149,6 +1223,7 @@ function hookMenuButtons(){
 function startDraft(){
 
     Game.screen="loading";
+    Game.quickMatch=false;
 
     const app=document.getElementById("app");
 
@@ -1232,7 +1307,7 @@ function renderBladeDraft(){
         nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
         document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
     }
-    container.appendChild(createBackButton(()=>location.reload()));
+    container.appendChild(createBackButton(()=>renderLeagueSelect()));
 }
 
 //=========================
@@ -1981,7 +2056,9 @@ function createComboSummaryCard(side,combo){
           </div>
         </div>
       </div>
-      ${!isPlayer && Game.mode==="custom" ? `<button class="vs-reroll" id="cpuRerollBtn" type="button">REROLL</button>` : ""}
+      ${Game.quickMatch || (!isPlayer && Game.mode==="custom")
+        ? `<button class="vs-reroll" id="${isPlayer?"playerRerollBtn":"cpuRerollBtn"}" type="button">REROLL</button>`
+        : ""}
     </article>`;
 }
 function showComboCard(){
@@ -1989,13 +2066,14 @@ function showComboCard(){
     generateCPUCombo();
     const cpuCombo=calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
+    const playLabel=Game.quickMatch?"PLAY":"LET IT RIP";
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta})}
       </section>
-      <button class="rip-btn" id="battleButton" type="button">LET IT RIP</button>
+      <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
     const battleButton=document.getElementById("battleButton");
     if(battleButton) battleButton.onclick=(event)=>{
@@ -2014,9 +2092,17 @@ function showComboCard(){
             showComboCard();
         };
     }
+    const playerRerollButton=document.getElementById("playerRerollBtn");
+    if(playerRerollButton){
+        playerRerollButton.onclick=(event)=>{
+            event?.preventDefault?.();
+            randomizeCombo("player");
+            showComboCard();
+        };
+    }
 
     const menu=document.querySelector(".vs-screen");
-    if(menu) menu.appendChild(createBackButton(()=>showBitDraft()));
+    if(menu) menu.appendChild(createBackButton(()=>Game.quickMatch?renderLeagueSelect():showBitDraft()));
 }
 
 //=========================
