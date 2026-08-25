@@ -2093,6 +2093,7 @@ function createComboSummaryCard(side,combo){
           </div>
         </div>
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
+        ${combo.rogueStack||""}
       </div>
       ${Game.quickMatch || (!isPlayer && Game.mode==="custom")
         ? `<button class="vs-reroll" id="${isPlayer?"playerRerollBtn":"cpuRerollBtn"}" type="button">REROLL</button>`
@@ -2110,9 +2111,9 @@ function showComboCard(){
     const playLabel=Game.quickMatch?"PLAY":"LET IT RIP";
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       <section class="vs-board">
-        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod})}
+        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:""})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:""})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
