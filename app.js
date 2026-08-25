@@ -2524,7 +2524,7 @@ const NEW_BATTLE = {
 };
 
 const KILL_CAM={
-    zoom:1.34,
+    zoom:1.48,
     slow:0.34,
     holdMs:720,
     openDelay:0.55,
@@ -2554,8 +2554,12 @@ function killCamState(){
     return NEW_BATTLE.killCam||(resetKillCam(),NEW_BATTLE.killCam);
 }
 
+function killCamLens(){
+    return document.getElementById("stadiumLens")||document.getElementById("newStadium");
+}
+
 function clearKillCamDom(){
-    const st=document.getElementById("newStadium");
+    const st=killCamLens();
     if(!st) return;
     st.classList.remove("kill-cam","kill-cam-out");
     st.style.transform="";
@@ -2677,7 +2681,7 @@ function endKillCam(){
     cam.until=0;
     cam.shakeUntil=0;
     cam.shakeAmp=0;
-    const st=document.getElementById("newStadium");
+    const st=killCamLens();
     if(!st) return;
     st.classList.add("kill-cam-out");
     st.classList.remove("kill-cam");
@@ -2687,7 +2691,7 @@ function endKillCam(){
 
 function applyKillCamTransform(now){
     const cam=NEW_BATTLE.killCam;
-    const st=document.getElementById("newStadium");
+    const st=killCamLens();
     if(!cam||!st) return;
     if(cam.active&&now>=cam.until) endKillCam();
     const shaking=cam.shakeUntil>now;
@@ -3494,6 +3498,7 @@ function renderNewBattle(){
             :`<p class="battle-callout" id="newCommentary"></p>`}
 
           <div class="stadium-cam">
+          <div id="stadiumLens" class="stadium-lens">
           <div id="newStadium">
 
             <svg id="newBattleSvg" viewBox="0 0 100 100"
@@ -3676,6 +3681,7 @@ function renderNewBattle(){
                     fill="#7ef0ff" stroke="#041018" stroke-width="0.55"
                     opacity="0">RECOVERED</text>
             </svg>
+          </div>
           </div>
           </div>
 
