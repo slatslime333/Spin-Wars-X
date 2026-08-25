@@ -634,22 +634,26 @@ if(radius>wall){
         s.vx*nx+s.vy*ny;
 
     /*
-      Finish openings sit on the lower rim. A real outward knock that
-      reaches that lip can leave the bowl; a normal orbit still bounces.
+      Finish openings are the three painted holes. A real outward
+      smash in that hole's wedge can leave the bowl; the rest of
+      the rim stays solid.
     */
-    const inXtremeGate=s.y>=0.58 && Math.abs(s.x)<=0.26;
-    const inPocketGate=s.y>=0.54 && Math.abs(s.x)>=0.50;
+    const mouth=
+        global.SpinWarsXRailEngine &&
+        typeof global.SpinWarsXRailEngine.inMouthCorridor==="function"
+            ? global.SpinWarsXRailEngine.inMouthCorridor(s.x,s.y)
+            : null;
     const finishEscape=
+        !!mouth &&
         outward>0.0048 &&
         radius>=0.68 &&
         radius<=1.08 &&
         (s.lastImpactForce||0)>=0.014 &&
-        (s.impactMomentumState||0)>0.22 &&
-        (inXtremeGate||inPocketGate);
+        (s.impactMomentumState||0)>0.22;
 
     if(finishEscape){
         s.finishLipContact={
-            zone:inXtremeGate?"Xtreme":"Over",
+            zone:mouth.id||"Over",
             speed:Math.hypot(s.vx,s.vy),
             outward,
             force:s.lastImpactForce||0
@@ -844,7 +848,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.4.0",
+    version:"1.4.1",
     step,
     homeOrbitRadius,
     orbitOmega,

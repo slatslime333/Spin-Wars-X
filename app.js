@@ -2449,6 +2449,8 @@ const NEW_STADIUM_GEOMETRY = {
         right: { x:80, y:91, w:24, h:9 }
     },
 
+    // Display notes only. Live Over/Xtreme mouths are the SVG hole
+    // polygons in xrail-engine.js (same paths as the stadium art).
     xtremeZone: { x:50, y:91, w:22, h:9 }
 };
 
@@ -3598,38 +3600,43 @@ function finishParkedBumper(s){
     return (Number(s?.lastImpactOpponentSpeed)||0)<FINISH_TUNING.parkedSpeed;
 }
 
-function finishRecoveryChance(s,zone,knockForce,source){
+function finishRecoveryChance(s,zone,knockForce,source,align){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
     const smash=newBattleClamp(force/FINISH_TUNING.knockCap,0,1.15);
+    const heading=newBattleClamp(Number(align)||0,-1,1);
+    const into=newBattleClamp((heading-0.05)/0.75,0,1);
     const kind=source||"smash";
     /*
-      Recovery audits every pocket: rail miss, dump, and smash.
-      High RPM is harder to finish. Low RPM pockets stick.
-      Same RPM: rail > dump > smash to climb.
+      Smash + straight line + real force beats high RPM.
+      Rail miss can still self-KO, but climbs more than a smash.
+      Limp dumps climb when healthy.
     */
     if(kind==="dump"){
-        let chance=0.10+Math.pow(rpm,1.10)*0.86-tilt*0.04;
-        if(rpm>=0.70) chance=Math.max(chance,0.90);
-        if(rpm>=0.50) chance=Math.max(chance,0.74);
-        if(rpm<0.28) chance*=0.45;
-        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.18, 0.96);
+        let chance=0.14+Math.pow(rpm,1.20)*0.72-tilt*0.04;
+        if(rpm>=0.70) chance=Math.max(chance,0.78);
+        if(rpm>=0.50) chance=Math.max(chance,0.58);
+        if(rpm<0.28) chance*=0.42;
+        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.12, 0.88);
     }
     if(kind==="rail"){
-        let chance=0.18+Math.pow(rpm,0.62)*0.84-tilt*0.04;
-        if(rpm>=0.50) chance=Math.max(chance,0.90);
-        if(rpm>=0.62) chance=Math.max(chance,0.94);
-        if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.20, 0.97);
+        let chance=
+            0.52+
+            rpm*0.30-
+            into*0.16-
+            tilt*0.04;
+        if(rpm<0.28) chance*=0.48;
+        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.14, 0.82);
     }
+    const glance=Math.pow(1-into,1.35);
     let chance=
-        0.06+
-        Math.pow(rpm,1.10)*0.68*(1-smash*0.40)-
-        tilt*((zone==="Pocket"||zone==="Over")?0.05:0.04);
-    if(rpm>=0.80) chance=Math.max(chance,0.38);
-    if(rpm<0.25) chance*=0.50;
-    return newBattleClamp(chance, rpm<0.22 ? 0.04 : 0.08, 0.65);
+        0.03+
+        Math.pow(rpm,1.05)*0.48*glance*(1-smash*0.58)+
+        glance*0.10*(0.40+0.60*rpm)-
+        tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
+    if(rpm<0.25) chance*=0.55;
+    return newBattleClamp(chance, rpm<0.22 ? 0.02 : 0.03, 0.52);
 }
 
 function recentOpponentSmash(s,now){
@@ -3694,13 +3701,13 @@ function bounceFromFinishZone(s,zone){
     s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.016;
 }
 
-function tryFinishZoneRecovery(s,zone,knockForce,source){
+function tryFinishZoneRecovery(s,zone,knockForce,source,align){
     const kind=source||"smash";
     if(!s || (kind==="smash" && s.finishRecoveryUsed)) return false;
     const now=performance.now();
     const rpm=newBattleClamp(s.rpm,0,1);
     const balance=getBattleStat(s,"balance");
-    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce,kind);
+    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce,kind,align);
 
     // A qualified zone entry already proved this was a real smash or
     // rail carry. Do not drop the climb because the clash timestamp
@@ -3792,81 +3799,21 @@ function checkForcedStadiumFinish(s){
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
 
-    // V55 FINISH QUALIFICATION
-    // A Bey must actually enter the finish zone with meaningful momentum
-    // and a directional path toward the opening. Position alone is not enough.
-    // This keeps self-KOs and light taps from producing automatic finishes.
+    // A finish is crossing into a painted hole this frame, not sitting
+    // on the lower rail. The 1.20s launch bounce is gone: spawn and
+    // rail position are not inside these holes.
+    const holes=typeof SpinWarsXRailEngine!=="undefined" ? SpinWarsXRailEngine : null;
+    if(!holes || typeof holes.holeAt!=="function") return null;
 
-    // ---------- XTREME ----------
-    const wasXtreme=
-        prevY>=0.70 &&
-        prevY<=1.01 &&
-        Math.abs(prevX)<=0.268;
+    const prevHole=holes.holeAt(prevX,prevY);
+    const hole=holes.holeAt(s.x,s.y);
+    const entered=!!hole && (!prevHole || prevHole.key!==hole.key);
+    const enteredXtreme=entered && hole.id==="Xtreme";
+    const enteredPocket=entered && hole.id==="Over";
 
-    const inXtreme=
-        s.y>=0.70 &&
-        s.y<=1.01 &&
-        Math.abs(s.x)<=0.268;
-
-    const enteredXtreme=(!wasXtreme && inXtreme);
-
-    if(enteredXtreme){
-        if((NEW_BATTLE.elapsed||0)<1.20){
-            bounceFromFinishZone(s,"Xtreme");
-            return null;
-        }
-        const dx=-s.x;
-        const dy=0.91-s.y;
-        const d=Math.hypot(dx,dy)||1;
-
-        const alignment=
-            (s.vx*dx+s.vy*dy)/
-            Math.max(speed*d,0.0001);
-
-        const tired=newBattleClamp(s.rpm,0,1)<0.35;
-        const impactQualified=
-            impactEntry &&
-            speed>=(tired?0.012:0.018) &&
-            alignment>=(tired?0.03:0.06);
-
-        const railQualified=
-            railEntry &&
-            speed>=(tired?0.018:0.026) &&
-            alignment>=(tired?0.035:0.07);
-
-        if(impactQualified||railQualified){
-            const source=finishEntrySource(impactQualified,railQualified,s,force);
-            const recoveryForce=source==="smash"
-                ? force
-                : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
-            if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce,source)) return "Recovered";
-            s.finishDebug=
-                `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
-                `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            return "Xtreme";
-        }
-        if(tryFinishZoneRecovery(s,"Xtreme",force,"dump")) return "Recovered";
-        bounceFromFinishZone(s,"Xtreme");
-        return null;
-    }
-
-    // ---------- OVER / POCKET ----------
-    const wasLeftPocket=prevX<=-0.560 && prevY>=0.708;
-    const wasRightPocket=prevX>=0.560 && prevY>=0.708;
-    const leftPocket=s.x<=-0.560 && s.y>=0.708;
-    const rightPocket=s.x>=0.560 && s.y>=0.708;
-
-    const enteredPocket=
-        (!wasLeftPocket && leftPocket) ||
-        (!wasRightPocket && rightPocket);
-
-    if(enteredPocket){
-        if((NEW_BATTLE.elapsed||0)<1.20){
-            bounceFromFinishZone(s,"Over");
-            return null;
-        }
-        const targetX=(leftPocket || s.x<0) ? -0.84 : 0.84;
-        const targetY=0.90;
+    if(entered){
+        const targetX=hole.cx;
+        const targetY=hole.cy;
         const dx=targetX-s.x;
         const dy=targetY-s.y;
         const d=Math.hypot(dx,dy)||1;
@@ -3892,19 +3839,22 @@ function checkForcedStadiumFinish(s){
             outward>=(tired?0.00055:0.00090) &&
             alignment>=(tired?0.032:0.065);
 
+        const zoneName=hole.id==="Xtreme"?"Xtreme":"Over";
+        const recoveryZone=hole.id==="Xtreme"?"Xtreme":"Pocket";
+
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
             const recoveryForce=source==="smash"
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
-            if(tryFinishZoneRecovery(s,"Pocket",recoveryForce,source)) return "Recovered";
+            if(tryFinishZoneRecovery(s,recoveryZone,recoveryForce,source,alignment)) return "Recovered";
             s.finishDebug=
-                `OVER CONFIRMED · force ${force.toFixed(3)} · `+
+                `${hole.id==="Xtreme"?"XTREME":"OVER"} CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            return "Over";
+            return zoneName;
         }
-        if(tryFinishZoneRecovery(s,"Pocket",force,"dump")) return "Recovered";
-        bounceFromFinishZone(s,"Over");
+        if(tryFinishZoneRecovery(s,recoveryZone,force,"dump",alignment)) return "Recovered";
+        bounceFromFinishZone(s,zoneName);
         return null;
     }
 
@@ -3929,7 +3879,10 @@ if(typeof globalThis!=="undefined"){
         recoveryChance:finishRecoveryChance,
         entrySource:finishEntrySource,
         parkedBumper:finishParkedBumper,
-        recentOpponentSmash
+        recentOpponentSmash,
+        holeAt:(x,y)=>typeof SpinWarsXRailEngine!=="undefined" && SpinWarsXRailEngine.holeAt
+            ? SpinWarsXRailEngine.holeAt(x,y)
+            : null
     };
 }
 

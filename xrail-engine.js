@@ -30,6 +30,89 @@ const DEFAULT_BEY_RADIUS=0.124;
 const MAX_SWEEP_SAMPLES=80;
 const RIDE_MAX_STEP=0.010;
 
+/*
+  Three painted holes: left Over, center Xtreme, right Over.
+  SVG paths in app.js stadium art. Wall, rail mouth, and score
+  all use these polygons. Sectors are the bowl-facing wedge so
+  a smash can leave the r=0.93 circle into a hole that sits
+  just outside that circle.
+*/
+const FINISH_HOLE_SVG=[
+ {id:"Over",side:"left",svg:[[10,82],[27,82],[32,88],[32,94],[10,94]]},
+ {id:"Xtreme",side:"center",svg:[[34,84],[66,84],[62,96],[38,96]]},
+ {id:"Over",side:"right",svg:[[73,82],[90,82],[90,94],[68,94],[68,88]]}
+];
+
+function toGame(p){return{x:(p[0]-50)/SVG_SCALE,y:(p[1]-46)/SVG_SCALE};}
+
+let finishHoles=null;
+function buildFinishHoles(){
+ if(finishHoles) return finishHoles;
+ finishHoles=FINISH_HOLE_SVG.map(spec=>{
+  const poly=spec.svg.map(toGame);
+  let cx=0,cy=0,aMin=Infinity,aMax=-Infinity;
+  for(const p of poly){
+   cx+=p.x;cy+=p.y;
+   const a=Math.atan2(p.y,p.x);
+   if(a<aMin) aMin=a;
+   if(a>aMax) aMax=a;
+  }
+  const n=poly.length||1;
+  return{
+   id:spec.id,
+   side:spec.side,
+   key:spec.id+"-"+spec.side,
+   poly,
+   cx:cx/n,
+   cy:cy/n,
+   aMin,
+   aMax
+  };
+ });
+ return finishHoles;
+}
+
+function pointInPoly(x,y,poly){
+ let inside=false;
+ for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+  const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;
+  const hit=((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/((yj-yi)||1e-12)+xi);
+  if(hit) inside=!inside;
+ }
+ return inside;
+}
+
+function angleInArc(a,from,to,pad){
+ let lo=from-pad, hi=to+pad, span=hi-lo;
+ if(span<0) span+=Math.PI*2;
+ let d=a-lo;
+ while(d<0) d+=Math.PI*2;
+ while(d>=Math.PI*2) d-=Math.PI*2;
+ return d<=span;
+}
+
+function holeAt(x,y){
+ if(!Number.isFinite(x)||!Number.isFinite(y)) return null;
+ for(const hole of buildFinishHoles()){
+  if(pointInPoly(x,y,hole.poly)) return hole;
+ }
+ return null;
+}
+
+function inMouthCorridor(x,y){
+ if(!Number.isFinite(x)||!Number.isFinite(y)) return false;
+ const inside=holeAt(x,y);
+ if(inside) return inside;
+ const r=Math.hypot(x,y);
+ if(r<0.68||r>1.20) return false;
+ const a=Math.atan2(y,x);
+ const pad=Math.asin(Math.min(1,DEFAULT_BEY_RADIUS/Math.max(r,0.20)));
+ for(const hole of buildFinishHoles()){
+  if(angleInArc(a,hole.aMin,hole.aMax,pad)) return hole;
+ }
+ return null;
+}
+
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
@@ -39,12 +122,8 @@ function inCommittedFinishMouth(s){
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
  if(outward<0.0048 || r<0.68)return false;
- const xtreme=s.y>=0.58 && Math.abs(s.x)<=0.26;
- const pocket=s.y>=0.54 && Math.abs(s.x)>=0.50;
- return xtreme||pocket;
+ return !!inMouthCorridor(s.x,s.y);
 }
-
-function toGame(p){return{x:(p[0]-50)/SVG_SCALE,y:(p[1]-46)/SVG_SCALE};}
 function bezier(p0,p1,p2,p3,t){
  const u=1-t,uu=u*u,tt=t*t;
  return{x:uu*u*p0.x+3*uu*t*p1.x+3*u*tt*p2.x+tt*t*p3.x,
@@ -566,5 +645,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.7-finish-mouth",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading,isExitZone};
+global.SpinWarsXRailEngine={version:"6.8-finish-holes",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone};
 })(typeof window!=="undefined"?window:globalThis);
