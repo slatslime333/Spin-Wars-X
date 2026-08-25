@@ -1545,17 +1545,32 @@ footer{
   fill:none;
 }
 
-#newStadium{
-  position:relative;
+.stadium-cam{
   width:min(72vw,56vh,520px)!important;
   max-width:520px;
   aspect-ratio:1/1;
   margin:0 auto;
+  overflow:hidden;
+  clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
+}
+#newStadium{
+  position:relative;
+  width:100%!important;
+  max-width:none;
+  height:100%;
+  aspect-ratio:1/1;
+  margin:0;
   background:#c9cdd0;
   border:3px solid #1ad15a;
   overflow:hidden;
   clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
   box-shadow:0 14px 32px rgba(0,0,0,.5)!important;
+}
+#newStadium.kill-cam{
+  will-change:transform;
+}
+#newStadium.kill-cam-out{
+  transition:transform .18s ease-out;
 }
 
 .battle-dock{display:flex;flex-direction:column;gap:8px}
