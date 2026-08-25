@@ -1218,6 +1218,8 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
             ? `${r.blade.name} takes the match ${playerScore}–${cpuScore}.`
             : `${Game.cpu.blade?.name||"CPU"} ends the run ${cpuScore}–${playerScore}.`
     };
+    Game.battle=Game.battle||{};
+    Game.battle.score={player:playerScore,cpu:cpuScore};
     setTimeout(()=>showResults(),200);
     persist();
     return true;
