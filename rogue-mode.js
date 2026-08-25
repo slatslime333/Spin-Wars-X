@@ -602,7 +602,48 @@ function plateDecor(side){
     const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
     const mod=packed?modifierById(packed.id):null;
-    return {stats,ovr,meta:ovr,delta,mod};
+    const stack=upgradeStack(side);
+    return {stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack)};
+}
+
+function bonusStackBoxes(bonuses){
+    const boxes=[];
+    STATS.forEach(k=>{
+        const n=round(Number(bonuses?.[k])||0);
+        if(!n) return;
+        boxes.push({
+            kicker:"UPGRADE",
+            title:`${LABEL[k]} ${n>0?"+":""}${n}`,
+            down:n<0
+        });
+    });
+    return boxes;
+}
+
+function upgradeStack(side){
+    const r=run();
+    if(!r) return [];
+    if(side==="cpu") return bonusStackBoxes(r.cpuBonuses);
+    const boxes=bonusStackBoxes(r.bonuses);
+    const seen={};
+    (r.history||[]).forEach(card=>{
+        if(!card) return;
+        if(card.kind==="evolve" && !seen[card.evolve||card.title]){
+            seen[card.evolve||card.title]=true;
+            boxes.push({kicker:"EVOLVE",title:card.title||"EVOLVE",rarity:"evolve"});
+        }
+        if(card.kind==="reforge"){
+            boxes.push({kicker:"REFORGE",title:card.title||"REFORGE",rarity:"rare"});
+        }
+    });
+    return boxes;
+}
+
+function upgradeStackHTML(stack){
+    if(!stack||!stack.length) return "";
+    return `<div class="vs-upgrade-stack">${stack.map(b=>
+        `<div class="vs-upgrade-box${b.down?" down":" up"}${b.rarity?" "+b.rarity:""}"><small>${b.kicker}</small><b>${b.title}</b></div>`
+    ).join("")}</div>`;
 }
 
 function mountDevButton(){
@@ -637,6 +678,7 @@ function toggleDev(){
         if(!r) return;
         r.bonuses=emptyBonuses();
         r.activeModifier=null;
+        r.history=[];
         renderDevList();
         refreshAfterDebug();
     };
@@ -691,6 +733,7 @@ function renderDevList(){
                 return;
             }
             applyDebugCard(card);
+            if(card.kind!=="reforge") r.history.push(card);
             renderDevList();
             refreshAfterDebug();
         };
@@ -1027,7 +1070,7 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
             <p>Bronze starters have the harder road and better rolls. Silver and Gold start a step above Bronze, not a full tier ahead — their opening stats are pulled toward Bronze so match 1 stays close. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
-            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades you pick — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. The CPU can also roll a common like +2 ATK, and that one does tint.</p>
+            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades you pick — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). The CPU can also roll a common like +2 ATK, and that one does tint and box.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
@@ -1178,6 +1221,7 @@ function showHub(){
                     return `<span>${LABEL[k]} <b>${stats[k]}</b>${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</span>`;
                 }).join("")}</div>
                 ${mod?`<p class="rogue-mod-line">${mod.name} · ${mod.blurb}</p>`:"<p class=\"rogue-mod-line\">No Rogue Modifier</p>"}
+                ${upgradeStackHTML(upgradeStack("player"))}
             </div>
         </section>
         <p class="home-leagues-label">CHOOSE ONE UPGRADE</p>

@@ -1163,6 +1163,48 @@ footer{
 .vs-plate.them .vs-mod-box{border-color:#1a5a66}
 .vs-plate.them .vs-mod-box small{color:#7ef0ff}
 
+.vs-upgrade-stack{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px;
+}
+.vs-upgrade-box{
+  flex:1 1 88px;
+  min-width:84px;
+  padding:6px 8px;
+  border:1px solid #1f7a3a;
+  background:rgba(0,0,0,.28);
+}
+.vs-upgrade-box small{
+  display:block;
+  color:var(--green);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.14em;
+}
+.vs-upgrade-box b{
+  display:block;
+  margin-top:2px;
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:16px;
+  font-weight:400;
+  line-height:.95;
+  color:#fff;
+}
+.vs-upgrade-box.down{border-color:#8a3044}
+.vs-upgrade-box.down small{color:#ff8aa0}
+.vs-upgrade-box.evolve{border-color:#7a5a16}
+.vs-upgrade-box.evolve small{color:var(--gold)}
+.vs-upgrade-box.rare{border-color:#3a6a88}
+.vs-upgrade-box.rare small{color:#7ec8ff}
+.vs-plate.them .vs-upgrade-box{border-color:#1a5a66}
+.vs-plate.them .vs-upgrade-box small{color:#7ef0ff}
+.vs-plate.them .vs-upgrade-box.down{border-color:#8a3044}
+.vs-plate.them .vs-upgrade-box.down small{color:#ff8aa0}
+
+.rogue-build .vs-upgrade-stack{margin-top:10px}
+
 .vs-reroll{
   grid-column:1 / -1;
   justify-self:end;
