@@ -3600,38 +3600,43 @@ function finishParkedBumper(s){
     return (Number(s?.lastImpactOpponentSpeed)||0)<FINISH_TUNING.parkedSpeed;
 }
 
-function finishRecoveryChance(s,zone,knockForce,source){
+function finishRecoveryChance(s,zone,knockForce,source,align){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
     const smash=newBattleClamp(force/FINISH_TUNING.knockCap,0,1.15);
+    const heading=newBattleClamp(Number(align)||0,-1,1);
+    const into=newBattleClamp((heading-0.05)/0.75,0,1);
     const kind=source||"smash";
     /*
-      Recovery audits every pocket: rail miss, dump, and smash.
-      High RPM is harder to finish. Low RPM pockets stick.
-      Same RPM: rail > dump > smash to climb.
+      Smash + straight line + real force beats high RPM.
+      Rail miss can still self-KO, but climbs more than a smash.
+      Limp dumps climb when healthy.
     */
     if(kind==="dump"){
-        let chance=0.10+Math.pow(rpm,1.10)*0.86-tilt*0.04;
-        if(rpm>=0.70) chance=Math.max(chance,0.90);
-        if(rpm>=0.50) chance=Math.max(chance,0.74);
-        if(rpm<0.28) chance*=0.45;
-        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.18, 0.96);
+        let chance=0.14+Math.pow(rpm,1.20)*0.72-tilt*0.04;
+        if(rpm>=0.70) chance=Math.max(chance,0.78);
+        if(rpm>=0.50) chance=Math.max(chance,0.58);
+        if(rpm<0.28) chance*=0.42;
+        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.12, 0.88);
     }
     if(kind==="rail"){
-        let chance=0.18+Math.pow(rpm,0.62)*0.84-tilt*0.04;
-        if(rpm>=0.50) chance=Math.max(chance,0.90);
-        if(rpm>=0.62) chance=Math.max(chance,0.94);
-        if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.20, 0.97);
+        let chance=
+            0.52+
+            rpm*0.30-
+            into*0.16-
+            tilt*0.04;
+        if(rpm<0.28) chance*=0.48;
+        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.14, 0.82);
     }
+    const glance=Math.pow(1-into,1.35);
     let chance=
-        0.06+
-        Math.pow(rpm,1.10)*0.68*(1-smash*0.40)-
-        tilt*((zone==="Pocket"||zone==="Over")?0.05:0.04);
-    if(rpm>=0.80) chance=Math.max(chance,0.38);
-    if(rpm<0.25) chance*=0.50;
-    return newBattleClamp(chance, rpm<0.22 ? 0.04 : 0.08, 0.65);
+        0.03+
+        Math.pow(rpm,1.05)*0.48*glance*(1-smash*0.58)+
+        glance*0.10*(0.40+0.60*rpm)-
+        tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
+    if(rpm<0.25) chance*=0.55;
+    return newBattleClamp(chance, rpm<0.22 ? 0.02 : 0.03, 0.52);
 }
 
 function recentOpponentSmash(s,now){
@@ -3696,13 +3701,13 @@ function bounceFromFinishZone(s,zone){
     s.vy=-Math.abs(Number(s.vy)||0)*0.35-0.016;
 }
 
-function tryFinishZoneRecovery(s,zone,knockForce,source){
+function tryFinishZoneRecovery(s,zone,knockForce,source,align){
     const kind=source||"smash";
     if(!s || (kind==="smash" && s.finishRecoveryUsed)) return false;
     const now=performance.now();
     const rpm=newBattleClamp(s.rpm,0,1);
     const balance=getBattleStat(s,"balance");
-    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce,kind);
+    const chance=finishRecoveryChance(s,zone,knockForce??s.lastImpactForce,kind,align);
 
     // A qualified zone entry already proved this was a real smash or
     // rail carry. Do not drop the climb because the clash timestamp
@@ -3842,13 +3847,13 @@ function checkForcedStadiumFinish(s){
             const recoveryForce=source==="smash"
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
-            if(tryFinishZoneRecovery(s,recoveryZone,recoveryForce,source)) return "Recovered";
+            if(tryFinishZoneRecovery(s,recoveryZone,recoveryForce,source,alignment)) return "Recovered";
             s.finishDebug=
                 `${hole.id==="Xtreme"?"XTREME":"OVER"} CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
             return zoneName;
         }
-        if(tryFinishZoneRecovery(s,recoveryZone,force,"dump")) return "Recovered";
+        if(tryFinishZoneRecovery(s,recoveryZone,force,"dump",alignment)) return "Recovered";
         bounceFromFinishZone(s,zoneName);
         return null;
     }
