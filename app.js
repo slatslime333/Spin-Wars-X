@@ -457,6 +457,7 @@ const BLADE_ENGINE = {
         tier:"Silver",
         spin:"Right",
         weight:35.8,
+        sprite:"assets/blades/Dransword (1).png",
 
         card:{
          ovr:84,
@@ -623,6 +624,7 @@ const BLADE_ENGINE = {
         tier:"Bronze",
         spin:"Right",
         weight:32.4,
+        sprite:"assets/blades/shelterdrake.png",
 
         card:{ovr:72,attack:69,knockback:72,defense:70,mobility:80,balance:82,stamina:78,burst:70},
 
@@ -1344,11 +1346,28 @@ function bitSpriteFile(bit){
         Point:"assets/blades/png bit/Point.png",
         Hexa:"assets/blades/png bit/Hexa.png",
         Level:"assets/blades/png bit/Level.png",
-        Wedge:"assets/blades/png bit/Wedge.png"
+        Wedge:"assets/blades/png bit/Wedge.png",
+        Kick:"assets/blades/png bit/kick.png",
+        Ball:"assets/blades/png bit/ball.png",
+        Orb:"assets/blades/png bit/orb.png",
+        Needle:"assets/blades/png bit/needle.png",
+        Quake:"assets/blades/png bit/quake.png",
+        "Low Flat":"assets/blades/png bit/lowflat.png"
     }[bit?.name]) || (typeof bit?.sprite==="string" ? bit.sprite.trim() : "") || "";
 }
 function bitSpritePath(bit){
     const path=bitSpriteFile(bit);
+    return path ? encodeURI(path) : "";
+}
+function ratchetSpriteFile(ratchet){
+    const n=Number(ratchet?.number);
+    if(Number.isFinite(n) && n>0){
+        return `assets/blades/ratchets/${n}-60.png`;
+    }
+    return (typeof ratchet?.sprite==="string" ? ratchet.sprite.trim() : "") || "";
+}
+function ratchetSpritePath(ratchet){
+    const path=ratchetSpriteFile(ratchet);
     return path ? encodeURI(path) : "";
 }
 function battleHudPartsLine(s){
@@ -1439,6 +1458,7 @@ function ratchetCard(r){
             (r.number===1||r.number===7||r.number===9)?"UNIVERSAL":"VERSATILE"]],
         extra:`<span class="part-index">${r.number}</span>`,
         description:desc,
+        sprite:ratchetSpriteFile(r),
         onClick:()=>{Game.player.ratchet=r;showBitDraft();}});
 }
 
@@ -2017,6 +2037,7 @@ function createComboSummaryCard(side,combo){
     const stats=combo.stats||{};
     const sprite=bladeSpritePath(combo.blade);
     const bitArt=bitSpritePath(combo.bit);
+    const ratchetArt=ratchetSpritePath(combo.ratchet);
     for(const key of ["attack","knockback","defense","mobility","balance","stamina","burst"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
@@ -2029,7 +2050,7 @@ function createComboSummaryCard(side,combo){
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
         <h2>${combo.blade.name}</h2>
-        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
+        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
         <div class="vs-ratings">
           <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
           <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
