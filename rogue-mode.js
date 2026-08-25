@@ -208,11 +208,44 @@ function onClash(p,c,pDealt,cDealt){
     else if(pHit>=0.022) c.rogueCounterArmed=true;
 }
 
+function bronzeBand(){
+    const blades=Object.values(BLADE_ENGINE||{}).filter(b=>String(b.tier)==="Bronze");
+    const ratchet=(typeof RATCHETS!=="undefined"&&RATCHETS.find(x=>x.name==="3-60"))||{name:"3-60",number:3,height:60};
+    const bits=typeof selectableBits==="function"?selectableBits():[];
+    const bit=bits.find(x=>x.name==="Point")||bits[0]||{name:"Point"};
+    const acc=emptyBonuses();
+    const pool=blades.length?blades:Object.values(BLADE_ENGINE||{});
+    let n=0;
+    pool.forEach(blade=>{
+        const s=comboBase(blade,ratchet,bit);
+        n++;
+        STATS.forEach(k=>{acc[k]+=(Number(s[k])||70);});
+    });
+    const count=Math.max(1,n);
+    STATS.forEach(k=>{acc[k]=acc[k]/count;});
+    return acc;
+}
+
+function makeStartScale(blade,ratchet,bit){
+    const scale=emptyBonuses();
+    const tier=String(blade?.tier||"");
+    if(tier==="Bronze"||!blade) return scale;
+    const band=bronzeBand();
+    const mine=comboBase(blade,ratchet,bit);
+    const lead=tier==="Gold"?4:2.5;
+    STATS.forEach(k=>{
+        const target=(Number(band[k])||70)+lead;
+        const have=Number(mine[k])||70;
+        if(have>target) scale[k]=round((target-have)*0.88);
+    });
+    return scale;
+}
+
 function playerEffective(){
     const r=run();
     if(!r) return emptyBonuses();
     const base=comboBase(r.blade,r.ratchet,r.bit);
-    return mergeStats(base,r.bonuses);
+    return mergeStats(mergeStats(base,r.startScale),r.bonuses);
 }
 
 function cpuEffective(){
@@ -225,11 +258,12 @@ function cpuEffective(){
 function playerPlateBase(){
     const r=run();
     if(!r) return emptyBonuses();
-    return comboBase(
+    const parts=comboBase(
         r.starterBlade||r.blade,
         r.starterRatchet||r.ratchet,
         r.starterBit||r.bit
     );
+    return mergeStats(parts,r.startScale);
 }
 
 function cpuPlateBase(){
@@ -751,6 +785,7 @@ function buildSave(){
             starterBladeName:(r.starterBlade||r.blade)?.name,
             starterRatchetName:(r.starterRatchet||r.ratchet)?.name,
             starterBitName:(r.starterBit||r.bit)?.name,
+            startScale:{...emptyBonuses(),...(r.startScale||{})},
             bonuses:{...emptyBonuses(),...(r.bonuses||{})},
             activeModifier:packModifier(r.activeModifier),
             history:(r.history||[]).map(packCard),
@@ -844,6 +879,7 @@ function hydrate(data){
         starterBlade:bladeByName(raw.starterBladeName)||blade,
         starterRatchet:ratchetByName(raw.starterRatchetName)||ratchet,
         starterBit:bitByName(raw.starterBitName)||bit,
+        startScale:{...emptyBonuses(),...(raw.startScale||{})},
         bonuses:{...emptyBonuses(),...(raw.bonuses||{})},
         activeModifier:raw.activeModifier||null,
         history:(raw.history||[]).map(c=>c),
@@ -860,6 +896,13 @@ function hydrate(data){
         cpuBonuses:{...emptyBonuses(),...(raw.cpuScale?raw.cpuBonuses:{})},
         cpuModifier:raw.cpuModifier||null
     };
+    if(!raw.startScale){
+        Game.rogue.startScale=makeStartScale(
+            Game.rogue.starterBlade,
+            Game.rogue.starterRatchet,
+            Game.rogue.starterBit
+        );
+    }
     if(!Game.rogue.cpuBlade||!Game.rogue.cpuRatchet||!Game.rogue.cpuBit){
         generateCpu();
     }
@@ -983,7 +1026,7 @@ function showHelp(){
         </div>
         <section class="menu-card rogue-help-card">
             <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
-            <p>Bronze starters have the harder road and better rolls. Gold starts easier. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
+            <p>Bronze starters have the harder road and better rolls. Silver and Gold start a step above Bronze, not a full tier ahead — their opening stats are pulled toward Bronze so match 1 stays close. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
             <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades you pick — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. The CPU can also roll a common like +2 ATK, and that one does tint.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
@@ -1017,6 +1060,7 @@ function beginRun(blade){
         currentRogueTier:blade.tier||"Silver",
         blade,ratchet:parts.ratchet,bit:parts.bit,
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
+        startScale:makeStartScale(blade,parts.ratchet,parts.bit),
         bonuses:emptyBonuses(),
         activeModifier:null,
         history:[],
