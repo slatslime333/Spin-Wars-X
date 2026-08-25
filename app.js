@@ -970,12 +970,6 @@ level:{
 
 },
 
-taper:{
-    name:"Taper",type:"Balance",
-    card:{attack:70,knockback:62,defense:58,mobility:74,balance:78,stamina:76,burst:80},
-    behavior:{speed:68,aggression:58,control:84,staminaRetention:78}
-},
-
 kick:{
 
     name:"Kick",
@@ -1043,7 +1037,6 @@ orb:{
 },
 
     point:{name:"Point",type:"Balance",card:{attack:74,knockback:62,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
-    high_needle:{name:"High Needle",type:"Defense",card:{attack:59,knockback:56,defense:54,mobility:40,balance:54,stamina:94,burst:72},behavior:{speed:42,aggression:24,control:88,staminaRetention:92}},
     quake:{name:"Quake",type:"Attack",card:{attack:87,knockback:83,defense:45,mobility:89,balance:42,stamina:38,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
 
 };
@@ -1072,6 +1065,13 @@ const BIT_PHYSICS = {
     Point:{movement:58,control:86,spinDrain:.78,xRailAffinity:52,centerAffinity:74,recovery:76,attackBias:1,acceleration:58,friction:77,precession:34,stability:72},
     Quake:{movement:89,control:40,spinDrain:1.88,xRailAffinity:75,centerAffinity:20,recovery:24,attackBias:11,acceleration:92,friction:43,precession:74,stability:30}
 };
+
+function selectableBits(){
+    return Object.values(BIT_ENGINE).filter(bit=>{
+        const name=String(bit?.name||"");
+        return name!=="Taper" && name!=="High Needle" && name!=="Elevate";
+    });
+}
 
 function getBitPhysics(blader){
     const name=Game[blader]?.bit?.name;
@@ -1192,7 +1192,7 @@ function randomizeCombo(side){
     if(!target) return;
     target.blade=pickDifferentPart(Object.values(BLADE_ENGINE),other?.blade?.name);
     target.ratchet=pickDifferentPart(RATCHETS,other?.ratchet?.name);
-    target.bit=pickDifferentPart(Object.values(BIT_ENGINE),other?.bit?.name);
+    target.bit=pickDifferentPart(selectableBits(),other?.bit?.name);
     target.spin=target.blade?.spin||"Right";
     target.launch={angle:null,technique:null,quality:null};
     syncComboStats(side);
@@ -1498,8 +1498,8 @@ function bitCard(bit){
 function showBitDraft(){
     Game.screen="bitDraft"; const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">◉</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BIT</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BITS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="bitContainer"></section></main>`;
-    if(Game.mode==="custom"){Game.selection=Game.selection||{};Game.selection.bitPool=Object.values(BIT_ENGINE);Game.selection.bitPage=Game.selection.bitPage||0;renderBitPage();return;}
-    const c=document.getElementById("bitContainer");Object.values(BIT_ENGINE).sort(()=>Math.random()-0.5).slice(0,3).forEach(bit=>c.appendChild(bitCard(bit)));c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
+    if(Game.mode==="custom"){Game.selection=Game.selection||{};Game.selection.bitPool=selectableBits();Game.selection.bitPage=Game.selection.bitPage||0;renderBitPage();return;}
+    const c=document.getElementById("bitContainer");selectableBits().sort(()=>Math.random()-0.5).slice(0,3).forEach(bit=>c.appendChild(bitCard(bit)));c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
 }
 function renderBitPage(){
     const pool=Game.selection.bitPool,page=Game.selection.bitPage,size=6,total=Math.max(1,Math.ceil(pool.length/size)),safe=Math.min(Math.max(page,0),total-1);Game.selection.bitPage=safe;
@@ -1977,8 +1977,7 @@ function calculateComboStats(blade,ratchet,bit){
 /*
  V57 RESEARCH / SYSTEM LOCK
  - 0 Ratchets removed from selectable pool.
- - Elevate removed from selectable Bit pool.
- - Taper and  restored as distinct parts.
+ - Elevate, Taper, and High Needle removed from selectable Bit pool.
  - Needle/HN: high stamina potential, low real stability; no free Defense/Balance.
  - Wedge: semi-mobile, high stamina, less stable than Ball.
  - Point: Physical behavior stable/aggressive behavior.
@@ -2148,7 +2147,7 @@ function generateCPUCombo(force=false){
     // CPU may never share the player's selected Blade, Ratchet, or Bit.
     const differentRatchets=RATCHETS.filter(r=>r!==playerRatchet && r.name!==playerRatchet?.name);
     const ratchetPool=differentRatchets.length?differentRatchets:RATCHETS;
-    const allBits=Object.values(BIT_ENGINE);
+    const allBits=selectableBits();
     const differentBits=allBits.filter(b=>b!==playerBit && b.name!==playerBit?.name);
     const bitPool=differentBits.length?differentBits:allBits;
     Game.cpu.blade=finalBladePool[Math.floor(Math.random()*finalBladePool.length)];
@@ -5765,6 +5764,9 @@ function newPhysicsCollision(dt){
     }else if(cAttackBit && !pAttackBit){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
+    }else if(!pAttackBit && !cAttackBit){
+        pKnockRaw*=1.11;
+        cKnockRaw*=1.11;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so

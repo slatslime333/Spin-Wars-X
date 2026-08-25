@@ -35,7 +35,7 @@ function frameBlend(perFrameAt60,dt){
 function bitOrbitClass(bitName,bitType,movement){
   const name=String(bitName||"").toLowerCase();
   const type=String(bitType||"").toLowerCase();
-  if(name==="kick"||name==="taper") return "hybrid";
+  if(name==="kick") return "hybrid";
   if(name==="point"||name==="level") return "gimmick";
   if(type==="attack") return "attack";
   if(type==="defense"||type==="stamina"||type==="balance") return "stable";
@@ -789,7 +789,7 @@ const movementDrain =
         speed*0.00042
     ) *
     bitDrain *
-    (0.65+rpm*0.35);
+    (0.94+Math.pow(1-rpm,1.4)*0.42);
 
 const tiltDrain =
     s.launchRpmLossMultiplier||1;
@@ -848,7 +848,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.4.1",
+    version:"1.4.2",
     step,
     homeOrbitRadius,
     orbitOmega,
