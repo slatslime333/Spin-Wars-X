@@ -2109,7 +2109,11 @@ function showComboCard(){
     const cpuCombo=cpuPlate||calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
     const playLabel=Game.quickMatch?"PLAY":"LET IT RIP";
+    const vsCall=typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.renderHTML
+        ?SpinWarsVsCall.renderHTML(Game.player,Game.cpu,playerCombo,cpuCombo,playerPlate,cpuPlate)
+        :"";
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
+      ${vsCall}
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:""})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
