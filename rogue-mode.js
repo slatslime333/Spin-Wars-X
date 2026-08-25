@@ -219,7 +219,39 @@ function cpuEffective(){
     const r=run();
     if(!r) return emptyBonuses();
     const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
-    return mergeStats(base,r.cpuBonuses);
+    return mergeStats(mergeStats(base,r.cpuScale),r.cpuBonuses);
+}
+
+function playerPlateBase(){
+    const r=run();
+    if(!r) return emptyBonuses();
+    return comboBase(
+        r.starterBlade||r.blade,
+        r.starterRatchet||r.ratchet,
+        r.starterBit||r.bit
+    );
+}
+
+function cpuPlateBase(){
+    const r=run();
+    if(!r) return emptyBonuses();
+    const parts=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
+    return mergeStats(parts,r.cpuScale);
+}
+
+function grantCpuCommons(){
+    const r=run();
+    const match=r.matchIndex||1;
+    const boss=!!r.boss;
+    let n=0;
+    if(boss) n=1+(Math.random()<0.6?1:0);
+    else if(match>=4) n=1+(Math.random()<0.45?1:0);
+    else if(match>=2) n=Math.random()<0.72?1:0;
+    else n=Math.random()<0.42?1:0;
+    for(let i=0;i<n;i++){
+        const stat=pick(STATS);
+        r.cpuBonuses[stat]=(r.cpuBonuses[stat]||0)+2;
+    }
 }
 
 function battleCombo(side){
@@ -284,8 +316,10 @@ function generateCpu(){
     r.cpuBit=pick(selectableBits())||parts.bit;
     const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
     const gap=target-powerOf(base);
+    r.cpuScale=emptyBonuses();
+    STATS.forEach(k=>{r.cpuScale[k]=round(clamp(gap*(0.72+Math.random()*0.56),-12,28));});
     r.cpuBonuses=emptyBonuses();
-    STATS.forEach(k=>{r.cpuBonuses[k]=round(clamp(gap*(0.72+Math.random()*0.56),-12,28));});
+    grantCpuCommons();
     if(boss && Math.random()<0.55){
         r.cpuModifier={id:pick(MODIFIERS).id};
     }else if(!boss && Math.random()<0.18){
@@ -520,7 +554,7 @@ function plateDecor(side){
     const blade=side==="cpu"?r.cpuBlade:r.blade;
     const ratchet=side==="cpu"?r.cpuRatchet:r.ratchet;
     const bit=side==="cpu"?r.cpuBit:r.bit;
-    const base=comboBase(blade,ratchet,bit);
+    const tintBase=side==="cpu"?cpuPlateBase():playerPlateBase();
     const merged=side==="cpu"?cpuEffective():playerEffective();
     const live=previewModifier(side);
     const stats={};
@@ -529,7 +563,7 @@ function plateDecor(side){
     keys.forEach(k=>{
         const shown=round((Number(merged[k])||70)+(Number(live[k])||0));
         stats[k]=shown;
-        delta[k]=shown-(Number(base[k])||70);
+        delta[k]=shown-(Number(tintBase[k])||70);
     });
     const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
@@ -714,6 +748,9 @@ function buildSave(){
             bladeName:r.blade?.name,
             ratchetName:r.ratchet?.name,
             bitName:r.bit?.name,
+            starterBladeName:(r.starterBlade||r.blade)?.name,
+            starterRatchetName:(r.starterRatchet||r.ratchet)?.name,
+            starterBitName:(r.starterBit||r.bit)?.name,
             bonuses:{...emptyBonuses(),...(r.bonuses||{})},
             activeModifier:packModifier(r.activeModifier),
             history:(r.history||[]).map(packCard),
@@ -726,6 +763,7 @@ function buildSave(){
             cpuBladeName:r.cpuBlade?.name,
             cpuRatchetName:r.cpuRatchet?.name,
             cpuBitName:r.cpuBit?.name,
+            cpuScale:{...emptyBonuses(),...(r.cpuScale||{})},
             cpuBonuses:{...emptyBonuses(),...(r.cpuBonuses||{})},
             cpuModifier:packModifier(r.cpuModifier)
         }
@@ -803,6 +841,9 @@ function hydrate(data){
         startingTier:raw.startingTier||blade.tier||"Silver",
         currentRogueTier:raw.currentRogueTier||blade.tier||"Silver",
         blade,ratchet,bit,
+        starterBlade:bladeByName(raw.starterBladeName)||blade,
+        starterRatchet:ratchetByName(raw.starterRatchetName)||ratchet,
+        starterBit:bitByName(raw.starterBitName)||bit,
         bonuses:{...emptyBonuses(),...(raw.bonuses||{})},
         activeModifier:raw.activeModifier||null,
         history:(raw.history||[]).map(c=>c),
@@ -815,7 +856,8 @@ function hydrate(data){
         cpuBlade:bladeByName(raw.cpuBladeName),
         cpuRatchet:ratchetByName(raw.cpuRatchetName),
         cpuBit:bitByName(raw.cpuBitName),
-        cpuBonuses:{...emptyBonuses(),...(raw.cpuBonuses||{})},
+        cpuScale:{...emptyBonuses(),...(raw.cpuScale||(!raw.cpuScale && raw.cpuBonuses?raw.cpuBonuses:{}))},
+        cpuBonuses:{...emptyBonuses(),...(raw.cpuScale?raw.cpuBonuses:{})},
         cpuModifier:raw.cpuModifier||null
     };
     if(!Game.rogue.cpuBlade||!Game.rogue.cpuRatchet||!Game.rogue.cpuBit){
@@ -942,6 +984,7 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
             <p>Bronze starters have the harder road and better rolls. Gold starts easier. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
+            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades you pick — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. The CPU can also roll a common like +2 ATK, and that one does tint.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
@@ -973,6 +1016,7 @@ function beginRun(blade){
         startingTier:blade.tier||"Silver",
         currentRogueTier:blade.tier||"Silver",
         blade,ratchet:parts.ratchet,bit:parts.bit,
+        starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
         bonuses:emptyBonuses(),
         activeModifier:null,
         history:[],
@@ -1066,7 +1110,7 @@ function showHub(){
     const r=run();
     Game.screen="rogueHub";
     const stats=playerEffective();
-    const base=comboBase(r.blade,r.ratchet,r.bit);
+    const base=playerPlateBase();
     const sprite=bladeSpritePath(r.blade);
     const mod=r.activeModifier?modifierById(r.activeModifier.id):null;
     const app=document.getElementById("app");
