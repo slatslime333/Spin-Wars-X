@@ -3667,7 +3667,9 @@ const FINISH_TUNING={
     liveStun:0.22,
     smashAlign:0.12,
     railSmashAlign:0.28,
-    railContextMs:1400
+    railContextMs:1400,
+    highRpm:0.80,
+    highRpmSmashRecover:0.45
 };
 
 function finishParkedBumper(s){
@@ -3688,11 +3690,15 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
       Limp dumps climb when healthy.
     */
     if(kind==="dump"){
-        let chance=0.22+Math.pow(rpm,1.20)*0.70-tilt*0.04;
-        if(rpm>=0.70) chance=Math.max(chance,0.86);
-        if(rpm>=0.50) chance=Math.max(chance,0.70);
-        if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.94);
+        const knocked=force>=FINISH_TUNING.mouthForce;
+        if(!knocked){
+            let chance=0.22+Math.pow(rpm,1.20)*0.70-tilt*0.04;
+            if(rpm>=0.70) chance=Math.max(chance,0.86);
+            if(rpm>=0.50) chance=Math.max(chance,0.70);
+            if(rpm<0.28) chance*=0.42;
+            return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.94);
+        }
+        // Mouth-force dump is a knock into the hole: use smash recover.
     }
     if(kind==="rail"){
         let chance=
@@ -3704,13 +3710,32 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
         return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.88);
     }
     const glance=Math.pow(1-into,1.35);
-    let chance=
-        0.02+
-        Math.pow(rpm,1.05)*0.34*glance*(1-smash*0.70)+
-        glance*0.07*(0.40+0.60*rpm)-
-        tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
-    if(rpm<0.25) chance*=0.50;
-    return newBattleClamp(chance, rpm<0.22 ? 0.01 : 0.02, 0.34);
+    /*
+      Knocked into Over/Xtreme: 45% climb at 80%+ RPM.
+      Straight smash is still the easier KO; glance climbs a bit more.
+      Below 80% RPM the chance falls with remaining spin.
+    */
+    let chance;
+    if(rpm>=FINISH_TUNING.highRpm){
+        chance=
+            FINISH_TUNING.highRpmSmashRecover+
+            glance*0.08-
+            into*0.08-
+            tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
+    }else{
+        chance=
+            FINISH_TUNING.highRpmSmashRecover*
+                Math.pow(rpm/FINISH_TUNING.highRpm,1.15)+
+            glance*0.07*rpm-
+            into*0.06*smash-
+            tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
+        if(rpm<0.25) chance*=0.50;
+    }
+    return newBattleClamp(
+        chance,
+        rpm<0.22 ? 0.01 : 0.02,
+        rpm>=FINISH_TUNING.highRpm ? 0.55 : 0.48
+    );
 }
 
 function recentOpponentSmash(s,now){
