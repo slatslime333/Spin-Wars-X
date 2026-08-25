@@ -3669,7 +3669,8 @@ const FINISH_TUNING={
     railSmashAlign:0.28,
     railContextMs:1400,
     highRpm:0.80,
-    highRpmSmashRecover:0.45
+    highRpmSmashRecover:0.45,
+    pocketReach:0.09
 };
 
 function finishParkedBumper(s){
@@ -3819,6 +3820,21 @@ function finishEntrySource(impactQualified,railQualified,s,force,align){
     return "dump";
 }
 
+function finishPocketAt(s){
+    const holes=typeof SpinWarsXRailEngine!=="undefined" ? SpinWarsXRailEngine : null;
+    if(!s || !holes || typeof holes.holeAt!=="function") return null;
+    const inside=holes.holeAt(s.x,s.y);
+    if(inside) return inside;
+    const knocked=
+        (Number(s.lastImpactForce)||0)>=FINISH_TUNING.mouthForce ||
+        (Number(s.impactMomentumState)||0)>FINISH_TUNING.liveStun;
+    if(!knocked) return null;
+    const r=Math.hypot(s.x,s.y);
+    if(r<0.74 || r>1.22) return null;
+    const reach=FINISH_TUNING.pocketReach;
+    return holes.holeAt(s.x+(s.x/r)*reach, s.y+(s.y/r)*reach);
+}
+
 function bounceFromFinishZone(s,zone){
     if(!s) return;
     if(zone==="Xtreme"){
@@ -3897,7 +3913,8 @@ function checkForcedStadiumFinish(s){
       legitimately carry a Bey into a finish zone without another collision
       on that exact frame.
 
-      The Bey must also CROSS the finish boundary this frame.
+      Sitting in a painted hole is also a made pocket. Do not wait
+      for a one-frame crossing that can be missed.
     */
     if(!s) return null;
 
@@ -3905,11 +3922,14 @@ function checkForcedStadiumFinish(s){
     const age=now-(s.lastImpactAt||0);
     const speed=Math.hypot(s.vx,s.vy);
     const force=s.lastImpactForce||0;
+    const holes=typeof SpinWarsXRailEngine!=="undefined" ? SpinWarsXRailEngine : null;
+    if(!holes || typeof holes.holeAt!=="function") return null;
 
+    const holeNow=finishPocketAt(s);
     if(!Number.isFinite(s.finishPrevX) || !Number.isFinite(s.finishPrevY)){
         s.finishPrevX=s.x;
         s.finishPrevY=s.y;
-        return null;
+        if(!holeNow) return null;
     }
 
     const prevX=s.finishPrevX;
@@ -3937,19 +3957,16 @@ function checkForcedStadiumFinish(s){
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
 
-    // A finish is crossing into a painted hole this frame, not sitting
-    // on the lower rail. The 1.20s launch bounce is gone: spawn and
-    // rail position are not inside these holes.
-    const holes=typeof SpinWarsXRailEngine!=="undefined" ? SpinWarsXRailEngine : null;
-    if(!holes || typeof holes.holeAt!=="function") return null;
-
+    // Occupying a painted hole is a made pocket, not only the crossing
+    // frame. Sprite overlap at the rim counts via a short outward sample.
     const prevHole=holes.holeAt(prevX,prevY);
-    const hole=holes.holeAt(s.x,s.y);
+    const hole=holeNow||holes.holeAt(s.x,s.y);
     const entered=!!hole && (!prevHole || prevHole.key!==hole.key);
-    const enteredXtreme=entered && hole.id==="Xtreme";
-    const enteredPocket=entered && hole.id==="Over";
+    const occupied=!!hole;
+    const enteredXtreme=occupied && hole.id==="Xtreme";
+    const enteredPocket=occupied && hole.id==="Over";
 
-    if(entered){
+    if(occupied){
         const targetX=hole.cx;
         const targetY=hole.cy;
         const dx=targetX-s.x;
@@ -4033,6 +4050,7 @@ if(typeof globalThis!=="undefined"){
         parkedBumper:finishParkedBumper,
         recentOpponentSmash,
         recentRailContext,
+        pocketAt:finishPocketAt,
         holeAt:(x,y)=>typeof SpinWarsXRailEngine!=="undefined" && SpinWarsXRailEngine.holeAt
             ? SpinWarsXRailEngine.holeAt(x,y)
             : null
