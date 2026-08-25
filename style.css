@@ -327,6 +327,37 @@ footer{
 }
 .home-league.custom .home-league-rank,
 .home-league.custom .home-league-go{color:var(--green)}
+.home-league.quick{
+  border-color:#7dff9f;
+  background:
+    linear-gradient(90deg,rgba(26,209,90,.16),transparent 48%),
+    #0c140e;
+  box-shadow:0 8px 0 #042010;
+}
+.home-league.quick .home-league-rank,
+.home-league.quick .home-league-go{color:var(--green)}
+.home-league.locked{
+  opacity:.55;
+  cursor:default;
+  pointer-events:none;
+  filter:grayscale(.28);
+  box-shadow:0 8px 0 #000;
+}
+.home-league.locked:hover,
+.home-league.locked:active{
+  transform:none;
+  filter:grayscale(.35);
+  box-shadow:0 8px 0 #000;
+}
+.home-league-go.lock{
+  color:#8a7d6c;
+  letter-spacing:.16em;
+}
+.home .back-btn{
+  width:min(440px,100%);
+  max-width:440px;
+  align-self:center;
+}
 
 .home-load .loading{width:min(420px,90%)}
 .win-name{
