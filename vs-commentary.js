@@ -385,10 +385,11 @@
         const series=[];
         if(fin){
             const how=fin.type==="Xtreme"?"an Xtreme":fin.type==="Over"?"an Over":"a spin";
+            const howCap=fin.type==="Xtreme"?"An Xtreme":fin.type==="Over"?"An Over":"A spin";
             series.push(
                 `${fin.winner} just took ${how}. Score's ${sc.player}–${sc.cpu}. Next launch's the answer, not the recap.`,
                 `That was ${how} for ${fin.winner}. ${fin.loser} has to come back out like it didn't rattle them.`,
-                `${how} goes on the board and we're ${sc.player}–${sc.cpu}. Don't let the last point pick the next launch for you.`
+                `${howCap} goes on the board and we're ${sc.player}–${sc.cpu}. Don't let the last point pick the next launch for you.`
             );
         }
         if(tied){
