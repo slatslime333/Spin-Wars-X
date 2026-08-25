@@ -58,28 +58,30 @@ function stableOrbitBase(movement,centerAffinity){
 }
 
 function orbitRpmFactor(spin,kind){
-  const s=Math.max(0.12,clamp01(spin));
+  const raw=clamp01(spin);
   /*
     Attack is slightly inside the rail at full spin. By 50% RPM it
-    should sit just under the X-Rail/X-Exit so laps miss the ring,
-    then keep walking in.
+    should sit just under the X-Rail/X-Exit so laps miss the ring.
+    By the last 20% RPM it pulls into a tight ring like Non-Attack,
+    with a little leftover Attack width.
   */
   if(kind==="attack"){
+    const s=Math.max(0.12,raw);
     if(s>=0.50) return 0.84+0.16*((s-0.50)/0.50);
-    /*
-      From 50% down they sit under the rail. By the last 20% RPM
-      they pull into a tight ring like Non-Attack, with a little
-      leftover Attack width.
-    */
     if(s>=0.20) return 0.32+0.52*((s-0.20)/0.30);
     return 0.22+0.10*(s/0.20);
   }
-  if(kind==="hybrid") return 0.42+0.58*Math.pow(s,1.45);
+  if(kind==="hybrid"){
+    const s=Math.max(0.08,raw);
+    if(s>=0.30) return 0.16+0.84*((s-0.30)/0.70);
+    return 0.08+0.08*(s/0.30);
+  }
   /*
-    After the opening mix, Non-Attack lives inner. High RPM is not a
-    locked mid-bowl circle — they walk in as spin drops.
+    Non-Attack: full/mid spin is an inner ring. By 30% RPM they sit
+    on the center pin so two tanks actually meet.
   */
-  return 0.12+0.46*Math.pow(s,1.55);
+  if(raw>=0.30) return 0.06+0.52*((raw-0.30)/0.70);
+  return 0.035+0.025*(raw/0.30);
 }
 
 function bitOrbitProfile(opts){
@@ -102,17 +104,30 @@ function bitOrbitProfile(opts){
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
-    home=Math.max(0.22,Math.min(0.70,stable*(1-mix)+attack*mix));
+    const floor=rpm>=0.30?0.16:0.07;
+    home=Math.max(floor,Math.min(0.70,stable*(1-mix)+attack*mix));
     attackWeight=mix;
   }else if(klass==="gimmick"){
     const mix=0.14+0.72*gimmick;
-    const openRpm=Math.max(rpm,0.50+0.50*gimmick);
-    const attackOpen=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(openRpm,"attack");
-    home=Math.max(0.12,Math.min(0.38,stable*(1-mix)+attackOpen*mix));
+    const attackOpen=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(rpm,"attack");
+    home=Math.max(0.05,Math.min(0.38,stable*(1-mix)+attackOpen*mix));
     attackWeight=mix;
   }else{
-    home=Math.max(0.08,Math.min(0.28,stable));
+    home=Math.max(0.045,Math.min(0.28,stable));
     attackWeight=0.08;
+  }
+  /*
+    By 30% RPM every Non-Attack bit occupies the center so two tired
+    tanks clash instead of circling past each other.
+  */
+  if(klass!=="attack"){
+    const tight=klass==="hybrid"?0.08:0.055;
+    if(rpm<=0.30){
+      home=Math.min(home, tight+(klass==="gimmick"?0.025:0.012));
+    }else if(rpm<0.55){
+      const fade=(0.55-rpm)/0.25;
+      home=home*(1-fade)+Math.min(home,tight+0.02)*fade;
+    }
   }
 
   const omega=
@@ -389,16 +404,17 @@ if(
 const impactHold=s.impactMomentumState||0;
 const steerRadius=windingHome;
 const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
+const tiredCenter=!attackLike && rpm<=0.35;
 const radialGain=attackLike
     ? (outsideHome?(rpm<0.20?0.34:0.22):0.14)
-    : (0.16+0.06*plant);
+    : (tiredCenter && outsideHome ? 0.36 : (0.16+0.06*plant));
 const windingOutwardCap=attackLike
     ? 0.006
     : (rNow>=steerRadius-0.01 ? 0.0008 : 0.0034);
 const desiredRadialSpeed=
     clamp(
         (steerRadius-rNow)*radialGain,
-        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? -0.022 : -0.012),
+        attackLike ? (outsideHome ? -0.026 : -0.014) : (outsideHome ? (tiredCenter?-0.038:-0.022) : -0.012),
         centerWinding
             ? windingOutwardCap
             : (attackLike ? 0.006 : 0.016)
@@ -416,7 +432,7 @@ const responseRate=
         bitPrecession*0.006+
         movement*0.004
     )*
-    (0.42+0.58*rpm)*
+    (0.42+0.58*(tiredCenter?Math.max(rpm,0.58):rpm))*
     mobilityResponse;
 /*
   Do not compass-lock Non-Attack onto a perfect ring. After a hit,
@@ -425,7 +441,7 @@ const responseRate=
 */
 const outsideSnap=attackLike
     ? 1.85
-    : (impactHold>0.12 ? 1.0 : (1.10+0.18*plant));
+    : (impactHold>0.12 ? 1.0 : (tiredCenter && outsideHome ? 1.70 : (1.10+0.18*plant)));
 const responseAmount=clamp(
     responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
     (centerWinding?(attackLike?1.55:0.88):1)*
@@ -433,7 +449,7 @@ const responseAmount=clamp(
     0,
     attackLike
         ? (centerWinding?0.070:(outsideHome?0.078:0.048))
-        : (centerWinding?0.040:(outsideHome?0.052:0.022))
+        : (centerWinding?0.040:(outsideHome?(tiredCenter?0.080:0.052):0.022))
 );
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
@@ -808,7 +824,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.6",
+    version:"1.3.7",
     step,
     homeOrbitRadius,
     orbitOmega,
