@@ -5912,8 +5912,8 @@ function newPhysicsCollision(dt){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
     }else if(!pAttackBit && !cAttackBit){
-        pKnockRaw*=1.25;
-        cKnockRaw*=1.25;
+        pKnockRaw*=1.55;
+        cKnockRaw*=1.55;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
