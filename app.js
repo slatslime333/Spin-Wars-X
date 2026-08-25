@@ -3787,12 +3787,42 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                  <div class="finish-flash-kicker">${winner.blade.name}</div>
                  <div class="finish-flash-main">SPIN FINISH</div>
                  <div class="finish-flash-points">+1</div>`;
+        }else if(finishType==="Over"){
+            flash.innerHTML=
+                `<div class="finish-fx finish-fx-flames" aria-hidden="true">
+                    <span class="finish-flame f1"></span>
+                    <span class="finish-flame f2"></span>
+                    <span class="finish-flame f3"></span>
+                    <span class="finish-flame f4"></span>
+                    <span class="finish-flame f5"></span>
+                    <span class="finish-ember e1"></span>
+                    <span class="finish-ember e2"></span>
+                    <span class="finish-ember e3"></span>
+                    <span class="finish-ember e4"></span>
+                    <span class="finish-heat"></span>
+                 </div>
+                 <div class="finish-flash-kicker">${winner.blade.name}</div>
+                 <div class="finish-flash-main">OVER FINISH</div>
+                 <div class="finish-flash-points">+${finishPoints}</div>`;
         }else{
             flash.innerHTML=
-                `<div class="finish-lightning lightning-left">⚡</div>
-                 <div class="finish-lightning lightning-right">⚡</div>
+                `<div class="finish-fx finish-fx-storm" aria-hidden="true">
+                    <span class="finish-bolt-flash"></span>
+                    <svg class="finish-bolt b1" viewBox="0 0 40 120" preserveAspectRatio="none">
+                        <path d="M22 0 L8 46 L20 46 L4 120 L26 58 L12 58 Z"/>
+                    </svg>
+                    <svg class="finish-bolt b2" viewBox="0 0 40 120" preserveAspectRatio="none">
+                        <path d="M18 0 L30 40 L16 40 L36 120 L14 62 L28 62 Z"/>
+                    </svg>
+                    <svg class="finish-bolt b3" viewBox="0 0 40 120" preserveAspectRatio="none">
+                        <path d="M20 0 L10 50 L22 44 L6 120 L24 64 L11 70 Z"/>
+                    </svg>
+                    <span class="finish-spark s1"></span>
+                    <span class="finish-spark s2"></span>
+                    <span class="finish-spark s3"></span>
+                 </div>
                  <div class="finish-flash-kicker">${winner.blade.name}</div>
-                 <div class="finish-flash-main">${finishType.toUpperCase()} FINISH</div>
+                 <div class="finish-flash-main">XTREME FINISH</div>
                  <div class="finish-flash-points">+${finishPoints}</div>`;
         }
         stadium.appendChild(flash);
