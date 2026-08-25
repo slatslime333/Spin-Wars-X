@@ -2637,7 +2637,7 @@ function isKillCamCandidate(p,c,now){
         if(!recentHit&&!row.weapon) continue;
         if(!mouth&&!row.weapon) continue;
         if(!(smash||heavy||(row.weapon&&mouth))) continue;
-        const holeBound=a.ghost||a.near||(smash&&a.align>=0.32&&a.speed>=0.016);
+        const holeBound=a.ghost||a.near;
         if(!holeBound) continue;
         const score=
             (a.near?6:0)+(a.ghost?5:0)+(smash?3:0)+(heavy?2:0)+
@@ -3493,6 +3493,7 @@ function renderNewBattle(){
             })
             :`<p class="battle-callout" id="newCommentary"></p>`}
 
+          <div class="stadium-cam">
           <div id="newStadium">
 
             <svg id="newBattleSvg" viewBox="0 0 100 100"
@@ -3675,6 +3676,7 @@ function renderNewBattle(){
                     fill="#7ef0ff" stroke="#041018" stroke-width="0.55"
                     opacity="0">RECOVERED</text>
             </svg>
+          </div>
           </div>
 
           <div class="battle-dock">
