@@ -2452,10 +2452,15 @@ const NEW_STADIUM_GEOMETRY = {
     xtremeZone: { x:50, y:91, w:22, h:9 }
 };
 
+const PHYSICS_HZ=60;
+const PHYSICS_DT=1/PHYSICS_HZ;
+const PHYSICS_MAX_STEPS=3;
+
 const NEW_BATTLE = {
     raf:null,
     last:0,
     elapsed:0,
+    physicsAcc:0,
     active:false,
     player:null,
     cpu:null,
@@ -3152,6 +3157,7 @@ function startNewBattle(){
     rememberLaunch("cpu",NEW_BATTLE.cpu.launchPlan);
 
         NEW_BATTLE.elapsed=0;
+        NEW_BATTLE.physicsAcc=0;
         NEW_BATTLE.active=true;
         NEW_BATTLE.last=performance.now();
 
@@ -3937,6 +3943,13 @@ function applyKnockbackBoundaryOverride(s){
     }
 }
 
+function battleDrawPos(s){
+    return {
+        x:Number.isFinite(s?.renderX)?s.renderX:s.x,
+        y:Number.isFinite(s?.renderY)?s.renderY:s.y
+    };
+}
+
 function updateBeyMotionTrail(state, groupId, now){
     const group=document.getElementById(groupId);
     if(!group) return;
@@ -3946,8 +3959,9 @@ function updateBeyMotionTrail(state, groupId, now){
         while(group.children.length>1) group.removeChild(group.lastElementChild);
         return;
     }
-    const cx=50+state.x*39;
-    const cy=46+state.y*39;
+    const draw=battleDrawPos(state);
+    const cx=50+draw.x*39;
+    const cy=46+draw.y*39;
     if(!Array.isArray(state.motionTrail)) state.motionTrail=[];
     const trail=state.motionTrail;
     const last=trail[trail.length-1];
@@ -3989,8 +4003,9 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         if(spriteEl) spriteEl.style.display="none";
         return;
     }
-    const cx=50+state.x*39;
-    const cy=46+state.y*39;
+    const draw=battleDrawPos(state);
+    const cx=50+draw.x*39;
+    const cy=46+draw.y*39;
     const r=4.85*(state.hitFlash>0?(state.impactScale||1):1);
     // SVG positive rotation is clockwise. Right-spin sprites use that.
     const rpm=newBattleClamp(Number(state.rpm)||0,0,1);
@@ -4023,48 +4038,74 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
-    const dt=Math.min(0.035,Math.max(0.001,(now-NEW_BATTLE.last)/1000));
+    /*
+      iPhone 15 Pro Low Power Mode (~60fps) is the physics feel target.
+      Display stays on requestAnimationFrame (smooth on 120/180Hz).
+      Sim ticks are fixed 1/60s so bowl/orbit/knock settle like the phone.
+    */
+    const frameDt=Math.min(0.050,Math.max(0,(now-NEW_BATTLE.last)/1000));
     NEW_BATTLE.last=now;
-    NEW_BATTLE.elapsed+=dt;
+    NEW_BATTLE.physicsAcc=Math.min(
+        (NEW_BATTLE.physicsAcc||0)+frameDt,
+        PHYSICS_DT*PHYSICS_MAX_STEPS
+    );
 
     try{
         const p=NEW_BATTLE.player;
         const c=NEW_BATTLE.cpu;
         if(!p || !c) throw new Error("Battle state missing player or CPU.");
 
-        if(NEW_BATTLE.elapsed<1.05){
-            Game.battle.phase="Launch";
-        }else{
-            p.launchComplete=true;
-            c.launchComplete=true;
-            Game.battle.phase="Battle";
+        let steps=0;
+        while(NEW_BATTLE.physicsAcc>=PHYSICS_DT && steps<PHYSICS_MAX_STEPS){
+            p.prevX=p.x;
+            p.prevY=p.y;
+            c.prevX=c.x;
+            c.prevY=c.y;
+
+            NEW_BATTLE.elapsed+=PHYSICS_DT;
+            if(NEW_BATTLE.elapsed<1.05){
+                Game.battle.phase="Launch";
+            }else{
+                p.launchComplete=true;
+                c.launchComplete=true;
+                Game.battle.phase="Battle";
+            }
+
+            newPhysicsStep(p,PHYSICS_DT);
+            newPhysicsStep(c,PHYSICS_DT);
+
+            if(
+                !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+                !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+                !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+                !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+            ){
+                throw new Error("Non-finite Bey physics state.");
+            }
+
+            newPhysicsCollision(PHYSICS_DT);
+
+            if(
+                !Number.isFinite(p.x)||!Number.isFinite(p.y)||
+                !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
+                !Number.isFinite(c.x)||!Number.isFinite(c.y)||
+                !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
+            ){
+                throw new Error("Non-finite collision result.");
+            }
+
+            NEW_BATTLE.physicsAcc-=PHYSICS_DT;
+            steps++;
         }
 
-        newPhysicsStep(p,dt);
-        newPhysicsStep(c,dt);
+        const alpha=newBattleClamp(NEW_BATTLE.physicsAcc/PHYSICS_DT,0,1);
+        p.renderX=(Number.isFinite(p.prevX)?p.prevX:p.x)+(p.x-(Number.isFinite(p.prevX)?p.prevX:p.x))*alpha;
+        p.renderY=(Number.isFinite(p.prevY)?p.prevY:p.y)+(p.y-(Number.isFinite(p.prevY)?p.prevY:p.y))*alpha;
+        c.renderX=(Number.isFinite(c.prevX)?c.prevX:c.x)+(c.x-(Number.isFinite(c.prevX)?c.prevX:c.x))*alpha;
+        c.renderY=(Number.isFinite(c.prevY)?c.prevY:c.y)+(c.y-(Number.isFinite(c.prevY)?c.prevY:c.y))*alpha;
 
-        if(
-            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
-            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
-            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
-            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
-        ){
-            throw new Error("Non-finite Bey physics state.");
-        }
-
-        newPhysicsCollision(dt);
-
-        if(
-            !Number.isFinite(p.x)||!Number.isFinite(p.y)||
-            !Number.isFinite(p.vx)||!Number.isFinite(p.vy)||
-            !Number.isFinite(c.x)||!Number.isFinite(c.y)||
-            !Number.isFinite(c.vx)||!Number.isFinite(c.vy)
-        ){
-            throw new Error("Non-finite collision result.");
-        }
-
-        updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",dt);
-        updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",dt);
+        updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",frameDt);
+        updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",frameDt);
         updateBeyMotionTrail(p,"playerMotionTrail",now);
         updateBeyMotionTrail(c,"cpuMotionTrail",now);
 
@@ -4209,8 +4250,8 @@ function newBattleFrame(now){
             [document.getElementById("cpuRecoveredText"),c]
         ]){
             if(el && s.recoveredFlashUntil>nowRecovery){
-                el.setAttribute("x",String(50+s.x*39));
-                el.setAttribute("y",String(46+s.y*39-8));
+                el.setAttribute("x",String(50+battleDrawPos(s).x*39));
+                el.setAttribute("y",String(46+battleDrawPos(s).y*39-8));
                 const ru=1-(s.recoveredFlashUntil-nowRecovery)/2400;
                 el.setAttribute("opacity",String(Math.max(0,1-ru*0.72)));
                 el.setAttribute("font-size",String(8.6+ru*2.2));
@@ -4221,10 +4262,10 @@ function newBattleFrame(now){
             }
         }
 
-        p.hitFlash=Math.max(0,(p.hitFlash||0)-dt);
-        c.hitFlash=Math.max(0,(c.hitFlash||0)-dt);
-        p.impactScale=Math.max(1,(p.impactScale||1)-dt*1.8);
-        c.impactScale=Math.max(1,(c.impactScale||1)-dt*1.8);
+        p.hitFlash=Math.max(0,(p.hitFlash||0)-frameDt);
+        c.hitFlash=Math.max(0,(c.hitFlash||0)-frameDt);
+        p.impactScale=Math.max(1,(p.impactScale||1)-frameDt*1.8);
+        c.impactScale=Math.max(1,(c.impactScale||1)-frameDt*1.8);
 
         for(const [id,v] of [
             ["newPlayerRPM",p.rpm],

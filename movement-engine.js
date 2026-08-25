@@ -16,6 +16,22 @@ function clamp01(v){
   return Math.max(0,Math.min(1,Number(v)||0));
 }
 
+/*
+  Phone Low Power Mode is the feel target: one 60Hz tick.
+  Blend/cut values are authored per 1/60s frame. Convert so a
+  different dt does not snap or plant harder.
+*/
+function frameScale(dt){
+  return Math.max(0,Number(dt)||0)*60;
+}
+function frameBlend(perFrameAt60,dt){
+  const k=clamp01(perFrameAt60);
+  const t=frameScale(dt);
+  if(k<=0||t<=0) return 0;
+  if(Math.abs(t-1)<1e-9) return k;
+  return 1-Math.pow(1-k,t);
+}
+
 function bitOrbitClass(bitName,bitType,movement){
   const name=String(bitName||"").toLowerCase();
   const type=String(bitType||"").toLowerCase();
@@ -390,7 +406,8 @@ if(
     const seedStrength=
         targetOrbitSpeed*
         (centerWinding?(attackLike?0.18:0.10):0.70)*
-        mobilityResponse;
+        mobilityResponse*
+        frameScale(dt);
 
     s.vx+=tangentX*seedStrength;
     s.vy+=tangentY*seedStrength;
@@ -442,8 +459,8 @@ const responseRate=
 const outsideSnap=attackLike
     ? 1.85
     : (impactHold>0.12 ? 1.0 : (tiredCenter && outsideHome ? 1.70 : (1.10+0.18*plant)));
-const responseAmount=clamp(
-    responseRate*dt*60*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
+const responseK60=clamp(
+    responseRate*Math.max(attackLike?0.05:0.04,orbitSteeringAvailability)*
     (centerWinding?(attackLike?1.55:0.88):1)*
     (outsideHome?outsideSnap:1),
     0,
@@ -451,6 +468,7 @@ const responseAmount=clamp(
         ? (centerWinding?0.070:(outsideHome?0.078:0.048))
         : (centerWinding?0.040:(outsideHome?(tiredCenter?0.080:0.052):0.022))
 );
+const responseAmount=frameBlend(responseK60,dt);
 s.vx+=(desiredVX-s.vx)*responseAmount;
 s.vy+=(desiredVY-s.vy)*responseAmount;
 
@@ -468,8 +486,9 @@ if(
                 ? 0.58
                 : (impactHold>0.20 ? (0.07+0.04*plant) : (0.36+0.12*plant))
         );
-        s.vx-=radialX*outward*cut;
-        s.vy-=radialY*outward*cut;
+        const frameCut=frameBlend(cut,dt);
+        s.vx-=radialX*outward*frameCut;
+        s.vy-=radialY*outward*frameCut;
     }
 }
 
@@ -491,8 +510,9 @@ if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
             ? (outsideHome?0.012:0.0036)
             : (outsideHome?(0.0042+0.0016*plant):0.0030)
     );
-    s.vx-=radialX*bowl;
-    s.vy-=radialY*bowl;
+    const frameBowl=bowl*frameScale(dt);
+    s.vx-=radialX*frameBowl;
+    s.vy-=radialY*frameBowl;
 }
 
 /*
@@ -824,11 +844,13 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.9",
+    version:"1.4.0",
     step,
     homeOrbitRadius,
     orbitOmega,
-    bitOrbitProfile
+    bitOrbitProfile,
+    frameScale,
+    frameBlend
 };
 
 })(typeof window!=="undefined" ? window : globalThis);
