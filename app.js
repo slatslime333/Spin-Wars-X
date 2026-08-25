@@ -3646,6 +3646,13 @@ function recentXExitSwing(s){
     return (performance.now()-exitAt)<=1000;
 }
 
+function recentRailSwing(s){
+    if(!s || s.railEngaged) return false;
+    if(s.xrailExitRampActive) return true;
+    if(s.lastXRailExitReason==="x-exit" && (s.railExitRefractory||0)>0) return true;
+    return recentXExitSwing(s);
+}
+
 /*
   Finish / recovery knobs. Knock cap stays 0.086.
   Mouth force is "were they actually shoved into the hole."
@@ -5848,22 +5855,26 @@ function newPhysicsCollision(dt){
     const bounceSep=Math.max(0,-closing)*(0.54+directness*0.24);
     const pAttackBit=isAttackTypeBit(p);
     const cAttackBit=isAttackTypeBit(c);
+    const pRailSwing=recentRailSwing(p);
+    const cRailSwing=recentRailSwing(c);
+    const pHitLikeAttack=pAttackBit || pRailSwing;
+    const cHitLikeAttack=cAttackBit || cRailSwing;
     const pSpinPower=
         (0.004+pAttack*0.004+pKB*0.026)*
         (0.22+0.78*pRPM)*
         Math.max(0.16, Math.min(1, pSpeed/0.034))*
         (0.42+0.58*directness)*
-        (pAttackBit && !cAttackBit ? 1.20 : 1);
+        (pHitLikeAttack && !cAttackBit ? 1.20 : 1);
     const cSpinPower=
         (0.004+cAttack*0.004+cKB*0.026)*
         (0.22+0.78*cRPM)*
         Math.max(0.16, Math.min(1, cSpeed/0.034))*
         (0.42+0.58*directness)*
-        (cAttackBit && !pAttackBit ? 1.20 : 1);
-    const pDefenseSoak=(pAttackBit && !cAttackBit
+        (cHitLikeAttack && !pAttackBit ? 1.20 : 1);
+    const pDefenseSoak=(pHitLikeAttack && !cAttackBit
         ? (1.04+(1-cDef)*0.26+(1-cBal)*0.08)
         : (0.92+(1-cDef)*0.28+(1-cBal)*0.08))*(1+(1-cRPM)*0.20);
-    const cDefenseSoak=(cAttackBit && !pAttackBit
+    const cDefenseSoak=(cHitLikeAttack && !pAttackBit
         ? (1.04+(1-pDef)*0.26+(1-pBal)*0.08)
         : (0.92+(1-pDef)*0.28+(1-pBal)*0.08))*(1+(1-pRPM)*0.20);
     let pKnockRaw=Math.max(
@@ -5878,10 +5889,10 @@ function newPhysicsCollision(dt){
         cDefenseSoak*
         (1.02+newBattleClamp(momentumFactor/2.4,0,0.16))
     );
-    if(pAttackBit && !cAttackBit){
+    if(pHitLikeAttack && !cHitLikeAttack){
         pKnockRaw*=1.24;
         cKnockRaw*=0.82;
-    }else if(cAttackBit && !pAttackBit){
+    }else if(cHitLikeAttack && !pHitLikeAttack){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
     }else if(!pAttackBit && !cAttackBit){
@@ -5891,9 +5902,10 @@ function newPhysicsCollision(dt){
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
       Over/Xtreme are a bit more reachable. Cap still owns the ceiling.
+      Non-Attack bits already use the Attack clash role for that swing.
     */
-    if(recentXExitSwing(p)) pKnockRaw*=1.11;
-    if(recentXExitSwing(c)) cKnockRaw*=1.11;
+    if(pRailSwing) pKnockRaw*=1.11;
+    if(cRailSwing) cKnockRaw*=1.11;
     const pKnockback=Math.min(0.086, pKnockRaw*0.82);
     const cKnockback=Math.min(0.086, cKnockRaw*0.82);
     const pRailBreakForce=cKnockback;
@@ -5979,10 +5991,10 @@ function newPhysicsCollision(dt){
 
     let recoilP=pKnockback*(0.04+0.05*pDef+0.08*pBal);
     let recoilC=cKnockback*(0.04+0.05*cDef+0.08*cBal);
-    if(pAttackBit && !cAttackBit){
+    if(pHitLikeAttack && !cHitLikeAttack){
         recoilC*=0.36;
         recoilP*=0.88;
-    }else if(cAttackBit && !pAttackBit){
+    }else if(cHitLikeAttack && !pHitLikeAttack){
         recoilP*=0.36;
         recoilC*=0.88;
     }
