@@ -3665,8 +3665,8 @@ const FINISH_TUNING={
     parkedSpeed:0.010,
     knockCap:0.086,
     liveStun:0.22,
-    smashAlign:0.18,
-    railSmashAlign:0.62,
+    smashAlign:0.12,
+    railSmashAlign:0.28,
     railContextMs:1400
 };
 
@@ -3740,13 +3740,20 @@ function recentRailContext(s,now){
 function railCarryIntoFinish(s,now){
     if(!s) return false;
     /*
-      A committed opponent smash into the pocket is a KO attempt, even
-      if they were on the X-Rail a moment ago. Self-KO recovery is only
+      A real knock into the pocket is a KO attempt, even if they were
+      on the X-Rail / X-Exit a moment ago. Self-KO recovery is only
       for a rail ride / X-Exit dump that was not put there by a hit.
-      Generic X-Rail clashes still get rail recovery via finishEntrySource.
+      Mouth-force clashes count, not only smashForce. Generic X-Rail
+      clashes still get rail recovery via finishEntrySource.
     */
-    if(recentOpponentSmash(s,now)){
-        const hitAt=Number(s.lastImpactAt)||0;
+    const hitAt=Number(s.lastImpactAt)||0;
+    const force=Number(s.lastImpactForce)||0;
+    const recentHit=
+        hitAt>0 &&
+        (now-hitAt)<=FINISH_TUNING.impactCreditMs &&
+        force>=FINISH_TUNING.mouthForce &&
+        !finishParkedBumper(s);
+    if(recentHit || recentOpponentSmash(s,now)){
         const exitAt=Number(s.railExitAt)||0;
         const rehooked=
             !!s.railEngaged ||
@@ -3755,7 +3762,6 @@ function railCarryIntoFinish(s,now){
         if(!rehooked) return false;
     }
     const exitAt=Number(s.railExitAt)||0;
-    const hitAt=Number(s.lastImpactAt)||0;
     if(exitAt>0 && hitAt>exitAt+60) return false;
     if(s.railEngaged || s.xrailExitRampActive) return true;
     if((s.railExitRefractory||0)>0) return true;
@@ -3765,13 +3771,13 @@ function railCarryIntoFinish(s,now){
 
 function finishEntrySource(impactQualified,railQualified,s,force,align){
     /*
-      Smash wins over rail only on a real shove into THIS hole.
-      Riding, then clashing, then falling in is a rail hit unless the
-      knock is lined up with the painted opening. A parked clip is a dump.
+      Smash wins over rail on a real shove that actually crossed into
+      this painted hole. Rail context alone is not enough to veto a
+      mouth-force clash; lineup still has to point at the opening.
+      A parked clip is a dump.
     */
     const parked=finishParkedBumper(s);
     const heading=Number(align)||0;
-    const liveStun=(Number(s?.impactMomentumState)||0)>FINISH_TUNING.liveStun;
     const now=typeof performance!=="undefined"&&typeof performance.now==="function"
         ? performance.now()
         : 0;
@@ -3781,10 +3787,10 @@ function finishEntrySource(impactQualified,railQualified,s,force,align){
         impactQualified &&
         force>=FINISH_TUNING.smashForce &&
         !parked &&
-        heading>=smashLine &&
-        (liveStun || !fromRail)
+        heading>=smashLine
     ) return "smash";
-    if(railQualified||(fromRail&&impactQualified)) return "rail";
+    if(railQualified||(fromRail&&!impactQualified)) return "rail";
+    if(impactQualified) return "dump";
     return "dump";
 }
 
@@ -3891,18 +3897,17 @@ function checkForcedStadiumFinish(s){
     const liveStun=(Number(s.impactMomentumState)||0)>FINISH_TUNING.liveStun;
 
     // Finishes need a committed knock into the opening. Light rim
-    // clips and a missed X-Exit dump should not auto-score. A real
-    // smash keeps credit for the full window so it can still travel
-    // into the hole after hit-stun fades. Light force only counts
-    // while they are still in the shove. A live rail carry or
-    // X-Exit dump is recovery, not an automatic self-KO.
+    // clips should not auto-score. A real smash keeps credit for the
+    // full window so it can still travel into the hole after hit-stun
+    // fades. Light force only counts while they are still in the shove.
+    // A rail/X-Exit dump with no clash is recovery-or-score, not a
+    // silent bounce. A mouth-force clash is not treated as rail carry.
     const impactEntry=
         recentImpact &&
         force>=FINISH_TUNING.mouthForce &&
-        !railCarry &&
         (liveStun || force>=FINISH_TUNING.smashForce);
     const railExitForce=s.railExitForce||0;
-    const railEntry=railCarry && speed>=0.022;
+    const railEntry=railCarry && speed>=0.018;
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3935,22 +3940,36 @@ function checkForcedStadiumFinish(s){
             Math.max(Math.hypot(s.x,s.y),0.0001);
 
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
+        const parked=finishParkedBumper(s);
+        /*
+          Crossing the painted hole is the finish attempt. Do not also
+          demand a perfect radial line — clash keeps orbit tangent, so
+          a real pocket shot often looks a little sideways. Light/parked
+          clips still bounce.
+        */
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.016:0.022) &&
-            outward>=(tired?0.00070:0.00110) &&
-            alignment>=(tired?0.040:0.080);
+            !parked &&
+            speed>=(tired?0.010:0.014) &&
+            (outward>=-0.00020 || alignment>=(tired?0.020:0.040));
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.024:0.032) &&
-            outward>=(tired?0.00070:0.00110) &&
-            alignment>=(tired?0.045:0.085);
+            speed>=(tired?0.016:0.020) &&
+            (outward>=-0.00020 || alignment>=(tired?0.020:0.040));
 
         const zoneName=hole.id==="Xtreme"?"Xtreme":"Over";
         const recoveryZone=hole.id==="Xtreme"?"Xtreme":"Pocket";
+        const lightClip=
+            parked ||
+            (
+                !impactEntry &&
+                !railEntry &&
+                speed<0.016 &&
+                force<FINISH_TUNING.mouthForce
+            );
 
-        if(impactQualified||railQualified){
+        if(impactQualified||railQualified||!lightClip){
             const source=finishEntrySource(impactQualified,railQualified,s,force,alignment);
             const recoveryForce=source==="smash"
                 ? force
