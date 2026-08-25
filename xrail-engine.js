@@ -121,7 +121,12 @@ function inCommittedFinishMouth(s){
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
- if(outward<0.0048 || r<0.68)return false;
+ /*
+   Skip the solid bounce so a real knock can finish crossing into
+   the painted hole. Outward only has to be into the opening, not
+   a full rail-speed dump. Light taps still bounce (no smash).
+ */
+ if(outward<0.0012 || r<0.64)return false;
  return !!inMouthCorridor(s.x,s.y);
 }
 function onStadiumOutside(s,p){
@@ -683,5 +688,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.9-rail-backside",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture};
+global.SpinWarsXRailEngine={version:"6.9-finish-mouth",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture};
 })(typeof window!=="undefined"?window:globalThis);
