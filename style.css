@@ -980,6 +980,48 @@ footer{
   animation:screenIn .18s ease-out;
 }
 
+.vs-screen{
+  overflow-y:auto;
+  max-height:100vh;
+}
+.vs-call{
+  margin:0;
+  flex:0 0 auto;
+  padding:12px 14px 14px;
+  background:
+    repeating-linear-gradient(-32deg,transparent 0 10px,rgba(240,180,41,.07) 10px 12px),
+    linear-gradient(180deg,#1a1612,#100e0c);
+  border:2px solid #3a3128;
+  border-left:6px solid var(--green);
+  box-shadow:0 8px 0 #000;
+}
+.vs-call-kicker{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 8px;
+  color:var(--gold);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.22em;
+}
+.vs-call-kicker span{
+  display:inline-flex;
+  align-items:center;
+  padding:2px 7px;
+  background:#0c6b32;
+  color:#d8ffd8;
+  letter-spacing:.14em;
+  font-size:10px;
+}
+.vs-call-copy{
+  margin:0;
+  color:#f6f0e6;
+  font-size:14px;
+  line-height:1.4;
+  text-align:left;
+}
+
 .vs-board{
   display:grid;
   grid-template-columns:1fr auto 1fr;
