@@ -2449,6 +2449,8 @@ const NEW_STADIUM_GEOMETRY = {
         right: { x:80, y:91, w:24, h:9 }
     },
 
+    // Display notes only. Live Over/Xtreme mouths are the SVG hole
+    // polygons in xrail-engine.js (same paths as the stadium art).
     xtremeZone: { x:50, y:91, w:22, h:9 }
 };
 
@@ -3792,81 +3794,21 @@ function checkForcedStadiumFinish(s){
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
 
-    // V55 FINISH QUALIFICATION
-    // A Bey must actually enter the finish zone with meaningful momentum
-    // and a directional path toward the opening. Position alone is not enough.
-    // This keeps self-KOs and light taps from producing automatic finishes.
+    // A finish is crossing into a painted hole this frame, not sitting
+    // on the lower rail. The 1.20s launch bounce is gone: spawn and
+    // rail position are not inside these holes.
+    const holes=typeof SpinWarsXRailEngine!=="undefined" ? SpinWarsXRailEngine : null;
+    if(!holes || typeof holes.holeAt!=="function") return null;
 
-    // ---------- XTREME ----------
-    const wasXtreme=
-        prevY>=0.70 &&
-        prevY<=1.01 &&
-        Math.abs(prevX)<=0.268;
+    const prevHole=holes.holeAt(prevX,prevY);
+    const hole=holes.holeAt(s.x,s.y);
+    const entered=!!hole && (!prevHole || prevHole.key!==hole.key);
+    const enteredXtreme=entered && hole.id==="Xtreme";
+    const enteredPocket=entered && hole.id==="Over";
 
-    const inXtreme=
-        s.y>=0.70 &&
-        s.y<=1.01 &&
-        Math.abs(s.x)<=0.268;
-
-    const enteredXtreme=(!wasXtreme && inXtreme);
-
-    if(enteredXtreme){
-        if((NEW_BATTLE.elapsed||0)<1.20){
-            bounceFromFinishZone(s,"Xtreme");
-            return null;
-        }
-        const dx=-s.x;
-        const dy=0.91-s.y;
-        const d=Math.hypot(dx,dy)||1;
-
-        const alignment=
-            (s.vx*dx+s.vy*dy)/
-            Math.max(speed*d,0.0001);
-
-        const tired=newBattleClamp(s.rpm,0,1)<0.35;
-        const impactQualified=
-            impactEntry &&
-            speed>=(tired?0.012:0.018) &&
-            alignment>=(tired?0.03:0.06);
-
-        const railQualified=
-            railEntry &&
-            speed>=(tired?0.018:0.026) &&
-            alignment>=(tired?0.035:0.07);
-
-        if(impactQualified||railQualified){
-            const source=finishEntrySource(impactQualified,railQualified,s,force);
-            const recoveryForce=source==="smash"
-                ? force
-                : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
-            if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce,source)) return "Recovered";
-            s.finishDebug=
-                `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
-                `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            return "Xtreme";
-        }
-        if(tryFinishZoneRecovery(s,"Xtreme",force,"dump")) return "Recovered";
-        bounceFromFinishZone(s,"Xtreme");
-        return null;
-    }
-
-    // ---------- OVER / POCKET ----------
-    const wasLeftPocket=prevX<=-0.560 && prevY>=0.708;
-    const wasRightPocket=prevX>=0.560 && prevY>=0.708;
-    const leftPocket=s.x<=-0.560 && s.y>=0.708;
-    const rightPocket=s.x>=0.560 && s.y>=0.708;
-
-    const enteredPocket=
-        (!wasLeftPocket && leftPocket) ||
-        (!wasRightPocket && rightPocket);
-
-    if(enteredPocket){
-        if((NEW_BATTLE.elapsed||0)<1.20){
-            bounceFromFinishZone(s,"Over");
-            return null;
-        }
-        const targetX=(leftPocket || s.x<0) ? -0.84 : 0.84;
-        const targetY=0.90;
+    if(entered){
+        const targetX=hole.cx;
+        const targetY=hole.cy;
         const dx=targetX-s.x;
         const dy=targetY-s.y;
         const d=Math.hypot(dx,dy)||1;
@@ -3892,19 +3834,22 @@ function checkForcedStadiumFinish(s){
             outward>=(tired?0.00055:0.00090) &&
             alignment>=(tired?0.032:0.065);
 
+        const zoneName=hole.id==="Xtreme"?"Xtreme":"Over";
+        const recoveryZone=hole.id==="Xtreme"?"Xtreme":"Pocket";
+
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
             const recoveryForce=source==="smash"
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
-            if(tryFinishZoneRecovery(s,"Pocket",recoveryForce,source)) return "Recovered";
+            if(tryFinishZoneRecovery(s,recoveryZone,recoveryForce,source)) return "Recovered";
             s.finishDebug=
-                `OVER CONFIRMED · force ${force.toFixed(3)} · `+
+                `${hole.id==="Xtreme"?"XTREME":"OVER"} CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
-            return "Over";
+            return zoneName;
         }
-        if(tryFinishZoneRecovery(s,"Pocket",force,"dump")) return "Recovered";
-        bounceFromFinishZone(s,"Over");
+        if(tryFinishZoneRecovery(s,recoveryZone,force,"dump")) return "Recovered";
+        bounceFromFinishZone(s,zoneName);
         return null;
     }
 
@@ -3929,7 +3874,10 @@ if(typeof globalThis!=="undefined"){
         recoveryChance:finishRecoveryChance,
         entrySource:finishEntrySource,
         parkedBumper:finishParkedBumper,
-        recentOpponentSmash
+        recentOpponentSmash,
+        holeAt:(x,y)=>typeof SpinWarsXRailEngine!=="undefined" && SpinWarsXRailEngine.holeAt
+            ? SpinWarsXRailEngine.holeAt(x,y)
+            : null
     };
 }
 
