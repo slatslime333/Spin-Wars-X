@@ -980,8 +980,13 @@ footer{
   animation:screenIn .18s ease-out;
 }
 
+.vs-screen{
+  overflow-y:auto;
+  max-height:100vh;
+}
 .vs-call{
   margin:0;
+  flex:0 0 auto;
   padding:12px 14px 14px;
   background:
     repeating-linear-gradient(-32deg,transparent 0 10px,rgba(240,180,41,.07) 10px 12px),
@@ -989,7 +994,6 @@ footer{
   border:2px solid #3a3128;
   border-left:6px solid var(--green);
   box-shadow:0 8px 0 #000;
-  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
 }
 .vs-call-kicker{
   display:flex;
@@ -1013,8 +1017,8 @@ footer{
 .vs-call-copy{
   margin:0;
   color:#f6f0e6;
-  font-size:15px;
-  line-height:1.45;
+  font-size:14px;
+  line-height:1.4;
   text-align:left;
 }
 

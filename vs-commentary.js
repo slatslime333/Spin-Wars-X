@@ -27,14 +27,6 @@
     function pick(list){
         return list[Math.floor(Math.random()*list.length)];
     }
-    function scramble(list){
-        const copy=list.slice();
-        for(let i=copy.length-1;i>0;i--){
-            const j=Math.floor(Math.random()*(i+1));
-            const t=copy[i];copy[i]=copy[j];copy[j]=t;
-        }
-        return copy;
-    }
     function n(v){return Math.round(Number(v)||0);}
     function escapeHtml(s){
         return String(s||"").replace(/[&<>"']/g,ch=>({
@@ -286,22 +278,13 @@
         const p=snapshot(player,playerCombo,playerPlate,"player");
         const c=snapshot(cpu,cpuCombo,cpuPlate,"cpu");
         const intro=pick(INTROS);
-        const pLike=pick(likeLines(p));
-        const pHate=pick(dislikeLines(p));
-        const cLike=pick(likeLines(c));
-        const cHate=pick(dislikeLines(c));
-        const height=Math.random()<0.55?heightTake(Math.random()<0.5?p:c):"";
-        const bits=scramble([
-            pLike,
-            Math.random()<0.72?pHate:"",
-            cLike,
-            Math.random()<0.72?cHate:"",
-            height,
-            matchupLine(p,c)
-        ]).filter(Boolean);
-        const takes=bits.slice(0,4);
+        const playerTake=Math.random()<0.55?pick(likeLines(p)):pick(dislikeLines(p));
+        const cpuTake=Math.random()<0.55?pick(likeLines(c)):pick(dislikeLines(c));
+        const extra=Math.random()<0.5
+            ?heightTake(Math.random()<0.5?p:c)
+            :matchupLine(p,c);
         const call=winnerCall(p,c);
-        return [intro,...takes,call].join(" ");
+        return [intro,playerTake,cpuTake,extra,call].join(" ");
     }
 
     function renderHTML(player,cpu,playerCombo,cpuCombo,playerPlate,cpuPlate){
