@@ -3640,12 +3640,12 @@ function recentXExitSwing(s){
   Smash force is "was that a committed KO," not any contact.
 */
 const FINISH_TUNING={
-    mouthForce:0.014,
+    mouthForce:0.020,
     mouthStun:0.22,
-    smashForce:0.038,
+    smashForce:0.028,
     impactCreditMs:1100,
     smashCreditMs:1100,
-    smashHotMs:500,
+    smashHotMs:700,
     parkedSpeed:0.010,
     knockCap:0.086,
     liveStun:0.22,
@@ -3672,29 +3672,29 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
       Limp dumps climb when healthy.
     */
     if(kind==="dump"){
-        let chance=0.14+Math.pow(rpm,1.20)*0.72-tilt*0.04;
-        if(rpm>=0.70) chance=Math.max(chance,0.78);
-        if(rpm>=0.50) chance=Math.max(chance,0.58);
+        let chance=0.22+Math.pow(rpm,1.20)*0.70-tilt*0.04;
+        if(rpm>=0.70) chance=Math.max(chance,0.86);
+        if(rpm>=0.50) chance=Math.max(chance,0.70);
         if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.12, 0.88);
+        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.94);
     }
     if(kind==="rail"){
         let chance=
-            0.52+
-            rpm*0.30-
-            into*0.16-
+            0.58+
+            rpm*0.28-
+            into*0.14-
             tilt*0.04;
         if(rpm<0.28) chance*=0.48;
-        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.14, 0.82);
+        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.88);
     }
     const glance=Math.pow(1-into,1.35);
     let chance=
-        0.03+
-        Math.pow(rpm,1.05)*0.48*glance*(1-smash*0.58)+
-        glance*0.10*(0.40+0.60*rpm)-
+        0.02+
+        Math.pow(rpm,1.05)*0.34*glance*(1-smash*0.70)+
+        glance*0.07*(0.40+0.60*rpm)-
         tilt*((zone==="Pocket"||zone==="Over")?0.03:0.02);
-    if(rpm<0.25) chance*=0.55;
-    return newBattleClamp(chance, rpm<0.22 ? 0.02 : 0.03, 0.52);
+    if(rpm<0.25) chance*=0.50;
+    return newBattleClamp(chance, rpm<0.22 ? 0.01 : 0.02, 0.34);
 }
 
 function recentOpponentSmash(s,now){
@@ -3765,8 +3765,8 @@ function finishEntrySource(impactQualified,railQualified,s,force,align){
         impactQualified &&
         force>=FINISH_TUNING.smashForce &&
         !parked &&
-        liveStun &&
-        heading>=smashLine
+        heading>=smashLine &&
+        (liveStun || !fromRail)
     ) return "smash";
     if(railQualified||(fromRail&&impactQualified)) return "rail";
     return "dump";
@@ -3875,15 +3875,16 @@ function checkForcedStadiumFinish(s){
     const liveStun=(Number(s.impactMomentumState)||0)>FINISH_TUNING.liveStun;
 
     // Finishes need a committed knock into the opening. Light rim
-    // clips and a missed X-Exit dump should not auto-score; a real
-    // smash still can. Stale smash credit without live hit-stun is
-    // not a KO line. A live rail carry or X-Exit dump is recovery,
-    // not an automatic self-KO, even if an older clash left force.
+    // clips and a missed X-Exit dump should not auto-score. A real
+    // smash keeps credit for the full window so it can still travel
+    // into the hole after hit-stun fades. Light force only counts
+    // while they are still in the shove. A live rail carry or
+    // X-Exit dump is recovery, not an automatic self-KO.
     const impactEntry=
         recentImpact &&
         force>=FINISH_TUNING.mouthForce &&
         !railCarry &&
-        liveStun;
+        (liveStun || force>=FINISH_TUNING.smashForce);
     const railExitForce=s.railExitForce||0;
     const railEntry=railCarry && speed>=0.022;
 
@@ -3920,15 +3921,15 @@ function checkForcedStadiumFinish(s){
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.012:0.018) &&
-            outward>=(tired?0.00055:0.00090) &&
-            alignment>=(tired?0.028:0.055);
+            speed>=(tired?0.016:0.022) &&
+            outward>=(tired?0.00070:0.00110) &&
+            alignment>=(tired?0.040:0.080);
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.018:0.026) &&
-            outward>=(tired?0.00055:0.00090) &&
-            alignment>=(tired?0.032:0.065);
+            speed>=(tired?0.024:0.032) &&
+            outward>=(tired?0.00070:0.00110) &&
+            alignment>=(tired?0.045:0.085);
 
         const zoneName=hole.id==="Xtreme"?"Xtreme":"Over";
         const recoveryZone=hole.id==="Xtreme"?"Xtreme":"Pocket";
@@ -5872,8 +5873,8 @@ function newPhysicsCollision(dt){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
     }else if(!pAttackBit && !cAttackBit){
-        pKnockRaw*=1.20;
-        cKnockRaw*=1.20;
+        pKnockRaw*=1.22;
+        cKnockRaw*=1.22;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so

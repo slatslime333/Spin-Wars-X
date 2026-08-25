@@ -116,7 +116,7 @@ function inMouthCorridor(x,y){
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
-  (Number(s.lastImpactForce)||0)>=0.014 &&
+  (Number(s.lastImpactForce)||0)>=0.020 &&
   (Number(s.impactMomentumState)||0)>0.22;
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);

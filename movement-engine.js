@@ -648,7 +648,7 @@ if(radius>wall){
         outward>0.0048 &&
         radius>=0.68 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.014 &&
+        (s.lastImpactForce||0)>=0.020 &&
         (s.impactMomentumState||0)>0.22;
 
     if(finishEscape){
