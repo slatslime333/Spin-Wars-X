@@ -124,6 +124,29 @@ function inCommittedFinishMouth(s){
  if(outward<0.0048 || r<0.68)return false;
  return !!inMouthCorridor(s.x,s.y);
 }
+function onStadiumOutside(s,p){
+ if(!s||!p)return false;
+ return (s.x-p.x)*p.x+(s.y-p.y)*p.y>0.0006;
+}
+/*
+  The ride path is the inner face of the X-Rail. A Bey that has been
+  knocked behind that spine (stadium-outside, including the lower rail
+  over the painted holes) must not re-hook and ride out of the bowl.
+*/
+function onRailBackside(s,p){
+ if(!s||!p||p.closer)return false;
+ return onStadiumOutside(s,p);
+}
+function blockRailCapture(s){
+ if(!s)return false;
+ if(holeAt(s.x,s.y))return true;
+ if(inCommittedFinishMouth(s))return true;
+ const ride=nearest(s.x,s.y);
+ if(ride&&onRailBackside(s,ride))return true;
+ const solid=nearestSolid(s.x,s.y);
+ if(solid&&onRailBackside(s,solid))return true;
+ return false;
+}
 function bezier(p0,p1,p2,p3,t){
  const u=1-t,uu=u*u,tt=t*t;
  return{x:uu*u*p0.x+3*uu*t*p1.x+3*u*tt*p2.x+tt*t*p3.x,
@@ -314,6 +337,9 @@ function captureDecision(s,p,contact){
    return{ok:false,reason:"exit-not-a-hook",contact:c};
   }
  }
+ if(onRailBackside(s,p)||holeAt(s.x,s.y)||inCommittedFinishMouth(s)){
+  return{ok:false,reason:"finish-backside",contact:c};
+ }
  return{ok:true,contact:c,grip:clamp(0.72+(1-c.tilt)*0.14+c.tangentRatio*0.10,0.72,0.96)};
 }
 function engage(s,contact){
@@ -383,7 +409,12 @@ function bounce(s,p){
  * their speed. Riding the exit is only for a real CCW hook (handled
  * before bounce). Do not dump them or let them skim along the V.
   */
- if(p.closer||isExitZone(s,p)){
+ /*
+ * Unhooked X-Exit hits bounce toward stadium middle with most of
+ * their speed. The back of the lower rail uses the same shove so a
+ * knock behind the spine cannot skate into a painted hole as a ride.
+  */
+ if(p.closer||isExitZone(s,p)||onRailBackside(s,p)){
   const toX=0-s.x,toY=0-s.y,toLen=Math.hypot(toX,toY)||1;
   const cx=toX/toLen,cy=toY/toLen;
   if(d<gap){
@@ -526,6 +557,11 @@ function exitRampStep(s,dt){
 function riderStep(s,dt){
  if(s.xrailExitRampActive)return exitRampStep(s,dt);
  const g=buildGeometry(),p=nearest(s.x,s.y);if(!p){release(s,"no-geometry");return false;}
+ if(holeAt(s.x,s.y)||onRailBackside(s,p)){
+  release(s,"finish-side");
+  bounce(s,p);
+  return false;
+ }
  const radius=beyRadius(s),distance=Math.sqrt(Math.max(0,p.dist2)),contactLimit=radius+RAIL_HALF_WIDTH+0.012;
  if(distance>contactLimit){release(s,"lost-contact");return false;}
  const lastDistance=s._xrailLastDistance;if(Number.isFinite(lastDistance)&&p.distance<lastDistance-0.12){release(s,"lost-forward-progress");return false;}
@@ -612,11 +648,13 @@ function step(s,dt){
  if(!Number.isFinite(s._xrailPrevX)){s._xrailPrevX=s.x;s._xrailPrevY=s.y;}
  const justRodeExit=!!s.railExited||(s.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0);
  const mouthPass=inCommittedFinishMouth(s);
+ const inHole=!!holeAt(s.x,s.y);
+ const noCapture=blockRailCapture(s);
  const solid=sweptSolidContact(s);
  if(solid){
   const overlapping=solid.distance<=contactRadius(s);
   if(solid.impact||overlapping){
-   if(!mouthPass && !justRodeExit && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
+   if(!noCapture && !justRodeExit && (s.railExitRefractory||0)<=0 && (s.railCaptureCooldown||0)<=0){
     const rail=sweptRailContact(s);
     if(rail && (rail.impact||rail.distance<=contactRadius(s)) && engage(s,rail)){
      s._xrailPrevX=s.x;s._xrailPrevY=s.y;
@@ -625,14 +663,14 @@ function step(s,dt){
      return{active:true,state:"capture"};
     }
    }
-   if(!mouthPass){
+   if(!mouthPass && !inHole){
     bounce(s,solid);
     const after=nearestSolid(s.x,s.y);
-    if(after) separateFromSolid(s,after);
+    if(after && !onRailBackside(s,after) && !after.closer) separateFromSolid(s,after);
    }
    s._xrailPrevX=s.x;s._xrailPrevY=s.y;
    const p=nearestSolid(s.x,s.y);s._xrailSolidPrevDistance=p?Math.sqrt(Math.max(0,p.dist2)):Infinity;
-   return{active:false,state:mouthPass?"finish-mouth":"free"};
+   return{active:false,state:(mouthPass||inHole)?"finish-mouth":"free"};
   }
   setContactDebug(s,solid,solid.distance,"near");
  }else clearContactDebug(s);
@@ -645,5 +683,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.8-finish-holes",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone};
+global.SpinWarsXRailEngine={version:"6.9-rail-backside",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture};
 })(typeof window!=="undefined"?window:globalThis);
