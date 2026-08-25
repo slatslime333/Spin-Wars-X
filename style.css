@@ -1557,6 +1557,12 @@ footer{
   clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);
   box-shadow:0 14px 32px rgba(0,0,0,.5)!important;
 }
+#newStadium.kill-cam{
+  will-change:transform;
+}
+#newStadium.kill-cam-out{
+  transition:transform .18s ease-out;
+}
 
 .battle-dock{display:flex;flex-direction:column;gap:8px}
 .battle-fighters{

@@ -2518,8 +2518,228 @@ const NEW_BATTLE = {
     active:false,
     player:null,
     cpu:null,
-    railGeometry:null
+    railGeometry:null,
+    killCam:null,
+    killCamPendingFinish:null
 };
+
+const KILL_CAM={
+    zoom:1.34,
+    slow:0.34,
+    holdMs:720,
+    openDelay:1.18,
+    chance:0.5,
+    ghostTicks:16,
+    shakeMs:170,
+    shakePx:5.2
+};
+
+function resetKillCam(){
+    NEW_BATTLE.killCam={
+        used:false,
+        rolledStamp:0,
+        armed:false,
+        active:false,
+        until:0,
+        originX:50,
+        originY:72,
+        shakeUntil:0,
+        shakeAmp:0
+    };
+    NEW_BATTLE.killCamPendingFinish=null;
+    clearKillCamDom();
+}
+
+function killCamState(){
+    return NEW_BATTLE.killCam||(resetKillCam(),NEW_BATTLE.killCam);
+}
+
+function clearKillCamDom(){
+    const st=document.getElementById("newStadium");
+    if(!st) return;
+    st.classList.remove("kill-cam","kill-cam-out");
+    st.style.transform="";
+    st.style.transformOrigin="";
+}
+
+function stadiumOriginFromWorld(x,y){
+    return {
+        x:newBattleClamp(50+(Number(x)||0)*39,12,88),
+        y:newBattleClamp(46+(Number(y)||0)*39,18,90)
+    };
+}
+
+function ghostHitsFinishHole(s,ticks){
+    const holes=typeof SpinWarsXRailEngine!=="undefined"?SpinWarsXRailEngine:null;
+    if(!s||!holes||typeof holes.holeAt!=="function") return false;
+    let x=Number(s.x)||0;
+    let y=Number(s.y)||0;
+    const vx=Number(s.vx)||0;
+    const vy=Number(s.vy)||0;
+    const n=Math.max(1,ticks|0);
+    for(let i=0;i<n;i++){
+        x+=vx;
+        y+=vy;
+        if(holes.holeAt(x,y)) return true;
+        if(typeof holes.inMouthCorridor==="function"&&holes.inMouthCorridor(x,y)) return true;
+    }
+    return false;
+}
+
+function killCamAim(s){
+    const holes=typeof SpinWarsXRailEngine!=="undefined"?SpinWarsXRailEngine:null;
+    const empty={align:-1,ghost:false,near:false,y:s?.y||0,force:0,speed:0};
+    if(!s||!holes||typeof holes.buildFinishHoles!=="function") return empty;
+    const force=Number(s.lastImpactForce)||0;
+    const speed=Math.hypot(Number(s.vx)||0,Number(s.vy)||0);
+    const list=holes.buildFinishHoles()||[];
+    let best=-1;
+    for(const h of list){
+        const dx=(h.cx||0)-s.x;
+        const dy=(h.cy||0)-s.y;
+        const d=Math.hypot(dx,dy)||1;
+        const align=speed>0.001?((s.vx*dx)+(s.vy*dy))/(speed*d):-1;
+        if(align>best) best=align;
+    }
+    const near=!!(typeof holes.holeAt==="function"&&holes.holeAt(s.x,s.y))||
+        (typeof holes.inCommittedFinishMouth==="function"&&holes.inCommittedFinishMouth(s))||
+        (typeof holes.inMouthCorridor==="function"&&holes.inMouthCorridor(s.x,s.y));
+    return {
+        align:best,
+        ghost:ghostHitsFinishHole(s,KILL_CAM.ghostTicks),
+        near,
+        y:Number(s.y)||0,
+        force,
+        speed
+    };
+}
+
+function isKillCamCandidate(p,c,now){
+    if((NEW_BATTLE.elapsed||0)<KILL_CAM.openDelay) return null;
+    const cam=killCamState();
+    if(cam.used||cam.active) return null;
+    const weapon=s=>
+        recentXExitSwing(s)||recentRailSwing(s)||railCarryIntoFinish(s,now);
+    const reads=[
+        {s:p,aim:killCamAim(p),weapon:weapon(p)||weapon(c)},
+        {s:c,aim:killCamAim(c),weapon:weapon(c)||weapon(p)}
+    ];
+    let pick=null;
+    let best=-1;
+    for(const row of reads){
+        const a=row.aim;
+        const smash=a.force>=FINISH_TUNING.smashForce;
+        const mouth=a.force>=FINISH_TUNING.mouthForce;
+        const heavy=NEW_BATTLE.lastImpact&&NEW_BATTLE.lastImpact.impactClass==="heavy";
+        const parked=finishParkedBumper(row.s);
+        if(parked) continue;
+        if(!mouth&&!row.weapon) continue;
+        if(!(smash||heavy||(row.weapon&&mouth))) continue;
+        const holeBound=a.ghost||a.near||(a.align>=0.40&&a.y>0.10&&a.speed>=0.018);
+        if(!holeBound) continue;
+        const score=
+            (a.near?6:0)+(a.ghost?5:0)+(smash?3:0)+(heavy?2:0)+
+            (row.weapon?2:0)+a.align*2+a.y;
+        if(score>best){
+            best=score;
+            pick=row;
+        }
+    }
+    return pick;
+}
+
+function pulseKillCamShake(now,amp){
+    const cam=killCamState();
+    cam.shakeUntil=now+KILL_CAM.shakeMs;
+    cam.shakeAmp=amp||KILL_CAM.shakePx;
+}
+
+function startKillCam(focus,now,shake){
+    const cam=killCamState();
+    if(cam.used||cam.active) return;
+    const origin=stadiumOriginFromWorld(focus.x,focus.y);
+    cam.active=true;
+    cam.used=true;
+    cam.until=now+KILL_CAM.holdMs;
+    cam.originX=origin.x;
+    cam.originY=origin.y;
+    if(shake) pulseKillCamShake(now,KILL_CAM.shakePx+0.8);
+    if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onKillCam){
+        SpinWarsVsCall.onKillCam(focus.victim,focus.other,now);
+    }
+}
+
+function endKillCam(){
+    const cam=killCamState();
+    cam.active=false;
+    cam.until=0;
+    cam.shakeUntil=0;
+    cam.shakeAmp=0;
+    const st=document.getElementById("newStadium");
+    if(!st) return;
+    st.classList.add("kill-cam-out");
+    st.classList.remove("kill-cam");
+    st.style.transformOrigin=`${cam.originX}% ${cam.originY}%`;
+    st.style.transform="translate(0px,0px) scale(1)";
+}
+
+function applyKillCamTransform(now){
+    const cam=NEW_BATTLE.killCam;
+    const st=document.getElementById("newStadium");
+    if(!cam||!st) return;
+    if(cam.active&&now>=cam.until) endKillCam();
+    const shaking=cam.shakeUntil>now;
+    if(!cam.active&&!shaking){
+        if(st.classList.contains("kill-cam")) endKillCam();
+        return;
+    }
+    st.classList.add("kill-cam");
+    st.classList.remove("kill-cam-out");
+    st.style.transformOrigin=`${cam.originX}% ${cam.originY}%`;
+    let sx=0,sy=0;
+    if(shaking){
+        const u=newBattleClamp((cam.shakeUntil-now)/KILL_CAM.shakeMs,0,1);
+        const mag=cam.shakeAmp*u*u;
+        sx=(Math.random()*2-1)*mag;
+        sy=(Math.random()*2-1)*mag;
+    }
+    const zoom=cam.active?KILL_CAM.zoom:1;
+    st.style.transform=`translate(${sx.toFixed(2)}px,${sy.toFixed(2)}px) scale(${zoom})`;
+}
+
+function considerKillCam(p,c,now){
+    const cam=killCamState();
+    const imp=NEW_BATTLE.lastImpact;
+    if(cam.active){
+        if(imp&&imp.time&&imp.time!==cam.rolledStamp&&(now-(imp.time||0))<80){
+            cam.rolledStamp=imp.time;
+            const origin=stadiumOriginFromWorld(imp.x,imp.y);
+            cam.originX=origin.x;
+            cam.originY=origin.y;
+            pulseKillCamShake(now,imp.impactClass==="heavy"?KILL_CAM.shakePx+1.4:KILL_CAM.shakePx);
+        }
+        applyKillCamTransform(now);
+        return;
+    }
+    if(!imp||!imp.time){
+        applyKillCamTransform(now);
+        return;
+    }
+    if(imp.time!==cam.rolledStamp){
+        cam.rolledStamp=imp.time;
+        const cand=isKillCamCandidate(p,c,now);
+        cam.armed=!!cand&&Math.random()<KILL_CAM.chance;
+        if(cam.armed&&cand){
+            startKillCam({
+                x:imp.x,
+                y:imp.y,
+                victim:cand.s,
+                other:cand.s===p?c:p
+            },now,true);
+        }
+    }
+    applyKillCamTransform(now);
+}
 
 // Self-contained helper for the NEW engine.
 // Do not depend on any removed legacy battle helpers.
@@ -3217,6 +3437,7 @@ function startNewBattle(){
         NEW_BATTLE.physicsAcc=0;
         NEW_BATTLE.active=true;
         NEW_BATTLE.last=performance.now();
+        resetKillCam();
 
         renderNewBattle();
         NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
@@ -3505,6 +3726,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     NEW_BATTLE.finishPending=true;
     NEW_BATTLE.active=false;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
+    endKillCam();
 
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
 
@@ -3628,6 +3850,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
         NEW_BATTLE.finishPending=false;
         NEW_BATTLE.active=false;
+        resetKillCam();
         Game.player.recoveredFlashUntil=0;
         Game.cpu.recoveredFlashUntil=0;
         NEW_BATTLE.player=null;
@@ -4168,6 +4391,20 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
 
+    if(NEW_BATTLE.killCamPendingFinish){
+        const cam=killCamState();
+        applyKillCamTransform(now);
+        if(!cam.active||now>=cam.until){
+            const finish=NEW_BATTLE.killCamPendingFinish;
+            NEW_BATTLE.killCamPendingFinish=null;
+            endKillCam();
+            finishNewBattle(finish.winnerSide,finish.type);
+            return;
+        }
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+        return;
+    }
+
     /*
       iPhone 15 Pro Low Power Mode (~60fps) is the physics feel target.
       Display stays on requestAnimationFrame (smooth on 120/180Hz).
@@ -4175,8 +4412,10 @@ function newBattleFrame(now){
     */
     const frameDt=Math.min(0.050,Math.max(0,(now-NEW_BATTLE.last)/1000));
     NEW_BATTLE.last=now;
+    const cam=NEW_BATTLE.killCam;
+    const timeScale=cam&&cam.active?KILL_CAM.slow:1;
     NEW_BATTLE.physicsAcc=Math.min(
-        (NEW_BATTLE.physicsAcc||0)+frameDt,
+        (NEW_BATTLE.physicsAcc||0)+frameDt*timeScale,
         PHYSICS_DT*PHYSICS_MAX_STEPS
     );
 
@@ -4415,6 +4654,8 @@ function newBattleFrame(now){
             }
         }
 
+        considerKillCam(p,c,now);
+
         /*
           V44 FIX: invoke the authoritative finish resolver from the physics
           loop. V43 defined the resolver but never executed it.
@@ -4442,9 +4683,21 @@ function newBattleFrame(now){
             });
         }
 
+        if(playerFinish==="Recovered"||cpuFinish==="Recovered"){
+            endKillCam();
+        }
+
         if(finishCandidates.length){
             finishCandidates.sort((a,b)=>b.strength-a.strength);
             const finish=finishCandidates[0];
+            if((finish.type==="Xtreme"||finish.type==="Over")&&killCamState().active){
+                pulseKillCamShake(now,KILL_CAM.shakePx+1.6);
+                applyKillCamTransform(now);
+                NEW_BATTLE.killCamPendingFinish=finish;
+                NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+                return;
+            }
+            endKillCam();
             finishNewBattle(finish.winnerSide,finish.type);
             return;
         }
@@ -4510,6 +4763,7 @@ function newBattleFrame(now){
         // authoritative finish resolver.
 
         if(p.rpm<=0.001 || c.rpm<=0.001){
+            endKillCam();
             finishNewBattle(p.rpm>c.rpm?"player":"cpu");
             return;
         }

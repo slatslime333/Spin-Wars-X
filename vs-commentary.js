@@ -713,6 +713,20 @@
         paint();
     }
 
+    function onKillCam(victim,other,now){
+        const b=bladeOf(victim);
+        const o=bladeOf(other);
+        const text=pickFresh([
+            `Wait— ${b} is going toward a hole. This might be the one.`,
+            `Slow it down. ${o} just sent ${b} on a bad trip.`,
+            `That's a pocket look. Don't blink.`,
+            `${b} is flying like it doesn't live here anymore.`
+        ]);
+        say(text,96,900,"killcam",now||0);
+        paint();
+        return text;
+    }
+
     function onFinish(winner,loser,type,matchOver,playerScore,cpuScore){
         booth.lastFinish={
             winner:bladeOf(winner),
@@ -735,6 +749,6 @@
 
     global.SpinWarsVsCall={
         INTROS,buildCopy,renderHTML,escapeHtml,
-        resetMatch,battleHudMarkup,beginLive,tickBattle,onFinish,ensureSetupLine
+        resetMatch,battleHudMarkup,beginLive,tickBattle,onFinish,onKillCam,ensureSetupLine
     };
 })(typeof window!=="undefined"?window:globalThis);
