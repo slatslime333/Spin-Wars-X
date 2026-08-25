@@ -52,16 +52,9 @@ function powerOf(stats){
 
 function starterParts(blade){
     const bits=selectableBits();
-    const type=String(blade?.type||"Balance");
-    const prefer=
-        type==="Attack"?["Rush","Point","Level","Kick","Flat"]:
-        type==="Defense"?["Hexa","Ball","Wedge","Needle","Point"]:
-        type==="Stamina"?["Ball","Orb","Needle","Hexa","Wedge"]:
-        ["Point","Level","Hexa","Ball","Rush"];
-    const bit=prefer.map(n=>bits.find(b=>b.name===n)).find(Boolean)||bits[0];
-    const rats=RATCHETS.filter(r=>r.height===60);
-    const want=type==="Attack"?1:type==="Defense"?9:type==="Stamina"?7:3;
-    const ratchet=rats.find(r=>r.number===want)||rats.find(r=>r.number===7)||rats[0];
+    const bit=pick(bits.length?bits:[{name:"Point"}]);
+    const rats=typeof RATCHETS!=="undefined"?RATCHETS:[];
+    const ratchet=pick(rats.length?rats:[{name:"3-60",number:3,height:60}]);
     return {ratchet,bit};
 }
 
@@ -507,23 +500,41 @@ function bannerHTML(){
     return `<p class="rogue-round-banner">ROGUE MATCH ${r.matchIndex} / ${MAX_MATCHES}${boss}</p>`;
 }
 
-function vsNoteHTML(side){
+function previewModifier(side){
     const r=run();
-    if(!r) return "";
-    if(side==="player"){
-        const base=comboBase(r.blade,r.ratchet,r.bit);
-        const now=playerEffective();
-        const chips=STATS.filter(k=>now[k]!==base[k]).slice(0,4).map(k=>{
-            const d=now[k]-base[k];
-            const sign=d>0?"+":"";
-            return `<span class="rogue-chip ${d>=0?"up":"down"}">${LABEL[k]} ${base[k]} → ${now[k]} ${sign}${d}</span>`;
-        }).join("");
-        const mod=r.activeModifier?modifierById(r.activeModifier.id):null;
-        return `<div class="rogue-vs-note">${chips}${mod?`<span class="rogue-mod-pill">${mod.name}</span>`:""}</div>`;
-    }
-    const bonus=powerOf(r.cpuBonuses||emptyBonuses());
-    const mod=r.cpuModifier?modifierById(r.cpuModifier.id):null;
-    return `<div class="rogue-vs-note"><span class="rogue-chip">${bonus>=1?"SCALED BUILD":"STOCK PARTS"}</span>${mod?`<span class="rogue-mod-pill cpu">${mod.name}</span>`:""}</div>`;
+    const out=emptyBonuses();
+    const packed=side==="cpu"?r?.cpuModifier:r?.activeModifier;
+    const def=packed?modifierById(packed.id):null;
+    if(!def||typeof def.live!=="function") return out;
+    const stub={
+        rpm:1,x:0,y:0.22,railEngaged:false,
+        rogueHeavyArmed:false,rogueCounterArmed:false
+    };
+    STATS.forEach(k=>{out[k]=def.live(stub,k)||0;});
+    return out;
+}
+
+function plateDecor(side){
+    const r=run();
+    if(!r) return null;
+    const blade=side==="cpu"?r.cpuBlade:r.blade;
+    const ratchet=side==="cpu"?r.cpuRatchet:r.ratchet;
+    const bit=side==="cpu"?r.cpuBit:r.bit;
+    const base=comboBase(blade,ratchet,bit);
+    const merged=side==="cpu"?cpuEffective():playerEffective();
+    const live=previewModifier(side);
+    const stats={};
+    const delta={};
+    const keys=["attack","knockback","defense","mobility","balance","stamina","burst"];
+    keys.forEach(k=>{
+        const shown=round((Number(merged[k])||70)+(Number(live[k])||0));
+        stats[k]=shown;
+        delta[k]=shown-(Number(base[k])||70);
+    });
+    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
+    const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
+    const mod=packed?modifierById(packed.id):null;
+    return {stats,ovr,meta:ovr,delta,mod};
 }
 
 function mountDevButton(){
@@ -929,7 +940,7 @@ function showHelp(){
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>You pick a starting Bey and keep it. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
+            <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
             <p>Bronze starters have the harder road and better rolls. Gold starts easier. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
@@ -985,9 +996,6 @@ function decorateVs(root){
     if(!isActive()||!root) return;
     const banner=el(bannerHTML());
     root.insertBefore(banner,root.firstChild);
-    const notes=root.querySelectorAll(".vs-plate");
-    if(notes[0]) notes[0].insertAdjacentHTML("beforeend",vsNoteHTML("player"));
-    if(notes[1]) notes[1].insertAdjacentHTML("beforeend",vsNoteHTML("cpu"));
     const back=root.querySelector(".back-btn");
     if(back) back.onclick=()=>{persist();showLanding();};
     const btn=document.getElementById("battleButton");
@@ -1228,7 +1236,7 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
-    mountDevButton,endRun,persist,hasSave,MAX_MATCHES,BOSS_AT,MODIFIERS
+    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{

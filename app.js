@@ -2054,7 +2054,14 @@ function createComboSummaryCard(side,combo){
     const ovr=Number.isFinite(Number(combo.ovr))?combo.ovr:60;
     const meta=Number.isFinite(Number(combo.meta))?combo.meta:60;
     const tier=tierClass(combo.blade?.tier);
-    const statBox=(label,value)=>`<span class="vs-stat"><small>${label}</small><b>${value}</b></span>`;
+    const statBox=(label,key)=>{
+        const value=stats[key];
+        const d=Number(combo.statDelta?.[key])||0;
+        const tint=d>0?" up":d<0?" down":"";
+        const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
+        return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
+    };
+    const mod=combo.rogueMod;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}">
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
@@ -2069,22 +2076,23 @@ function createComboSummaryCard(side,combo){
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">HIT</span>
             <div class="vs-stats pair">
-              ${statBox("ATK",stats.attack)}${statBox("KB",stats.knockback)}
+              ${statBox("ATK","attack")}${statBox("KB","knockback")}
             </div>
           </div>
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">HOLD</span>
             <div class="vs-stats">
-              ${statBox("DEF",stats.defense)}${statBox("BAL",stats.balance)}${statBox("BST",stats.burst)}
+              ${statBox("DEF","defense")}${statBox("BAL","balance")}${statBox("BST","burst")}
             </div>
           </div>
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">MOVE</span>
             <div class="vs-stats pair">
-              ${statBox("MOB",stats.mobility)}${statBox("STA",stats.stamina)}
+              ${statBox("MOB","mobility")}${statBox("STA","stamina")}
             </div>
           </div>
         </div>
+        ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
       </div>
       ${Game.quickMatch || (!isPlayer && Game.mode==="custom")
         ? `<button class="vs-reroll" id="${isPlayer?"playerRerollBtn":"cpuRerollBtn"}" type="button">REROLL</button>`
@@ -2094,19 +2102,17 @@ function createComboSummaryCard(side,combo){
 function showComboCard(){
     Game.screen="comboCheck";
     if(Game.mode!=="rogue") generateCPUCombo();
-    const playerCombo=Game.mode==="rogue"
-        ? SpinWarsRogue.battleCombo("player")
-        : calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
-    const cpuCombo=Game.mode==="rogue"
-        ? SpinWarsRogue.battleCombo("cpu")
-        : calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
+    const playerPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("player"):null;
+    const cpuPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("cpu"):null;
+    const playerCombo=playerPlate||calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
+    const cpuCombo=cpuPlate||calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
     const playLabel=Game.quickMatch?"PLAY":"LET IT RIP";
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       <section class="vs-board">
-        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta})}
+        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
@@ -5896,8 +5902,8 @@ function newPhysicsCollision(dt){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
     }else if(!pAttackBit && !cAttackBit){
-        pKnockRaw*=1.23;
-        cKnockRaw*=1.23;
+        pKnockRaw*=1.25;
+        cKnockRaw*=1.25;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
