@@ -3592,7 +3592,11 @@ const FINISH_TUNING={
     smashCreditMs:1100,
     smashHotMs:500,
     parkedSpeed:0.010,
-    knockCap:0.086
+    knockCap:0.086,
+    liveStun:0.22,
+    smashAlign:0.18,
+    railSmashAlign:0.62,
+    railContextMs:1400
 };
 
 function finishParkedBumper(s){
@@ -3650,12 +3654,25 @@ function recentOpponentSmash(s,now){
     );
 }
 
+function recentRailContext(s,now){
+    if(!s) return false;
+    if(s.railEngaged || s.xrailExitRampActive) return true;
+    if((s.railExitRefractory||0)>0) return true;
+    if(recentXExitSwing(s)) return true;
+    const exitAt=Number(s.railExitAt)||0;
+    if(exitAt<=0) return false;
+    const t=Number(now);
+    const clock=Number.isFinite(t)&&t>0?t:(typeof performance!=="undefined"?performance.now():0);
+    return (clock-exitAt)<=FINISH_TUNING.railContextMs;
+}
+
 function railCarryIntoFinish(s,now){
     if(!s) return false;
     /*
       A committed opponent smash into the pocket is a KO attempt, even
       if they were on the X-Rail a moment ago. Self-KO recovery is only
       for a rail ride / X-Exit dump that was not put there by a hit.
+      Generic X-Rail clashes still get rail recovery via finishEntrySource.
     */
     if(recentOpponentSmash(s,now)){
         const hitAt=Number(s.lastImpactAt)||0;
@@ -3675,14 +3692,28 @@ function railCarryIntoFinish(s,now){
     return now-exitAt<=1400;
 }
 
-function finishEntrySource(impactQualified,railQualified,s,force){
+function finishEntrySource(impactQualified,railQualified,s,force,align){
     /*
-      Smash wins over rail only when the knock is a real shove.
-      A parked clip or light graze is a dump so recovery can climb.
+      Smash wins over rail only on a real shove into THIS hole.
+      Riding, then clashing, then falling in is a rail hit unless the
+      knock is lined up with the painted opening. A parked clip is a dump.
     */
     const parked=finishParkedBumper(s);
-    if(impactQualified && force>=FINISH_TUNING.smashForce && !parked) return "smash";
-    if(railQualified) return "rail";
+    const heading=Number(align)||0;
+    const liveStun=(Number(s?.impactMomentumState)||0)>FINISH_TUNING.liveStun;
+    const now=typeof performance!=="undefined"&&typeof performance.now==="function"
+        ? performance.now()
+        : 0;
+    const fromRail=railQualified||recentRailContext(s,now);
+    const smashLine=fromRail?FINISH_TUNING.railSmashAlign:FINISH_TUNING.smashAlign;
+    if(
+        impactQualified &&
+        force>=FINISH_TUNING.smashForce &&
+        !parked &&
+        liveStun &&
+        heading>=smashLine
+    ) return "smash";
+    if(railQualified||(fromRail&&impactQualified)) return "rail";
     return "dump";
 }
 
@@ -3786,12 +3817,18 @@ function checkForcedStadiumFinish(s){
 
     const recentImpact=age<=FINISH_TUNING.impactCreditMs;
     const railCarry=railCarryIntoFinish(s,now);
+    const liveStun=(Number(s.impactMomentumState)||0)>FINISH_TUNING.liveStun;
 
     // Finishes need a committed knock into the opening. Light rim
     // clips and a missed X-Exit dump should not auto-score; a real
-    // smash still can. A live rail carry or X-Exit dump is recovery,
+    // smash still can. Stale smash credit without live hit-stun is
+    // not a KO line. A live rail carry or X-Exit dump is recovery,
     // not an automatic self-KO, even if an older clash left force.
-    const impactEntry=recentImpact && force>=FINISH_TUNING.mouthForce && !railCarry;
+    const impactEntry=
+        recentImpact &&
+        force>=FINISH_TUNING.mouthForce &&
+        !railCarry &&
+        liveStun;
     const railExitForce=s.railExitForce||0;
     const railEntry=railCarry && speed>=0.022;
 
@@ -3842,7 +3879,7 @@ function checkForcedStadiumFinish(s){
         const recoveryZone=hole.id==="Xtreme"?"Xtreme":"Pocket";
 
         if(impactQualified||railQualified){
-            const source=finishEntrySource(impactQualified,railQualified,s,force);
+            const source=finishEntrySource(impactQualified,railQualified,s,force,alignment);
             const recoveryForce=source==="smash"
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
@@ -3879,6 +3916,7 @@ if(typeof globalThis!=="undefined"){
         entrySource:finishEntrySource,
         parkedBumper:finishParkedBumper,
         recentOpponentSmash,
+        recentRailContext,
         holeAt:(x,y)=>typeof SpinWarsXRailEngine!=="undefined" && SpinWarsXRailEngine.holeAt
             ? SpinWarsXRailEngine.holeAt(x,y)
             : null
@@ -5908,15 +5946,15 @@ function newPhysicsCollision(dt){
         if(!rider.railEngaged &&
            rider.lastImpactForce>=0.0065 &&
            rider.railContactPoint){
-            const rx=rider.x-rider.railContactPoint.x;
-            const ry=rider.y-rider.railContactPoint.y;
+            const rx=rider.railContactPoint.x;
+            const ry=rider.railContactPoint.y;
             const rl=Math.hypot(rx,ry)||1;
             const eject=
                 0.010+
                 newBattleClamp(rider.lastImpactForce/0.025,0,2)*0.014;
 
-            rider.vx+=(rx/rl)*eject;
-            rider.vy+=(ry/rl)*eject;
+            rider.vx+=(-rx/rl)*eject;
+            rider.vy+=(-ry/rl)*eject;
             rider.surfaceBounce=0.34;
             rider.surfaceRecovery=0.20;
             rider.railContactPoint=null;
