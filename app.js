@@ -1100,6 +1100,12 @@ function homeMarkHTML(opts){
 function renderMainMenu(){
     Game.screen="menu";
     Game.quickMatch=false;
+    document.getElementById("rogueDevBtn")?.remove();
+    document.getElementById("rogueDevPanel")?.remove();
+    if(typeof SpinWarsRogue!=="undefined" && Game.mode==="rogue"){
+        SpinWarsRogue.endRun("aborted");
+    }
+    Game.mode=null;
     const app=document.getElementById("app");
     if(!app) return;
 
@@ -1120,14 +1126,15 @@ function renderMainMenu(){
                 <span class="home-league-copy"><b>CAMPAIGN</b><small>Coming soon</small></span>
                 <span class="home-league-go lock">LOCKED</span>
             </button>
-            <button class="home-league locked" type="button" aria-disabled="true">
+            <button class="home-league custom" data-home="rogue" type="button">
                 <span class="home-league-rank">03</span>
-                <span class="home-league-copy"><b>ROGUE</b><small>Coming soon</small></span>
-                <span class="home-league-go lock">LOCKED</span>
+                <span class="home-league-copy"><b>ROGUE</b><small>6 matches · first to 7 · build the Bey</small></span>
+                <span class="home-league-go">ENTER</span>
             </button>
         </nav>
     </main>`;
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
+    document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showIntro());
 }
 
 function renderLeagueSelect(){
@@ -1309,7 +1316,8 @@ function renderBladeDraft(){
         nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
         document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
     }
-    container.appendChild(createBackButton(()=>renderLeagueSelect()));
+    container.appendChild(createBackButton(()=>Game.mode==="rogue"?SpinWarsRogue.showIntro():renderLeagueSelect()));
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 
 //=========================
@@ -1420,9 +1428,11 @@ function chooseBlade(blade,card){
     card.style.boxShadow="0 0 30px gold";
 
     setTimeout(()=>{
-
+        if(Game.mode==="rogue"){
+            SpinWarsRogue.onStarterPicked(blade);
+            return;
+        }
         showRatchetPlaceholder();
-
     },350);
 
 }
@@ -2082,9 +2092,14 @@ function createComboSummaryCard(side,combo){
     </article>`;
 }
 function showComboCard(){
-    const playerCombo=calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
-    generateCPUCombo();
-    const cpuCombo=calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
+    Game.screen="comboCheck";
+    if(Game.mode!=="rogue") generateCPUCombo();
+    const playerCombo=Game.mode==="rogue"
+        ? SpinWarsRogue.battleCombo("player")
+        : calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
+    const cpuCombo=Game.mode==="rogue"
+        ? SpinWarsRogue.battleCombo("cpu")
+        : calculateComboStats(Game.cpu.blade,Game.cpu.ratchet,Game.cpu.bit);
     const app=document.getElementById("app");
     const playLabel=Game.quickMatch?"PLAY":"LET IT RIP";
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
@@ -2122,7 +2137,11 @@ function showComboCard(){
     }
 
     const menu=document.querySelector(".vs-screen");
-    if(menu) menu.appendChild(createBackButton(()=>Game.quickMatch?renderLeagueSelect():showBitDraft()));
+    if(menu) menu.appendChild(createBackButton(()=>
+        Game.mode==="rogue"?SpinWarsRogue.showIntro():
+        Game.quickMatch?renderLeagueSelect():showBitDraft()
+    ));
+    if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
 }
 
 //=========================
@@ -2182,13 +2201,17 @@ function generateCPUCombo(force=false){
 
 
 function showVS(){
-    generateCPUCombo();
+    if(Game.mode!=="rogue") generateCPUCombo();
     assignStadiumSides();
 
     // Match is first-to-7 points. Only initialize this when creating the
     // matchup; individual battle sequences preserve the score.
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
-    Game.battle.round=1;
+    if(Game.mode==="rogue"){
+        Game.battle.round=Game.battle.round||1;
+    }else{
+        Game.battle.round=1;
+    }
     Game.battle.playerLaunchHistory=Game.battle.playerLaunchHistory||[];
     Game.battle.cpuLaunchHistory=Game.battle.cpuLaunchHistory||[];
     Game.cpu.lockedLaunchPlan=null;
@@ -2709,7 +2732,10 @@ function getAutomaticLaunchPlan(side){
 
 function newBattleLaunchState(side){
     const combo=Game[side];
-    const stats=calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+    const comboCalc=Game.mode==="rogue"
+        ? SpinWarsRogue.battleCombo(side)
+        : calculateComboStats(combo.blade,combo.ratchet,combo.bit);
+    const stats=comboCalc?.stats||{};
 
     const plan =
         side==="player" && Game.player.launch?.technique
@@ -2983,8 +3009,8 @@ function newBattleLaunchState(side){
         mass:Math.max(0.82,Math.min(1.18,(combo.blade?.weight||35)/35)),
         hitFlash:0,impactScale:1,lastKnockback:0,
         stats,blade:combo.blade,ratchet:combo.ratchet,bit:combo.bit,
-        comboOVR:Number(stats.ovr ?? combo.comboOVR),
-        comboMeta:Number(stats.meta ?? combo.comboMeta),
+        comboOVR:Number(comboCalc?.ovr ?? combo.comboOVR),
+        comboMeta:Number(comboCalc?.meta ?? combo.comboMeta),
         launchPlan:plan,
         launchQuality:plan.quality,
         launchSpeed,
@@ -3439,7 +3465,7 @@ function renderNewBattle(){
                   <span class="battle-score-vs">VS</span>
                   <b>${Game.battle.score?.cpu||0}</b>
                 </div>
-                <small class="battle-score-ft">first to 7</small>
+                <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
               </div>
               <div class="battle-hud-card battle-hud-cpu">
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
@@ -3459,6 +3485,9 @@ function renderNewBattle(){
     updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
     updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        SpinWarsRogue.mountDevButton();
+    }
 }
 
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
@@ -3538,6 +3567,11 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
             Game.battle.matchFinished=true;
             Game.battle.finished=true;
             Game.battle.winner=matchWinner;
+
+            if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+                SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType);
+                return;
+            }
 
             const finalWinner=
                 matchWinner==="player"
@@ -4678,6 +4712,13 @@ function getDynamicBitBehavior(bit,rpm,stability,currentTilt){
 
 function getBattleStatPoints(s,key,fallback=70){
     const value=Number(s?.stats?.[key]);
+    const live=typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()
+        ? SpinWarsRogue.liveBonus(s,key)
+        : 0;
+    const total=(Number.isFinite(value)?value:fallback)+live;
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
+        return Math.max(1,Math.min(220,total));
+    }
     if(!Number.isFinite(value)){
         return Math.max(50,Math.min(99,fallback));
     }
@@ -4705,6 +4746,13 @@ function matchStatCounter(key){
   not a bye.
 */
 function matchScaledStat(myPoints,theirPoints){
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
+        const mine=Math.max(1,Number(myPoints)||70);
+        const theirs=Math.max(1,Number(theirPoints)||70);
+        const mean=Math.max(1,(mine+theirs)*0.5);
+        const rel=newBattleClamp(mine/mean,0.72,1.32);
+        return newBattleClamp(0.90*rel,0.62,1.18);
+    }
     const mine=Math.max(50,Math.min(99,Number(myPoints)||70));
     const theirs=Math.max(50,Math.min(99,Number(theirPoints)||70));
     const mean=Math.max(1,(mine+theirs)*0.5);
@@ -6308,6 +6356,9 @@ function newPhysicsCollision(dt){
     c.lastImpactOpponentSpeed=pSpeed;
     p.lastImpactAttacker="cpu";
     c.lastImpactAttacker="player";
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
+        SpinWarsRogue.onClash(p,c,pKnockback,cKnockback);
+    }
 
     if(pWasOnRail &&
        Math.max(pRailBreakForce,Math.abs(p.lastKnockback||0))>=railCollisionBreakThreshold){
