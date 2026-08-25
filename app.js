@@ -1103,7 +1103,7 @@ function renderMainMenu(){
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
     if(typeof SpinWarsRogue!=="undefined" && Game.mode==="rogue"){
-        SpinWarsRogue.endRun("aborted");
+        SpinWarsRogue.persist();
     }
     Game.mode=null;
     const app=document.getElementById("app");
@@ -1134,7 +1134,7 @@ function renderMainMenu(){
         </nav>
     </main>`;
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
-    document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showIntro());
+    document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
 }
 
 function renderLeagueSelect(){
@@ -1316,7 +1316,7 @@ function renderBladeDraft(){
         nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
         document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
     }
-    container.appendChild(createBackButton(()=>Game.mode==="rogue"?SpinWarsRogue.showIntro():renderLeagueSelect()));
+    container.appendChild(createBackButton(()=>Game.mode==="rogue"?SpinWarsRogue.showLanding():renderLeagueSelect()));
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 
@@ -2138,10 +2138,11 @@ function showComboCard(){
 
     const menu=document.querySelector(".vs-screen");
     if(menu) menu.appendChild(createBackButton(()=>
-        Game.mode==="rogue"?SpinWarsRogue.showIntro():
+        Game.mode==="rogue"?SpinWarsRogue.showLanding():
         Game.quickMatch?renderLeagueSelect():showBitDraft()
     ));
     if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
+    if(Game.mode==="rogue" && typeof SpinWarsRogue.persist==="function") SpinWarsRogue.persist();
 }
 
 //=========================
@@ -2229,6 +2230,11 @@ function showLetItRip(){
        !Game.cpu.blade || !Game.cpu.ratchet || !Game.cpu.bit){
         console.error("Launch setup blocked: combo data is missing.");
         return;
+    }
+
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        Game.screen="battle";
+        SpinWarsRogue.persist();
     }
 
     Game.player.launch=Game.player.launch||{};
@@ -3487,6 +3493,8 @@ function renderNewBattle(){
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
+        Game.screen="battle";
+        SpinWarsRogue.persist();
     }
 }
 
@@ -3508,6 +3516,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.battle.score.player+=finishPoints;
     }else{
         Game.battle.score.cpu+=finishPoints;
+    }
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        Game.screen="battle";
+        SpinWarsRogue.persist();
     }
 
     Game.battle.finishType=finishType;

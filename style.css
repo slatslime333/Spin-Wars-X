@@ -2015,6 +2015,34 @@ button:focus-visible{
   margin-top:10px;
 }
 
+#rogueNewConfirm{
+  width:min(520px,100%);
+  margin:12px auto 0;
+}
+#rogueNewConfirm .menu-btn{margin-top:10px;width:100%}
+.home-league:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  pointer-events:none;
+}
+.rogue-help{gap:12px}
+.rogue-help-card{
+  width:100%;
+}
+.rogue-help-card .eyebrow{color:var(--gold);letter-spacing:.16em}
+.rogue-help-card p+p{margin-top:10px}
+.rogue-help-offers{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.rogue-help-offers .rogue-offer{
+  min-height:132px;
+  cursor:default;
+  pointer-events:none;
+}
+.rogue-help-offers .rogue-offer.evolve{grid-column:1/-1}
+
 @media(max-width:720px){
   .rogue-offers{grid-template-columns:1fr}
+  .rogue-help-offers{grid-template-columns:1fr}
+  .rogue-help-offers .rogue-offer.evolve{grid-column:auto}
 }

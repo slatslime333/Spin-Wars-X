@@ -243,6 +243,7 @@ function applyLiveToBattle(){
 
 function refreshAfterDebug(){
     applyLiveToBattle();
+    persist();
     if(Game.screen==="rogueHub") showHub();
     else if(Game.screen==="comboCheck") showComboCard();
 }
@@ -618,36 +619,338 @@ function renderDevList(){
     });
 }
 
-function showIntro(){
+function bladeByName(name){
+    return Object.values(BLADE_ENGINE).find(b=>b.name===name)||null;
+}
+function ratchetByName(name){
+    return (typeof RATCHETS!=="undefined"?RATCHETS:[]).find(r=>r.name===name)||null;
+}
+function bitByName(name){
+    return (selectableBits().find(b=>b.name===name))||null;
+}
+
+const SAVE_KEY="spinWarsX.rogue.v1";
+const COOKIE_KEY="swx_rogue";
+
+function packModifier(mod){
+    if(!mod) return null;
+    return {id:mod.id};
+}
+function packCard(card){
+    if(!card) return null;
+    return {
+        id:card.id,rarity:card.rarity,kind:card.kind,stat:card.stat,
+        amount:card.amount,downStat:card.downStat,downAmt:card.downAmt,
+        title:card.title,kicker:card.kicker,body:card.body,
+        part:card.part,modifierId:card.modifierId,evolve:card.evolve
+    };
+}
+function packUpgrade(u){
+    if(!u) return null;
+    return {
+        card:packCard(u.card),
+        before:u.before||null,
+        after:u.after||null,
+        partName:u.part?.name||null,
+        partKind:u.card?.part||null,
+        lostId:u.lost?.id||null,
+        nowId:u.now?.id||null,
+        tier:u.tier||null
+    };
+}
+function unpackUpgrade(raw){
+    if(!raw) return null;
+    const u={
+        card:raw.card||null,
+        before:raw.before||null,
+        after:raw.after||null,
+        tier:raw.tier||null
+    };
+    if(raw.partName){
+        u.part=raw.partKind==="ratchet"?ratchetByName(raw.partName):bitByName(raw.partName);
+    }
+    if(raw.lostId) u.lost=modifierById(raw.lostId);
+    if(raw.nowId) u.now=modifierById(raw.nowId);
+    return u;
+}
+
+function persistScreen(){
+    const s=Game.screen;
+    if(s==="battle"||s==="comboCheck") return s==="battle"?"battle":"comboCheck";
+    return s||"comboCheck";
+}
+
+function buildSave(){
+    const r=run();
+    if(!r||r.runStatus==="lost"||!r.blade) return null;
+    return {
+        v:1,
+        savedAt:Date.now(),
+        screen:persistScreen(),
+        battle:{
+            score:{
+                player:Number(Game.battle?.score?.player)||0,
+                cpu:Number(Game.battle?.score?.cpu)||0
+            },
+            round:Number(Game.battle?.round)||1
+        },
+        rogue:{
+            runStatus:r.runStatus||"running",
+            matchIndex:r.matchIndex||1,
+            startingBeyId:r.startingBeyId||r.blade?.name,
+            startingTier:r.startingTier,
+            currentRogueTier:r.currentRogueTier,
+            bladeName:r.blade?.name,
+            ratchetName:r.ratchet?.name,
+            bitName:r.bit?.name,
+            bonuses:{...emptyBonuses(),...(r.bonuses||{})},
+            activeModifier:packModifier(r.activeModifier),
+            history:(r.history||[]).map(packCard),
+            offers:(r.offers||[]).map(packCard),
+            lastResult:r.lastResult||null,
+            lastUpgrade:packUpgrade(r.lastUpgrade),
+            pendingReforge:packCard(r.pendingReforge),
+            cpuPowerTarget:r.cpuPowerTarget||0,
+            boss:!!r.boss,
+            cpuBladeName:r.cpuBlade?.name,
+            cpuRatchetName:r.cpuRatchet?.name,
+            cpuBitName:r.cpuBit?.name,
+            cpuBonuses:{...emptyBonuses(),...(r.cpuBonuses||{})},
+            cpuModifier:packModifier(r.cpuModifier)
+        }
+    };
+}
+
+function writeCookie(value){
+    try{
+        const encoded=encodeURIComponent(value);
+        const payload=encoded.length>3500
+            ? encodeURIComponent(JSON.stringify({v:1,has:1}))
+            : encoded;
+        document.cookie=`${COOKIE_KEY}=${payload}; path=/; max-age=31536000; SameSite=Lax`;
+    }catch(_e){}
+}
+function readCookie(){
+    try{
+        const parts=document.cookie.split(";");
+        for(const part of parts){
+            const p=part.trim();
+            if(!p.startsWith(COOKIE_KEY+"=")) continue;
+            return decodeURIComponent(p.slice(COOKIE_KEY.length+1));
+        }
+    }catch(_e){}
+    return "";
+}
+function persist(){
+    const data=buildSave();
+    if(!data) return false;
+    let json="";
+    try{json=JSON.stringify(data);}catch(_e){return false;}
+    try{localStorage.setItem(SAVE_KEY,json);}catch(_e){}
+    writeCookie(json);
+    return true;
+}
+function loadRaw(){
+    let text="";
+    try{text=localStorage.getItem(SAVE_KEY)||"";}catch(_e){}
+    if(!text) text=readCookie();
+    if(!text) return null;
+    try{
+        const data=JSON.parse(text);
+        if(!data||data.v!==1||!data.rogue||!data.rogue.bladeName) return null;
+        return data;
+    }catch(_e){return null;}
+}
+function hasSave(){return !!loadRaw();}
+function peekSave(){
+    const data=loadRaw();
+    if(!data) return null;
+    return {
+        match:data.rogue.matchIndex,
+        blade:data.rogue.bladeName,
+        score:data.battle?.score,
+        screen:data.screen
+    };
+}
+function clearSave(){
+    try{localStorage.removeItem(SAVE_KEY);}catch(_e){}
+    try{document.cookie=`${COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`;}catch(_e){}
+}
+
+function hydrate(data){
+    const raw=data.rogue;
+    const blade=bladeByName(raw.bladeName);
+    const ratchet=ratchetByName(raw.ratchetName);
+    const bit=bitByName(raw.bitName);
+    if(!blade||!ratchet||!bit) return false;
     Game.mode="rogue";
     Game.quickMatch=false;
-    Game.screen="rogueIntro";
-    Game.rogue=null;
+    Game.rogue={
+        runStatus:raw.runStatus||"running",
+        matchIndex:raw.matchIndex||1,
+        startingBeyId:raw.startingBeyId||blade.name,
+        startingTier:raw.startingTier||blade.tier||"Silver",
+        currentRogueTier:raw.currentRogueTier||blade.tier||"Silver",
+        blade,ratchet,bit,
+        bonuses:{...emptyBonuses(),...(raw.bonuses||{})},
+        activeModifier:raw.activeModifier||null,
+        history:(raw.history||[]).map(c=>c),
+        offers:(raw.offers||[]).map(c=>c),
+        lastResult:raw.lastResult||null,
+        lastUpgrade:unpackUpgrade(raw.lastUpgrade),
+        pendingReforge:raw.pendingReforge||null,
+        cpuPowerTarget:raw.cpuPowerTarget||0,
+        boss:!!raw.boss,
+        cpuBlade:bladeByName(raw.cpuBladeName),
+        cpuRatchet:ratchetByName(raw.cpuRatchetName),
+        cpuBit:bitByName(raw.cpuBitName),
+        cpuBonuses:{...emptyBonuses(),...(raw.cpuBonuses||{})},
+        cpuModifier:raw.cpuModifier||null
+    };
+    if(!Game.rogue.cpuBlade||!Game.rogue.cpuRatchet||!Game.rogue.cpuBit){
+        generateCpu();
+    }
+    Game.battle={
+        score:{
+            player:Number(data.battle?.score?.player)||0,
+            cpu:Number(data.battle?.score?.cpu)||0
+        },
+        round:Number(data.battle?.round)||1
+    };
+    Game.player.launch={angle:"Flat",technique:"Center"};
+    Game.cpu.lockedLaunchPlan=null;
+    syncLoadout();
+    return true;
+}
+
+function resumeSave(){
+    const data=loadRaw();
+    if(!data||!hydrate(data)) return false;
+    const screen=data.screen;
+    if(screen==="rogueHub") showHub();
+    else if(screen==="rogueResults") showResults();
+    else if(screen==="rogueUpgrade") showUpgradeResult();
+    else if(screen==="rogueReforge" && run().pendingReforge) openReforge(run().pendingReforge,false);
+    else if(screen==="rogueWin") showRunWin();
+    else{
+        Game.player.launch={angle:"Flat",technique:"Center",setupStage:"quality"};
+        showComboCard();
+    }
+    return true;
+}
+
+function showLanding(){
+    Game.mode="rogue";
+    Game.quickMatch=false;
+    Game.screen="rogueLanding";
+    const save=peekSave();
+    const canContinue=!!save && save.blade;
+    const continueNote=canContinue
+        ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
+        : "No run saved";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
-    <main class="home rogue-intro">
+    <main class="home rogue-landing">
+        <div class="home-ring" aria-hidden="true"></div>
         ${homeMarkHTML({tag:"Rogue · First to 7 · Build the Bey"})}
-        <section class="menu-card rogue-intro-card">
-            <p class="eyebrow">ROGUE RUN</p>
-            <h2>KEEP THE BEY. CHANGE THE BUILD.</h2>
-            <p>Pick a starting Bey. Each match is still first to 7 — Xtreme, Over, Spin. Win the match, take one of three upgrades. Lose the match, the run ends. Six matches. Bosses on 3 and 6.</p>
-            <p>Bronze starters grow harder and roll better upgrades. Gold starts easier. Stats can climb past 99. Only one Rogue Modifier at a time.</p>
-            <button class="rip-btn" id="rogueStartBtn" type="button">CHOOSE STARTING BEY</button>
-        </section>
+        <nav class="home-leagues" aria-label="Rogue">
+            <p class="home-leagues-label">ROGUE RUN</p>
+            <button class="home-league quick" id="rogueNewGame" type="button">
+                <span class="home-league-rank">01</span>
+                <span class="home-league-copy"><b>NEW GAME</b><small>Pick a starting Bey</small></span>
+                <span class="home-league-go">START</span>
+            </button>
+            <button class="home-league ${canContinue?"custom":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+                <span class="home-league-rank">02</span>
+                <span class="home-league-copy"><b>CONTINUE</b><small>${continueNote}</small></span>
+                <span class="home-league-go ${canContinue?"":"lock"}">${canContinue?"RESUME":"LOCKED"}</span>
+            </button>
+            <button class="home-league silver" id="rogueHelp" type="button">
+                <span class="home-league-rank">03</span>
+                <span class="home-league-copy"><b>HELP</b><small>How a run works</small></span>
+                <span class="home-league-go">READ</span>
+            </button>
+        </nav>
+        <div id="rogueNewConfirm" hidden></div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
-    document.getElementById("rogueStartBtn").onclick=()=>{
-        Game.mode="rogue";
-        showBladeDraft();
-        const p=document.querySelector(".selection-header p");
-        if(p) p.textContent="ROGUE · STARTING BEY";
-        const h=document.querySelector(".selection-header h1");
-        if(h) h.textContent="STARTING BEY";
-        const back=document.querySelector(".back-btn");
-        if(back) back.onclick=()=>showIntro();
-        mountDevButton();
+    document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
+    document.getElementById("rogueContinue").onclick=()=>{
+        if(!canContinue) return;
+        resumeSave();
     };
+    document.getElementById("rogueHelp").onclick=()=>showHelp();
     mountDevButton();
+}
+
+function requestNewGame(){
+    if(!hasSave()){
+        startBladePick();
+        return;
+    }
+    const save=peekSave();
+    const box=document.getElementById("rogueNewConfirm");
+    if(!box){startBladePick();return;}
+    box.hidden=false;
+    box.innerHTML=`<section class="menu-card rogue-intro-card">
+        <p class="eyebrow">REPLACE SAVE</p>
+        <h2>START A NEW RUN?</h2>
+        <p>This wipes Match ${save.match||1} · ${save.blade}. The old file is gone once you pick a Bey.</p>
+        <button class="rip-btn" id="rogueNewConfirmGo" type="button">START NEW GAME</button>
+        <button class="menu-btn silver" id="rogueNewConfirmNo" type="button">BACK</button>
+    </section>`;
+    document.getElementById("rogueNewConfirmGo").onclick=()=>startBladePick();
+    document.getElementById("rogueNewConfirmNo").onclick=()=>{box.hidden=true;box.innerHTML="";};
+}
+
+function startBladePick(){
+    Game.mode="rogue";
+    showBladeDraft();
+    const p=document.querySelector(".selection-header p");
+    if(p) p.textContent="ROGUE · STARTING BEY";
+    const h=document.querySelector(".selection-header h1");
+    if(h) h.textContent="STARTING BEY";
+    const back=document.querySelector(".back-btn");
+    if(back) back.onclick=()=>showLanding();
+    mountDevButton();
+}
+
+function showHelp(){
+    Game.screen="rogueHelp";
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background"></div>
+    <main class="menu rogue-help">
+        <div class="selection-header">
+            <div class="selection-icon">X</div>
+            <div>
+                <span class="eyebrow">ROGUE</span>
+                <h1>HOW A RUN WORKS</h1>
+                <p>Same stadium. One Bey. Six matches.</p>
+            </div>
+        </div>
+        <section class="menu-card rogue-help-card">
+            <p>You pick a starting Bey and keep it. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
+            <p>Bronze starters have the harder road and better rolls. Gold starts easier. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
+        </section>
+        <p class="home-leagues-label">UPGRADES</p>
+        <div class="rogue-offers rogue-help-offers">
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 STAT</strong><small>One number goes up. No catch.</small></article>
+            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>+3 OR A TRADE</strong><small>A cleaner bump, or more of one stat for less of another.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>BIT / RATCHET REFORGE</strong><small>Three parts. Pick one. The rest of the combo stays. The stadium will feel it.</small></article>
+            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A condition in battle — late RPM, the X-Rail, opening seconds. Equipping a new one drops the old one.</small></article>
+            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">EVOLVE</span><strong>KEEP THE BEY</strong><small>The identity stays. The whole build jumps. Bronze can step up a tier.</small></article>
+        </div>
+        <section class="menu-card rogue-help-card">
+            <p class="eyebrow">MODIFIERS</p>
+            <p>Last Stand and Final Spin wake up when the RPM is gone. Berserker and First Blood hit while you are still healthy. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor plant in the bowl. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+        </section>
+    </main>`;
+    document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
+    mountDevButton();
+}
+
+function showIntro(){
+    showLanding();
 }
 
 function beginRun(blade){
@@ -671,6 +974,7 @@ function beginRun(blade){
     Game.battle={score:{player:0,cpu:0},round:1};
     generateCpu();
     showComboCard();
+    persist();
 }
 
 function onStarterPicked(blade){
@@ -685,7 +989,7 @@ function decorateVs(root){
     if(notes[0]) notes[0].insertAdjacentHTML("beforeend",vsNoteHTML("player"));
     if(notes[1]) notes[1].insertAdjacentHTML("beforeend",vsNoteHTML("cpu"));
     const back=root.querySelector(".back-btn");
-    if(back) back.onclick=()=>showIntro();
+    if(back) back.onclick=()=>{persist();showLanding();};
     const btn=document.getElementById("battleButton");
     if(btn) btn.textContent="LET IT RIP";
     mountDevButton();
@@ -701,6 +1005,10 @@ function scoreboardLabel(){
 function showResults(){
     const r=run();
     const res=r.lastResult;
+    if(!res){
+        showComboCard();
+        return;
+    }
     Game.screen="rogueResults";
     const win=res.winner==="player";
     const app=document.getElementById("app");
@@ -719,6 +1027,7 @@ function showResults(){
         showHub();
     };
     mountDevButton();
+    persist();
 }
 
 function showRunWin(){
@@ -735,12 +1044,14 @@ function showRunWin(){
         <button class="rip-btn" id="rogueWinHome" type="button">TITLE</button>
     </main>`;
     document.getElementById("rogueWinHome").onclick=()=>{endRun("won");renderMainMenu();};
+    persist();
 }
 
 function endRun(status){
     if(Game.rogue) Game.rogue.runStatus=status;
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
+    if(status==="won"||status==="lost") clearSave();
 }
 
 function showHub(){
@@ -787,6 +1098,7 @@ function showHub(){
         box.appendChild(btn);
     });
     mountDevButton();
+    persist();
 }
 
 function chooseOffer(index){
@@ -807,6 +1119,7 @@ function chooseOffer(index){
 function openReforge(card,fromDev){
     const r=run();
     const returnScreen=Game.screen;
+    r.pendingReforge=packCard(card);
     Game.screen="rogueReforge";
     const isBit=card.part==="bit";
     const pool=isBit
@@ -827,6 +1140,7 @@ function openReforge(card,fromDev){
             const before={...playerEffective()};
             if(isBit) r.bit=part; else r.ratchet=part;
             syncLoadout();
+            r.pendingReforge=null;
             r.lastUpgrade={card,before,after:{...playerEffective()},part};
             r.history.push(card);
             if(fromDev){
@@ -841,12 +1155,18 @@ function openReforge(card,fromDev){
         box.appendChild(node);
     });
     mountDevButton();
+    persist();
 }
 
 function showUpgradeResult(){
     const r=run();
     const u=r.lastUpgrade||{};
     const card=u.card||{};
+    if(!card.kind){
+        if(r.offers&&r.offers.length) showHub();
+        else showComboCard();
+        return;
+    }
     Game.screen="rogueUpgrade";
     let body="";
     if(u.before&&u.after){
@@ -874,6 +1194,7 @@ function showUpgradeResult(){
     </main>`;
     document.getElementById("rogueContinue").onclick=advanceMatch;
     mountDevButton();
+    persist();
 }
 
 function advanceMatch(){
@@ -885,6 +1206,7 @@ function advanceMatch(){
     Game.cpu.lockedLaunchPlan=null;
     generateCpu();
     showComboCard();
+    persist();
 }
 
 function onMatchOver(winner,playerScore,cpuScore,finishType){
@@ -897,12 +1219,18 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
             : `${Game.cpu.blade?.name||"CPU"} ends the run ${cpuScore}–${playerScore}.`
     };
     setTimeout(()=>showResults(),200);
+    persist();
     return true;
 }
 
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
-    showIntro,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
-    mountDevButton,endRun,MAX_MATCHES,BOSS_AT,MODIFIERS
+    showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
+    mountDevButton,endRun,persist,hasSave,MAX_MATCHES,BOSS_AT,MODIFIERS
 };
+if(typeof window!=="undefined"){
+    window.addEventListener("beforeunload",()=>{
+        try{persist();}catch(_e){}
+    });
+}
 })(typeof window!=="undefined"?window:globalThis);
