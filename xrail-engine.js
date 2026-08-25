@@ -33,12 +33,12 @@ const RIDE_MAX_STEP=0.010;
 function inCommittedFinishMouth(s){
  if(!s)return false;
  const smash=
-  (Number(s.lastImpactForce)||0)>=0.020 &&
-  (Number(s.impactMomentumState)||0)>0.28;
+  (Number(s.lastImpactForce)||0)>=0.014 &&
+  (Number(s.impactMomentumState)||0)>0.22;
  if(!smash)return false;
  const r=Math.hypot(s.x,s.y);
  const outward=r>1e-6?(s.vx*s.x+s.vy*s.y)/r:0;
- if(outward<0.0054 || r<0.68)return false;
+ if(outward<0.0048 || r<0.68)return false;
  const xtreme=s.y>=0.58 && Math.abs(s.x)<=0.26;
  const pocket=s.y>=0.54 && Math.abs(s.x)>=0.50;
  return xtreme||pocket;
@@ -566,5 +566,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.6-finish-mouth",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading,isExitZone};
+global.SpinWarsXRailEngine={version:"6.7-finish-mouth",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,pickExitLane,chooseExitHeading,isExitZone};
 })(typeof window!=="undefined"?window:globalThis);

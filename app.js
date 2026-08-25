@@ -3578,12 +3578,12 @@ function recentXExitSwing(s){
   Smash force is "was that a committed KO," not any contact.
 */
 const FINISH_TUNING={
-    mouthForce:0.020,
-    mouthStun:0.28,
+    mouthForce:0.014,
+    mouthStun:0.22,
     smashForce:0.038,
-    impactCreditMs:750,
-    smashCreditMs:750,
-    smashHotMs:400,
+    impactCreditMs:1100,
+    smashCreditMs:1100,
+    smashHotMs:500,
     parkedSpeed:0.010,
     knockCap:0.086
 };
@@ -3599,8 +3599,9 @@ function finishRecoveryChance(s,zone,knockForce,source){
     const smash=newBattleClamp(force/FINISH_TUNING.knockCap,0,1.15);
     const kind=source||"smash";
     /*
-      Recovery owns unfair entries: missed X-Rail / X-Exit, dumps, and
-      grazes. A committed smash into the opening still usually scores.
+      Recovery audits every pocket: rail miss, dump, and smash.
+      High RPM is harder to finish. Low RPM pockets stick.
+      Same RPM: rail > dump > smash to climb.
     */
     if(kind==="dump"){
         let chance=0.10+Math.pow(rpm,1.10)*0.86-tilt*0.04;
@@ -3617,11 +3618,12 @@ function finishRecoveryChance(s,zone,knockForce,source){
         return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.20, 0.97);
     }
     let chance=
-        0.02+
-        Math.pow(rpm,1.55)*0.20*(1-smash*0.90)-
-        tilt*((zone==="Pocket"||zone==="Over")?0.06:0.04);
-    if(rpm<0.18) chance*=0.28;
-    return newBattleClamp(chance, 0.02, 0.20);
+        0.06+
+        Math.pow(rpm,1.10)*0.68*(1-smash*0.40)-
+        tilt*((zone==="Pocket"||zone==="Over")?0.05:0.04);
+    if(rpm>=0.80) chance=Math.max(chance,0.38);
+    if(rpm<0.25) chance*=0.50;
+    return newBattleClamp(chance, rpm<0.22 ? 0.04 : 0.08, 0.65);
 }
 
 function recentOpponentSmash(s,now){
@@ -3779,7 +3781,7 @@ function checkForcedStadiumFinish(s){
     // not an automatic self-KO, even if an older clash left force.
     const impactEntry=recentImpact && force>=FINISH_TUNING.mouthForce && !railCarry;
     const railExitForce=s.railExitForce||0;
-    const railEntry=railCarry && speed>=0.028;
+    const railEntry=railCarry && speed>=0.022;
 
     const lip=s.finishLipContact||null;
     if(s.finishLipContact) s.finishLipContact=null;
@@ -3818,13 +3820,13 @@ function checkForcedStadiumFinish(s){
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.014:0.024) &&
-            alignment>=(tired?0.05:0.10);
+            speed>=(tired?0.012:0.018) &&
+            alignment>=(tired?0.03:0.06);
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.024:0.032) &&
-            alignment>=(tired?0.05:0.10);
+            speed>=(tired?0.018:0.026) &&
+            alignment>=(tired?0.035:0.07);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3832,10 +3834,6 @@ function checkForcedStadiumFinish(s){
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
             if(tryFinishZoneRecovery(s,"Xtreme",recoveryForce,source)) return "Recovered";
-            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.62){
-                bounceFromFinishZone(s,"Xtreme");
-                return null;
-            }
             s.finishDebug=
                 `XTREME CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
@@ -3878,15 +3876,15 @@ function checkForcedStadiumFinish(s){
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.014:0.022) &&
-            outward>=(tired?0.00080:0.00120) &&
-            alignment>=(tired?0.04:0.08);
+            speed>=(tired?0.012:0.018) &&
+            outward>=(tired?0.00055:0.00090) &&
+            alignment>=(tired?0.028:0.055);
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.024:0.032) &&
-            outward>=(tired?0.00080:0.00120) &&
-            alignment>=(tired?0.05:0.10);
+            speed>=(tired?0.018:0.026) &&
+            outward>=(tired?0.00055:0.00090) &&
+            alignment>=(tired?0.032:0.065);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3894,10 +3892,6 @@ function checkForcedStadiumFinish(s){
                 ? force
                 : Math.max(force*0.35,railExitForce*0.08,speed*0.14);
             if(tryFinishZoneRecovery(s,"Pocket",recoveryForce,source)) return "Recovered";
-            if(source!=="smash" && newBattleClamp(s.rpm,0,1)>=0.62){
-                bounceFromFinishZone(s,"Over");
-                return null;
-            }
             s.finishDebug=
                 `OVER CONFIRMED · force ${force.toFixed(3)} · `+
                 `speed ${speed.toFixed(3)} · align ${alignment.toFixed(2)}`;
