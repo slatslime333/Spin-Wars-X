@@ -2939,6 +2939,7 @@ function newBattleLaunchState(side){
         railExitRefractoryPoint:null,
         finishRecoveryUsed:false,
         recoveredFlashUntil:0,
+        lastImpactOpponentSpeed:0,
         surfaceRecovery:0,
         surfaceBounce:0,
         spriteAngle:0,
@@ -3485,54 +3486,67 @@ function recentXExitSwing(s){
     return (performance.now()-exitAt)<=1000;
 }
 
+/*
+  Finish / recovery knobs. Knock cap stays 0.086.
+  Mouth force is "were they actually shoved into the hole."
+  Smash force is "was that a committed KO," not any contact.
+*/
+const FINISH_TUNING={
+    mouthForce:0.020,
+    mouthStun:0.28,
+    smashForce:0.038,
+    impactCreditMs:750,
+    smashCreditMs:750,
+    smashHotMs:400,
+    parkedSpeed:0.010,
+    knockCap:0.086
+};
+
+function finishParkedBumper(s){
+    return (Number(s?.lastImpactOpponentSpeed)||0)<FINISH_TUNING.parkedSpeed;
+}
+
 function finishRecoveryChance(s,zone,knockForce,source){
     const rpm=newBattleClamp(s?.rpm,0,1);
     const tilt=newBattleClamp(s?.tiltLevel||0,0,1);
     const force=Math.max(0, Number(knockForce)||0);
-    const smash=newBattleClamp(force/0.086,0,1.15);
+    const smash=newBattleClamp(force/FINISH_TUNING.knockCap,0,1.15);
     const kind=source||"smash";
     /*
-      Recovery is for the cases that feel unfair: a self rail carry, an
-      X-Exit dump, or a graze that sat in the pocket and did nothing.
-      A real opponent smash into the opening should usually stay scored.
+      Recovery owns unfair entries: missed X-Rail / X-Exit, dumps, and
+      grazes. A committed smash into the opening still usually scores.
     */
     if(kind==="dump"){
-        return newBattleClamp(
-            0.04+Math.pow(rpm,1.25)*0.86-tilt*0.05,
-            rpm<0.28 ? 0.04 : 0.10,
-            0.94
-        );
+        let chance=0.10+Math.pow(rpm,1.10)*0.86-tilt*0.04;
+        if(rpm>=0.70) chance=Math.max(chance,0.90);
+        if(rpm>=0.50) chance=Math.max(chance,0.74);
+        if(rpm<0.28) chance*=0.45;
+        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.18, 0.96);
     }
     if(kind==="rail"){
-        /*
-          High RPM X-Rail / X-Exit carries into Over/Xtreme should usually
-          climb. A hard opponent knock uses smash odds, not these.
-        */
-        let chance=0.10+Math.pow(rpm,0.70)*0.84-tilt*0.05;
-        if(rpm>=0.55) chance=Math.max(chance,0.90);
+        let chance=0.18+Math.pow(rpm,0.62)*0.84-tilt*0.04;
+        if(rpm>=0.50) chance=Math.max(chance,0.90);
+        if(rpm>=0.62) chance=Math.max(chance,0.94);
         if(rpm<0.28) chance*=0.42;
-        return newBattleClamp(chance, rpm<0.22 ? 0.06 : 0.14, 0.96);
+        return newBattleClamp(chance, rpm<0.22 ? 0.08 : 0.20, 0.97);
     }
-    /*
-      Real smash into the opening: usually stays scored. High RPM does
-      not buy a self-KO save here.
-    */
     let chance=
         0.02+
-        Math.pow(rpm,1.55)*0.22*(1-smash*0.90)-
+        Math.pow(rpm,1.55)*0.20*(1-smash*0.90)-
         tilt*((zone==="Pocket"||zone==="Over")?0.06:0.04);
     if(rpm<0.18) chance*=0.28;
-    return newBattleClamp(chance, 0.02, 0.22);
+    return newBattleClamp(chance, 0.02, 0.20);
 }
 
 function recentOpponentSmash(s,now){
     const hitAt=Number(s?.lastImpactAt)||0;
     const force=Number(s?.lastImpactForce)||0;
     if(hitAt<=0) return false;
-    if((now-hitAt)>1400) return false;
-    return force>=0.024 && (
-        (Number(s.impactMomentumState)||0)>0.16 ||
-        (now-hitAt)<=500
+    if((now-hitAt)>FINISH_TUNING.smashCreditMs) return false;
+    if(finishParkedBumper(s)) return false;
+    return force>=FINISH_TUNING.smashForce && (
+        (Number(s.impactMomentumState)||0)>0.22 ||
+        (now-hitAt)<=FINISH_TUNING.smashHotMs
     );
 }
 
@@ -3563,19 +3577,12 @@ function railCarryIntoFinish(s,now){
 
 function finishEntrySource(impactQualified,railQualified,s,force){
     /*
-      Smash wins over rail. A hard knock into Over/Xtreme is not a
-      self-KO just because they touched the X-Rail this lap.
+      Smash wins over rail only when the knock is a real shove.
+      A parked clip or light graze is a dump so recovery can climb.
     */
-    if(impactQualified && force>=0.024) return "smash";
+    const parked=finishParkedBumper(s);
+    if(impactQualified && force>=FINISH_TUNING.smashForce && !parked) return "smash";
     if(railQualified) return "rail";
-    const rpm=newBattleClamp(s?.rpm,0,1);
-    /*
-      Attack bits that clip a tank then fall into a pocket usually only
-      ate their own recoil. Treat that light self-entry as a dump, not a
-      smash. A real shove into the opening still scores.
-    */
-    if(impactQualified && force<0.024 && rpm>=0.52) return "dump";
-    if(impactQualified) return "smash";
     return "dump";
 }
 
@@ -3677,14 +3684,14 @@ function checkForcedStadiumFinish(s){
     s.finishPrevX=s.x;
     s.finishPrevY=s.y;
 
-    const recentImpact=age<=1800;
+    const recentImpact=age<=FINISH_TUNING.impactCreditMs;
     const railCarry=railCarryIntoFinish(s,now);
 
     // Finishes need a committed knock into the opening. Light rim
     // clips and a missed X-Exit dump should not auto-score; a real
     // smash still can. A live rail carry or X-Exit dump is recovery,
     // not an automatic self-KO, even if an older clash left force.
-    const impactEntry=recentImpact && force>=0.0046 && !railCarry;
+    const impactEntry=recentImpact && force>=FINISH_TUNING.mouthForce && !railCarry;
     const railExitForce=s.railExitForce||0;
     const railEntry=railCarry && speed>=0.028;
 
@@ -3725,13 +3732,13 @@ function checkForcedStadiumFinish(s){
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.011:0.016) &&
-            alignment>=(tired?0.018:0.04);
+            speed>=(tired?0.014:0.024) &&
+            alignment>=(tired?0.05:0.10);
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.020:0.028) &&
-            alignment>=(tired?0.03:0.06);
+            speed>=(tired?0.024:0.032) &&
+            alignment>=(tired?0.05:0.10);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3785,15 +3792,15 @@ function checkForcedStadiumFinish(s){
         const tired=newBattleClamp(s.rpm,0,1)<0.35;
         const impactQualified=
             impactEntry &&
-            speed>=(tired?0.011:0.015) &&
-            outward>=(tired?0.00045:0.00070) &&
-            alignment>=(tired?0.016:0.028);
+            speed>=(tired?0.014:0.022) &&
+            outward>=(tired?0.00080:0.00120) &&
+            alignment>=(tired?0.04:0.08);
 
         const railQualified=
             railEntry &&
-            speed>=(tired?0.020:0.028) &&
-            outward>=(tired?0.00045:0.00070) &&
-            alignment>=(tired?0.022:0.04);
+            speed>=(tired?0.024:0.032) &&
+            outward>=(tired?0.00080:0.00120) &&
+            alignment>=(tired?0.05:0.10);
 
         if(impactQualified||railQualified){
             const source=finishEntrySource(impactQualified,railQualified,s,force);
@@ -3828,6 +3835,16 @@ function checkForcedStadiumFinish(s){
     }
 
     return null;
+}
+
+if(typeof globalThis!=="undefined"){
+    globalThis.SpinWarsFinish={
+        tuning:FINISH_TUNING,
+        recoveryChance:finishRecoveryChance,
+        entrySource:finishEntrySource,
+        parkedBumper:finishParkedBumper,
+        recentOpponentSmash
+    };
 }
 
 function applyKnockbackBoundaryOverride(s){
@@ -5718,17 +5735,20 @@ function newPhysicsCollision(dt){
     p.vy+=ty*(pTangent*0.90-pTanNow);
     c.vx+=tx*(cTangent*0.90-cTanNow);
     c.vy+=ty*(cTangent*0.90-cTanNow);
-    const keepClashSpeed=(s,pre)=>{
+    const keepClashSpeed=(s,pre,againstParked)=>{
         const now=Math.hypot(s.vx,s.vy);
-        const want=Math.max(0.012, pre*(0.48+0.30*(1-directness)));
+        const keep=againstParked
+            ? (0.28+0.16*(1-directness))
+            : (0.48+0.30*(1-directness));
+        const want=Math.max(0.012, pre*keep);
         if(now<want && now>1e-8){
             const sc=Math.min(want/now,1.55);
             s.vx*=sc;
             s.vy*=sc;
         }
     };
-    keepClashSpeed(p,pSpeedPre);
-    keepClashSpeed(c,cSpeedPre);
+    keepClashSpeed(p,pSpeedPre,cParked);
+    keepClashSpeed(c,cSpeedPre,pParked);
 
     /*
       PHASE A — IMPACT MOMENTUM OWNERSHIP
@@ -6149,6 +6169,8 @@ function newPhysicsCollision(dt){
     c.lastImpactAt=performance.now();
     p.lastImpactForce=cKnockback;
     c.lastImpactForce=pKnockback;
+    p.lastImpactOpponentSpeed=cSpeed;
+    c.lastImpactOpponentSpeed=pSpeed;
     p.lastImpactAttacker="cpu";
     c.lastImpactAttacker="player";
 

@@ -623,8 +623,8 @@ if(radius>wall){
         outward>0.0054 &&
         radius>=0.68 &&
         radius<=1.08 &&
-        (s.lastImpactForce||0)>=0.0046 &&
-        (s.impactMomentumState||0)>0.22 &&
+        (s.lastImpactForce||0)>=0.020 &&
+        (s.impactMomentumState||0)>0.28 &&
         (inXtremeGate||inPocketGate);
 
     if(finishEscape){
@@ -824,7 +824,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.3.7",
+    version:"1.3.8",
     step,
     homeOrbitRadius,
     orbitOmega,
