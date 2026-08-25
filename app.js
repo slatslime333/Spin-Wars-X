@@ -2367,7 +2367,6 @@ function showLetItRip(){
             <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
             <div class="launch-row">
               <button class="rip-btn compact" id="startBattleNow" type="button">LET IT RIP</button>
-              <button class="menu-btn silver" id="backToQuality" type="button">BACK</button>
             </div>
           </div>
         `;
@@ -2451,14 +2450,6 @@ function showLetItRip(){
             // The CPU preview is intentionally incomplete. Its real launch
             // is generated only now, after the player's choices are locked.
             startNewBattle();
-        };
-    }
-
-    const backToQuality=controls.querySelector("#backToQuality");
-    if(backToQuality){
-        backToQuality.onclick=()=>{
-            Game.player.launch.setupStage="quality";
-            showLetItRip();
         };
     }
 }
