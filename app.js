@@ -2527,9 +2527,9 @@ const KILL_CAM={
     zoom:1.34,
     slow:0.34,
     holdMs:720,
-    openDelay:1.18,
+    openDelay:0.55,
     chance:0.5,
-    ghostTicks:16,
+    ghostTicks:36,
     shakeMs:170,
     shakePx:5.2
 };
@@ -2632,10 +2632,12 @@ function isKillCamCandidate(p,c,now){
         const mouth=a.force>=FINISH_TUNING.mouthForce;
         const heavy=NEW_BATTLE.lastImpact&&NEW_BATTLE.lastImpact.impactClass==="heavy";
         const parked=finishParkedBumper(row.s);
+        const recentHit=(now-(Number(row.s.lastImpactAt)||0))<=FINISH_TUNING.impactCreditMs;
         if(parked) continue;
+        if(!recentHit&&!row.weapon) continue;
         if(!mouth&&!row.weapon) continue;
         if(!(smash||heavy||(row.weapon&&mouth))) continue;
-        const holeBound=a.ghost||a.near||(a.align>=0.40&&a.y>0.10&&a.speed>=0.018);
+        const holeBound=a.ghost||a.near||(smash&&a.align>=0.32&&a.speed>=0.016);
         if(!holeBound) continue;
         const score=
             (a.near?6:0)+(a.ghost?5:0)+(smash?3:0)+(heavy?2:0)+
@@ -2711,7 +2713,7 @@ function considerKillCam(p,c,now){
     const cam=killCamState();
     const imp=NEW_BATTLE.lastImpact;
     if(cam.active){
-        if(imp&&imp.time&&imp.time!==cam.rolledStamp&&(now-(imp.time||0))<80){
+        if(imp&&imp.time&&imp.time!==cam.rolledStamp&&(now-(imp.time||0))<90){
             cam.rolledStamp=imp.time;
             const origin=stadiumOriginFromWorld(imp.x,imp.y);
             cam.originX=origin.x;
@@ -2721,18 +2723,18 @@ function considerKillCam(p,c,now){
         applyKillCamTransform(now);
         return;
     }
-    if(!imp||!imp.time){
-        applyKillCamTransform(now);
-        return;
-    }
-    if(imp.time!==cam.rolledStamp){
-        cam.rolledStamp=imp.time;
-        const cand=isKillCamCandidate(p,c,now);
-        cam.armed=!!cand&&Math.random()<KILL_CAM.chance;
-        if(cam.armed&&cand){
+    const cand=isKillCamCandidate(p,c,now);
+    const stamp=imp&&imp.time;
+    if(cand&&stamp){
+        if(cam.rolledStamp!==stamp){
+            cam.rolledStamp=stamp;
+            cam.armed=Math.random()<KILL_CAM.chance;
+        }
+        if(cam.armed){
+            const focus=imp&&(now-(imp.time||0))<900?imp:cand.s;
             startKillCam({
-                x:imp.x,
-                y:imp.y,
+                x:focus.x,
+                y:focus.y,
                 victim:cand.s,
                 other:cand.s===p?c:p
             },now,true);
