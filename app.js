@@ -2525,11 +2525,17 @@ const NEW_BATTLE = {
 
 const KILL_CAM={
     zoom:1.48,
-    slow:0.34,
-    holdMs:720,
+    // Wall-time wind-up stays ~1–2s: sim ETA / windupWall, then clamp.
+    slowMin:0.28,
+    slowMax:0.72,
+    windupWall:1.55,
+    etaMin:0.40,
+    etaMax:1.20,
+    ghostTicks:96,
+    holdMaxMs:2400,
+    afterHitMs:280,
     openDelay:0.55,
     chance:0.5,
-    ghostTicks:36,
     shakeMs:170,
     shakePx:5.2
 };
@@ -2541,10 +2547,14 @@ function resetKillCam(){
         armed:false,
         active:false,
         until:0,
+        hitAt:0,
+        slow:KILL_CAM.slowMin,
         originX:50,
         originY:72,
         shakeUntil:0,
-        shakeAmp:0
+        shakeAmp:0,
+        victim:null,
+        startedAt:0
     };
     NEW_BATTLE.killCamPendingFinish=null;
     clearKillCamDom();
@@ -2573,26 +2583,26 @@ function stadiumOriginFromWorld(x,y){
     };
 }
 
-function ghostHitsFinishHole(s,ticks){
+function ghostHoleTicks(s,ticks){
     const holes=typeof SpinWarsXRailEngine!=="undefined"?SpinWarsXRailEngine:null;
-    if(!s||!holes||typeof holes.holeAt!=="function") return false;
+    if(!s||!holes||typeof holes.holeAt!=="function") return 0;
     let x=Number(s.x)||0;
     let y=Number(s.y)||0;
     const vx=Number(s.vx)||0;
     const vy=Number(s.vy)||0;
     const n=Math.max(1,ticks|0);
-    for(let i=0;i<n;i++){
+    for(let i=1;i<=n;i++){
         x+=vx;
         y+=vy;
-        if(holes.holeAt(x,y)) return true;
-        if(typeof holes.inMouthCorridor==="function"&&holes.inMouthCorridor(x,y)) return true;
+        if(holes.holeAt(x,y)) return i;
+        if(typeof holes.inMouthCorridor==="function"&&holes.inMouthCorridor(x,y)) return i;
     }
-    return false;
+    return 0;
 }
 
 function killCamAim(s){
     const holes=typeof SpinWarsXRailEngine!=="undefined"?SpinWarsXRailEngine:null;
-    const empty={align:-1,ghost:false,near:false,y:s?.y||0,force:0,speed:0};
+    const empty={align:-1,ticks:0,eta:0,near:false,inHole:false,y:s?.y||0,force:0,speed:0};
     if(!s||!holes||typeof holes.buildFinishHoles!=="function") return empty;
     const force=Number(s.lastImpactForce)||0;
     const speed=Math.hypot(Number(s.vx)||0,Number(s.vy)||0);
@@ -2605,13 +2615,16 @@ function killCamAim(s){
         const align=speed>0.001?((s.vx*dx)+(s.vy*dy))/(speed*d):-1;
         if(align>best) best=align;
     }
-    const near=!!(typeof holes.holeAt==="function"&&holes.holeAt(s.x,s.y))||
-        (typeof holes.inCommittedFinishMouth==="function"&&holes.inCommittedFinishMouth(s))||
-        (typeof holes.inMouthCorridor==="function"&&holes.inMouthCorridor(s.x,s.y));
+    const inHole=!!(typeof holes.holeAt==="function"&&holes.holeAt(s.x,s.y));
+    const near=inHole||
+        (typeof holes.inCommittedFinishMouth==="function"&&holes.inCommittedFinishMouth(s));
+    const ticks=ghostHoleTicks(s,KILL_CAM.ghostTicks);
     return {
         align:best,
-        ghost:ghostHitsFinishHole(s,KILL_CAM.ghostTicks),
+        ticks,
+        eta:ticks>0?ticks/60:0,
         near,
+        inHole,
         y:Number(s.y)||0,
         force,
         speed
@@ -2632,6 +2645,7 @@ function isKillCamCandidate(p,c,now){
     let best=-1;
     for(const row of reads){
         const a=row.aim;
+        if(a.inHole||a.near) continue;
         const smash=a.force>=FINISH_TUNING.smashForce;
         const mouth=a.force>=FINISH_TUNING.mouthForce;
         const heavy=NEW_BATTLE.lastImpact&&NEW_BATTLE.lastImpact.impactClass==="heavy";
@@ -2641,11 +2655,8 @@ function isKillCamCandidate(p,c,now){
         if(!recentHit&&!row.weapon) continue;
         if(!mouth&&!row.weapon) continue;
         if(!(smash||heavy||(row.weapon&&mouth))) continue;
-        const holeBound=a.ghost||a.near;
-        if(!holeBound) continue;
-        const score=
-            (a.near?6:0)+(a.ghost?5:0)+(smash?3:0)+(heavy?2:0)+
-            (row.weapon?2:0)+a.align*2+a.y;
+        if(!(a.ticks>0&&a.align>=0.18)) continue;
+        const score=(a.ticks?5:0)+(smash?3:0)+(heavy?2:0)+(row.weapon?2:0)+a.align*2+a.eta;
         if(score>best){
             best=score;
             pick=row;
@@ -2660,16 +2671,20 @@ function pulseKillCamShake(now,amp){
     cam.shakeAmp=amp||KILL_CAM.shakePx;
 }
 
-function startKillCam(focus,now,shake){
+function startKillCam(focus,now){
     const cam=killCamState();
     if(cam.used||cam.active) return;
+    const eta=Math.max(KILL_CAM.etaMin,Number(focus.eta)||KILL_CAM.etaMin);
     const origin=stadiumOriginFromWorld(focus.x,focus.y);
     cam.active=true;
     cam.used=true;
-    cam.until=now+KILL_CAM.holdMs;
+    cam.hitAt=0;
+    cam.startedAt=now;
+    cam.slow=newBattleClamp(eta/KILL_CAM.windupWall,KILL_CAM.slowMin,KILL_CAM.slowMax);
+    cam.until=now+KILL_CAM.holdMaxMs;
     cam.originX=origin.x;
     cam.originY=origin.y;
-    if(shake) pulseKillCamShake(now,KILL_CAM.shakePx+0.8);
+    cam.victim=focus.victim||null;
     if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onKillCam){
         SpinWarsVsCall.onKillCam(focus.victim,focus.other,now);
     }
@@ -2717,31 +2732,41 @@ function considerKillCam(p,c,now){
     const cam=killCamState();
     const imp=NEW_BATTLE.lastImpact;
     if(cam.active){
-        if(imp&&imp.time&&imp.time!==cam.rolledStamp&&(now-(imp.time||0))<90){
-            cam.rolledStamp=imp.time;
-            const origin=stadiumOriginFromWorld(imp.x,imp.y);
+        const follow=cam.victim||null;
+        if(follow){
+            const origin=stadiumOriginFromWorld(follow.x,follow.y);
             cam.originX=origin.x;
             cam.originY=origin.y;
+        }
+        if(!cam.hitAt&&imp&&imp.time&&imp.time!==cam.rolledStamp&&(now-(imp.time||0))<90){
+            cam.rolledStamp=imp.time;
             pulseKillCamShake(now,imp.impactClass==="heavy"?KILL_CAM.shakePx+1.4:KILL_CAM.shakePx);
+        }
+        const aim=follow?killCamAim(follow):null;
+        if(!cam.hitAt&&aim&&!aim.ticks&&!aim.near&&!aim.inHole&&(now-(cam.startedAt||now))>280){
+            endKillCam();
+            applyKillCamTransform(now);
+            return;
         }
         applyKillCamTransform(now);
         return;
     }
     const cand=isKillCamCandidate(p,c,now);
-    const stamp=imp&&imp.time;
-    if(cand&&stamp){
-        if(cam.rolledStamp!==stamp){
-            cam.rolledStamp=stamp;
-            cam.armed=Math.random()<KILL_CAM.chance;
-        }
-        if(cam.armed){
-            const focus=imp&&(now-(imp.time||0))<900?imp:cand.s;
+    const stamp=(imp&&imp.time)||(cand&&cand.s&&cand.s.lastImpactAt)||0;
+    if(cand&&stamp&&cam.rolledStamp!==stamp){
+        cam.rolledStamp=stamp;
+        cam.armed=Math.random()<KILL_CAM.chance;
+    }
+    if(cam.armed&&cand){
+        const eta=Number(cand.aim&&cand.aim.eta)||0;
+        if(eta>=KILL_CAM.etaMin&&eta<=KILL_CAM.etaMax){
             startKillCam({
-                x:focus.x,
-                y:focus.y,
+                x:cand.s.x,
+                y:cand.s.y,
+                eta,
                 victim:cand.s,
                 other:cand.s===p?c:p
-            },now,true);
+            },now);
         }
     }
     applyKillCamTransform(now);
@@ -4441,8 +4466,7 @@ function newBattleFrame(now){
             finishNewBattle(finish.winnerSide,finish.type);
             return;
         }
-        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
-        return;
+        // Keep 1x physics after the pocket hit so slo-mo is only the wind-up.
     }
 
     /*
@@ -4453,7 +4477,7 @@ function newBattleFrame(now){
     const frameDt=Math.min(0.050,Math.max(0,(now-NEW_BATTLE.last)/1000));
     NEW_BATTLE.last=now;
     const cam=NEW_BATTLE.killCam;
-    const timeScale=cam&&cam.active?KILL_CAM.slow:1;
+    const timeScale=cam&&cam.active&&!cam.hitAt?cam.slow:1;
     NEW_BATTLE.physicsAcc=Math.min(
         (NEW_BATTLE.physicsAcc||0)+frameDt*timeScale,
         PHYSICS_DT*PHYSICS_MAX_STEPS
@@ -4723,23 +4747,28 @@ function newBattleFrame(now){
             });
         }
 
-        if(playerFinish==="Recovered"||cpuFinish==="Recovered"){
-            endKillCam();
-        }
-
-        if(finishCandidates.length){
-            finishCandidates.sort((a,b)=>b.strength-a.strength);
-            const finish=finishCandidates[0];
-            if((finish.type==="Xtreme"||finish.type==="Over")&&killCamState().active){
-                pulseKillCamShake(now,KILL_CAM.shakePx+1.6);
-                applyKillCamTransform(now);
-                NEW_BATTLE.killCamPendingFinish=finish;
-                NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
-                return;
+        if(!NEW_BATTLE.killCamPendingFinish){
+            if(playerFinish==="Recovered"||cpuFinish==="Recovered"){
+                endKillCam();
             }
-            endKillCam();
-            finishNewBattle(finish.winnerSide,finish.type);
-            return;
+
+            if(finishCandidates.length){
+                finishCandidates.sort((a,b)=>b.strength-a.strength);
+                const finish=finishCandidates[0];
+                const camNow=killCamState();
+                if((finish.type==="Xtreme"||finish.type==="Over")&&camNow.active){
+                    camNow.hitAt=now;
+                    camNow.slow=1;
+                    camNow.until=now+KILL_CAM.afterHitMs;
+                    pulseKillCamShake(now,KILL_CAM.shakePx+1.6);
+                    applyKillCamTransform(now);
+                    NEW_BATTLE.killCamPendingFinish=finish;
+                }else{
+                    endKillCam();
+                    finishNewBattle(finish.winnerSide,finish.type);
+                    return;
+                }
+            }
         }
 
         if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.tickBattle){
