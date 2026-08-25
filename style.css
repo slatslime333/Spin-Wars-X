@@ -1520,18 +1520,22 @@ footer{
 
 .battle-callout{
   margin:0;
-  min-height:40px;
-  padding:9px 14px;
+  min-height:58px;
+  padding:10px 14px 12px;
   background:
     repeating-linear-gradient(-32deg,transparent 0 10px,rgba(240,180,41,.08) 10px 12px),
-    #120e0c;
-  border:2px solid #2a241c;
+    linear-gradient(180deg,#1a1612,#100e0c);
+  border:2px solid #3a3128;
   border-left:6px solid var(--green);
+  box-shadow:0 8px 0 #000;
   color:#f6f0e6;
+  text-align:left;
+}
+.battle-callout .vs-call-kicker{margin:0 0 6px}
+.battle-callout-copy{
+  margin:0;
   font-size:14px;
-  line-height:1.25;
-  text-align:center;
-  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+  line-height:1.4;
 }
 
 .bey-motion-trail{

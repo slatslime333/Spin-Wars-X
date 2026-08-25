@@ -284,6 +284,7 @@
             ?heightTake(Math.random()<0.5?p:c)
             :matchupLine(p,c);
         const call=winnerCall(p,c);
+        lastPregame={p,c,call,at:Date.now()};
         return [intro,playerTake,cpuTake,extra,call].join(" ");
     }
 
@@ -295,5 +296,445 @@
         </aside>`;
     }
 
-    global.SpinWarsVsCall={INTROS,buildCopy,renderHTML};
+    /* ---------- live battle booth ---------- */
+
+    let lastPregame=null;
+    let liveCtx={score:{player:0,cpu:0},round:0,active:false,elapsed:0,lastImpact:null,player:null,cpu:null};
+    const recent=[];
+    const booth={
+        line:"",
+        holdUntil:0,
+        priority:0,
+        kind:"",
+        setupKey:"",
+        live:false,
+        impactStamp:0,
+        recoveryStamp:0,
+        rail:{player:false,cpu:false},
+        exitNoted:{player:0,cpu:0},
+        predicted:false,
+        lastFinish:null
+    };
+
+    function pickFresh(list){
+        const pool=list.filter(s=>s&&!recent.includes(s));
+        const line=pick(pool.length?pool:list);
+        if(!line) return "";
+        recent.push(line);
+        if(recent.length>10) recent.shift();
+        return line;
+    }
+    function bladeOf(s){return s?.blade?.name||"that Bey";}
+    function qualityOf(s){return s?.launchQuality||s?.launchPlan?.quality||"";}
+    function scorePair(){
+        const sc=liveCtx.score||{player:0,cpu:0};
+        return {player:Number(sc.player)||0,cpu:Number(sc.cpu)||0};
+    }
+    function isColdOpen(){
+        const s=scorePair();
+        return s.player+s.cpu===0;
+    }
+    function recentExit(s,now){
+        if(!s||s.railEngaged) return false;
+        if(s.lastXRailExitReason!=="x-exit") return false;
+        const at=Number(s.railExitAt)||0;
+        return at>0&&(now-at)<=1100;
+    }
+    function say(text,priority,hold,kind,now){
+        if(!text) return;
+        booth.line=text;
+        booth.priority=priority;
+        booth.holdUntil=(now||0)+hold;
+        booth.kind=kind;
+    }
+    function paint(){
+        const copy=typeof document!=="undefined"?document.getElementById("newCommentaryCopy"):null;
+        if(copy&&copy.textContent!==booth.line) copy.textContent=booth.line;
+    }
+
+    function setupCopy(){
+        const sc=scorePair();
+        const pName=lastPregame?.p?.blade||bladeOf(liveCtx.player);
+        const cName=lastPregame?.c?.blade||bladeOf(liveCtx.cpu);
+        const fin=booth.lastFinish;
+        if(sc.player>=7||sc.cpu>=7){
+            const w=sc.player>=7?pName:cName;
+            return pickFresh([
+                `That's seven. ${w} closes it. Lights can come down whenever they want.`,
+                `Match. ${w} got there first. Everything else was just the road.`
+            ]);
+        }
+        if(isColdOpen()){
+            return pickFresh([
+                `First launch of the night. We're 0-0. Nothing's happened yet — this is still a theory until somebody rips.`,
+                `0-0. Plates are done talking. Now we find out if ${pName} and ${cName} look like that in the bowl.`,
+                `Nobody's scored. First to seven starts with a rip, not a graphic. Let's see who actually shows up.`,
+                `Cold open. I already said my piece on the way in. Launch decides if I look smart or loud.`,
+                `We're still at zero. Don't overthink the pad — the first contact is going to rewrite whatever I just said.`,
+                lastPregame?.call
+                    ? `0-0, first rip. For the record: ${lastPregame.call}`
+                    : `First rip coming. Crowd's up, X-Rail's quiet, scoreboard's empty.`
+            ]);
+        }
+        const lead=sc.player-sc.cpu;
+        const tied=lead===0;
+        const abs=Math.abs(lead);
+        const leader=lead>0?pName:cName;
+        const trailer=lead>0?cName:pName;
+        const you=lead>0?"the player":"the CPU";
+        const series=[];
+        if(fin){
+            const how=fin.type==="Xtreme"?"an Xtreme":fin.type==="Over"?"an Over":"a spin";
+            const howCap=fin.type==="Xtreme"?"An Xtreme":fin.type==="Over"?"An Over":"A spin";
+            series.push(
+                `${fin.winner} just took ${how}. Score's ${sc.player}–${sc.cpu}. Next launch's the answer, not the recap.`,
+                `That was ${how} for ${fin.winner}. ${fin.loser} has to come back out like it didn't rattle them.`,
+                `${howCap} goes on the board and we're ${sc.player}–${sc.cpu}. Don't let the last point pick the next launch for you.`
+            );
+        }
+        if(tied){
+            series.push(
+                `Tied ${sc.player}–${sc.cpu}. Reset your brain. This next rip is a new fight.`,
+                `${sc.player} apiece. Room feels even. That's when somebody gets greedy on the pad.`,
+                `We're knotted up. First to seven doesn't care that the last point was pretty.`
+            );
+        }else if(abs>=5){
+            series.push(
+                `${leader} is running away at ${sc.player}–${sc.cpu}. ${trailer} needs a messy point, not a polite one.`,
+                `That's a gap. ${you} on ${leader} has ${sc.player}–${sc.cpu}. One more clean rip and this starts to look decided.`
+            );
+        }else if(Math.max(sc.player,sc.cpu)>=6){
+            series.push(
+                `Game point energy. ${sc.player}–${sc.cpu}. One launch from somebody hearing the building.`,
+                `${leader} is a point away from putting this away. ${trailer} is a point away from making me eat a prediction.`
+            );
+        }else{
+            series.push(
+                `${sc.player}–${sc.cpu}. ${leader} has the room. ${trailer} has the next launch — that's the only thing that matters.`,
+                `Scoreboard says ${sc.player}–${sc.cpu}. Same Beys, new rip. Don't fight the last point.`,
+                `${leader} leads. Not a blowout. Not safe. Launch like you still have to earn seven.`
+            );
+        }
+        return pickFresh(series);
+    }
+
+    function openingLiveCopy(p,c){
+        const pb=bladeOf(p), cb=bladeOf(c);
+        const pt=p?.launchPlan?.technique||"Center";
+        const ct=c?.launchPlan?.technique||"Center";
+        const pq=qualityOf(p), cq=qualityOf(c);
+        const cold=isColdOpen();
+        const qTalk=[];
+        if(pq==="Perfect") qTalk.push(`That's a Perfect from ${pb}. Clean as it gets on the way in.`);
+        if(pq==="Horrible") qTalk.push(`${pb} just ripped a Horrible. That's a dare.`);
+        if(cq==="Perfect") qTalk.push(`CPU answers Perfect on ${cb}. They didn't come in shy.`);
+        if(cq==="Horrible") qTalk.push(`${cb}'s launch is a mess. If they survive the first second, I'll be impressed.`);
+        const tech={};
+        tech["Direct Clash"]=pickFresh([
+            `${pb} is going straight at somebody. Clash launch — no orbit, no manners.`,
+            `${pb} picked a fight on the way in. Direct line. Somebody's going to feel the first one.`
+        ]);
+        tech["Drop Launch"]=pickFresh([
+            `${pb} hangs and drops. That's the shot from up top — straight through the middle if they mean it.`,
+            `Drop from ${pb}. They're not asking the rail for permission.`
+        ]);
+        tech["X-Rail"]=pickFresh([
+            `${pb} takes the X-Rail on the rip. They want the ring before the conversation starts.`,
+            `${pb} is on the rail out of the gate. Speed first, opinions later.`
+        ]);
+        tech["Center"]=pickFresh([
+            `${pb} opens from center. Planted. Waiting to see who blinks.`,
+            `Center launch, ${pb}. They're starting in the bowl, not on a highlight.`
+        ]);
+        const cpuTech={};
+        cpuTech["Direct Clash"]=`${cb} is coming through the front door too.`;
+        cpuTech["Drop Launch"]=`${cb} drops in from the other side.`;
+        cpuTech["X-Rail"]=`${cb} grabbed the rail.`;
+        cpuTech["Center"]=`${cb} sits center and waits.`;
+        const head=cold
+            ?pickFresh([
+                `First rip. Nothing's happened yet — this is the handshake.`,
+                `We're live. Score's still 0-0. First contact writes the rest.`,
+                `Let it rip. Theory's over.`
+            ])
+            :pickFresh([
+                `Next rip. Score's already on the board — this one still counts the same.`,
+                `New launch, same match. Don't bring the last point in with you.`,
+                `They're back on the line. Next point's open.`
+            ]);
+        const parts=[head,tech[pt]||tech.Center,cpuTech[ct]||cpuTech.Center];
+        if(qTalk.length&&Math.random()<0.7) parts.push(pick(qTalk));
+        if(cold&&lastPregame?.p?.blade===pb&&Math.random()<0.35){
+            parts.push(pickFresh([
+                `Remember, I already had a read on ${pb}. Bowl doesn't care.`,
+                `This is where ${pb} proves the plate or makes me a liar.`
+            ]));
+        }
+        return parts.filter(Boolean).join(" ");
+    }
+
+    function impactLine(p,c,imp,offRail){
+        const pb=bladeOf(p), cb=bladeOf(c);
+        if(offRail){
+            return pickFresh([
+                `${pb} and ${cb} meet coming off the ring. That's the swing I was waiting on.`,
+                `Off the X-Exit and into a clash — that hit has extra on it.`,
+                `They used the rail and then they used each other. That's the fun one.`
+            ]);
+        }
+        if(imp.impactClass==="heavy"){
+            return pickFresh([
+                `That's a real one. ${pb} and ${cb} just paid rent.`,
+                `Heavy contact. Somebody's going to remember that in the RPM.`,
+                `Boom. That's not a graze — that's a statement.`,
+                `${pb} walked into ${cb} and neither of them liked it. Good.`,
+                `There it is. First honest clash of the point.`
+            ]);
+        }
+        return pickFresh([
+            `They clip. Not the finish, but the conversation started.`,
+            `${pb} finds ${cb}. Light enough to stay in, hard enough to matter.`,
+            `Contact in the bowl. They're not circling past each other anymore.`,
+            `That's a poke, not a knockout. Still counts.`
+        ]);
+    }
+
+    function railLine(s){
+        const b=bladeOf(s);
+        return pickFresh([
+            `${b} hooks the X-Rail. Speed's about to get rude.`,
+            `${b} is on the ring. Don't look away for the exit.`,
+            `Rail ride, ${b}. That's the lap that turns into a problem.`,
+            `${b} caught the X-Rail. Building a run.`
+        ]);
+    }
+
+    function exitLine(s){
+        const b=bladeOf(s);
+        return pickFresh([
+            `${b} dumps off the X-Exit toward the middle. That's a weapon if they still have legs.`,
+            `X-Exit, ${b}. Shot's coming into the bowl, not out the back.`,
+            `${b} leaves the rail. Now we see if that speed has a target.`
+        ]);
+    }
+
+    function recoveryLine(s){
+        const b=bladeOf(s);
+        const pct=Math.round((Number(s.rpm)||0)*100);
+        return pickFresh([
+            `${b} climbs out! That's a save. Building's still loud.`,
+            `RECOVERED. ${b} looked gone and then it wasn't.${pct?` Still got ${pct} on the meter.`:""}`,
+            `${b} refuses the pocket. That's the kind of luck that feels like skill.`,
+            `They don't stay down. ${b} is back in the bowl.`
+        ]);
+    }
+
+    function predictLine(p,c){
+        const ahead=p.rpm>=c.rpm?p:c;
+        const behind=ahead===p?c:p;
+        const ab=bladeOf(ahead), bb=bladeOf(behind);
+        return pickFresh([
+            `If this ends right now, it's ${ab}. ${bb} is running on fumes.`,
+            `I'm calling it while they're still spinning: ${ab} unless somebody finds a hole.`,
+            `${ab} looks like the point. ${bb} needs a miracle clash, not another lap.`,
+            `Late read: ${ab} has more left. Don't quote me if they both die in a pocket.`
+        ]);
+    }
+
+    function finishCopy(winner,loser,type,matchOver,playerScore,cpuScore){
+        const w=bladeOf(winner), l=bladeOf(loser);
+        const xtreme=type==="Xtreme", over=type==="Over";
+        const lines=xtreme?[
+            `${l} falls through the Xtreme! That's three. ${w} just punched the scoreboard.`,
+            `XTREME. ${l} is gone. ${w} takes the big one.`,
+            `That's the hole in the middle and ${l} found it the hard way. ${w} +3.`
+        ]:over?[
+            `${l} gets put in the Over. Two points, ${w}. That's a knock with manners.`,
+            `OVER. ${w} sent ${l} packing out the side.`,
+            `${l} couldn't hold the bowl. Over for ${w}.`
+        ]:[
+            `${w} outlasts ${l}. Spin finish. Ugly, honest, one point.`,
+            `That's a spin. ${l} dies first. ${w} is still humming.`,
+            `${w} wins the grind. Not pretty. Still on the board.`
+        ];
+        let text=pickFresh(lines);
+        if(matchOver){
+            text+=" "+pickFresh([
+                `And that's the match. First to seven, and ${w} got there.`,
+                `Ballgame. ${w} closes it ${playerScore}–${cpuScore}.`,
+                `You can exhale. ${w} just ended the night.`
+            ]);
+        }else if(Math.random()<0.45){
+            const sc=`${playerScore}–${cpuScore}`;
+            text+=" "+pickFresh([
+                `We're ${sc}. Next launch is going to tell on somebody.`,
+                `Score's ${sc}. I wouldn't get comfortable.`,
+                `${sc}. Room's still live.`
+            ]);
+        }
+        return text;
+    }
+
+    function resetMatch(){
+        booth.line="";
+        booth.holdUntil=0;
+        booth.priority=0;
+        booth.kind="";
+        booth.setupKey="";
+        booth.live=false;
+        booth.impactStamp=0;
+        booth.recoveryStamp=0;
+        booth.rail={player:false,cpu:false};
+        booth.exitNoted={player:0,cpu:0};
+        booth.predicted=false;
+        booth.lastFinish=null;
+        recent.length=0;
+    }
+
+    function ensureSetupLine(){
+        const sc=scorePair();
+        const key=`setup:${sc.player}:${sc.cpu}:${liveCtx.round||0}`;
+        if(booth.setupKey!==key){
+            booth.setupKey=key;
+            booth.live=false;
+            booth.predicted=false;
+            booth.rail={player:false,cpu:false};
+            booth.line=setupCopy();
+            booth.kind="setup";
+            booth.priority=40;
+            booth.holdUntil=Infinity;
+        }
+        return booth.line;
+    }
+
+    function beginLive(p,c,now){
+        const t=now||(typeof performance!=="undefined"?performance.now():Date.now());
+        booth.live=true;
+        booth.setupKey="";
+        booth.predicted=false;
+        booth.rail={player:false,cpu:false};
+        booth.exitNoted={player:0,cpu:0};
+        booth.impactStamp=0;
+        booth.recoveryStamp=0;
+        const copy=openingLiveCopy(p,c);
+        say(copy,90,2800,"opening",t);
+        paint();
+        return booth.line;
+    }
+
+    function adoptCtx(info){
+        if(!info) return;
+        if(info.score) liveCtx.score=info.score;
+        if(info.round!=null) liveCtx.round=info.round;
+        if(info.active!=null) liveCtx.active=!!info.active;
+        if(info.elapsed!=null) liveCtx.elapsed=info.elapsed;
+        if("lastImpact" in info) liveCtx.lastImpact=info.lastImpact;
+        if(info.player) liveCtx.player=info.player;
+        if(info.cpu) liveCtx.cpu=info.cpu;
+    }
+
+    function battleHudMarkup(info){
+        adoptCtx(info);
+        if(!liveCtx.active) ensureSetupLine();
+        else if(!booth.live||!booth.line) beginLive(liveCtx.player,liveCtx.cpu);
+        return `<aside class="battle-callout" id="newCommentary" aria-live="polite">
+            <div class="vs-call-kicker"><span>LIVE</span> COMMENTARY</div>
+            <p class="battle-callout-copy" id="newCommentaryCopy">${escapeHtml(booth.line||"")}</p>
+        </aside>`;
+    }
+
+    function consider(p,c,now){
+        if((p.recoveredFlashUntil||0)>now||(c.recoveredFlashUntil||0)>now){
+            const s=(p.recoveredFlashUntil||0)>=(c.recoveredFlashUntil||0)?p:c;
+            const stamp=s.recoveredFlashUntil||0;
+            if(stamp&&stamp!==booth.recoveryStamp){
+                return {text:recoveryLine(s),priority:92,hold:2300,kind:"recovery",stamp:"recovery",apply:()=>{booth.recoveryStamp=stamp;}};
+            }
+        }
+        const imp=liveCtx.lastImpact;
+        if(imp&&imp.time&&imp.time!==booth.impactStamp){
+            const off=recentExit(p,now)||recentExit(c,now);
+            if(imp.impactClass==="light"&&!off){
+                return {text:null,priority:0,hold:0,kind:"skip",stamp:"impact",apply:()=>{booth.impactStamp=imp.time;}};
+            }
+            return {
+                text:impactLine(p,c,imp,off),
+                priority:off||imp.impactClass==="heavy"?86:54,
+                hold:off||imp.impactClass==="heavy"?1800:1300,
+                kind:"impact",
+                stamp:"impact",
+                apply:()=>{booth.impactStamp=imp.time;}
+            };
+        }
+        const riders=[["player",p],["cpu",c]];
+        for(const [side,s] of riders){
+            if(s.railEngaged&&!booth.rail[side]){
+                return {text:railLine(s),priority:72,hold:1700,kind:"rail",stamp:"rail-"+side,apply:()=>{booth.rail[side]=true;}};
+            }
+            if(!s.railEngaged) booth.rail[side]=false;
+            if(recentExit(s,now)){
+                const at=Number(s.railExitAt)||0;
+                if(at&&at!==booth.exitNoted[side]){
+                    return {text:exitLine(s),priority:74,hold:1600,kind:"exit",stamp:"exit-"+side,apply:()=>{booth.exitNoted[side]=at;}};
+                }
+            }
+        }
+        const elapsed=Number(liveCtx.elapsed)||0;
+        if(!booth.predicted&&elapsed>5.2){
+            const gap=Math.abs((p.rpm||0)-(c.rpm||0));
+            const tired=Math.min(p.rpm||0,c.rpm||0);
+            if(tired<0.40&&gap>0.14){
+                booth.predicted=true;
+                if(Math.random()<0.62){
+                    return {text:predictLine(p,c),priority:48,hold:2000,kind:"predict",stamp:"predict",apply:()=>{}};
+                }
+            }
+        }
+        return null;
+    }
+
+    function tickBattle(p,c,now,info){
+        if(!p||!c) return;
+        adoptCtx(info);
+        const t=now||0;
+        if(!liveCtx.active){
+            paint();
+            return;
+        }
+        const ev=consider(p,c,t);
+        if(ev){
+            if(ev.kind==="skip"){
+                if(typeof ev.apply==="function") ev.apply();
+            }else if(ev.text&&(t>=booth.holdUntil||ev.priority>=booth.priority)){
+                if(typeof ev.apply==="function") ev.apply();
+                say(ev.text,ev.priority,ev.hold,ev.kind,t);
+            }
+        }
+        paint();
+    }
+
+    function onFinish(winner,loser,type,matchOver,playerScore,cpuScore){
+        booth.lastFinish={
+            winner:bladeOf(winner),
+            loser:bladeOf(loser),
+            type:type||"Spin Finish"
+        };
+        booth.live=false;
+        booth.setupKey="";
+        const text=finishCopy(winner,loser,type,matchOver,playerScore,cpuScore);
+        say(text,100,4000,"finish",typeof performance!=="undefined"?performance.now():0);
+        paint();
+        const el=typeof document!=="undefined"?document.getElementById("newCommentaryCopy"):null;
+        if(el) el.textContent=text;
+        else{
+            const fallback=typeof document!=="undefined"?document.getElementById("newCommentary"):null;
+            if(fallback) fallback.textContent=text;
+        }
+        return text;
+    }
+
+    global.SpinWarsVsCall={
+        INTROS,buildCopy,renderHTML,escapeHtml,
+        resetMatch,battleHudMarkup,beginLive,tickBattle,onFinish,ensureSetupLine
+    };
 })(typeof window!=="undefined"?window:globalThis);

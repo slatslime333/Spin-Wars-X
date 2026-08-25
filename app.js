@@ -2112,6 +2112,7 @@ function showComboCard(){
     const vsCall=typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.renderHTML
         ?SpinWarsVsCall.renderHTML(Game.player,Game.cpu,playerCombo,cpuCombo,playerPlate,cpuPlate)
         :"";
+    if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.resetMatch) SpinWarsVsCall.resetMatch();
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       ${vsCall}
       <section class="vs-board">
@@ -3259,17 +3260,15 @@ function renderNewBattle(){
     app.innerHTML=`
       <div class="background"></div>
       <main class="battle-shell">
-        <p class="battle-callout" id="newCommentary">${p.blade.name} ${
-    p.launchPlan.technique==="Direct Clash" ? "comes out aggressively." :
-    p.launchPlan.technique==="Drop Launch" ? "drops in from the X Exit." :
-    "settles into its opening line."
-} ${c.blade.name} ${
-                c.launchPlan?.technique==="Direct Clash" ? "answers with a clash." :
-                c.launchPlan?.technique==="X-Rail" ? "takes the X-Rail." :
-                c.launchPlan?.technique==="Drop Launch" ? "drops from the X-Exit." :
-                c.launchPlan?.technique==="Center" ? "opens from center." :
-                "is waiting for your launch."
-            }</p>
+        ${typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.battleHudMarkup
+            ?SpinWarsVsCall.battleHudMarkup({
+                score:Game.battle?.score||{player:0,cpu:0},
+                round:Game.battle?.round||0,
+                active:!!NEW_BATTLE.active,
+                player:p,
+                cpu:c
+            })
+            :`<p class="battle-callout" id="newCommentary"></p>`}
 
           <div id="newStadium">
 
@@ -3566,8 +3565,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         }
         stadium.appendChild(flash);
     }
-    const commentary=document.getElementById("newCommentary");
-    if(commentary){
+    const commentary=document.getElementById("newCommentaryCopy")||document.getElementById("newCommentary");
+    if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onFinish){
+        SpinWarsVsCall.onFinish(winner,loser,finishType,!!matchWinner,playerScore,cpuScore);
+    }else if(commentary){
         commentary.textContent=
             finishType==="Xtreme"
                 ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +3`
@@ -4448,6 +4449,17 @@ function newBattleFrame(now){
             return;
         }
 
+        if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.tickBattle){
+            SpinWarsVsCall.tickBattle(p,c,performance.now(),{
+                active:!!NEW_BATTLE.active,
+                elapsed:NEW_BATTLE.elapsed,
+                lastImpact:NEW_BATTLE.lastImpact,
+                score:Game.battle?.score,
+                round:Game.battle?.round,
+                player:p,
+                cpu:c
+            });
+        }else{
         const commentary=document.getElementById("newCommentary");
         if(commentary){
             const distance=Math.hypot(p.x-c.x,p.y-c.y);
@@ -4491,6 +4503,7 @@ function newBattleFrame(now){
             }else{
                 commentary.textContent="Both Beys are moving through the stadium.";
             }
+        }
         }
 
         // Xtreme / Over have already been resolved above by the single
