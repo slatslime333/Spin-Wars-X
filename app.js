@@ -624,8 +624,7 @@ const BLADE_ENGINE = {
         tier:"Bronze",
         spin:"Right",
         weight:32.4,
-        sprite:"assets/blades/shelterdrake.png",
-        battleSpriteScale:1.26,
+        sprite:"assets/blades/shelterdrake.png?v=8.90",
 
         card:{ovr:71,attack:70,knockback:68,defense:67,mobility:80,balance:82,stamina:78,burst:70},
 
