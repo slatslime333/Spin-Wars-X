@@ -983,6 +983,7 @@ function toggleDev(){
         <div class="rogue-dev-actions">
             <button type="button" class="menu-btn silver" id="rogueDevJump17">MATCH 17</button>
             <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
+            <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
             <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
             <button type="button" class="menu-btn gold" id="rogueDevWin">FORCE MATCH WIN</button>
             <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
@@ -1009,6 +1010,18 @@ function toggleDev(){
         panel.remove();
         generateOffers();
         showHub();
+    });
+    document.getElementById("rogueDevOmen")?.addEventListener("click",()=>{
+        if(!run()) return;
+        panel.remove();
+        const hold=Game.screen;
+        paintSharkOmen();
+        window.setTimeout(()=>{
+            if(Game.screen!=="rogueOmen") return;
+            if(hold==="rogueHub") showHub();
+            else if(hold==="comboCheck") showComboCard();
+            else showLanding();
+        },6000);
     });
     document.getElementById("rogueDevFinal")?.addEventListener("click",()=>{
         const r=run();
@@ -1705,20 +1718,24 @@ function advanceMatch(){
     persist();
 }
 
-function showSharkOmen(){
-    const r=run();
+function paintSharkOmen(){
     Game.screen="rogueOmen";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background omen-bg"></div>
     <main class="rogue-omen" id="rogueOmen">
-        <div class="omen-circle" aria-hidden="true"></div>
-        <div class="omen-soul" aria-hidden="true">
+        <div class="omen-figure" aria-hidden="true">
+            <div class="omen-circle"></div>
+            <div class="omen-soul"></div>
             <span class="omen-eye left"></span>
             <span class="omen-eye right"></span>
-            <span class="omen-maw"></span>
         </div>
         <p class="omen-line">a dark presence watched you</p>
     </main>`;
+}
+
+function showSharkOmen(){
+    const r=run();
+    paintSharkOmen();
     persist();
     const go=()=>{
         if(Game.screen!=="rogueOmen") return;
