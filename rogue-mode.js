@@ -59,6 +59,88 @@ function starterParts(blade){
     return {ratchet,bit};
 }
 
+function bladeRole(blade){
+    const t=String(blade?.type||"Balance");
+    if(t==="Attack"||t==="Defense"||t==="Stamina") return t;
+    const c=blade?.card||{};
+    const atk=(Number(c.attack)||70)+(Number(c.knockback)||70);
+    const hold=(Number(c.defense)||70)+(Number(c.stamina)||70);
+    if(atk>=hold+8) return "Attack";
+    if(hold>=atk+8) return "Stamina";
+    return "Balance";
+}
+
+function bitCompatScore(blade,bit){
+    const table=blade?.compatibility?.bits||{};
+    const name=String(bit?.name||"");
+    const compact=name.replace(/\s+/g,"");
+    const n=Number(table[name]??table[compact]);
+    return Number.isFinite(n)?n:50;
+}
+
+function heightCompatScore(blade,height){
+    const n=Number(blade?.compatibility?.heights?.[height]);
+    if(Number.isFinite(n)) return n;
+    return height===60?78:height===70?62:42;
+}
+
+function roleBitNames(role){
+    if(role==="Attack") return ["Rush","Low Rush","Flat","Low Flat","Kick","Quake"];
+    if(role==="Defense") return ["Needle","Hexa","Wedge","Ball","Orb","Point"];
+    if(role==="Stamina") return ["Ball","Orb","Needle","Hexa","Point","Level"];
+    return ["Point","Level","Hexa","Kick","Ball"];
+}
+
+function roleRatchetNumbers(role){
+    if(role==="Attack") return [1,3,4,5];
+    if(role==="Stamina") return [7,9,6,5];
+    if(role==="Defense") return [9,7,6,5];
+    return [3,5,7,9];
+}
+
+function pickFromTop(scored){
+    const pool=scored.slice(0,Math.min(4,scored.length));
+    return pick(pool.length?pool:scored);
+}
+
+function pickCommittedParts(blade,exclude){
+    const role=bladeRole(blade);
+    const bits=(typeof selectableBits==="function"?selectableBits():[])
+        .filter(b=>roleBitNames(role).includes(b.name));
+    const skipBit=exclude?.bitName;
+    const scored=bits
+        .filter(b=>!skipBit||b.name!==skipBit)
+        .map(b=>({item:b,score:bitCompatScore(blade,b)}))
+        .sort((a,c)=>c.score-a.score);
+    const good=scored.filter(x=>x.score>=70);
+    const bit=(pickFromTop(good.length?good:scored)||{}).item
+        || bits[0]
+        || {name:"Point"};
+
+    const heightRows=[60,70,80].map(h=>({h,score:heightCompatScore(blade,h)}));
+    let heights=heightRows.filter(x=>x.score>=72).map(x=>x.h);
+    if(role!=="Attack") heights=heights.filter(h=>h!==80);
+    if(!heights.length) heights=[60];
+    if(role!=="Attack" && heights.includes(60) && Math.random()<0.82) heights=[60];
+    else if(role==="Attack" && heights.includes(60) && Math.random()<0.55) heights=[60,70].filter(h=>heights.includes(h));
+    const height=pick(heights)||60;
+
+    const nums=roleRatchetNumbers(role);
+    const rats=(typeof RATCHETS!=="undefined"?RATCHETS:[])
+        .filter(r=>Number(r.height)===height && nums.includes(Number(r.number)))
+        .filter(r=>!exclude?.ratchetName||r.name!==exclude.ratchetName);
+    const fallback=(typeof RATCHETS!=="undefined"?RATCHETS:[])
+        .filter(r=>Number(r.height)===height);
+    const ratchet=pick(rats.length?rats:fallback)||{name:`3-${height}`,number:3,height};
+    return {ratchet,bit,role};
+}
+
+function cpuCompetence(match){
+    if(match<=1) return 0;
+    if(match===2) return Math.random()<0.45?1:0;
+    return 1;
+}
+
 const MODIFIERS=[
     {id:"last_stand",name:"LAST STAND",tag:"LATE",
      blurb:"Under 40% RPM: +8 DEF and +5 KB. Healthy spin sits -3 MOB.",
@@ -312,11 +394,22 @@ function playerUpgradeCount(){
     return Math.max(fromHist,fromMatch);
 }
 
-function tierPressureCount(){
+function cpuStackLead(){
     const t=String(run()?.startingTier||"");
-    if(t==="Bronze") return 1+Math.floor(Math.random()*3);
-    if(t==="Silver") return 1+Math.floor(Math.random()*2);
-    return 1;
+    const roll=Math.random();
+    if(t==="Bronze"){
+        if(roll<0.18) return 0;
+        if(roll<0.58) return 1;
+        return 2;
+    }
+    if(t==="Silver"){
+        if(roll<0.24) return 0;
+        if(roll<0.74) return 1;
+        return 2;
+    }
+    if(roll<0.32) return 0;
+    if(roll<0.82) return 1;
+    return 2;
 }
 
 function grantCpuPressure(n){
@@ -408,13 +501,12 @@ function applyCpuCard(card){
     }else if(card.kind==="evolve"){
         STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+2;});
     }else if(card.kind==="reforge"){
-        if(card.part==="bit"){
-            const opts=selectableBits().filter(b=>b.name!==r.cpuBit?.name);
-            if(opts.length) r.cpuBit=pick(opts);
-        }else{
-            const opts=(typeof RATCHETS!=="undefined"?RATCHETS:[]).filter(x=>x.name!==r.cpuRatchet?.name);
-            if(opts.length) r.cpuRatchet=pick(opts);
-        }
+        const committed=pickCommittedParts(r.cpuBlade,{
+            bitName:r.cpuBit?.name,
+            ratchetName:r.cpuRatchet?.name
+        });
+        if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
+        else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
     }
     r.cpuHistory=r.cpuHistory||[];
     r.cpuHistory.push(card);
@@ -435,7 +527,7 @@ function grantCpuStack(){
         );
         applyCpuCard(card);
     }
-    grantCpuPressure(tierPressureCount()+bossExtraStacks());
+    grantCpuPressure(cpuStackLead()+bossExtraStacks());
 }
 
 function bossExtraStacks(){
@@ -546,18 +638,19 @@ function peakStat(stats){
 function cpuPowerTarget(playerPow,match,boss){
     const r=run();
     const tier=String(r.startingTier||"");
-    const growth=tier==="Bronze"?0.022:tier==="Silver"?0.020:0.018;
-    let target=playerPow*(0.90+match*growth);
-    if(tier==="Bronze") target*=1.03;
-    else if(tier==="Silver") target*=1.025;
-    else target*=1.04;
-    if(r.cpuPowerTarget) target=r.cpuPowerTarget*0.62+target*0.38;
+    const roll=Math.random();
+    let band;
+    if(roll<0.14) band=0.94+Math.random()*0.04;
+    else if(roll<0.40) band=0.99+Math.random()*0.03;
+    else band=1.04+Math.random()*0.06;
+    if(tier==="Gold" && band<1.00) band=0.99+Math.random()*0.04;
+    if(tier==="Bronze" && band<1.00 && Math.random()<0.45) band+=0.04;
     if(boss){
-        if(match===18) target=playerPow*(1.04+Math.random()*0.015);
-        else if(match===12) target=playerPow*(1.022+Math.random()*0.01);
-        else target=playerPow*(1.016+Math.random()*0.01);
+        if(match===18) band=Math.max(band,1.05+Math.random()*0.02);
+        else if(match===12) band=Math.max(band,1.03+Math.random()*0.015);
+        else band=Math.max(band,1.02+Math.random()*0.012);
     }
-    return target;
+    return playerPow*band;
 }
 
 function fillCpuScale(target){
@@ -599,18 +692,20 @@ function generateCpu(){
 
     if(match===18){
         r.cpuBlade=sharkScaleBlade()||pick(playableBlades());
-        r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||starterParts(r.cpuBlade).ratchet;
-        r.cpuBit=(typeof selectableBits==="function"?selectableBits():[]).find(b=>b.name==="Rush")
-            ||pick(selectableBits())||starterParts(r.cpuBlade).bit;
+        const parts=pickCommittedParts(r.cpuBlade);
+        r.cpuRatchet=parts.ratchet;
+        r.cpuBit=parts.bit;
     }else{
         const blades=playableBlades();
         let wantTier=cpuLane(match);
         if(match>FINAL_MATCH && Math.random()<0.28) wantTier="Silver";
         const pool=blades.filter(b=>b.tier===wantTier);
         r.cpuBlade=pick(pool.length?pool:blades);
-        const parts=starterParts(r.cpuBlade);
-        r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||parts.ratchet;
-        r.cpuBit=pick(selectableBits())||parts.bit;
+        const parts=cpuCompetence(match)
+            ? pickCommittedParts(r.cpuBlade)
+            : starterParts(r.cpuBlade);
+        r.cpuRatchet=parts.ratchet;
+        r.cpuBit=parts.bit;
     }
     grantCpuStack();
     fillCpuScale(r.cpuPowerTarget);
@@ -1768,7 +1863,7 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH
+    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
