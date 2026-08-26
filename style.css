@@ -812,6 +812,37 @@ footer{
   object-fit:contain;
   pointer-events:none;
 }
+.luck-grade{
+  position:absolute;
+  top:8px;
+  right:8px;
+  z-index:4;
+  width:40px;
+  padding:4px 0 3px;
+  text-align:center;
+  border:1px solid rgba(0,0,0,.45);
+  background:rgba(8,8,10,.72);
+  box-shadow:0 4px 0 rgba(0,0,0,.35);
+  pointer-events:none;
+}
+.luck-grade small{
+  display:block;
+  font-size:6px;
+  font-weight:900;
+  letter-spacing:1.2px;
+  color:#c9c2b4;
+}
+.luck-grade b{
+  display:block;
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:22px;
+  font-weight:400;
+  line-height:.9;
+  text-shadow:0 2px 0 #000;
+}
+.luck-grade.luck-a{border-color:#1ad15a;color:#1ad15a}
+.luck-grade.luck-b{border-color:#c5ced8;color:#e8eef4}
+.luck-grade.luck-c{border-color:#8a7a4a;color:#c4b07a}
 .combo-blade-sprite{
   width:72px;
   height:72px;
@@ -1180,6 +1211,41 @@ footer{
 .vs-plate.tier-bronze{border-color:#c07a4a;background:linear-gradient(180deg,#3a2010,#140c08)}
 .vs-plate.you{box-shadow:0 10px 0 #0c6b32}
 .vs-plate.them{box-shadow:0 10px 0 #7a1020}
+.vs-boss-mark{
+  position:absolute;
+  top:8px;
+  left:16px;
+  z-index:5;
+  padding:3px 7px;
+  border:1px solid #e31c3d;
+  background:#120306;
+  color:#ff8aa0;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.16em;
+}
+.vs-plate.boss-final .vs-boss-mark{
+  border-color:#6a2ad1;
+  color:#d7b6ff;
+  background:#0a0612;
+}
+.vs-plate.enhanced:after,
+.rogue-build.enhanced:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  opacity:.82;
+  background:
+    radial-gradient(circle at 50% 0,rgba(255,255,255,.1),transparent 42%),
+    repeating-linear-gradient(60deg,rgba(0,0,0,.4) 0 2px,transparent 2px 11px),
+    repeating-linear-gradient(-60deg,rgba(0,0,0,.34) 0 2px,transparent 2px 11px);
+  backdrop-filter:blur(6px);
+  mix-blend-mode:multiply;
+}
+.vs-plate.enhanced > *,
+.rogue-build.enhanced > *{position:relative;z-index:1}
 
 .vs-art{
   width:96px;height:96px;
@@ -2217,6 +2283,8 @@ button:focus-visible{
 
 .rogue-hub{gap:12px}
 .rogue-build{
+  position:relative;
+  overflow:hidden;
   display:grid;
   grid-template-columns:92px 1fr;
   gap:12px;
@@ -2412,4 +2480,96 @@ button:focus-visible{
   .rogue-offers{grid-template-columns:1fr}
   .rogue-help-offers{grid-template-columns:1fr}
   .rogue-help-offers .rogue-offer.evolve{grid-column:auto}
+}
+
+.omen-bg{
+  background:#000!important;
+}
+.omen-bg:after{opacity:0}
+.rogue-omen{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  position:relative;
+  overflow:hidden;
+  background:#000;
+}
+.omen-circle{
+  position:absolute;
+  width:min(42vw,280px);
+  height:min(42vw,280px);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(40,10,50,.9),#000 70%);
+  box-shadow:0 0 80px rgba(60,0,80,.6);
+  animation:omenCircle 6s ease forwards;
+}
+.omen-soul{
+  position:relative;
+  z-index:2;
+  width:90px;
+  height:110px;
+  border-radius:46% 46% 40% 40%;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(90,40,120,.55),transparent 42%),
+    radial-gradient(circle at 50% 70%,#1a0a22,#07040c 70%);
+  filter:blur(.4px);
+  box-shadow:0 0 40px rgba(80,20,110,.55);
+  animation:omenGrow 6s ease forwards;
+}
+.omen-eye{
+  position:absolute;
+  top:38%;
+  width:10px;
+  height:4px;
+  background:#3a1020;
+  border-radius:2px;
+  animation:omenEyes 6s ease forwards;
+}
+.omen-eye.left{left:24%}
+.omen-eye.right{right:24%}
+.omen-maw{
+  position:absolute;
+  left:50%;
+  bottom:22%;
+  width:28px;
+  height:10px;
+  transform:translateX(-50%);
+  border-bottom:2px solid #2a0814;
+  border-radius:0 0 12px 12px;
+  opacity:.7;
+}
+.omen-line{
+  position:absolute;
+  bottom:14%;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:3;
+  width:min(90vw,420px);
+  text-align:center;
+  color:#c9b8d8;
+  letter-spacing:.18em;
+  font-size:13px;
+  font-weight:800;
+  text-transform:lowercase;
+  animation:omenText 6s ease forwards;
+}
+@keyframes omenCircle{
+  0%{transform:scale(.6);opacity:.4}
+  100%{transform:scale(1.15);opacity:1}
+}
+@keyframes omenGrow{
+  0%{transform:scale(.35);opacity:.15;filter:blur(8px)}
+  55%{opacity:.9;filter:blur(.6px)}
+  100%{transform:scale(1.85);opacity:1;filter:blur(.2px)}
+}
+@keyframes omenEyes{
+  0%,28%{height:2px;background:#1a0810;opacity:.2}
+  45%{height:7px;opacity:.6}
+  100%{height:9px;background:#e8d4ff;box-shadow:0 0 8px #a070ff;opacity:1}
+}
+@keyframes omenText{
+  0%{opacity:0}
+  25%{opacity:0}
+  45%{opacity:1}
+  100%{opacity:1}
 }

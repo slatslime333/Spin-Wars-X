@@ -860,7 +860,23 @@ const BLADE_ENGINE = {
     knight_shield:{name:"Knight Shield",type:"Defense",tier:"Bronze",spin:"Right",weight:32.3,sprite:"assets/blades/knight shield.png",card:{ovr:71,attack:61,knockback:73,defense:78,mobility:56,balance:75,stamina:75,burst:80},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Round Tri-Wing",recoil:"High",lockStrength:84,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter",smashPower:48,upperPower:24,barragePower:42,counterPower:82,movementControl:87,spinRetention:72,lad:70,burstResistance:80,winConditions:{spin:62,burst:68,knockout:34,counter:96}},compatibility:{heights:{60:96,70:88,80:68},bits:{Needle:98,HighNeedle:96,Point:84,Hexa:92,Wedge:90,Ball:86,Orb:84,Elevate:70,Level:62,Rush:38,LowRush:34,Flat:32,LowFlat:28,Kick:50,Quake:30}},traits:["Defense","Counter","Round","High Recoil","Stationary"],personality:{aggression:24,control:94,consistency:86,risk:18}},
     tyranno_beat:{name:"Tyranno Beat",type:"Attack",tier:"Gold",spin:"Right",weight:37.0,sprite:"assets/blades/tyrannoBeat.png",card:{ovr:88,attack:91,knockback:89,defense:72,mobility:84,balance:74,stamina:73,burst:84},physics:{weightClass:"Heavy",centerOfGravity:"Medium",contactShape:"Elliptical",recoil:"High",lockStrength:84,weightDistribution:"Outer"},behavior:{attackStyle:"Elliptical Smash",smashPower:90,upperPower:58,barragePower:72,counterPower:60,movementControl:84,spinRetention:70,lad:67,burstResistance:84,winConditions:{spin:38,burst:74,knockout:94,counter:68}},compatibility:{heights:{60:96,70:90,80:48},bits:{Quake:98,Flat:94,LowFlat:96,Rush:90,LowRush:88,Point:74,Level:80,Kick:84,HighNeedle:46,Needle:38,Hexa:54,Wedge:46,Ball:30,Orb:34,Elevate:52}},traits:["Attack","Elliptical","Heavy","Smash","Counter Attack","High Recoil"],personality:{aggression:92,control:76,consistency:72,risk:86}},
 
-    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,sprite:"assets/blades/Leonfang.png",card:{ovr:75,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:92,70:84,80:66},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}}
+    leon_claw:{name:"Leon Claw",type:"Balance",tier:"Bronze",spin:"Right",weight:34.0,sprite:"assets/blades/Leonfang.png",card:{ovr:75,attack:73,knockback:71,defense:76,mobility:76,balance:86,stamina:79,burst:78},physics:{weightClass:"Medium",centerOfGravity:"Medium",contactShape:"Claw Hybrid",recoil:"Medium",lockStrength:74,weightDistribution:"Balanced"},behavior:{attackStyle:"Counter Rush",smashPower:64,upperPower:48,barragePower:62,counterPower:78,movementControl:82,spinRetention:76,lad:72,burstResistance:74,winConditions:{spin:70,burst:48,knockout:48,counter:82}},compatibility:{heights:{60:92,70:84,80:66},bits:{Point:94,Level:92,Hexa:88,Elevate:82,Needle:80,HighNeedle:78,Ball:76,Orb:78,Wedge:74,Rush:62,LowRush:58,Flat:66,LowFlat:60,Kick:74,Quake:58}},traits:["Balance","Counter","Versatile","Controlled Attack"],personality:{aggression:52,control:86,consistency:84,risk:38}},
+
+    shark_scale:{
+        name:"Shark Scale",
+        type:"Attack",
+        tier:"Gold",
+        hidden:true,
+        rogueBoss:true,
+        spin:"Right",
+        weight:38.6,
+        card:{ovr:95,attack:96,knockback:98,defense:71,mobility:85,balance:78,stamina:70,burst:85},
+        physics:{weightClass:"Heavy",centerOfGravity:"Low",contactShape:"Upper Smash",recoil:"High",lockStrength:88,weightDistribution:"Forward"},
+        behavior:{attackStyle:"Rush Smash",smashPower:97,upperPower:96,barragePower:80,counterPower:36,movementControl:86,spinRetention:70,lad:62,burstResistance:85,winConditions:{spin:28,burst:88,knockout:99,counter:34}},
+        compatibility:{heights:{60:99,70:86,80:40},bits:{Rush:99,LowRush:99,Flat:94,LowFlat:96,Kick:88,Level:82,Point:70,Hexa:34,Wedge:28,Ball:20,Orb:22,Needle:16,Elevate:48,Quake:80}},
+        traits:["Hidden","Final Boss","Knockout","Aggressive"],
+        personality:{aggression:99,control:72,consistency:70,risk:96}
+    }
 
 };
 
@@ -1197,6 +1213,16 @@ function renderLeagueSelect(){
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
 }
 
+function playableBlades(){
+    return Object.values(BLADE_ENGINE).filter(blade=>blade&&!blade.hidden);
+}
+function rogueLuckGrade(tier){
+    const t=String(tier||"").toLowerCase();
+    if(t==="bronze") return "A";
+    if(t==="silver") return "B";
+    if(t==="gold") return "C";
+    return "";
+}
 function pickDifferentPart(pool,avoidName){
     const list=Array.isArray(pool)?pool:[];
     const filtered=list.filter(part=>part && part.name!==avoidName);
@@ -1208,7 +1234,7 @@ function randomizeCombo(side){
     const other=side==="player"?Game.cpu:Game.player;
     const target=Game[side];
     if(!target) return;
-    target.blade=pickDifferentPart(Object.values(BLADE_ENGINE),other?.blade?.name);
+    target.blade=pickDifferentPart(playableBlades(),other?.blade?.name);
     target.ratchet=pickDifferentPart(RATCHETS,other?.ratchet?.name);
     target.bit=pickDifferentPart(selectableBits(),other?.bit?.name);
     target.spin=target.blade?.spin||"Right";
@@ -1306,7 +1332,8 @@ function createBackButton(onClick){
 //=========================
 function showBladeDraft(){
     Game.screen="bladeDraft";
-    const pool=Object.values(BLADE_ENGINE).filter(blade=>{
+    const pool=playableBlades().filter(blade=>{
+        if(blade.hidden) return false;
         if(Game.mode==="bronze") return blade.tier==="Bronze";
         if(Game.mode==="silver") return blade.tier==="Silver";
         if(Game.mode==="gold") return blade.tier==="Gold";
@@ -1403,9 +1430,11 @@ function createBladeCard(blade){
     const card=document.createElement("button");
     card.type="button";
     const sprite=bladeSpritePath(blade);
-    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}`;
+    const luck=Game.mode==="rogue"?rogueLuckGrade(blade.tier):"";
+    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}`;
     card.innerHTML=`
         ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
+        ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
         <div class="blade-card-head">
             <div class="blade-card-title">
                 <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
@@ -2062,7 +2091,9 @@ function createComboSummaryCard(side,combo){
     }
     const ovr=Number.isFinite(Number(combo.ovr))?combo.ovr:60;
     const meta=Number.isFinite(Number(combo.meta))?combo.meta:60;
-    const tier=tierClass(combo.blade?.tier);
+    const tier=tierClass(combo.plateTier||combo.blade?.tier);
+    const bossMark=combo.bossMark||"";
+    const enhanced=!!combo.enhanced;
     const statBox=(label,key)=>{
         const value=stats[key];
         const d=Number(combo.statDelta?.[key])||0;
@@ -2071,7 +2102,8 @@ function createComboSummaryCard(side,combo){
         return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
     };
     const mod=combo.rogueMod;
-    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}">
+    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
+      ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
@@ -2125,9 +2157,9 @@ function showComboCard(){
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       ${vsCall}
       <section class="vs-board">
-        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:""})}
+        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:""})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
@@ -2201,7 +2233,7 @@ function generateCPUCombo(force=false){
     const playerBlade=Game.player.blade;
     const playerRatchet=Game.player.ratchet;
     const playerBit=Game.player.bit;
-    const allBlades=Object.values(BLADE_ENGINE);
+    const allBlades=playableBlades();
     const tierPool=Game.mode==="custom" ? allBlades : allBlades.filter(b=>!playerTier || b.tier===playerTier);
     const differentBlades=tierPool.filter(b=>b!==playerBlade && b.name!==playerBlade?.name);
     const bladePool=differentBlades.length?differentBlades:tierPool.filter(b=>b!==playerBlade);
@@ -6315,8 +6347,14 @@ function newPhysicsCollision(dt){
     */
     if(pRailSwing) pKnockRaw*=1.11;
     if(cRailSwing) cKnockRaw*=1.11;
-    const pKnockback=Math.min(0.086, pKnockRaw*0.82);
-    const cKnockback=Math.min(0.086, cKnockRaw*0.82);
+    let pKnockback=pKnockRaw*0.82;
+    let cKnockback=cKnockRaw*0.82;
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive() && typeof SpinWarsRogue.applyPsyshockKnock==="function"){
+        pKnockback=SpinWarsRogue.applyPsyshockKnock(p,pKnockback);
+        cKnockback=SpinWarsRogue.applyPsyshockKnock(c,cKnockback);
+    }
+    pKnockback=Math.min(0.086, pKnockback);
+    cKnockback=Math.min(0.086, cKnockback);
     const pRailBreakForce=cKnockback;
     const cRailBreakForce=pKnockback;
 
