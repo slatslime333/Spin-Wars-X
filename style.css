@@ -1236,13 +1236,27 @@ footer{
   inset:0;
   pointer-events:none;
   z-index:0;
-  opacity:.82;
-  background:
-    radial-gradient(circle at 50% 0,rgba(255,255,255,.1),transparent 42%),
-    repeating-linear-gradient(60deg,rgba(0,0,0,.4) 0 2px,transparent 2px 11px),
-    repeating-linear-gradient(-60deg,rgba(0,0,0,.34) 0 2px,transparent 2px 11px);
-  backdrop-filter:blur(6px);
-  mix-blend-mode:multiply;
+  opacity:1;
+  background-color:rgba(4,4,6,.3);
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,255,255,.32) 11px 13px, rgba(0,0,0,.72) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px);
+  backdrop-filter:blur(5px) saturate(.75);
+}
+.vs-plate.tier-bronze.enhanced:after,
+.rogue-build.tier-bronze.enhanced:after{
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,186,120,.55) 11px 13px, rgba(0,0,0,.78) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px);
+}
+.vs-plate.tier-silver.enhanced:after,
+.rogue-build.tier-silver.enhanced:after{
+  background-image:
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(236,244,255,.58) 11px 13px, rgba(0,0,0,.75) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px);
 }
 .vs-plate.enhanced > *,
 .rogue-build.enhanced > *{position:relative;z-index:1}
