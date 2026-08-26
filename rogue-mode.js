@@ -273,18 +273,81 @@ function cpuPlateBase(){
     return mergeStats(parts,r.cpuScale);
 }
 
-function grantCpuCommons(){
+function playerUpgradeCount(){
     const r=run();
-    const match=r.matchIndex||1;
-    const boss=!!r.boss;
-    let n=0;
-    if(boss) n=1+(Math.random()<0.6?1:0);
-    else if(match>=4) n=1+(Math.random()<0.45?1:0);
-    else if(match>=2) n=Math.random()<0.72?1:0;
-    else n=Math.random()<0.42?1:0;
+    if(!r) return 0;
+    const fromHist=(r.history||[]).length;
+    const fromMatch=Math.max(0,(r.matchIndex||1)-1);
+    return Math.max(fromHist,fromMatch);
+}
+
+function makeOfferCard(rarity,blade,modifierId){
+    const r=run();
+    if(rarity==="common"){
+        return makeStatCard("common",pick(STATS),2);
+    }
+    if(rarity==="uncommon"){
+        if(Math.random()<0.42){
+            const up=focusedStat(blade||r?.blade);
+            const down=pick(STATS.filter(s=>s!==up));
+            return makeStatCard("uncommon",up,4,down,-2);
+        }
+        return makeStatCard("uncommon",Math.random()<0.55?focusedStat(blade||r?.blade):pick(STATS),3);
+    }
+    if(rarity==="rare"){
+        return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+    }
+    if(rarity==="legendary"){
+        const pool=MODIFIERS.filter(m=>m.id!==modifierId);
+        return makeModifierCard(pick(pool.length?pool:MODIFIERS));
+    }
+    const tier=r?.currentRogueTier;
+    const type=tier==="Gold"||tier==="gold"?"final":"evolve";
+    const roll=Math.random();
+    return makeEvolveCard(roll<0.45?"enhance":type==="final"?"final":"evolve");
+}
+
+function applyCpuCard(card){
+    const r=run();
+    if(!r||!card) return;
+    if(card.kind==="stat"){
+        r.cpuBonuses[card.stat]=(r.cpuBonuses[card.stat]||0)+card.amount;
+        if(card.downStat) r.cpuBonuses[card.downStat]=(r.cpuBonuses[card.downStat]||0)+card.downAmt;
+    }else if(card.kind==="modifier"){
+        r.cpuModifier={id:card.modifierId};
+    }else if(card.kind==="evolve"){
+        const bump=card.evolve==="final"?8:card.evolve==="evolve"?6:4;
+        STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+bump;});
+        const type=String(r.cpuBlade?.type||"");
+        if(type==="Attack"){r.cpuBonuses.attack+=2;r.cpuBonuses.knockback+=2;}
+        if(type==="Defense"){r.cpuBonuses.defense+=2;r.cpuBonuses.balance+=2;}
+        if(type==="Stamina"){r.cpuBonuses.stamina+=3;}
+    }else if(card.kind==="reforge"){
+        if(card.part==="bit"){
+            const opts=selectableBits().filter(b=>b.name!==r.cpuBit?.name);
+            if(opts.length) r.cpuBit=pick(opts);
+        }else{
+            const opts=(typeof RATCHETS!=="undefined"?RATCHETS:[]).filter(x=>x.name!==r.cpuRatchet?.name);
+            if(opts.length) r.cpuRatchet=pick(opts);
+        }
+    }
+    r.cpuHistory=r.cpuHistory||[];
+    r.cpuHistory.push(card);
+}
+
+function grantCpuStack(){
+    const r=run();
+    const n=playerUpgradeCount();
+    r.cpuBonuses=emptyBonuses();
+    r.cpuHistory=[];
+    r.cpuModifier=null;
     for(let i=0;i<n;i++){
-        const stat=pick(STATS);
-        r.cpuBonuses[stat]=(r.cpuBonuses[stat]||0)+2;
+        const card=makeOfferCard(
+            rarityRoll(r.matchIndex,r.startingTier),
+            r.cpuBlade,
+            r.cpuModifier?.id
+        );
+        applyCpuCard(card);
     }
 }
 
@@ -348,19 +411,12 @@ function generateCpu(){
     const parts=starterParts(r.cpuBlade);
     r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||parts.ratchet;
     r.cpuBit=pick(selectableBits())||parts.bit;
+    grantCpuStack();
     const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
-    const gap=target-powerOf(base);
+    const stacked=mergeStats(base,r.cpuBonuses);
+    const gap=target-powerOf(stacked);
     r.cpuScale=emptyBonuses();
     STATS.forEach(k=>{r.cpuScale[k]=round(clamp(gap*(0.72+Math.random()*0.56),-12,28));});
-    r.cpuBonuses=emptyBonuses();
-    grantCpuCommons();
-    if(boss && Math.random()<0.55){
-        r.cpuModifier={id:pick(MODIFIERS).id};
-    }else if(!boss && Math.random()<0.18){
-        r.cpuModifier={id:pick(MODIFIERS).id};
-    }else{
-        r.cpuModifier=null;
-    }
     syncLoadout();
 }
 
@@ -441,29 +497,7 @@ function generateOffers(){
     let guard=0;
     while(cards.length<3 && guard++<24){
         const rarity=rarityRoll(r.matchIndex,r.startingTier);
-        let card=null;
-        if(rarity==="common"){
-            const stat=pick(STATS);
-            card=makeStatCard("common",stat,2);
-        }else if(rarity==="uncommon"){
-            if(Math.random()<0.42){
-                const up=focusedStat(r.blade);
-                const down=pick(STATS.filter(s=>s!==up));
-                card=makeStatCard("uncommon",up,4,down,-2);
-            }else{
-                card=makeStatCard("uncommon",Math.random()<0.55?focusedStat(r.blade):pick(STATS),3);
-            }
-        }else if(rarity==="rare"){
-            card=makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
-        }else if(rarity==="legendary"){
-            const pool=MODIFIERS.filter(m=>m.id!==r.activeModifier?.id);
-            card=makeModifierCard(pick(pool.length?pool:MODIFIERS));
-        }else{
-            const tier=r.currentRogueTier;
-            const type=tier==="Gold"||tier==="gold"?"final":tier==="Silver"||tier==="silver"?"evolve":"evolve";
-            const roll=Math.random();
-            card=makeEvolveCard(roll<0.45?"enhance":type==="final"?"final":"evolve");
-        }
+        const card=makeOfferCard(rarity,r.blade,r.activeModifier?.id);
         const key=card.kind+card.title+card.stat;
         if(used.has(key)) continue;
         used.add(key);
@@ -623,10 +657,11 @@ function bonusStackBoxes(bonuses){
 function upgradeStack(side){
     const r=run();
     if(!r) return [];
-    if(side==="cpu") return bonusStackBoxes(r.cpuBonuses);
-    const boxes=bonusStackBoxes(r.bonuses);
+    const bonuses=side==="cpu"?r.cpuBonuses:r.bonuses;
+    const hist=side==="cpu"?r.cpuHistory:r.history;
+    const boxes=bonusStackBoxes(bonuses);
     const seen={};
-    (r.history||[]).forEach(card=>{
+    (hist||[]).forEach(card=>{
         if(!card) return;
         if(card.kind==="evolve" && !seen[card.evolve||card.title]){
             seen[card.evolve||card.title]=true;
@@ -843,6 +878,7 @@ function buildSave(){
             cpuBitName:r.cpuBit?.name,
             cpuScale:{...emptyBonuses(),...(r.cpuScale||{})},
             cpuBonuses:{...emptyBonuses(),...(r.cpuBonuses||{})},
+            cpuHistory:(r.cpuHistory||[]).map(packCard),
             cpuModifier:packModifier(r.cpuModifier)
         }
     };
@@ -937,6 +973,7 @@ function hydrate(data){
         cpuBit:bitByName(raw.cpuBitName),
         cpuScale:{...emptyBonuses(),...(raw.cpuScale||(!raw.cpuScale && raw.cpuBonuses?raw.cpuBonuses:{}))},
         cpuBonuses:{...emptyBonuses(),...(raw.cpuScale?raw.cpuBonuses:{})},
+        cpuHistory:(raw.cpuHistory||[]).map(c=>c),
         cpuModifier:raw.cpuModifier||null
     };
     if(!raw.startScale){
@@ -1070,7 +1107,7 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
             <p>Bronze starters have the harder road and better rolls. Silver and Gold start a step above Bronze, not a full tier ahead — their opening stats are pulled toward Bronze so match 1 stays close. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
-            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades you pick — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). The CPU can also roll a common like +2 ATK, and that one does tint and box.</p>
+            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). After every match the CPU takes the same number of upgrades you have locked in, so match 3 stacks vs stacks, not a naked CPU vs your hub picks.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
@@ -1110,6 +1147,7 @@ function beginRun(blade){
         offers:[],
         lastResult:null,
         cpuPowerTarget:0,
+        cpuHistory:[],
         boss:false
     };
     Game.player.launch={angle:"Flat",technique:"Center"};
@@ -1368,7 +1406,8 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
-    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS
+    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
+    playerUpgradeCount
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
