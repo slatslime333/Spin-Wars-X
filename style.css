@@ -1237,26 +1237,26 @@ footer{
   pointer-events:none;
   z-index:0;
   opacity:1;
-  background-color:rgba(4,4,6,.26);
+  background-color:rgba(4,4,6,.3);
   background-image:
-    repeating-linear-gradient(0deg, transparent 0 13px, rgba(255,255,255,.22) 13px 14px, rgba(0,0,0,.62) 14px 16px),
-    repeating-linear-gradient(60deg, transparent 0 13px, rgba(255,255,255,.2) 13px 14px, rgba(0,0,0,.58) 14px 16px),
-    repeating-linear-gradient(-60deg, transparent 0 13px, rgba(255,255,255,.2) 13px 14px, rgba(0,0,0,.58) 14px 16px);
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,255,255,.32) 11px 13px, rgba(0,0,0,.72) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px);
   backdrop-filter:blur(5px) saturate(.75);
 }
 .vs-plate.tier-bronze.enhanced:after,
 .rogue-build.tier-bronze.enhanced:after{
   background-image:
-    repeating-linear-gradient(0deg, transparent 0 13px, rgba(227,154,104,.38) 13px 14px, rgba(0,0,0,.7) 14px 16px),
-    repeating-linear-gradient(60deg, transparent 0 13px, rgba(227,154,104,.32) 13px 14px, rgba(0,0,0,.66) 14px 16px),
-    repeating-linear-gradient(-60deg, transparent 0 13px, rgba(227,154,104,.32) 13px 14px, rgba(0,0,0,.66) 14px 16px);
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,186,120,.55) 11px 13px, rgba(0,0,0,.78) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px);
 }
 .vs-plate.tier-silver.enhanced:after,
 .rogue-build.tier-silver.enhanced:after{
   background-image:
-    repeating-linear-gradient(0deg, transparent 0 13px, rgba(220,230,240,.42) 13px 14px, rgba(0,0,0,.68) 14px 16px),
-    repeating-linear-gradient(60deg, transparent 0 13px, rgba(220,230,240,.34) 13px 14px, rgba(0,0,0,.64) 14px 16px),
-    repeating-linear-gradient(-60deg, transparent 0 13px, rgba(220,230,240,.34) 13px 14px, rgba(0,0,0,.64) 14px 16px);
+    repeating-linear-gradient(0deg, transparent 0 11px, rgba(236,244,255,.58) 11px 13px, rgba(0,0,0,.75) 13px 15px),
+    repeating-linear-gradient(60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px),
+    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px);
 }
 .vs-plate.enhanced > *,
 .rogue-build.enhanced > *{position:relative;z-index:1}
