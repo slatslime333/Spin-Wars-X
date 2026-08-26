@@ -3986,6 +3986,32 @@ function recentRailSwing(s){
 }
 
 /*
+  X-Exit / rail-release clash: the swinging Bey already spent its
+  inbound line on the hit. Dump leftover follow-through so they
+  bounce instead of riding through the opponent into a pocket.
+  Victim shove is unchanged.
+*/
+function dumpRailSwingFollowThrough(s, preVx, preVy, throughX, throughY){
+    if(!recentRailSwing(s)) return;
+    const pre=Math.hypot(preVx, preVy)||1;
+    const hx=preVx/pre;
+    const hy=preVy/pre;
+    const along=s.vx*hx+s.vy*hy;
+    if(along>0){
+        s.vx-=hx*along*0.78;
+        s.vy-=hy*along*0.78;
+    }
+    const thruLen=Math.hypot(throughX, throughY)||1;
+    const ux=throughX/thruLen;
+    const uy=throughY/thruLen;
+    const thru=s.vx*ux+s.vy*uy;
+    if(thru>0){
+        s.vx-=ux*thru*0.85;
+        s.vy-=uy*thru*0.85;
+    }
+}
+
+/*
   Finish / recovery knobs. Knock cap stays 0.086.
   Mouth force is "were they actually shoved into the hole."
   Smash force is "was that a committed KO," not any contact.
@@ -6366,6 +6392,8 @@ function newPhysicsCollision(dt){
     const cNormal=c.vx*nx+c.vy*ny;
     const pSpeedPre=Math.hypot(p.vx,p.vy);
     const cSpeedPre=Math.hypot(c.vx,c.vy);
+    const pVxIn=p.vx, pVyIn=p.vy;
+    const cVxIn=c.vx, cVyIn=c.vy;
     /*
       Cancel the approaching contact, then bounce that component back
       so a head-on up-vs-down clash does not zero both Beys. Keep each
@@ -6392,20 +6420,22 @@ function newPhysicsCollision(dt){
     p.vy+=ty*(pTangent*0.90-pTanNow);
     c.vx+=tx*(cTangent*0.90-cTanNow);
     c.vy+=ty*(cTangent*0.90-cTanNow);
-    const keepClashSpeed=(s,pre,againstParked)=>{
+    const keepClashSpeed=(s,pre,againstParked,railSwing)=>{
         const now=Math.hypot(s.vx,s.vy);
-        const keep=againstParked
-            ? (0.28+0.16*(1-directness))
-            : (0.48+0.30*(1-directness));
-        const want=Math.max(0.012, pre*keep);
+        const keep=railSwing
+            ? (0.12+0.10*(1-directness))
+            : againstParked
+                ? (0.28+0.16*(1-directness))
+                : (0.48+0.30*(1-directness));
+        const want=Math.max(railSwing?0.008:0.012, pre*keep);
         if(now<want && now>1e-8){
-            const sc=Math.min(want/now,1.55);
+            const sc=Math.min(want/now, railSwing?1.12:1.55);
             s.vx*=sc;
             s.vy*=sc;
         }
     };
-    keepClashSpeed(p,pSpeedPre,cParked);
-    keepClashSpeed(c,cSpeedPre,pParked);
+    keepClashSpeed(p,pSpeedPre,cParked,pRailSwing);
+    keepClashSpeed(c,cSpeedPre,pParked,cRailSwing);
 
     /*
       PHASE A — IMPACT MOMENTUM OWNERSHIP
@@ -6437,6 +6467,8 @@ function newPhysicsCollision(dt){
         c.impactMomentumState||0,
         cImpactMomentumState
     );
+    if(pRailSwing) p.impactMomentumState=Math.min(p.impactMomentumState, 0.32);
+    if(cRailSwing) c.impactMomentumState=Math.min(c.impactMomentumState, 0.32);
 
     let recoilP=pKnockback*(0.04+0.05*pDef+0.08*pBal);
     let recoilC=cKnockback*(0.04+0.05*cDef+0.08*cBal);
@@ -6471,6 +6503,8 @@ function newPhysicsCollision(dt){
     p.vy+=ty*pFollow;
     c.vx-=tx*cFollow;
     c.vy-=ty*cFollow;
+    dumpRailSwingFollowThrough(p, pVxIn, pVyIn, nx, ny);
+    dumpRailSwingFollowThrough(c, cVxIn, cVyIn, -nx, -ny);
 
     if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
         breakXRailFromImpact(p,nx,ny,cRailBreakForce);
@@ -6826,6 +6860,12 @@ function newPhysicsCollision(dt){
     c.lastImpactAt=performance.now();
     p.lastImpactForce=cKnockback;
     c.lastImpactForce=pKnockback;
+    /*
+      Swinging attacker should not keep smash credit on themselves if
+      leftover line still clips a hole. Victim knock is unchanged.
+    */
+    if(pRailSwing) p.lastImpactForce=Math.min(Number(p.lastImpactForce)||0, 0.018);
+    if(cRailSwing) c.lastImpactForce=Math.min(Number(c.lastImpactForce)||0, 0.018);
     p.lastImpactOpponentSpeed=cSpeed;
     c.lastImpactOpponentSpeed=pSpeed;
     p.lastImpactAttacker="cpu";
