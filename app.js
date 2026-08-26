@@ -1089,12 +1089,27 @@ function getBitPhysics(blader){
 function homeMarkHTML(opts){
     opts=opts||{};
     const compact=opts.compact?" compact":"";
-    const tag=opts.tag?`<p class="home-tag">${opts.tag}</p>`:"";
+    const kicker=opts.kicker||"X STADIUM";
+    const tagText=opts.tag!==undefined
+        ? opts.tag
+        : (opts.compact?"":"Two Beys. X-Rail. First to 7.");
+    const tag=tagText?`<p class="home-tag">${tagText}</p>`:"";
     return `<header class="home-mark${compact}">
-        <p class="home-kicker">STADIUM BATTLE</p>
+        <p class="home-kicker">${kicker}</p>
         <h1>SPIN WARS<i>X</i></h1>
         ${tag}
     </header>`;
+}
+
+function homeBowlHTML(){
+    return `<div class="home-bowl" aria-hidden="true">
+        <span class="home-bowl-rail"></span>
+        <span class="home-bowl-floor"></span>
+        <span class="home-bowl-x">X</span>
+        <span class="home-pocket home-pocket-l"></span>
+        <span class="home-pocket home-pocket-c"></span>
+        <span class="home-pocket home-pocket-r"></span>
+    </div>`;
 }
 
 function renderMainMenu(){
@@ -1110,27 +1125,29 @@ function renderMainMenu(){
     if(!app) return;
 
     app.innerHTML=`
-    <div class="background"></div>
-    <main class="home">
-        <div class="home-ring" aria-hidden="true"></div>
-        ${homeMarkHTML({tag:"First to 7 · Xtreme · Over · Spin"})}
-        <nav class="home-leagues" aria-label="Choose a mode">
-            <p class="home-leagues-label">SELECT MODE</p>
-            <button class="home-league quick" data-home="quick" type="button">
-                <span class="home-league-rank">01</span>
-                <span class="home-league-copy"><b>QUICK PLAY</b><small>Bronze to Custom leagues</small></span>
-                <span class="home-league-go">PLAY</span>
+    <div class="background stadium"></div>
+    <main class="home lobby">
+        ${homeBowlHTML()}
+        ${homeMarkHTML()}
+        <nav class="home-doors" aria-label="Choose a mode">
+            <button class="home-door rip" data-home="quick" type="button">
+                <span class="home-door-kicker">QUICK PLAY</span>
+                <b>LET IT RIP</b>
+                <small>Leagues · random fights · first to 7</small>
             </button>
-            <button class="home-league locked" type="button" aria-disabled="true">
-                <span class="home-league-rank">02</span>
-                <span class="home-league-copy"><b>CAMPAIGN</b><small>Coming soon</small></span>
-                <span class="home-league-go lock">LOCKED</span>
-            </button>
-            <button class="home-league custom" data-home="rogue" type="button">
-                <span class="home-league-rank">03</span>
-                <span class="home-league-copy"><b>ROGUE</b><small>6 matches · first to 7 · build the Bey</small></span>
-                <span class="home-league-go">ENTER</span>
-            </button>
+            <div class="home-door-row">
+                <button class="home-door locked" type="button" aria-disabled="true">
+                    <span class="home-door-kicker">STORY</span>
+                    <b>CAMPAIGN</b>
+                    <small>Coming soon</small>
+                    <span class="home-door-lock">LOCKED</span>
+                </button>
+                <button class="home-door rogue" data-home="rogue" type="button">
+                    <span class="home-door-kicker">RUN</span>
+                    <b>ROGUE</b>
+                    <small>6 matches · build the Bey</small>
+                </button>
+            </div>
         </nav>
     </main>`;
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
@@ -1144,37 +1161,29 @@ function renderLeagueSelect(){
     if(!app) return;
 
     app.innerHTML=`
-    <div class="background"></div>
-    <main class="home">
-        <div class="home-ring" aria-hidden="true"></div>
-        ${homeMarkHTML({tag:"First to 7 · Xtreme · Over · Spin"})}
-        <nav class="home-leagues" aria-label="Choose a league">
-            <p class="home-leagues-label">SELECT LEAGUE</p>
-            <button class="home-league quick" data-quick-match="1" type="button">
-                <span class="home-league-rank">00</span>
+    <div class="background stadium"></div>
+    <main class="home league-board">
+        ${homeBowlHTML()}
+        ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:"Pick a fight. First to 7."})}
+        <nav class="home-leagues board" aria-label="Choose a league">
+            <button class="home-league featured" data-quick-match="1" type="button">
                 <span class="home-league-copy"><b>QUICK MATCH</b><small>Random combos · reroll both sides</small></span>
-                <span class="home-league-go">FIGHT</span>
+                <span class="home-league-go">RIP</span>
             </button>
-            <button class="home-league bronze" data-mode="bronze" type="button">
-                <span class="home-league-rank">01</span>
-                <span class="home-league-copy"><b>BRONZE</b><small>Starter blade pool</small></span>
-                <span class="home-league-go">PLAY</span>
-            </button>
-            <button class="home-league silver" data-mode="silver" type="button">
-                <span class="home-league-rank">02</span>
-                <span class="home-league-copy"><b>SILVER</b><small>Mid-tier blade pool</small></span>
-                <span class="home-league-go">PLAY</span>
-            </button>
-            <button class="home-league gold" data-mode="gold" type="button">
-                <span class="home-league-rank">03</span>
-                <span class="home-league-copy"><b>GOLD</b><small>Top-tier blade pool</small></span>
-                <span class="home-league-go">PLAY</span>
-            </button>
-            <button class="home-league custom" data-mode="custom" type="button">
-                <span class="home-league-rank">04</span>
-                <span class="home-league-copy"><b>CUSTOM</b><small>Full garage · every part</small></span>
-                <span class="home-league-go">BUILD</span>
-            </button>
+            <div class="home-league-grid">
+                <button class="home-league bronze" data-mode="bronze" type="button">
+                    <span class="home-league-copy"><b>BRONZE</b><small>Starter pool</small></span>
+                </button>
+                <button class="home-league silver" data-mode="silver" type="button">
+                    <span class="home-league-copy"><b>SILVER</b><small>Mid-tier pool</small></span>
+                </button>
+                <button class="home-league gold" data-mode="gold" type="button">
+                    <span class="home-league-copy"><b>GOLD</b><small>Top-tier pool</small></span>
+                </button>
+                <button class="home-league custom" data-mode="custom" type="button">
+                    <span class="home-league-copy"><b>CUSTOM</b><small>Full garage</small></span>
+                </button>
+            </div>
         </nav>
     </main>`;
     document.querySelectorAll(".home-league[data-mode]").forEach(button=>{

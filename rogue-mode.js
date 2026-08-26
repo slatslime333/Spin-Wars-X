@@ -1069,27 +1069,23 @@ function showLanding(){
         ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
         : "No run saved";
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
-        <div class="home-ring" aria-hidden="true"></div>
-        ${homeMarkHTML({tag:"Rogue · First to 7 · Build the Bey"})}
-        <nav class="home-leagues" aria-label="Rogue">
-            <p class="home-leagues-label">ROGUE RUN</p>
-            <button class="home-league quick" id="rogueNewGame" type="button">
-                <span class="home-league-rank">01</span>
-                <span class="home-league-copy"><b>NEW GAME</b><small>Pick a starting Bey</small></span>
-                <span class="home-league-go">START</span>
+        ${homeBowlHTML()}
+        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Six matches. First to 7."})}
+        <nav class="home-doors rogue-doors" aria-label="Rogue">
+            <button class="home-door rip" id="rogueNewGame" type="button">
+                <span class="home-door-kicker">NEW RUN</span>
+                <b>NEW GAME</b>
+                <small>Pick a starting Bey</small>
             </button>
-            <button class="home-league ${canContinue?"custom":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span class="home-league-rank">02</span>
-                <span class="home-league-copy"><b>CONTINUE</b><small>${continueNote}</small></span>
-                <span class="home-league-go ${canContinue?"":"lock"}">${canContinue?"RESUME":"LOCKED"}</span>
+            <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+                <span class="home-door-kicker">SAVE</span>
+                <b>CONTINUE</b>
+                <small>${continueNote}</small>
+                ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
             </button>
-            <button class="home-league silver" id="rogueHelp" type="button">
-                <span class="home-league-rank">03</span>
-                <span class="home-league-copy"><b>HELP</b><small>How a run works</small></span>
-                <span class="home-league-go">READ</span>
-            </button>
+            <button class="home-help" id="rogueHelp" type="button">How a run works</button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
