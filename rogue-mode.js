@@ -1711,9 +1711,9 @@ function showSharkOmen(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background omen-bg"></div>
     <main class="rogue-omen" id="rogueOmen">
-        <div class="omen-circle" aria-hidden="true"></div>
-        <div class="omen-soul" aria-hidden="true">
-            <span class="omen-fin"></span>
+        <div class="omen-figure" aria-hidden="true">
+            <div class="omen-circle"></div>
+            <div class="omen-soul"></div>
             <span class="omen-brow left"></span>
             <span class="omen-brow right"></span>
             <span class="omen-eye left"></span>
