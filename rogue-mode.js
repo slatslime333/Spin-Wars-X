@@ -232,11 +232,13 @@ function makeStartScale(blade,ratchet,bit){
     if(tier==="Bronze"||!blade) return scale;
     const band=bronzeBand();
     const mine=comboBase(blade,ratchet,bit);
-    const lead=tier==="Gold"?4:2.5;
+    // Silver/Gold sit a step above Bronze, not a full-tier jump.
+    // Keep the shape: only pull highs down, leave dump stats dump.
+    const lead=tier==="Gold"?2.2:1.0;
     STATS.forEach(k=>{
         const target=(Number(band[k])||70)+lead;
         const have=Number(mine[k])||70;
-        if(have>target) scale[k]=round((target-have)*0.88);
+        if(have>target) scale[k]=round((target-have)*0.93);
     });
     return scale;
 }
@@ -279,6 +281,24 @@ function playerUpgradeCount(){
     const fromHist=(r.history||[]).length;
     const fromMatch=Math.max(0,(r.matchIndex||1)-1);
     return Math.max(fromHist,fromMatch);
+}
+
+function tierPressureCount(){
+    const t=String(run()?.startingTier||"");
+    if(t==="Bronze") return 1+Math.floor(Math.random()*3);
+    if(t==="Silver") return 1+Math.floor(Math.random()*2);
+    return 1;
+}
+
+function grantCpuPressure(n){
+    const r=run();
+    for(let i=0;i<n;i++){
+        const focus=focusedStat(r.cpuBlade);
+        const card=Math.random()<0.72
+            ? makeStatCard("common",focus,2)
+            : makeOfferCard("uncommon",r.cpuBlade,r.cpuModifier?.id);
+        applyCpuCard(card);
+    }
 }
 
 function makeOfferCard(rarity,blade,modifierId){
@@ -349,6 +369,7 @@ function grantCpuStack(){
         );
         applyCpuCard(card);
     }
+    grantCpuPressure(tierPressureCount());
 }
 
 function battleCombo(side){
@@ -391,18 +412,45 @@ function syncLoadout(){
     Game.cpu.comboMeta=c.meta;
 }
 
+function cpuPowerTarget(playerPow,match,boss){
+    const r=run();
+    const tier=String(r.startingTier||"");
+    const growth=tier==="Bronze"?0.022:tier==="Silver"?0.020:0.018;
+    let target=playerPow*(0.90+match*growth);
+    if(tier==="Bronze") target*=1.03;
+    else if(tier==="Silver") target*=1.025;
+    else target*=1.04;
+    if(r.cpuPowerTarget) target=r.cpuPowerTarget*0.62+target*0.38;
+    if(boss){
+        let bump=1.05+Math.random()*0.07;
+        if(tier==="Bronze") bump=1.08+Math.random()*0.07;
+        else if(tier==="Silver") bump=1.06+Math.random()*0.07;
+        target=playerPow*bump;
+    }
+    return target;
+}
+
+function fillCpuScale(target){
+    const r=run();
+    const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
+    const stacked=mergeStats(base,r.cpuBonuses);
+    const pow=powerOf(stacked)||70;
+    const factor=target/pow;
+    r.cpuScale=emptyBonuses();
+    STATS.forEach(k=>{
+        const have=Number(stacked[k])||70;
+        const want=have*factor;
+        r.cpuScale[k]=round(clamp(want-have,-14,30));
+    });
+}
+
 function generateCpu(){
     const r=run();
     const playerPow=powerOf(playerEffective());
     const match=r.matchIndex;
     const boss=!!BOSS_AT[match];
-    let target=playerPow*(0.90+match*0.018);
-    if(r.startingTier==="Bronze") target*=0.96;
-    if(r.startingTier==="Gold") target*=1.04;
-    if(r.cpuPowerTarget) target=r.cpuPowerTarget*0.62+target*0.38;
-    if(boss) target=playerPow*(1.05+Math.random()*0.07);
-    r.cpuPowerTarget=target;
     r.boss=boss;
+    r.cpuPowerTarget=cpuPowerTarget(playerPow,match,boss);
 
     const blades=Object.values(BLADE_ENGINE);
     const wantTier=boss?"Gold":match>=4?"Silver":pick(["Bronze","Silver","Gold"]);
@@ -412,11 +460,7 @@ function generateCpu(){
     r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||parts.ratchet;
     r.cpuBit=pick(selectableBits())||parts.bit;
     grantCpuStack();
-    const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
-    const stacked=mergeStats(base,r.cpuBonuses);
-    const gap=target-powerOf(stacked);
-    r.cpuScale=emptyBonuses();
-    STATS.forEach(k=>{r.cpuScale[k]=round(clamp(gap*(0.72+Math.random()*0.56),-12,28));});
+    fillCpuScale(r.cpuPowerTarget);
     syncLoadout();
 }
 
@@ -1106,8 +1150,8 @@ function showHelp(){
         </div>
         <section class="menu-card rogue-help-card">
             <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
-            <p>Bronze starters have the harder road and better rolls. Silver and Gold start a step above Bronze, not a full tier ahead — their opening stats are pulled toward Bronze so match 1 stays close. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
-            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates. Green and red only mark upgrades — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). After every match the CPU takes the same number of upgrades you have locked in, so match 3 stacks vs stacks, not a naked CPU vs your hub picks.</p>
+            <p>Bronze starters have the harder road and better rolls. Silver and Gold open a step above Bronze, not a full tier ahead — their opening stats sit a bit closer to Bronze, but an Attack Bey still hits like Attack and a tank still tanks. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
+            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates and keep the CPU Bey's shape. Green and red only mark upgrades — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). After every match the CPU takes the same number of upgrades you have locked in, plus extra pressure from your starting tier: Bronze CPUs walk in with 1–3 extras, Silver 1–2, Gold 1.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
