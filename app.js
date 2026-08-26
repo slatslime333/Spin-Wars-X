@@ -625,6 +625,7 @@ const BLADE_ENGINE = {
         spin:"Right",
         weight:32.4,
         sprite:"assets/blades/shelterdrake.png",
+        battleSpriteScale:1.18,
 
         card:{ovr:71,attack:70,knockback:68,defense:67,mobility:80,balance:82,stamina:78,burst:70},
 
@@ -4466,6 +4467,8 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const cx=50+draw.x*39;
     const cy=46+draw.y*39;
     const r=4.85*(state.hitFlash>0?(state.impactScale||1):1);
+    const artScale=Number(state.blade?.battleSpriteScale);
+    const artR=r*(artScale>0?artScale:1);
     // SVG positive rotation is clockwise. Right-spin sprites use that.
     const rpm=newBattleClamp(Number(state.rpm)||0,0,1);
     const visualSpin=rpm<=0.0005?0:Math.max(0.16, Math.pow(rpm,0.55));
@@ -4478,10 +4481,10 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         if(spriteEl.getAttribute("href")!==sprite){
             spriteEl.setAttribute("href",sprite);
         }
-        spriteEl.setAttribute("x",String(cx-r));
-        spriteEl.setAttribute("y",String(cy-r));
-        spriteEl.setAttribute("width",String(r*2));
-        spriteEl.setAttribute("height",String(r*2));
+        spriteEl.setAttribute("x",String(cx-artR));
+        spriteEl.setAttribute("y",String(cy-artR));
+        spriteEl.setAttribute("width",String(artR*2));
+        spriteEl.setAttribute("height",String(artR*2));
         spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
     }else{
         if(spriteEl) spriteEl.style.display="none";
