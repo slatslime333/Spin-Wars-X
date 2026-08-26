@@ -2496,48 +2496,56 @@ button:focus-visible{
 }
 .omen-circle{
   position:absolute;
-  width:min(42vw,280px);
-  height:min(42vw,280px);
+  width:min(46vw,300px);
+  height:min(46vw,300px);
   border-radius:50%;
-  background:radial-gradient(circle,rgba(40,10,50,.9),#000 70%);
-  box-shadow:0 0 80px rgba(60,0,80,.6);
+  background:radial-gradient(circle,rgba(28,4,18,.95),#000 68%);
+  box-shadow:0 0 90px rgba(90,0,20,.45);
   animation:omenCircle 6s ease forwards;
 }
 .omen-soul{
   position:relative;
   z-index:2;
-  width:90px;
-  height:110px;
-  border-radius:46% 46% 40% 40%;
+  width:108px;
+  height:128px;
+  clip-path:polygon(50% 0,86% 14%,100% 48%,78% 100%,50% 92%,22% 100%,0 48%,14% 14%);
   background:
-    radial-gradient(circle at 50% 30%,rgba(90,40,120,.55),transparent 42%),
-    radial-gradient(circle at 50% 70%,#1a0a22,#07040c 70%);
-  filter:blur(.4px);
-  box-shadow:0 0 40px rgba(80,20,110,.55);
+    radial-gradient(circle at 50% 22%,rgba(70,12,40,.5),transparent 38%),
+    radial-gradient(circle at 50% 58%,#12040c,#030104 74%);
+  box-shadow:0 0 48px rgba(90,0,24,.55);
   animation:omenGrow 6s ease forwards;
 }
+.omen-fin{
+  position:absolute;
+  left:50%;
+  top:-18%;
+  width:18px;
+  height:38px;
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,#1a0610,#050204);
+  clip-path:polygon(50% 0,100% 100%,0 100%);
+  opacity:.9;
+}
+.omen-brow{
+  position:absolute;
+  top:30%;
+  width:22px;
+  height:3px;
+  background:#2a0a12;
+  animation:omenBrow 6s ease forwards;
+}
+.omen-brow.left{left:20%;transform:rotate(28deg)}
+.omen-brow.right{right:20%;transform:rotate(-28deg)}
 .omen-eye{
   position:absolute;
   top:38%;
-  width:10px;
-  height:4px;
-  background:#3a1020;
-  border-radius:2px;
+  width:16px;
+  height:2px;
+  background:#1a0508;
   animation:omenEyes 6s ease forwards;
 }
-.omen-eye.left{left:24%}
-.omen-eye.right{right:24%}
-.omen-maw{
-  position:absolute;
-  left:50%;
-  bottom:22%;
-  width:28px;
-  height:10px;
-  transform:translateX(-50%);
-  border-bottom:2px solid #2a0814;
-  border-radius:0 0 12px 12px;
-  opacity:.7;
-}
+.omen-eye.left{left:22%;transform:rotate(22deg)}
+.omen-eye.right{right:22%;transform:rotate(-22deg)}
 .omen-line{
   position:absolute;
   bottom:14%;
@@ -2555,17 +2563,27 @@ button:focus-visible{
 }
 @keyframes omenCircle{
   0%{transform:scale(.6);opacity:.4}
-  100%{transform:scale(1.15);opacity:1}
+  100%{transform:scale(1.18);opacity:1}
 }
 @keyframes omenGrow{
-  0%{transform:scale(.35);opacity:.15;filter:blur(8px)}
-  55%{opacity:.9;filter:blur(.6px)}
-  100%{transform:scale(1.85);opacity:1;filter:blur(.2px)}
+  0%{transform:scale(.32);opacity:.12;filter:blur(10px)}
+  50%{opacity:.95;filter:blur(.8px)}
+  100%{transform:scale(1.9);opacity:1;filter:blur(0)}
+}
+@keyframes omenBrow{
+  0%{opacity:.15}
+  40%{opacity:.7}
+  100%{opacity:1;box-shadow:0 0 6px rgba(80,0,20,.6)}
 }
 @keyframes omenEyes{
-  0%,28%{height:2px;background:#1a0810;opacity:.2}
-  45%{height:7px;opacity:.6}
-  100%{height:9px;background:#e8d4ff;box-shadow:0 0 8px #a070ff;opacity:1}
+  0%,22%{height:1px;background:#120306;opacity:.15;box-shadow:none}
+  48%{height:2px;opacity:.7;background:#4a0818}
+  100%{
+    height:3px;
+    background:#ff3a4a;
+    box-shadow:0 0 8px #ff2440,0 0 18px rgba(160,0,40,.8);
+    opacity:1;
+  }
 }
 @keyframes omenText{
   0%{opacity:0}

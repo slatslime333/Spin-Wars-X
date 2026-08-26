@@ -1713,9 +1713,11 @@ function showSharkOmen(){
     <main class="rogue-omen" id="rogueOmen">
         <div class="omen-circle" aria-hidden="true"></div>
         <div class="omen-soul" aria-hidden="true">
+            <span class="omen-fin"></span>
+            <span class="omen-brow left"></span>
+            <span class="omen-brow right"></span>
             <span class="omen-eye left"></span>
             <span class="omen-eye right"></span>
-            <span class="omen-maw"></span>
         </div>
         <p class="omen-line">a dark presence watched you</p>
     </main>`;
