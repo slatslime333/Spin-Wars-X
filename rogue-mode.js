@@ -1,6 +1,6 @@
 /* SPIN WARS X — ROGUE MODE
  * Progression around the live battle engine. First to 7 per match.
- * Six matches in a run. Bosses on 3 and 6. Lose a match, run over.
+ * Eighteen matches. Minis 6/12. Shark Scale at 18. Then endless.
  */
 (function(global){
 "use strict";
@@ -10,8 +10,9 @@ const LABEL={
     attack:"ATK",knockback:"KB",defense:"DEF",
     mobility:"MOB",balance:"BAL",stamina:"STA"
 };
-const MAX_MATCHES=6;
-const BOSS_AT={3:true,6:true};
+const FINAL_MATCH=18;
+const MAX_MATCHES=FINAL_MATCH;
+const BOSS_AT={6:"mini",12:"mini",18:"final"};
 
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
 function round(n){return Math.round(Number(n)||0);}
@@ -178,6 +179,13 @@ const MODIFIERS=[
          if(key==="attack") return 6;
          if(key==="balance") return 4;
          return 0;
+     }},
+    {id:"psyshock",name:"PSYSHOCK",tag:"KNOCK",
+     blurb:"First 5s: +5 KB. Hits cycle 60% knock, then the held 40% dumps on the next clash, then it resets.",
+     live(s,key){
+         if(key!=="knockback") return 0;
+         const t=Number(NEW_BATTLE?.elapsed)||0;
+         return t<=5?5:0;
      }}
 ];
 
@@ -192,6 +200,27 @@ function liveBonus(s,key){
     const def=modifierById(mod.id);
     if(!def||typeof def.live!=="function") return 0;
     return def.live(s,key)||0;
+}
+
+function hasMod(s,id){
+    const r=run();
+    if(!r||!s) return false;
+    const packed=s===NEW_BATTLE?.cpu?r.cpuModifier:r.activeModifier;
+    return packed?.id===id;
+}
+
+function applyPsyshockKnock(s,knock){
+    const intended=Number(knock)||0;
+    if(!isActive()||!s||!hasMod(s,"psyshock")) return intended;
+    if(!s.roguePsyshockArmed){
+        s.roguePsyshockStored=intended*0.4;
+        s.roguePsyshockArmed=true;
+        return intended*0.6;
+    }
+    const dumped=intended+(Number(s.roguePsyshockStored)||0);
+    s.roguePsyshockStored=0;
+    s.roguePsyshockArmed=false;
+    return dumped;
 }
 
 function onClash(p,c,pDealt,cDealt){
@@ -209,7 +238,7 @@ function onClash(p,c,pDealt,cDealt){
 }
 
 function bronzeBand(){
-    const blades=Object.values(BLADE_ENGINE||{}).filter(b=>String(b.tier)==="Bronze");
+    const blades=Object.values(BLADE_ENGINE||{}).filter(b=>String(b.tier)==="Bronze"&&!b.hidden);
     const ratchet=(typeof RATCHETS!=="undefined"&&RATCHETS.find(x=>x.name==="3-60"))||{name:"3-60",number:3,height:60};
     const bits=typeof selectableBits==="function"?selectableBits():[];
     const bit=bits.find(x=>x.name==="Point")||bits[0]||{name:"Point"};
@@ -296,35 +325,75 @@ function grantCpuPressure(n){
         const focus=focusedStat(r.cpuBlade);
         const card=Math.random()<0.72
             ? makeStatCard("common",focus,2)
-            : makeOfferCard("uncommon",r.cpuBlade,r.cpuModifier?.id);
+            : makeOfferCard("uncommon",r.cpuBlade,r.cpuModifier?.id,{forCpu:true});
         applyCpuCard(card);
     }
 }
 
-function makeOfferCard(rarity,blade,modifierId){
+function makeCommonCard(blade,forCpu){
+    const stats=forCpu?cpuEffective():playerEffective();
+    const roll=Math.random();
+    let stat,body;
+    if(roll<0.34){
+        stat=focusedStat(blade);
+        body=`Type lean. +2 where this Bey wants it.`;
+    }else if(roll<0.67){
+        stat=lowestStat(stats);
+        body=`Patch the low line. +2 ${LABEL[stat]}.`;
+    }else{
+        stat=pick(STATS);
+        body=`Wild +2. Safe growth.`;
+    }
+    const card=makeStatCard("common",stat,2);
+    card.body=body;
+    return card;
+}
+
+function makeDualStatCard(a,aAmt,b,bAmt){
+    return {
+        id:"stat-dual-"+Math.random().toString(16).slice(2),
+        rarity:"rare",kind:"stat",stat:a,amount:aAmt,secondStat:b,secondAmt:bAmt,
+        title:`${LABEL[a]} +${aAmt}  ·  ${LABEL[b]} +${bAmt}`,
+        kicker:"RARE",
+        body:`Two lines move. +${aAmt} ${LABEL[a]} and +${bAmt} ${LABEL[b]}.`
+    };
+}
+
+function makeOfferCard(rarity,blade,modifierId,opts){
     const r=run();
+    const forCpu=!!opts?.forCpu;
     if(rarity==="common"){
-        return makeStatCard("common",pick(STATS),2);
+        return makeCommonCard(blade||r?.blade,forCpu);
     }
     if(rarity==="uncommon"){
+        const up=Math.random()<0.62?focusedStat(blade||r?.blade):pick(STATS);
+        const down=pick(STATS.filter(s=>s!==up));
         if(Math.random()<0.42){
-            const up=focusedStat(blade||r?.blade);
-            const down=pick(STATS.filter(s=>s!==up));
             return makeStatCard("uncommon",up,4,down,-2);
         }
-        return makeStatCard("uncommon",Math.random()<0.55?focusedStat(blade||r?.blade):pick(STATS),3);
+        return makeStatCard("uncommon",up,3,down,-1);
     }
     if(rarity==="rare"){
-        return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        const roll=Math.random();
+        if(roll<0.50) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        if(roll<0.75){
+            const peak=peakStat(forCpu?cpuEffective():playerEffective());
+            const card=makeStatCard("rare",Math.random()<0.7?focusedStat(blade||r?.blade):peak,4);
+            card.body=`Peak. +4 ${LABEL[card.stat]}. No catch.`;
+            return card;
+        }
+        const a=focusedStat(blade||r?.blade);
+        const b=pick(STATS.filter(s=>s!==a));
+        return makeDualStatCard(a,2,b,2);
     }
     if(rarity==="legendary"){
         const pool=MODIFIERS.filter(m=>m.id!==modifierId);
         return makeModifierCard(pick(pool.length?pool:MODIFIERS));
     }
-    const tier=r?.currentRogueTier;
-    const type=tier==="Gold"||tier==="gold"?"final":"evolve";
-    const roll=Math.random();
-    return makeEvolveCard(roll<0.45?"enhance":type==="final"?"final":"evolve");
+    if(forCpu) return makeOfferCard("uncommon",blade,modifierId,{forCpu:true});
+    const form=nextFormCard();
+    if(form) return form;
+    return makeOfferCard("uncommon",blade,modifierId);
 }
 
 function applyCpuCard(card){
@@ -333,15 +402,11 @@ function applyCpuCard(card){
     if(card.kind==="stat"){
         r.cpuBonuses[card.stat]=(r.cpuBonuses[card.stat]||0)+card.amount;
         if(card.downStat) r.cpuBonuses[card.downStat]=(r.cpuBonuses[card.downStat]||0)+card.downAmt;
+        if(card.secondStat) r.cpuBonuses[card.secondStat]=(r.cpuBonuses[card.secondStat]||0)+card.secondAmt;
     }else if(card.kind==="modifier"){
         r.cpuModifier={id:card.modifierId};
     }else if(card.kind==="evolve"){
-        const bump=card.evolve==="final"?8:card.evolve==="evolve"?6:4;
-        STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+bump;});
-        const type=String(r.cpuBlade?.type||"");
-        if(type==="Attack"){r.cpuBonuses.attack+=2;r.cpuBonuses.knockback+=2;}
-        if(type==="Defense"){r.cpuBonuses.defense+=2;r.cpuBonuses.balance+=2;}
-        if(type==="Stamina"){r.cpuBonuses.stamina+=3;}
+        STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+2;});
     }else if(card.kind==="reforge"){
         if(card.part==="bit"){
             const opts=selectableBits().filter(b=>b.name!==r.cpuBit?.name);
@@ -365,11 +430,21 @@ function grantCpuStack(){
         const card=makeOfferCard(
             rarityRoll(r.matchIndex,r.startingTier),
             r.cpuBlade,
-            r.cpuModifier?.id
+            r.cpuModifier?.id,
+            {forCpu:true}
         );
         applyCpuCard(card);
     }
-    grantCpuPressure(tierPressureCount());
+    grantCpuPressure(tierPressureCount()+bossExtraStacks());
+}
+
+function bossExtraStacks(){
+    const m=Number(run()?.matchIndex)||1;
+    if(m===6) return 2;
+    if(m===12) return 3;
+    if(m===18) return 4;
+    if(m>FINAL_MATCH) return 1+Math.min(3,Math.floor((m-FINAL_MATCH)/4));
+    return 0;
 }
 
 function battleCombo(side){
@@ -412,6 +487,62 @@ function syncLoadout(){
     Game.cpu.comboMeta=c.meta;
 }
 
+function startTier(){
+    const t=String(run()?.startingTier||"");
+    if(t==="Bronze"||t==="bronze") return "Bronze";
+    if(t==="Gold"||t==="gold") return "Gold";
+    return "Silver";
+}
+function formTier(){
+    const t=String(run()?.currentRogueTier||"Bronze");
+    if(t==="Gold"||t==="gold") return "Gold";
+    if(t==="Silver"||t==="silver") return "Silver";
+    return "Bronze";
+}
+function inEndless(){
+    return (Number(run()?.matchIndex)||1)>FINAL_MATCH;
+}
+function canEnhance(){
+    const r=run();
+    if(!r||r.enhanced||inEndless()) return false;
+    const start=startTier();
+    if(start==="Gold") return false;
+    if(start==="Bronze") return true;
+    return formTier()==="Silver";
+}
+function canEvolve(){
+    const r=run();
+    if(!r||inEndless()) return false;
+    const start=startTier();
+    const form=formTier();
+    if(start==="Bronze") return false;
+    if(start==="Silver") return form==="Bronze";
+    return form!=="Gold";
+}
+function nextFormCard(){
+    if(canEvolve()){
+        return makeEvolveCard(startTier()==="Gold"&&formTier()==="Silver"?"final":"evolve");
+    }
+    if(canEnhance()) return makeEvolveCard("enhance");
+    return null;
+}
+function lowestStat(stats){
+    let best=STATS[0], n=1e9;
+    STATS.forEach(k=>{
+        const v=Number(stats?.[k])||70;
+        if(v<n){n=v;best=k;}
+    });
+    return best;
+}
+function peakStat(stats){
+    let best=STATS[0], n=-1e9;
+    STATS.forEach(k=>{
+        const v=Number(stats?.[k])||70;
+        if(v>n){n=v;best=k;}
+    });
+    return best;
+}
+
 function cpuPowerTarget(playerPow,match,boss){
     const r=run();
     const tier=String(r.startingTier||"");
@@ -422,10 +553,9 @@ function cpuPowerTarget(playerPow,match,boss){
     else target*=1.04;
     if(r.cpuPowerTarget) target=r.cpuPowerTarget*0.62+target*0.38;
     if(boss){
-        let bump=1.05+Math.random()*0.07;
-        if(tier==="Bronze") bump=1.08+Math.random()*0.07;
-        else if(tier==="Silver") bump=1.06+Math.random()*0.07;
-        target=playerPow*bump;
+        if(match===18) target=playerPow*(1.04+Math.random()*0.015);
+        else if(match===12) target=playerPow*(1.022+Math.random()*0.01);
+        else target=playerPow*(1.016+Math.random()*0.01);
     }
     return target;
 }
@@ -444,32 +574,66 @@ function fillCpuScale(target){
     });
 }
 
+function playableBlades(){
+    return Object.values(BLADE_ENGINE||{}).filter(b=>b&&!b.hidden);
+}
+function sharkScaleBlade(){
+    return (typeof BLADE_ENGINE!=="undefined"&&BLADE_ENGINE.shark_scale)||
+        Object.values(BLADE_ENGINE||{}).find(b=>b.name==="Shark Scale")||null;
+}
+function cpuLane(match){
+    if(match===18) return "final";
+    if(match<=5) return "Bronze";
+    if(match<=11) return "Silver";
+    if(match===12) return "Gold";
+    return "Gold";
+}
 function generateCpu(){
     const r=run();
     const playerPow=powerOf(playerEffective());
     const match=r.matchIndex;
     const boss=!!BOSS_AT[match];
     r.boss=boss;
+    r.finalBoss=match===18;
     r.cpuPowerTarget=cpuPowerTarget(playerPow,match,boss);
 
-    const blades=Object.values(BLADE_ENGINE);
-    const wantTier=boss?"Gold":match>=4?"Silver":pick(["Bronze","Silver","Gold"]);
-    const pool=blades.filter(b=>b.tier===wantTier);
-    r.cpuBlade=pick(pool.length?pool:blades);
-    const parts=starterParts(r.cpuBlade);
-    r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||parts.ratchet;
-    r.cpuBit=pick(selectableBits())||parts.bit;
+    if(match===18){
+        r.cpuBlade=sharkScaleBlade()||pick(playableBlades());
+        r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||starterParts(r.cpuBlade).ratchet;
+        r.cpuBit=(typeof selectableBits==="function"?selectableBits():[]).find(b=>b.name==="Rush")
+            ||pick(selectableBits())||starterParts(r.cpuBlade).bit;
+    }else{
+        const blades=playableBlades();
+        let wantTier=cpuLane(match);
+        if(match>FINAL_MATCH && Math.random()<0.28) wantTier="Silver";
+        const pool=blades.filter(b=>b.tier===wantTier);
+        r.cpuBlade=pick(pool.length?pool:blades);
+        const parts=starterParts(r.cpuBlade);
+        r.cpuRatchet=pick(RATCHETS.filter(x=>x.height===60||x.height===70))||parts.ratchet;
+        r.cpuBit=pick(selectableBits())||parts.bit;
+    }
     grantCpuStack();
     fillCpuScale(r.cpuPowerTarget);
     syncLoadout();
 }
 
 function rarityRoll(match,tier){
+    const t=String(tier||"");
     let common=62,uncommon=24,rare=9,legendary=4,evolve=1;
-    if(tier==="Bronze"){rare+=3;legendary+=1;evolve+=1.2;}
-    if(tier==="Gold"){common+=8;rare-=2;evolve-=0.4;}
-    if(match>=3){legendary+=1.5;evolve+=0.6;rare+=1;}
-    if(match>=5){legendary+=1;evolve+=1.2;}
+    if(t==="Bronze"){rare+=3;legendary+=1;evolve+=1.2;}
+    if(t==="Gold"){common+=8;rare-=2;legendary-=0.5;evolve-=0.4;}
+    if(match>=3){
+        if(t==="Bronze"){rare+=2;legendary+=2;evolve+=1;}
+        else if(t==="Gold"){common+=4;uncommon+=1;}
+        else {rare+=1;legendary+=1.5;evolve+=0.6;}
+    }
+    if(match>=6){
+        if(t==="Bronze"){rare+=2;legendary+=2;evolve+=1.8;}
+        else if(t==="Gold"){common+=3;uncommon+=1;legendary+=0.4;}
+        else {rare+=1;legendary+=1;evolve+=1.2;}
+    }
+    if(match>=12 && t==="Bronze"){rare+=1;legendary+=1;evolve+=0.8;}
+    if(inEndless()) evolve=0;
     const total=common+uncommon+rare+legendary+evolve;
     let roll=Math.random()*total;
     if((roll-=common)<0) return "common";
@@ -522,15 +686,27 @@ function makeModifierCard(mod){
 
 function makeEvolveCard(type){
     const map={
-        enhance:{title:"ENHANCED TIER",body:"Keep this Bey's identity. Every stat gets a real bump."},
-        evolve:{title:"TIER EVOLUTION",body:"Step the Rogue tier up. Build bonuses stay."},
-        final:{title:"FINAL EVOLUTION",body:"Peak form. Identity stays. Power jumps."}
+        enhance:{
+            title:"ENHANCED TIER",
+            kicker:"ENHANCE",
+            body:"One and done. +4 on your best 3 stats, +3 on the rest. Later upgrades get +1 extra. Permanent honeycomb on the plate."
+        },
+        evolve:{
+            title:"TIER EVOLUTION",
+            kicker:"EVOLVE",
+            body:"The Bey stays itself. Form steps up. Shop bonuses stay. Plate retints."
+        },
+        final:{
+            title:"GOLD FORM",
+            kicker:"EVOLVE",
+            body:"Peak form. The bronze nerf falls off. This is Gold's late paycheck."
+        }
     };
-    const m=map[type];
+    const m=map[type]||map.evolve;
     return {
         id:"evo-"+type+"-"+Math.random().toString(16).slice(2),
         rarity:"evolve",kind:"evolve",evolve:type,
-        title:m.title,kicker:"EVOLVE",body:m.body
+        title:m.title,kicker:m.kicker||"EVOLVE",body:m.body
     };
 }
 
@@ -539,25 +715,55 @@ function generateOffers(){
     const cards=[];
     const used=new Set();
     let guard=0;
-    while(cards.length<3 && guard++<24){
+    while(cards.length<3 && guard++<28){
         const rarity=rarityRoll(r.matchIndex,r.startingTier);
         const card=makeOfferCard(rarity,r.blade,r.activeModifier?.id);
-        const key=card.kind+card.title+card.stat;
+        const key=card.kind+card.title+(card.stat||"")+(card.evolve||"");
         if(used.has(key)) continue;
         used.add(key);
         cards.push(card);
     }
     while(cards.length<3){
-        cards.push(makeStatCard("common",pick(STATS),2));
+        cards.push(makeCommonCard(r.blade,false));
     }
-    r.offers=cards;
+    injectFormPity(cards);
+    r.offers=cards.slice(0,3);
+    const hasForm=r.offers.some(c=>c.kind==="evolve");
+    r.hubsWithoutForm=hasForm?0:(Number(r.hubsWithoutForm)||0)+1;
+}
+
+function injectFormPity(cards){
+    const r=run();
+    const need=nextFormCard();
+    if(!need||!cards) return;
+    if(cards.some(c=>c.kind==="evolve")) return;
+    const hard=r.matchIndex===6||r.matchIndex===12;
+    const soft=(Number(r.hubsWithoutForm)||0)>=4;
+    if(!hard && !soft) return;
+    cards[cards.length?cards.length-1:0]=need;
+}
+
+function enhanceBumps(stats){
+    const ranked=STATS.slice().sort((a,b)=>{
+        const d=(Number(stats[b])||0)-(Number(stats[a])||0);
+        return d||STATS.indexOf(a)-STATS.indexOf(b);
+    });
+    const top=new Set(ranked.slice(0,3));
+    const bumps={};
+    STATS.forEach(k=>{bumps[k]=top.has(k)?4:3;});
+    return bumps;
 }
 
 function applyStatCard(card){
     const r=run();
     const before={...playerEffective()};
-    r.bonuses[card.stat]=(r.bonuses[card.stat]||0)+card.amount;
+    const extra=r.enhanced&&Number(card.amount)>0?1:0;
+    r.bonuses[card.stat]=(r.bonuses[card.stat]||0)+card.amount+extra;
     if(card.downStat) r.bonuses[card.downStat]=(r.bonuses[card.downStat]||0)+card.downAmt;
+    if(card.secondStat){
+        const extra2=r.enhanced&&Number(card.secondAmt)>0?1:0;
+        r.bonuses[card.secondStat]=(r.bonuses[card.secondStat]||0)+card.secondAmt+extra2;
+    }
     const after={...playerEffective()};
     return {before,after,card};
 }
@@ -572,18 +778,25 @@ function applyModifierCard(card){
 function applyEvolveCard(card){
     const r=run();
     const before={...playerEffective()};
-    const bump=card.evolve==="final"?8:card.evolve==="evolve"?6:4;
-    STATS.forEach(k=>{r.bonuses[k]=(r.bonuses[k]||0)+bump;});
-    if(card.evolve==="evolve" || card.evolve==="final"){
-        const t=String(r.currentRogueTier||r.startingTier);
-        if(t==="Bronze"||t==="bronze") r.currentRogueTier="Silver";
-        else r.currentRogueTier="Gold";
+    if(card.evolve==="enhance"){
+        if(r.enhanced) return {before,after:{...playerEffective()},card,tier:r.currentRogueTier};
+        const bumps=enhanceBumps(before);
+        STATS.forEach(k=>{r.bonuses[k]=(r.bonuses[k]||0)+bumps[k];});
+        r.enhanced=true;
+        return {before,after:{...playerEffective()},card,tier:r.currentRogueTier,enhanced:true};
     }
-    if(card.evolve==="final") r.currentRogueTier="Gold";
-    const type=String(r.blade?.type||"");
-    if(type==="Attack"){r.bonuses.attack+=2;r.bonuses.knockback+=2;}
-    if(type==="Defense"){r.bonuses.defense+=2;r.bonuses.balance+=2;}
-    if(type==="Stamina"){r.bonuses.stamina+=3;}
+    if(card.evolve==="evolve"){
+        r.currentRogueTier="Silver";
+        if(startTier()==="Gold"){
+            STATS.forEach(k=>{r.startScale[k]=round((Number(r.startScale[k])||0)*0.5);});
+        }else{
+            r.startScale=emptyBonuses();
+        }
+    }
+    if(card.evolve==="final"){
+        r.currentRogueTier="Gold";
+        r.startScale=emptyBonuses();
+    }
     return {before,after:{...playerEffective()},card,tier:r.currentRogueTier};
 }
 
@@ -599,11 +812,12 @@ function allCatalog(){
     const list=[];
     STATS.forEach(stat=>{
         list.push(makeStatCard("common",stat,2));
-        list.push(makeStatCard("uncommon",stat,3));
+        list.push(makeStatCard("uncommon",stat,3,pick(STATS.filter(s=>s!==stat)),-1));
     });
-    list.push(makeStatCard("uncommon","attack",4,"defense",-2));
-    list.push(makeStatCard("uncommon","stamina",4,"attack",-2));
-    list.push(makeStatCard("uncommon","knockback",4,"mobility",-2));
+    list.push(makeStatCard("uncommon","attack",3,"defense",-1));
+    list.push(makeStatCard("uncommon","stamina",3,"attack",-1));
+    list.push(makeDualStatCard("attack",2,"knockback",2));
+    list.push(makeStatCard("rare","attack",4));
     list.push(makeReforgeCard("bit"));
     list.push(makeReforgeCard("ratchet"));
     MODIFIERS.forEach(m=>list.push(makeModifierCard(m)));
@@ -628,7 +842,11 @@ function commentaryFor(result){
         if(result.lost) return `${result.now.name} replaces ${result.lost.name}. One identity at a time.`;
         return `${result.now.name} is live. Watch the condition in battle.`;
     }
-    if(card.kind==="evolve") return `${name} stays itself — the Rogue tier just jumped.`;
+    if(card.kind==="evolve"){
+        if(card.evolve==="enhance") return `${name} is Enhanced. Best lines jump, and every later bump is a little fatter.`;
+        if(card.evolve==="final") return `${name} hits Gold form. The shop was the tax. This is the paycheck.`;
+        return `${name} stays itself — the plate just stepped up a form.`;
+    }
     if(card.kind==="reforge") return `New ${card.part}. The stadium will feel it.`;
     return "Build updated.";
 }
@@ -639,11 +857,18 @@ function el(html){
     return d.firstElementChild;
 }
 
-function bannerHTML(){
+function matchBannerText(){
     const r=run();
     if(!r) return "";
-    const boss=BOSS_AT[r.matchIndex]?" — BOSS":"";
-    return `<p class="rogue-round-banner">ROGUE MATCH ${r.matchIndex} / ${MAX_MATCHES}${boss}</p>`;
+    const m=r.matchIndex;
+    if(m===18) return "ROGUE · FINAL BOSS";
+    if(m===6||m===12) return `ROGUE MATCH ${m} / ${FINAL_MATCH} — BOSS`;
+    if(m>FINAL_MATCH) return `ROGUE ENDLESS ${m}`;
+    return `ROGUE MATCH ${m} / ${FINAL_MATCH}`;
+}
+function bannerHTML(){
+    if(!run()) return "";
+    return `<p class="rogue-round-banner">${matchBannerText()}</p>`;
 }
 
 function previewModifier(side){
@@ -681,7 +906,14 @@ function plateDecor(side){
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
     const mod=packed?modifierById(packed.id):null;
     const stack=upgradeStack(side);
-    return {stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack)};
+    const mark=side==="cpu"?(r.finalBoss||r.matchIndex===18?"final":(r.matchIndex===6||r.matchIndex===12?"mini":"")):"";
+    const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
+    return {
+        stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
+        plateTier,
+        bossMark:mark||""
+    };
 }
 
 function bonusStackBoxes(bonuses){
@@ -709,7 +941,11 @@ function upgradeStack(side){
         if(!card) return;
         if(card.kind==="evolve" && !seen[card.evolve||card.title]){
             seen[card.evolve||card.title]=true;
-            boxes.push({kicker:"EVOLVE",title:card.title||"EVOLVE",rarity:"evolve"});
+            boxes.push({
+                kicker:card.evolve==="enhance"?"ENHANCE":"EVOLVE",
+                title:card.title||"EVOLVE",
+                rarity:"evolve"
+            });
         }
         if(card.kind==="reforge"){
             boxes.push({kicker:"REFORGE",title:card.title||"REFORGE",rarity:"rare"});
@@ -745,6 +981,8 @@ function toggleDev(){
         <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
         <div class="rogue-dev-list" id="rogueDevList"></div>
         <div class="rogue-dev-actions">
+            <button type="button" class="menu-btn silver" id="rogueDevJump17">MATCH 17</button>
+            <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
             <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
             <button type="button" class="menu-btn gold" id="rogueDevWin">FORCE MATCH WIN</button>
             <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
@@ -758,9 +996,28 @@ function toggleDev(){
         r.bonuses=emptyBonuses();
         r.activeModifier=null;
         r.history=[];
+        r.enhanced=false;
+        r.currentRogueTier="Bronze";
+        r.startScale=makeStartScale(r.starterBlade||r.blade,r.starterRatchet||r.ratchet,r.starterBit||r.bit);
         renderDevList();
         refreshAfterDebug();
     };
+    document.getElementById("rogueDevJump17")?.addEventListener("click",()=>{
+        const r=run();
+        if(!r) return;
+        r.matchIndex=17;
+        panel.remove();
+        generateOffers();
+        showHub();
+    });
+    document.getElementById("rogueDevFinal")?.addEventListener("click",()=>{
+        const r=run();
+        if(!r) return;
+        r.matchIndex=18;
+        panel.remove();
+        generateCpu();
+        showComboCard();
+    });
     document.getElementById("rogueDevWin").onclick=()=>{
         if(!run()) return;
         panel.remove();
@@ -843,7 +1100,8 @@ function packCard(card){
         id:card.id,rarity:card.rarity,kind:card.kind,stat:card.stat,
         amount:card.amount,downStat:card.downStat,downAmt:card.downAmt,
         title:card.title,kicker:card.kicker,body:card.body,
-        part:card.part,modifierId:card.modifierId,evolve:card.evolve
+        part:card.part,modifierId:card.modifierId,evolve:card.evolve,
+        secondStat:card.secondStat,secondAmt:card.secondAmt
     };
 }
 function packUpgrade(u){
@@ -923,7 +1181,9 @@ function buildSave(){
             cpuScale:{...emptyBonuses(),...(r.cpuScale||{})},
             cpuBonuses:{...emptyBonuses(),...(r.cpuBonuses||{})},
             cpuHistory:(r.cpuHistory||[]).map(packCard),
-            cpuModifier:packModifier(r.cpuModifier)
+            cpuModifier:packModifier(r.cpuModifier),
+            enhanced:!!r.enhanced,
+            hubsWithoutForm:Number(r.hubsWithoutForm)||0
         }
     };
 }
@@ -997,7 +1257,9 @@ function hydrate(data){
         matchIndex:raw.matchIndex||1,
         startingBeyId:raw.startingBeyId||blade.name,
         startingTier:raw.startingTier||blade.tier||"Silver",
-        currentRogueTier:raw.currentRogueTier||blade.tier||"Silver",
+        currentRogueTier:raw.currentRogueTier||"Bronze",
+        enhanced:!!raw.enhanced,
+        hubsWithoutForm:Number(raw.hubsWithoutForm)||0,
         blade,ratchet,bit,
         starterBlade:bladeByName(raw.starterBladeName)||blade,
         starterRatchet:ratchetByName(raw.starterRatchetName)||ratchet,
@@ -1020,6 +1282,9 @@ function hydrate(data){
         cpuHistory:(raw.cpuHistory||[]).map(c=>c),
         cpuModifier:raw.cpuModifier||null
     };
+    if(raw.enhanced===undefined && !(raw.history||[]).some(c=>c&&c.kind==="evolve")){
+        Game.rogue.currentRogueTier="Bronze";
+    }
     if(!raw.startScale){
         Game.rogue.startScale=makeStartScale(
             Game.rogue.starterBlade,
@@ -1052,6 +1317,10 @@ function resumeSave(){
     else if(screen==="rogueUpgrade") showUpgradeResult();
     else if(screen==="rogueReforge" && run().pendingReforge) openReforge(run().pendingReforge,false);
     else if(screen==="rogueWin") showRunWin();
+    else if(screen==="rogueOmen"){
+        generateCpu();
+        showComboCard();
+    }
     else{
         Game.player.launch={angle:"Flat",technique:"Center",setupStage:"quality"};
         showComboCard();
@@ -1072,7 +1341,7 @@ function showLanding(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
         ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Six matches. First to 7."})}
+        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Eighteen matches. Then the dark."})}
         <nav class="home-doors rogue-doors" aria-label="Rogue">
             <button class="home-door rip" id="rogueNewGame" type="button">
                 <span class="home-door-kicker">NEW RUN</span>
@@ -1141,25 +1410,26 @@ function showHelp(){
             <div>
                 <span class="eyebrow">ROGUE</span>
                 <h1>HOW A RUN WORKS</h1>
-                <p>Same stadium. One Bey. Six matches.</p>
+                <p>Same stadium. One Bey. Eighteen matches, then endless.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 — Xtreme, Over, Spin — on the same battle screen as Quick Play. Win the match, take one upgrade. Lose the match, the run is over. Matches 3 and 6 are bosses.</p>
-            <p>Bronze starters have the harder road and better rolls. Silver and Gold open a step above Bronze, not a full tier ahead — their opening stats sit a bit closer to Bronze, but an Attack Bey still hits like Attack and a tank still tanks. Gold is still the easier start. Stats can climb past 99. Only one Rogue Modifier at a time. Close the browser and Continue puts you back. If you left mid-battle, the round restarts with the score you had.</p>
-            <p>CPU power is scaled to yours, but those hidden numbers stay plain on the VS plates and keep the CPU Bey's shape. Green and red only mark upgrades — stat bumps, bit/ratchet reforge, evolve, enhance, and modifiers. Each stat upgrade also gets its own box so you can see the stack (ATK +2, then ATK +4). After every match the CPU takes the same number of upgrades you have locked in, plus extra pressure from your starting tier: Bronze CPUs walk in with 1–3 extras, Silver 1–2, Gold 1.</p>
+                <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 on the live stadium. Win, take one upgrade. Lose, the run is over. Matches 6 and 12 are mini bosses. Match 18 is Shark Scale — a hidden Final Boss. Beat him and the night does not end.</p>
+            <p>Blade cards show luck in Rogue only: Bronze A, Silver B, Gold C. Bronze starts poorer and the shop fattens late. Silver is the middle table. Gold opens a step above Bronze, but the shop stays thin because Gold can evolve — that form ladder is the paycheck. Commons stay +2. Uncommons are always a trade (+3/−1 or +4/−2). Rares are reforge, a +4 peak, or two +2s.</p>
+            <p>Bronze never evolves — they take Enhanced instead (one and done: +4 on the best 3 stats, +3 on the rest, +1 on later bumps, honeycomb plate). Silver starts in Bronze form, evolves once to Silver, then can Enhance. Gold starts in Bronze form and can step to Gold. Form pity injects the missing step after a dry spell, and after minis 6 and 12.</p>
+            <p>CPU power is scaled to yours. Mini bosses carry extra visible upgrade boxes, not a silent stat nuke. Green and red mark your upgrades. After every match the CPU takes the same number of upgrades you have locked in, plus starter-tier pressure: Bronze 1–3 extras, Silver 1–2, Gold 1. Minis add more boxes. Close the browser and Continue puts you back.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 STAT</strong><small>One number goes up. No catch.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>+3 OR A TRADE</strong><small>A cleaner bump, or more of one stat for less of another.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>BIT / RATCHET REFORGE</strong><small>Three parts. Pick one. The rest of the combo stays. The stadium will feel it.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A condition in battle — late RPM, the X-Rail, opening seconds. Equipping a new one drops the old one.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">EVOLVE</span><strong>KEEP THE BEY</strong><small>The identity stays. The whole build jumps. Bronze can step up a tier.</small></article>
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 LEAN / PATCH / WILD</strong><small>Always +2. Type line, lowest line, or random.</small></article>
+            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>+3 / −1 OR +4 / −2</strong><small>A real bump with a tax. No clean +3.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · PEAK · PAIR</strong><small>New bit or ratchet, +4 on one line, or two +2s.</small></article>
+            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A condition in battle. Psyshock stores knock. Equipping a new one drops the old one.</small></article>
+            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Bronze Enhance. Silver evolve then Enhance. Gold evolve to Gold. Never both stolen from the shop lottery.</small></article>
         </div>
         <section class="menu-card rogue-help-card">
             <p class="eyebrow">MODIFIERS</p>
-            <p>Last Stand and Final Spin wake up when the RPM is gone. Berserker and First Blood hit while you are still healthy. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor plant in the bowl. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+            <p>Last Stand and Final Spin wake up when the RPM is gone. Berserker and First Blood hit while you are still healthy. Psyshock is +5 KB for 5s, then every clash is 60% knock and the next dumps the stored 40% — it never stops cycling. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor plant in the bowl. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
@@ -1177,7 +1447,9 @@ function beginRun(blade){
         matchIndex:1,
         startingBeyId:blade.name,
         startingTier:blade.tier||"Silver",
-        currentRogueTier:blade.tier||"Silver",
+        currentRogueTier:"Bronze",
+        enhanced:false,
+        hubsWithoutForm:0,
         blade,ratchet:parts.ratchet,bit:parts.bit,
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
         startScale:makeStartScale(blade,parts.ratchet,parts.bit),
@@ -1215,8 +1487,11 @@ function decorateVs(root){
 function scoreboardLabel(){
     const r=run();
     if(!r) return "first to 7";
-    const boss=BOSS_AT[r.matchIndex]?"BOSS · ":"";
-    return `${boss}MATCH ${r.matchIndex}/${MAX_MATCHES} · first to 7`;
+    const m=r.matchIndex;
+    if(m===18) return "FINAL BOSS · first to 7";
+    if(m===6||m===12) return `BOSS · MATCH ${m}/${FINAL_MATCH} · first to 7`;
+    if(m>FINAL_MATCH) return `ENDLESS ${m} · first to 7`;
+    return `MATCH ${m}/${FINAL_MATCH} · first to 7`;
 }
 
 function showResults(){
@@ -1231,15 +1506,14 @@ function showResults(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
-        ${homeMarkHTML({tag:win?"MATCH CLEAR":"RUN OVER"})}
-        <p class="win-name">${win?"MATCH WON":"RUN OVER"}</p>
+        ${homeMarkHTML({tag:win?(r.matchIndex===18?"FINAL BOSS DOWN":(r.matchIndex===6||r.matchIndex===12?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
+        <p class="win-name">${win?(r.matchIndex===18?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
         <p class="rogue-result-copy">${res.commentary||""}</p>
-        <button class="rip-btn" id="rogueResultsGo" type="button">${win?(r.matchIndex>=MAX_MATCHES?"CLAIM THE RUN":"OPEN HUB"):"BACK TO TITLE"}</button>
+        <button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>
     </main>`;
     document.getElementById("rogueResultsGo").onclick=()=>{
         if(!win){endRun("lost");renderMainMenu();return;}
-        if(r.matchIndex>=MAX_MATCHES){showRunWin();return;}
         generateOffers();
         showHub();
     };
@@ -1285,15 +1559,15 @@ function showHub(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">ROGUE RUN</span>
-                <h1>MATCH ${r.matchIndex} / ${MAX_MATCHES} CLEAR</h1>
+                <h1>${r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex} CLEAR`:`MATCH ${r.matchIndex} / ${FINAL_MATCH} CLEAR`}</h1>
                 <p>${r.blade.name} · ${r.ratchet.name} · ${r.bit.name}</p>
             </div>
         </div>
-        <section class="menu-card rogue-build">
+        <section class="menu-card rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
             <div class="rogue-build-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
             <div>
                 <b>${r.blade.name}</b>
-                <small>${r.currentRogueTier.toUpperCase()} TIER</small>
+                <small>${String(r.currentRogueTier||"Bronze").toUpperCase()} FORM${r.enhanced?" · ENHANCED":""}</small>
                 <div class="rogue-statline">${STATS.map(k=>{
                     const d=stats[k]-base[k];
                     return `<span>${LABEL[k]} <b>${stats[k]}</b>${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</span>`;
@@ -1422,9 +1696,37 @@ function advanceMatch(){
     Game.battle={score:{player:0,cpu:0},round:1};
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.cpu.lockedLaunchPlan=null;
+    if(r.matchIndex===18){
+        showSharkOmen();
+        return;
+    }
     generateCpu();
     showComboCard();
     persist();
+}
+
+function showSharkOmen(){
+    const r=run();
+    Game.screen="rogueOmen";
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background omen-bg"></div>
+    <main class="rogue-omen" id="rogueOmen">
+        <div class="omen-circle" aria-hidden="true"></div>
+        <div class="omen-soul" aria-hidden="true">
+            <span class="omen-eye left"></span>
+            <span class="omen-eye right"></span>
+            <span class="omen-maw"></span>
+        </div>
+        <p class="omen-line">a dark presence watched you</p>
+    </main>`;
+    persist();
+    const go=()=>{
+        if(Game.screen!=="rogueOmen") return;
+        generateCpu();
+        showComboCard();
+        persist();
+    };
+    window.setTimeout(go,6000);
 }
 
 function onMatchOver(winner,playerScore,cpuScore,finishType){
@@ -1433,7 +1735,9 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
     r.lastResult={
         winner,playerScore,cpuScore,finishType,
         commentary:winner==="player"
-            ? `${r.blade.name} takes the match ${playerScore}–${cpuScore}.`
+            ? (r.matchIndex===18
+                ? `${r.blade.name} puts Shark Scale down ${playerScore}–${cpuScore}. The night does not end.`
+                : `${r.blade.name} takes the match ${playerScore}–${cpuScore}.`)
             : `${Game.cpu.blade?.name||"CPU"} ends the run ${cpuScore}–${playerScore}.`
     };
     Game.battle=Game.battle||{};
@@ -1447,7 +1751,7 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount
+    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
