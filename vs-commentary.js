@@ -308,9 +308,10 @@
         const series=[];
         if(fin){
             const how=fin.type==="Xtreme"?"Xtreme":fin.type==="Over"?"Over":"spin";
+            const art=how==="spin"?"a":"an";
             series.push(
                 `${how} for ${fin.winner}. We're ${sc.player}–${sc.cpu}. Next rip.`,
-                `${fin.winner} just took a ${how}. ${sc.player}–${sc.cpu}.`,
+                `${fin.winner} just took ${art} ${how}. ${sc.player}–${sc.cpu}.`,
                 `${fin.loser} ate that ${how}. Board's ${sc.player}–${sc.cpu}.`
             );
         }
