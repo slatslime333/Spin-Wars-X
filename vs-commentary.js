@@ -1,25 +1,18 @@
 /*==================================
  VS SCREEN COMMENTARY
- Sports-booth color for the combo plates.
+ Short booth color for the combo plates and live battle.
 ==================================*/
 
 (function(global){
     const INTROS=[
-        "Welcome, ladies and gentlemen, for this exciting match.",
-        "The stadium lights are up, the X-Rail is humming — we are live.",
-        "Folks, settle in. This one has that first-to-seven smell already.",
-        "Good evening from the bowl. Two builds walk in, only one walks out with seven.",
-        "Here we go. Crowds on their feet, Beys on the plates — let's talk about what we're looking at."
+        "Lights up — first to seven.",
+        "Two Beys, one bowl.",
+        "Stadium's live; don't overthink the plates.",
+        "Welcome in — the X-Rail's quiet for now.",
+        "Here we go: same sport, new mess.",
+        "Crowd's in and the scoreboard's empty.",
+        "Good evening from the bowl — somebody's leaving with seven."
     ];
-
-    const STAT_TALK={
-        attack:{hot:"attack",cold:"attack",punch:"that hit power"},
-        knockback:{hot:"knock",cold:"knock",punch:"the shove on contact"},
-        defense:{hot:"defense",cold:"defense",punch:"how it eats a clash"},
-        mobility:{hot:"mobility",cold:"mobility",punch:"how quick it answers a launch"},
-        balance:{hot:"balance",cold:"balance",punch:"how it holds its feet after a hit"},
-        stamina:{hot:"stamina",cold:"stamina",punch:"the spin it can actually keep"}
-    };
 
     const ATTACK_BITS=new Set(["Flat","Low Flat","Rush","Low Rush","Kick","Quake"]);
     const TANK_BITS=new Set(["Ball","Orb","Hexa","Needle","Wedge"]);
@@ -41,13 +34,8 @@
         const stats=combo?.stats||side.stats||{};
         const ovr=n(combo?.ovr??side.comboOVR??70);
         const meta=n(combo?.meta??side.comboMeta??ovr);
-        const entries=["attack","knockback","defense","mobility","balance","stamina"].map(k=>({
-            key:k,val:n(stats[k])
-        }));
-        entries.sort((a,b)=>b.val-a.val);
         const bitName=bit.name||"that bit";
         const bladeType=blade.type||"Balance";
-        const bitType=bit.type||"Balance";
         const height=Number(ratchet.height)||60;
         const upgrades=(plate&&plate.stack)||[];
         const isPlayer=label==="player";
@@ -60,16 +48,12 @@
             ratchet:ratchet.name||`${ratchet.number||"?"}-${height}`,
             height,
             bit:bitName,
-            bitType,
+            bitType:bit.type||"Balance",
             attackBit:ATTACK_BITS.has(bitName),
             tankBit:TANK_BITS.has(bitName),
             ovr,
             meta,
-            top:entries[0],
-            second:entries[1],
-            bottom:entries[entries.length-1],
             stats,
-            fit:combo?.compatibility,
             mod:plate&&plate.mod,
             upgrades
         };
@@ -83,158 +67,98 @@
         return "mixed";
     }
 
-    function heightTake(s){
-        if(s.height===80){
+    function jobOf(s){
+        const m=mismatch(s);
+        if(m==="full-send"){
             return pick([
-                `That ${s.ratchet} is standing tall — more bite, less forgiveness if it gets stood up.`,
-                `They're on an 80 with the ${s.ratchet}. That's a statement. You either land the hit or you eat the wobble.`,
-                `I like the nerve of the ${s.ratchet}. High ratchet, high drama.`
+                `${s.blade} on ${s.bit} is here to hit something, not wait it out.`,
+                `${s.blade} brought ${s.bit} — smash build, no mystery.`,
+                `${s.whoCap}'s ${s.blade} wants the rail and a hole.`
             ]);
         }
-        if(s.height===70){
+        if(m==="pure-tank"){
             return pick([
-                `The ${s.ratchet} sits in that middle height — not hiding, not gambling the whole night on an 80.`,
-                `${s.ratchet} is a compromise height. Some people call that smart. Some people call that scared. We'll see.`
+                `${s.blade} on ${s.bit} is playing the long game: stay spinning, make them miss.`,
+                `${s.blade} looks like a tank with ${s.bit} under it.`,
+                `${s.whoCap} parked ${s.blade} in the middle of the bowl on purpose.`
+            ]);
+        }
+        if(m==="tank-on-attack"){
+            return pick([
+                `${s.blade} is an attack blade on ${s.bit}, so it might sit still longer than you'd like.`,
+                `${s.blade} with ${s.bit} is smash metal on tank feet.`,
+                `Don't expect ${s.blade} to fly at the rail — that ${s.bit} wants to hold.`
+            ]);
+        }
+        if(m==="rush-on-tank"){
+            return pick([
+                `${s.blade} is a tank blade on ${s.bit} — a runner in a heavy coat.`,
+                `${s.bit} under ${s.blade} can get greedy.`,
+                `${s.whoCap} put speed under ${s.blade}, for better or worse.`
             ]);
         }
         return pick([
-            `${s.ratchet} keeps it low and planted. That's the "I plan to still be spinning" ratchet.`,
-            `They're on ${s.ratchet}. Low, tight, not trying to win the beauty contest.`
+            `${s.blade} on ${s.bit} is a mixed bag.`,
+            `${s.blade} isn't shouting a plan — the first clash will.`
         ]);
     }
 
-    function likeLines(s){
-        const lines=[];
-        const talk=STAT_TALK[s.top.key]||STAT_TALK.attack;
-        if(s.top.val>=82){
-            lines.push(
-                `Look at ${s.blade} — ${talk.punch} is sitting at ${s.top.val}. That's not a rumor, that's on the card.`,
-                `I like ${s.blade} here. ${s.top.val} ${talk.hot}? That's the kind of number you build a night around.`,
-                `${s.blade} brought ${talk.hot} and didn't apologize. ${s.top.val} is loud.`
-            );
-        }else if(s.top.val>=74){
-            lines.push(
-                `${s.blade} isn't a highlight-reel monster, but that ${talk.hot} at ${s.top.val} is honest.`,
-                `There's a clean read on ${s.blade}: the ${talk.hot} is the part of the build that actually showed up.`
-            );
-        }
-        const m=mismatch(s);
-        if(m==="full-send"){
-            lines.push(
-                `${s.blade} on ${s.bit} — that's an attack blade that actually got an attack bit. Finally, someone who means it.`,
-                `I love this ${s.bit} under ${s.blade}. They're not here to orbit politely. They're here to make a mess.`
-            );
-        }
-        if(m==="pure-tank"){
-            lines.push(
-                `${s.blade} with ${s.bit} is the old-school read: sit in the bowl, keep spinning, make the other kid miss.`,
-                `That's a tank that knows it's a tank. ${s.bit} under ${s.blade} — if this thing is still moving late, somebody's in trouble.`
-            );
-        }
-        if(s.tier==="gold"){
-            lines.push(
-                `${s.blade} is gold-tier hardware. You don't bring that to a first-to-seven unless you want the room to notice.`,
-                `Gold blade on the plate. ${s.blade} has that "we've seen this clip before" energy.`
-            );
-        }
-        if(s.ovr>=88){
-            lines.push(`${s.blade}'s sitting in the high eighties on OVR. On paper, that's a favorite walking in like it owns the rent.`);
-        }
+    function colorLine(s){
+        const extra=[];
         if(s.mod){
-            lines.push(`And they've got ${s.mod.name} hanging on the build. That's not flavor text — that's a different night.`);
+            extra.push(`${s.blade} is running ${s.mod.name}. Watch for that once they rip.`);
+            extra.push(`${s.whoCap} tagged ${s.blade} with ${s.mod.name}. That's the extra.`);
         }
         if(s.upgrades&&s.upgrades.length){
             const u=s.upgrades[0];
-            lines.push(`${s.whoCap}'s carrying ${u.title} into this. That's the kind of extra that shows up in the third or fourth point, not the first launch.`);
+            extra.push(`${s.whoCap} brought ${u.title} in with ${s.blade}.`);
+            extra.push(`${s.blade} isn't stock — ${u.title} is riding along.`);
         }
-        if(s.stats.stamina>=84){
-            lines.push(`${s.blade} can actually stay alive. ${n(s.stats.stamina)} stamina — that's a Bey that makes you earn the finish.`);
+        if(s.tier==="gold"){
+            extra.push(`${s.blade} is gold hardware the room already knows.`);
         }
-        if(s.stats.knockback>=84){
-            lines.push(`The knock on ${s.blade} is real. ${n(s.stats.knockback)} — if they catch you clean, you're going for a walk.`);
-        }
-        if(!lines.length){
-            lines.push(`There's a shape I like on ${s.blade}. Nothing gaudy, just a Bey that looks like it was put together on purpose.`);
-        }
-        return lines;
-    }
-
-    function dislikeLines(s){
-        const lines=[];
-        const talk=STAT_TALK[s.bottom.key]||STAT_TALK.stamina;
-        if(s.bottom.val<=62){
-            lines.push(
-                `I'm not sold on the ${talk.cold} though. ${s.bottom.val} on ${s.blade} is the hole you hide until someone finds it.`,
-                `Here's my problem with ${s.blade}: the ${talk.cold} is a ${s.bottom.val}. That's the part of the broadcast where I start frowning.`
-            );
-        }else if(s.bottom.val<=70){
-            lines.push(
-                `${s.blade} is leaving ${talk.cold} on the table at ${s.bottom.val}. Not a disaster. Not a flex either.`,
-                `If I'm picking nits — and that's the job — ${s.blade}'s ${talk.cold} is the soft spot.`
-            );
-        }
-        const m=mismatch(s);
-        if(m==="tank-on-attack"){
-            lines.push(
-                `I do not love ${s.bit} under ${s.blade}. That's an attack blade they dressed like a librarian.`,
-                `${s.blade} on ${s.bit}? That's a smash artist they asked to sit still. I get the idea. I don't have to like it.`
-            );
-        }
-        if(m==="rush-on-tank"){
-            lines.push(
-                `${s.bit} on ${s.blade} is spicy in a way that can get you hurt. Tanks that sprint still have to stop.`,
-                `Putting ${s.bit} under a ${s.bladeType.toLowerCase()} blade is a gamble. Either it's genius or it's a self-KO waiting for an invitation.`
-            );
-        }
-        if(s.height===80&&s.tankBit){
-            lines.push(`Tall ratchet, tank bit — ${s.blade} is asking the stadium to be polite. Stadiums are not polite.`);
-        }
-        if(s.ovr<=72){
-            lines.push(`The OVR on ${s.blade} isn't scaring anybody. That's a "win the launches" Bey, not a "win the spreadsheet" Bey.`);
-        }
-        if(s.stats.defense<=60&&s.attackBit){
-            lines.push(`${s.blade} is going to feel every clash. That defense number is not a shield, it's a suggestion.`);
-        }
-        if(!lines.length){
-            lines.push(`It's not a perfect plate. ${s.blade} still has to prove it in the bowl, not on the graphic.`);
-        }
-        return lines;
+        if(extra.length&&Math.random()<0.35) return pick(extra);
+        return jobOf(s);
     }
 
     function matchupLine(p,c){
         if(p.blade===c.blade){
             return pick([
-                `Same blade on both sides. ${p.blade} versus ${p.blade}. That's a mirror and somebody's about to blink.`,
-                `We've got twin ${p.blade}s. The parts under them are the whole story now.`
+                `Same blade twice — ${p.blade} vs ${p.blade} — so the bits decide it.`,
+                `Mirror match: twin ${p.blade}s, and somebody blinks first.`
             ]);
         }
         if(p.attackBit&&c.tankBit){
             return pick([
-                `Classic night: ${p.blade} wants to end this early, ${c.blade} wants to still be there when the gas runs out.`,
-                `${p.whoCap} came to smash. ${c.whoCap} came to make them miss. That's the whole sport in one sentence.`
+                `${p.blade} wants this over quick; ${c.blade} wants to still be spinning.`,
+                `Player smash, CPU stall — oldest fight in the book.`,
+                `${p.blade} hunts holes while ${c.blade} tries not to fall in one.`
             ]);
         }
         if(c.attackBit&&p.tankBit){
             return pick([
-                `${c.blade} is the dog that wants the rail. ${p.blade} is the wall. We'll find out if the wall holds.`,
-                `CPU's looking to punch holes. The player's looking to make those punches expensive.`
+                `${c.blade} is the aggressor and ${p.blade} is the wall.`,
+                `CPU came to punch; the player came to make those punches expensive.`,
+                `${p.blade} holds, ${c.blade} charges.`
             ]);
         }
         if(p.attackBit&&c.attackBit){
             return pick([
-                `Two attack bits. Don't blink on the first contact — somebody's leaving through a painted hole or climbing out looking embarrassed.`,
-                `This is not a stamina seminar. Both sides brought knives.`
+                `Two attack bits — first contact might end a Bey.`,
+                `${p.blade} and ${c.blade} both brought speed.`,
+                `Nobody's here to grind; this is a collision sport tonight.`
             ]);
         }
         if(p.tankBit&&c.tankBit){
             return pick([
-                `Two tanks. Late fight is going to look like two stubborn coins arguing in the middle of the bowl.`,
-                `Nobody here is in a hurry. That's dangerous in its own way — first real knock still decides a lot.`
+                `Two tanks, so this might go late unless somebody finds a hole anyway.`,
+                `${p.blade} vs ${c.blade}, both planted.`,
+                `Patience match until one shove wakes the room up.`
             ]);
         }
         return pick([
-            `Different jobs, same stadium. ${p.blade} and ${c.blade} are not trying to win this the same way.`,
-            `On paper it's a style fight. In the bowl it's still first to seven.`
+            `${p.blade} and ${c.blade} want different nights, same first-to-seven.`,
+            `Different jobs: ${p.blade} vs ${c.blade}.`
         ]);
     }
 
@@ -244,33 +168,31 @@
         let fav,dog,margin;
         if(Math.abs(lean)<3.5){
             return pick([
-                `If you're asking me who wins? I'm not picking a side with a straight face. This is a coin in a hurricane.`,
-                `Prediction? Toss-up. The better launch is going to look like genius and the worse one is going to look like a mistake.`,
-                `I could talk myself into either Bey. That's usually when the night gets weird.`,
-                `Call it even. Whoever misses the first real clash is buying dinner.`
+                `Toss-up — better launch wins the argument.`,
+                `I wouldn't pick a side with a straight face.`,
+                `Even on the plates; first clash is the real intro.`
             ]);
         }
         if(lean>0){fav=p;dog=c;margin=lean;}
         else{fav=c;dog=p;margin=-lean;}
         if(upset){
             return pick([
-                `Everybody in the building is leaning ${fav.blade}. I'm not. ${dog.blade} has that "wrong on paper, right in the bowl" look.`,
-                `I'll take the dog. ${dog.blade} against ${fav.blade} — if the favorite blinks once, this flips.`,
-                `Upset watch: ${dog.who} on ${dog.blade}. Don't say I didn't tell you when the graphic looks silly.`
+                `I'll take ${dog.blade} anyway — favorites blink.`,
+                `Upset lean: ${dog.blade}.`,
+                `${dog.blade} looks live if ${fav.blade} misses once.`
             ]);
         }
         if(margin>=10){
             return pick([
-                `If I have to put a name on it, it's ${fav.blade}. ${dog.blade} has to steal this, not win it clean.`,
-                `${fav.whoCap}'s ${fav.blade} is the pick. Not because the sport is fair — because the other plate has more holes.`,
-                `I'm riding with ${fav.blade}. ${dog.blade} can make noise. I don't think it makes seven first.`
+                `Nod to ${fav.blade}; ${dog.blade} has to steal it.`,
+                `${fav.blade} is the pick, and ${dog.blade} needs a messy point.`,
+                `I'm with ${fav.blade} until they prove me wrong.`
             ]);
         }
         return pick([
-            `Slight nod to ${fav.blade}. It's close enough that a bad launch still ruins my prediction, and I accept that.`,
-            `I'll take ${fav.who} by a hair. ${fav.blade} just looks a little more like a plan.`,
-            `Edge: ${fav.blade}. ${dog.blade} is live if this turns into a scramble, but right now I'm not jumping off the favorite.`,
-            `Give me ${fav.blade} in a fight, not a sweep. ${dog.blade} can absolutely make me eat this.`
+            `Slight edge ${fav.blade} — a bad rip still ruins that.`,
+            `Hair toward ${fav.blade}, close enough to get weird.`,
+            `Give me ${fav.blade} in a fight, not a sweep.`
         ]);
     }
 
@@ -278,14 +200,11 @@
         const p=snapshot(player,playerCombo,playerPlate,"player");
         const c=snapshot(cpu,cpuCombo,cpuPlate,"cpu");
         const intro=pick(INTROS);
-        const playerTake=Math.random()<0.55?pick(likeLines(p)):pick(dislikeLines(p));
-        const cpuTake=Math.random()<0.55?pick(likeLines(c)):pick(dislikeLines(c));
-        const extra=Math.random()<0.5
-            ?heightTake(Math.random()<0.5?p:c)
-            :matchupLine(p,c);
-        const call=winnerCall(p,c);
-        lastPregame={p,c,call,at:Date.now()};
-        return [intro,playerTake,cpuTake,extra,call].join(" ");
+        const body=Math.random()<0.55?matchupLine(p,c):colorLine(Math.random()<0.5?p:c);
+        const beats=[intro,body];
+        if(Math.random()<0.82) beats.push(winnerCall(p,c));
+        lastPregame={p,c,call:beats[beats.length-1],at:Date.now()};
+        return beats.join(" ");
     }
 
     function renderHTML(player,cpu,playerCombo,cpuCombo,playerPlate,cpuPlate){
@@ -352,6 +271,13 @@
         if(copy&&copy.textContent!==booth.line) copy.textContent=booth.line;
     }
 
+    function techName(t){
+        if(t==="Direct Clash") return "clash";
+        if(t==="Drop Launch") return "drop";
+        if(t==="X-Rail") return "rail";
+        return "center";
+    }
+
     function setupCopy(){
         const sc=scorePair();
         const pName=lastPregame?.p?.blade||bladeOf(liveCtx.player);
@@ -360,20 +286,18 @@
         if(sc.player>=7||sc.cpu>=7){
             const w=sc.player>=7?pName:cName;
             return pickFresh([
-                `That's seven. ${w} closes it. Lights can come down whenever they want.`,
-                `Match. ${w} got there first. Everything else was just the road.`
+                `That's seven. ${w} closes it.`,
+                `Match. ${w} got there first.`,
+                `Ballgame. ${w} takes it.`
             ]);
         }
         if(isColdOpen()){
             return pickFresh([
-                `First launch of the night. We're 0-0. Nothing's happened yet — this is still a theory until somebody rips.`,
-                `0-0. Plates are done talking. Now we find out if ${pName} and ${cName} look like that in the bowl.`,
-                `Nobody's scored. First to seven starts with a rip, not a graphic. Let's see who actually shows up.`,
-                `Cold open. I already said my piece on the way in. Launch decides if I look smart or loud.`,
-                `We're still at zero. Don't overthink the pad — the first contact is going to rewrite whatever I just said.`,
-                lastPregame?.call
-                    ? `0-0, first rip. For the record: ${lastPregame.call}`
-                    : `First rip coming. Crowd's up, X-Rail's quiet, scoreboard's empty.`
+                `0–0. First rip of the night.`,
+                `Empty board. ${pName} vs ${cName}. Let it rip.`,
+                `Cold open. First launch writes the intro.`,
+                `Nobody's scored. Pad's yours.`,
+                `Scoreboard's quiet. Rip something.`
             ]);
         }
         const lead=sc.player-sc.cpu;
@@ -381,38 +305,36 @@
         const abs=Math.abs(lead);
         const leader=lead>0?pName:cName;
         const trailer=lead>0?cName:pName;
-        const you=lead>0?"the player":"the CPU";
         const series=[];
         if(fin){
-            const how=fin.type==="Xtreme"?"an Xtreme":fin.type==="Over"?"an Over":"a spin";
-            const howCap=fin.type==="Xtreme"?"An Xtreme":fin.type==="Over"?"An Over":"A spin";
+            const how=fin.type==="Xtreme"?"Xtreme":fin.type==="Over"?"Over":"spin";
             series.push(
-                `${fin.winner} just took ${how}. Score's ${sc.player}–${sc.cpu}. Next launch's the answer, not the recap.`,
-                `That was ${how} for ${fin.winner}. ${fin.loser} has to come back out like it didn't rattle them.`,
-                `${howCap} goes on the board and we're ${sc.player}–${sc.cpu}. Don't let the last point pick the next launch for you.`
+                `${how} for ${fin.winner}. We're ${sc.player}–${sc.cpu}. Next rip.`,
+                `${fin.winner} just took a ${how}. ${sc.player}–${sc.cpu}.`,
+                `${fin.loser} ate that ${how}. Board's ${sc.player}–${sc.cpu}.`
             );
         }
         if(tied){
             series.push(
-                `Tied ${sc.player}–${sc.cpu}. Reset your brain. This next rip is a new fight.`,
-                `${sc.player} apiece. Room feels even. That's when somebody gets greedy on the pad.`,
-                `We're knotted up. First to seven doesn't care that the last point was pretty.`
+                `Tied ${sc.player}–${sc.cpu}. New fight.`,
+                `${sc.player} apiece. Don't get cute.`,
+                `Knotted up. First to seven still doesn't care.`
             );
         }else if(abs>=5){
             series.push(
-                `${leader} is running away at ${sc.player}–${sc.cpu}. ${trailer} needs a messy point, not a polite one.`,
-                `That's a gap. ${you} on ${leader} has ${sc.player}–${sc.cpu}. One more clean rip and this starts to look decided.`
+                `${leader} is running at ${sc.player}–${sc.cpu}. ${trailer} needs a hole.`,
+                `Gap. ${sc.player}–${sc.cpu}. ${trailer} has to make a mess.`
             );
         }else if(Math.max(sc.player,sc.cpu)>=6){
             series.push(
-                `Game point energy. ${sc.player}–${sc.cpu}. One launch from somebody hearing the building.`,
-                `${leader} is a point away from putting this away. ${trailer} is a point away from making me eat a prediction.`
+                `Game point feel. ${sc.player}–${sc.cpu}.`,
+                `${leader} is one away. ${trailer} is one save from staying alive.`
             );
         }else{
             series.push(
-                `${sc.player}–${sc.cpu}. ${leader} has the room. ${trailer} has the next launch — that's the only thing that matters.`,
-                `Scoreboard says ${sc.player}–${sc.cpu}. Same Beys, new rip. Don't fight the last point.`,
-                `${leader} leads. Not a blowout. Not safe. Launch like you still have to earn seven.`
+                `${sc.player}–${sc.cpu}. ${leader} leads.`,
+                `Board says ${sc.player}–${sc.cpu}. Same Beys, new rip.`,
+                `${leader} up. Not safe. Launch like seven still costs.`
             );
         }
         return pickFresh(series);
@@ -423,109 +345,125 @@
         const pt=p?.launchPlan?.technique||"Center";
         const ct=c?.launchPlan?.technique||"Center";
         const pq=qualityOf(p), cq=qualityOf(c);
-        const cold=isColdOpen();
-        const qTalk=[];
-        if(pq==="Perfect") qTalk.push(`That's a Perfect from ${pb}. Clean as it gets on the way in.`);
-        if(pq==="Horrible") qTalk.push(`${pb} just ripped a Horrible. That's a dare.`);
-        if(cq==="Perfect") qTalk.push(`CPU answers Perfect on ${cb}. They didn't come in shy.`);
-        if(cq==="Horrible") qTalk.push(`${cb}'s launch is a mess. If they survive the first second, I'll be impressed.`);
-        const tech={};
-        tech["Direct Clash"]=pickFresh([
-            `${pb} is going straight at somebody. Clash launch — no orbit, no manners.`,
-            `${pb} picked a fight on the way in. Direct line. Somebody's going to feel the first one.`
-        ]);
-        tech["Drop Launch"]=pickFresh([
-            `${pb} hangs and drops. That's the shot from up top — straight through the middle if they mean it.`,
-            `Drop from ${pb}. They're not asking the rail for permission.`
-        ]);
-        tech["X-Rail"]=pickFresh([
-            `${pb} takes the X-Rail on the rip. They want the ring before the conversation starts.`,
-            `${pb} is on the rail out of the gate. Speed first, opinions later.`
-        ]);
-        tech["Center"]=pickFresh([
-            `${pb} opens from center. Planted. Waiting to see who blinks.`,
-            `Center launch, ${pb}. They're starting in the bowl, not on a highlight.`
-        ]);
-        const cpuTech={};
-        cpuTech["Direct Clash"]=`${cb} is coming through the front door too.`;
-        cpuTech["Drop Launch"]=`${cb} drops in from the other side.`;
-        cpuTech["X-Rail"]=`${cb} grabbed the rail.`;
-        cpuTech["Center"]=`${cb} sits center and waits.`;
-        const head=cold
-            ?pickFresh([
-                `First rip. Nothing's happened yet — this is the handshake.`,
-                `We're live. Score's still 0-0. First contact writes the rest.`,
-                `Let it rip. Theory's over.`
-            ])
-            :pickFresh([
-                `Next rip. Score's already on the board — this one still counts the same.`,
-                `New launch, same match. Don't bring the last point in with you.`,
-                `They're back on the line. Next point's open.`
-            ]);
-        const parts=[head,tech[pt]||tech.Center,cpuTech[ct]||cpuTech.Center];
-        if(qTalk.length&&Math.random()<0.7) parts.push(pick(qTalk));
-        if(cold&&lastPregame?.p?.blade===pb&&Math.random()<0.35){
-            parts.push(pickFresh([
-                `Remember, I already had a read on ${pb}. Bowl doesn't care.`,
-                `This is where ${pb} proves the plate or makes me a liar.`
-            ]));
+        const lines=[];
+        if(pq==="Perfect"&&cq==="Perfect"){
+            lines.push(
+                `Two Perfects. ${pb} and ${cb} both meant that.`,
+                `Clean rips both ways. No excuses on the way in.`
+            );
+        }else if(pq==="Perfect"){
+            lines.push(
+                `Perfect from ${pb}. That's the one you wanted.`,
+                `${pb} rips Perfect. ${cb} has to answer in the bowl.`
+            );
+        }else if(cq==="Perfect"){
+            lines.push(
+                `CPU Perfect on ${cb}. They didn't come in shy.`,
+                `${cb} nails the rip. ${pb} still has to fight.`
+            );
+        }else if(pq==="Horrible"&&cq==="Horrible"){
+            lines.push(
+                `Two Horribles. This point's already a dare.`,
+                `Both rips are a mess. Survive first, style later.`
+            );
+        }else if(pq==="Horrible"){
+            lines.push(
+                `Horrible from ${pb}. That's a dare.`,
+                `${pb} sprayed it. Now they have to live with it.`
+            );
+        }else if(cq==="Horrible"){
+            lines.push(
+                `${cb}'s rip is a mess. If they live, I'll clap.`,
+                `CPU Horrible on ${cb}. Gift, if ${pb} can take it.`
+            );
         }
-        return parts.filter(Boolean).join(" ");
+        if(pt===ct){
+            const t=techName(pt);
+            lines.push(
+                `Both on ${t}. ${pb} and ${cb} picked the same fight.`,
+                `Mirror launch: ${t} vs ${t}. First contact's coming.`
+            );
+            if(pt==="Direct Clash"){
+                lines.push(`${pb} and ${cb} are going straight at each other.`);
+            }
+            if(pt==="X-Rail"){
+                lines.push(`Both grabbed the rail. Race is on.`);
+            }
+            if(pt==="Drop Launch"){
+                lines.push(`Double drop. Straight shots through the middle.`);
+            }
+        }else{
+            lines.push(
+                `${pb} ${techName(pt)}, ${cb} ${techName(ct)}. Different ideas, same point.`,
+                `${pb} goes ${techName(pt)}. ${cb} answers ${techName(ct)}.`
+            );
+            if(pt==="Direct Clash"){
+                lines.push(`${pb} picked a fight on the way in. ${cb} ${techName(ct)}s.`);
+            }
+            if(pt==="Drop Launch"){
+                lines.push(`${pb} hangs and drops. ${cb} came in ${techName(ct)}.`);
+            }
+            if(pt==="X-Rail"){
+                lines.push(`${pb} takes the rail out of the gate. ${cb} is ${techName(ct)}.`);
+            }
+            if(pt==="Center"){
+                lines.push(`${pb} plants center. ${cb} went ${techName(ct)}.`);
+            }
+        }
+        return pickFresh(lines);
     }
 
     function impactLine(p,c,imp,offRail){
         const pb=bladeOf(p), cb=bladeOf(c);
         if(offRail){
             return pickFresh([
-                `${pb} and ${cb} meet coming off the ring. That's the swing I was waiting on.`,
-                `Off the X-Exit and into a clash — that hit has extra on it.`,
-                `They used the rail and then they used each other. That's the fun one.`
+                `Off the X-Exit into a clash. That one had extra.`,
+                `${pb} and ${cb} meet coming off the ring.`,
+                `Rail swing, then contact. That's the fun one.`
             ]);
         }
         if(imp.impactClass==="heavy"){
             return pickFresh([
-                `That's a real one. ${pb} and ${cb} just paid rent.`,
-                `Heavy contact. Somebody's going to remember that in the RPM.`,
-                `Boom. That's not a graze — that's a statement.`,
-                `${pb} walked into ${cb} and neither of them liked it. Good.`,
-                `There it is. First honest clash of the point.`
+                `Heavy clash. ${pb} and ${cb} both felt that.`,
+                `Boom. That's a real hit.`,
+                `${pb} walks into ${cb}. Neither liked it.`,
+                `There it is. Honest contact.`
             ]);
         }
         return pickFresh([
-            `They clip. Not the finish, but the conversation started.`,
-            `${pb} finds ${cb}. Light enough to stay in, hard enough to matter.`,
-            `Contact in the bowl. They're not circling past each other anymore.`,
-            `That's a poke, not a knockout. Still counts.`
+            `They clip. Still in it.`,
+            `${pb} finds ${cb}. Not a finish — yet.`,
+            `Contact in the bowl.`,
+            `Poke, not a knockout.`
         ]);
     }
 
     function railLine(s){
         const b=bladeOf(s);
         return pickFresh([
-            `${b} hooks the X-Rail. Speed's about to get rude.`,
-            `${b} is on the ring. Don't look away for the exit.`,
-            `Rail ride, ${b}. That's the lap that turns into a problem.`,
-            `${b} caught the X-Rail. Building a run.`
+            `${b} hooks the X-Rail.`,
+            `${b} is on the ring. Watch the exit.`,
+            `Rail ride, ${b}.`,
+            `${b} caught the X-Rail.`
         ]);
     }
 
     function exitLine(s){
         const b=bladeOf(s);
         return pickFresh([
-            `${b} dumps off the X-Exit toward the middle. That's a weapon if they still have legs.`,
-            `X-Exit, ${b}. Shot's coming into the bowl, not out the back.`,
-            `${b} leaves the rail. Now we see if that speed has a target.`
+            `${b} dumps off the X-Exit into the middle.`,
+            `X-Exit, ${b}. Shot's coming in.`,
+            `${b} leaves the rail. Speed still on it.`
         ]);
     }
 
     function recoveryLine(s){
         const b=bladeOf(s);
-        const pct=Math.round((Number(s.rpm)||0)*100);
         return pickFresh([
-            `${b} climbs out! That's a save. Building's still loud.`,
-            `RECOVERED. ${b} looked gone and then it wasn't.${pct?` Still got ${pct} on the meter.`:""}`,
-            `${b} refuses the pocket. That's the kind of luck that feels like skill.`,
-            `They don't stay down. ${b} is back in the bowl.`
+            `${b} climbs out! That's a save.`,
+            `RECOVERED. ${b} looked gone.`,
+            `${b} refuses the pocket.`,
+            `They don't stay down. ${b} is back.`
         ]);
     }
 
@@ -534,10 +472,10 @@
         const behind=ahead===p?c:p;
         const ab=bladeOf(ahead), bb=bladeOf(behind);
         return pickFresh([
-            `If this ends right now, it's ${ab}. ${bb} is running on fumes.`,
-            `I'm calling it while they're still spinning: ${ab} unless somebody finds a hole.`,
-            `${ab} looks like the point. ${bb} needs a miracle clash, not another lap.`,
-            `Late read: ${ab} has more left. Don't quote me if they both die in a pocket.`
+            `${ab} has more spin left. ${bb} is fading.`,
+            `If this ends now, it's ${ab}.`,
+            `${bb} needs a hole, not another lap.`,
+            `Late read: ${ab} unless somebody finds Over.`
         ]);
     }
 
@@ -545,31 +483,24 @@
         const w=bladeOf(winner), l=bladeOf(loser);
         const xtreme=type==="Xtreme", over=type==="Over";
         const lines=xtreme?[
-            `${l} falls through the Xtreme! That's three. ${w} just punched the scoreboard.`,
-            `XTREME. ${l} is gone. ${w} takes the big one.`,
-            `That's the hole in the middle and ${l} found it the hard way. ${w} +3.`
+            `Xtreme! ${l} through the middle. ${w} takes three.`,
+            `${l} falls in the Xtreme. That's the big one for ${w}.`,
+            `Center hole. ${w} just punched the board.`
         ]:over?[
-            `${l} gets put in the Over. Two points, ${w}. That's a knock with manners.`,
-            `OVER. ${w} sent ${l} packing out the side.`,
-            `${l} couldn't hold the bowl. Over for ${w}.`
+            `Over. ${w} puts ${l} out the side for two.`,
+            `${l} can't hold the bowl. Over for ${w}.`,
+            `Side pocket. Two for ${w}.`
         ]:[
-            `${w} outlasts ${l}. Spin finish. Ugly, honest, one point.`,
-            `That's a spin. ${l} dies first. ${w} is still humming.`,
-            `${w} wins the grind. Not pretty. Still on the board.`
+            `Spin finish. ${w} outlasts ${l}. One point.`,
+            `${l} dies first. ${w} is still humming.`,
+            `${w} wins the grind.`
         ];
         let text=pickFresh(lines);
         if(matchOver){
             text+=" "+pickFresh([
-                `And that's the match. First to seven, and ${w} got there.`,
+                `That's the match. ${w} got to seven.`,
                 `Ballgame. ${w} closes it ${playerScore}–${cpuScore}.`,
-                `You can exhale. ${w} just ended the night.`
-            ]);
-        }else if(Math.random()<0.45){
-            const sc=`${playerScore}–${cpuScore}`;
-            text+=" "+pickFresh([
-                `We're ${sc}. Next launch is going to tell on somebody.`,
-                `Score's ${sc}. I wouldn't get comfortable.`,
-                `${sc}. Room's still live.`
+                `${w} just ended the night.`
             ]);
         }
         return text;
@@ -717,10 +648,10 @@
         const b=bladeOf(victim);
         const o=bladeOf(other);
         const text=pickFresh([
-            `Wait— ${b} is going toward a hole. This might be the one.`,
-            `Slow it down. ${o} just sent ${b} on a bad trip.`,
-            `That's a pocket look. Don't blink.`,
-            `${b} is flying like it doesn't live here anymore.`
+            `Wait — ${b} is headed for a hole.`,
+            `Slow it down. ${o} just sent ${b} packing.`,
+            `Pocket look. Don't blink.`,
+            `${b} is flying like it doesn't live here.`
         ]);
         say(text,96,900,"killcam",now||0);
         paint();
