@@ -678,7 +678,7 @@
         s.y=pg.aim.y;
         state.pegasusCrash=nowMs()+420;
         state.pegasusSide=pg.side;
-        const hit=Math.hypot(s.x-foe.x,s.y-foe.y)<=foe.radius*1.20;
+        const hit=Math.hypot(s.x-foe.x,s.y-foe.y)<=foe.radius*1.45;
         if(hit){
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
@@ -697,17 +697,29 @@
     }
 
     function showPegasusStick(pg){
+        if(pg.side==="cpu"){
+            const foe=bey("player");
+            if(foe){
+                const dx=foe.x-pg.aim.x, dy=foe.y-pg.aim.y;
+                const m=Math.hypot(dx,dy)||1;
+                pg.stick={x:(dx/m)*0.55,y:(dy/m)*0.55};
+            }
+            return;
+        }
+        const host=document.querySelector(".battle-shell")||document.body;
+        host.classList.add("is-pegasus-aim");
         let box=document.getElementById("pegasusAim");
         if(!box){
             box=document.createElement("div");
             box.id="pegasusAim";
             box.className="pegasus-aim";
             box.innerHTML=`<p>AIM THE BLAST</p><div class="pegasus-stick" id="pegasusStick"><i id="pegasusKnob"></i></div>`;
-            document.querySelector(".battle-dock")?.appendChild(box);
+            host.appendChild(box);
         }
         box.hidden=false;
         const stick=document.getElementById("pegasusStick");
         const knob=document.getElementById("pegasusKnob");
+        const travel=()=>Math.max(40, (stick?.clientWidth||160)*0.32);
         const setFrom=(cx,cy,rect)=>{
             const x=(cx-rect.left)/rect.width*2-1;
             const y=(cy-rect.top)/rect.height*2-1;
@@ -715,7 +727,8 @@
             const k=m>1?1/m:1;
             pg.stick={x:x*k,y:y*k};
             if(knob){
-                knob.style.transform=`translate(${pg.stick.x*28}px,${pg.stick.y*28}px)`;
+                const t=travel();
+                knob.style.transform=`translate(calc(-50% + ${pg.stick.x*t}px), calc(-50% + ${pg.stick.y*t}px))`;
             }
         };
         stick.onpointerdown=(e)=>{
@@ -725,19 +738,12 @@
         stick.onpointermove=(e)=>{
             if(e.buttons||stick.hasPointerCapture?.(e.pointerId)) setFrom(e.clientX,e.clientY,stick.getBoundingClientRect());
         };
-        stick.onpointerup=()=>{ pg.stick={x:0,y:0}; if(knob) knob.style.transform=""; };
-        if(pg.side==="cpu"){
-            const foe=bey("player");
-            if(foe){
-                const dx=foe.x-pg.aim.x, dy=foe.y-pg.aim.y;
-                const m=Math.hypot(dx,dy)||1;
-                pg.stick={x:(dx/m)*0.55,y:(dy/m)*0.55};
-            }
-        }
+        stick.onpointerup=()=>{ pg.stick={x:0,y:0}; if(knob) knob.style.transform="translate(-50%,-50%)"; };
     }
     function hidePegasusStick(){
         const box=document.getElementById("pegasusAim");
         if(box) box.hidden=true;
+        document.querySelector(".battle-shell")?.classList.remove("is-pegasus-aim");
     }
 
     function readFight(cpu,you){
@@ -928,10 +934,10 @@
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
             html+=`<g class="fx-cross">
-                <circle cx="${v.x}" cy="${v.y}" r="4.2" fill="none" stroke="#7ef0ff" stroke-width="0.8"/>
-                <circle cx="${v.x}" cy="${v.y}" r="1.2" fill="#7ef0ff"/>
-                <line x1="${v.x-6}" y1="${v.y}" x2="${v.x-2.2}" y2="${v.y}" stroke="#7ef0ff" stroke-width="0.6"/>
-                <line x1="${v.x+2.2}" y1="${v.y}" x2="${v.x+6}" y2="${v.y}" stroke="#7ef0ff" stroke-width="0.6"/>
+                <circle cx="${v.x}" cy="${v.y}" r="8.4" fill="none" stroke="#7ef0ff" stroke-width="1.15"/>
+                <circle cx="${v.x}" cy="${v.y}" r="2.4" fill="#7ef0ff"/>
+                <line x1="${v.x-12}" y1="${v.y}" x2="${v.x-4.4}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.1"/>
+                <line x1="${v.x+4.4}" y1="${v.y}" x2="${v.x+12}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.1"/>
             </g>`;
         }
         if(state.pegasusCrash && state.pegasusCrash>t){

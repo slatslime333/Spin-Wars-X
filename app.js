@@ -3606,6 +3606,7 @@ function renderNewBattle(){
             })
             :`<p class="battle-callout" id="newCommentary"></p>`}
 
+          <div class="stadium-slot">
           <div class="stadium-cam">
           <div id="stadiumLens" class="stadium-lens">
           <div id="newStadium">
@@ -3791,6 +3792,7 @@ function renderNewBattle(){
                     fill="#7ef0ff" stroke="#041018" stroke-width="0.55"
                     opacity="0">RECOVERED</text>
             </svg>
+          </div>
           </div>
           </div>
           </div>
