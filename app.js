@@ -873,7 +873,7 @@ const BLADE_ENGINE = {
         card:{ovr:95,attack:96,knockback:98,defense:71,mobility:85,balance:78,stamina:70,burst:85},
         physics:{weightClass:"Heavy",centerOfGravity:"Low",contactShape:"Upper Smash",recoil:"High",lockStrength:88,weightDistribution:"Forward"},
         behavior:{attackStyle:"Rush Smash",smashPower:97,upperPower:96,barragePower:80,counterPower:36,movementControl:86,spinRetention:70,lad:62,burstResistance:85,winConditions:{spin:28,burst:88,knockout:99,counter:34}},
-        compatibility:{heights:{60:99,70:86,80:40},bits:{Rush:99,LowRush:99,Flat:94,LowFlat:96,Kick:88,Level:82,Point:70,Hexa:34,Wedge:28,Ball:20,Orb:22,Needle:16,Elevate:48,Quake:80}},
+        compatibility:{heights:{60:99,70:86,80:40},bits:{Rush:99,LowRush:99,Flat:94,LowFlat:96,Kick:88,Level:82,Point:70,Hexa:34,Wedge:28,Ball:20,Orb:90,Needle:16,Elevate:48,Quake:80}},
         traits:["Hidden","Final Boss","Knockout","Aggressive"],
         personality:{aggression:99,control:72,consistency:70,risk:96}
     }
@@ -1920,12 +1920,17 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     else if(bitName==="Wedge") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?91:70;
     else if(bitName==="Hexa") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?92:(bladeType==="Balance"?84:68);
     else if(bitName==="Ball"||bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?95:(bladeType==="Balance"?82:58);
+
+    if(blade.rogueBoss && bitName==="Orb") roleFit=96;
     else if(bitName==="Needle"||bitName==="High Needle") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?78:(bladeType==="Balance"?70:62);
     else if(bitName==="Point"||bitName==="Level") roleFit=(bladeType==="Balance"||bladeType==="Attack")?88:(bladeType==="Defense"?82:78);
     else if(bitName==="Quake") roleFit=bladeType==="Attack"?84:58;
     else if(bitName==="Taper") roleFit=(bladeType==="Balance"||bladeType==="Attack"||bladeType==="Defense")?86:78;
 
     let signature=0;
+
+    // Hidden boss kit: Shark Scale 1-60 Orb is a signature, not a dump bit.
+    if(blade.rogueBoss && bitName==="Orb" && ratchet.number===1 && height===60) signature+=1.45;
 
     // 1-60 attack identity.
     if(ratchet.number===1 && height===60 && bladeType==="Attack") signature+=1.80;
