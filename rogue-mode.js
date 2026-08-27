@@ -1374,7 +1374,9 @@ function buildSave(){
                 player:Number(Game.battle?.score?.player)||0,
                 cpu:Number(Game.battle?.score?.cpu)||0
             },
-            round:Number(Game.battle?.round)||1
+            round:Number(Game.battle?.round)||1,
+            matchStarted:!!Game.battle?.matchStarted,
+            abilityCharges:Game.battle?.abilityCharges||null
         },
         rogue:{
             runStatus:r.runStatus||"running",
@@ -1531,8 +1533,13 @@ function hydrate(data){
             player:Number(data.battle?.score?.player)||0,
             cpu:Number(data.battle?.score?.cpu)||0
         },
-        round:Number(data.battle?.round)||1
+        round:Number(data.battle?.round)||1,
+        matchStarted:!!data.battle?.matchStarted,
+        abilityCharges:data.battle?.abilityCharges||null
     };
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.restoreCharges){
+        SpinWarsAbilities.restoreCharges();
+    }
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.cpu.lockedLaunchPlan=null;
     syncLoadout();
@@ -1699,7 +1706,8 @@ function beginRun(blade){
         boss:false
     };
     Game.player.launch={angle:"Flat",technique:"Center"};
-    Game.battle={score:{player:0,cpu:0},round:1};
+    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
     generateCpu();
     showComboCard();
     persist();
@@ -1996,7 +2004,8 @@ function advanceMatch(){
     const r=run();
     r.matchIndex+=1;
     r.offers=[];
-    Game.battle={score:{player:0,cpu:0},round:1};
+    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.cpu.lockedLaunchPlan=null;
     if(r.matchIndex===18){

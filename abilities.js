@@ -86,6 +86,7 @@
         pegasus:null,
         swordGlow:true
     };
+    const CHARGE_KEY="spinWarsX.abilityCharges";
 
     function kitId(blade){
         if(blade?.abilityId && META[blade.abilityId]) return blade.abilityId;
@@ -179,8 +180,55 @@
         </details>`;
     }
 
+    function persistCharges(){
+        const payload={
+            player:clamp(Number(state.charges.player)||0,0,ABILITY_USES),
+            cpu:clamp(Number(state.charges.cpu)||0,0,ABILITY_USES)
+        };
+        state.charges=payload;
+        if(global.Game){
+            global.Game.battle=global.Game.battle||{};
+            global.Game.battle.abilityCharges={...payload};
+        }
+        try{ sessionStorage.setItem(CHARGE_KEY, JSON.stringify(payload)); }catch(_e){}
+    }
+    function readStoredCharges(){
+        const fromBattle=global.Game?.battle?.abilityCharges;
+        if(fromBattle && Number.isFinite(Number(fromBattle.player))){
+            return {
+                player:clamp(Number(fromBattle.player)||0,0,ABILITY_USES),
+                cpu:clamp(Number(fromBattle.cpu)||0,0,ABILITY_USES)
+            };
+        }
+        try{
+            const raw=JSON.parse(sessionStorage.getItem(CHARGE_KEY)||"null");
+            if(raw && Number.isFinite(Number(raw.player))){
+                return {
+                    player:clamp(Number(raw.player)||0,0,ABILITY_USES),
+                    cpu:clamp(Number(raw.cpu)||0,0,ABILITY_USES)
+                };
+            }
+        }catch(_e){}
+        return null;
+    }
+    function restoreCharges(){
+        const saved=readStoredCharges();
+        if(!saved) return false;
+        state.charges=saved;
+        persistCharges();
+        updateDock();
+        return true;
+    }
+    function matchStillHoldsCharges(){
+        const saved=readStoredCharges();
+        if(global.Game?.battle?.matchStarted) return true;
+        if(!saved) return false;
+        return saved.player<ABILITY_USES || saved.cpu<ABILITY_USES;
+    }
+
     function resetMatch(){
         state.charges={player:ABILITY_USES,cpu:ABILITY_USES};
+        persistCharges();
         state.dashAt={player:0,cpu:0};
         state.pending=null;
         state.channel=null;
@@ -192,7 +240,6 @@
         state.cpuThink=0;
         if(global.Game){
             global.Game.battle=global.Game.battle||{};
-            global.Game.battle.abilityCharges={...state.charges};
             global.Game.battle.playerCombatHistory=[];
         }
     }
@@ -296,7 +343,7 @@
 
     function spend(side){
         state.charges[side]=Math.max(0,(state.charges[side]||0)-1);
-        if(global.Game?.battle) global.Game.battle.abilityCharges={...state.charges};
+        persistCharges();
         if(side==="player") rememberPlayerCombat("ability");
         updateDock();
     }
@@ -530,26 +577,82 @@
         return false;
     }
 
-    function step(dt,p,c){
+    function expireSoftChannel(t){
+        const ch=state.channel;
+        if(!ch || ch.until>t) return;
+        if(ch.kind==="ancient-sword" || ch.kind==="pegasus-blast") return;
+        const side=ch.side;
+        state.channel=null;
+        const s=bey(side);
+        if(!s) return;
+        if(ch.kind==="hurricane" || ch.kind==="flame-trail") s.abilitySpeedMul=1;
+        if(ch.kind==="iron-skin") s.metallic=false;
+    }
+
+    function finishSword(atk,def){
+        if(!atk||!def) return;
+        const avg=(atk.swordHits||[0.4]).reduce((a,b)=>a+b,0)/Math.max(1,(atk.swordHits||[]).length);
+        const mag=Math.min(KNOCK_CAP, 0.086*avg);
+        const ox=-(atk.swordFrom?.x||1);
+        const oy=-(atk.swordFrom?.y||0);
+        applyShove(def, ox, oy, mag);
+        applyShove(atk, atk.swordFrom?.x||1, atk.swordFrom?.y||0, mag*0.4);
+        atk.abilityHold=false;
+        def.abilityHold=false;
+        atk.ninjaFlick=1;
+        atk.swordFreezeUntil=0;
+        def.swordFreezeUntil=0;
+        state.channel=null;
+    }
+
+    function releaseStuckHolds(p,c){
+        const swordLive=state.channel?.kind==="ancient-sword";
+        const pegLive=!!state.pegasus;
+        [p,c].forEach(s=>{
+            if(!s) return;
+            const pegHere=pegLive && state.pegasus.side===(s===p?"player":"cpu");
+            if(!swordLive && !pegHere){
+                s.abilityHold=false;
+                s.abilityHidden=false;
+                if((s.swordFreezeUntil||0)<nowMs()) s.swordFreezeUntil=0;
+            }
+        });
+    }
+
+    function onForeground(){
         const t=nowMs();
-        if(state.channel && state.channel.until<=t){
-            const kind=state.channel.kind;
-            const side=state.channel.side;
-            state.channel=null;
-            if(kind==="hurricane"){
-                const s=bey(side);
-                if(s) s.abilitySpeedMul=1;
-            }
-            if(kind==="flame-trail"){
-                const s=bey(side);
-                if(s) s.abilitySpeedMul=1;
-            }
-            if(kind==="iron-skin"){
-                const s=bey(side);
-                if(s) s.metallic=false;
+        const p=bey("player");
+        const c=bey("cpu");
+        expireSoftChannel(t);
+        if(state.channel?.kind==="ancient-sword" && state.channel.until<=t){
+            const atk=bey(state.channel.side);
+            const def=bey(other(state.channel.side));
+            finishSword(atk,def);
+        }
+        const pg=state.pegasus;
+        if(pg){
+            const s=bey(pg.side);
+            const foe=bey(other(pg.side));
+            if(!s||!foe){
+                state.pegasus=null;
+                state.channel=null;
+            }else if(pg.phase==="aim" && t>=(pg.aimUntil||0)){
+                crashPegasus(pg,s,foe);
+            }else if(pg.phase==="lift" && t>=(pg.liftUntil||0)+PEGASUS_AIM_MS){
+                crashPegasus(pg,s,foe);
+            }else if(pg.phase==="lift" && t>=(pg.liftUntil||0)){
+                pg.phase="aim";
+                pg.aimUntil=t+PEGASUS_AIM_MS;
+                showPegasusStick(pg);
             }
         }
+        releaseStuckHolds(p,c);
+        updateDock();
+    }
 
+    function step(dt,p,c){
+        const t=nowMs();
+        expireSoftChannel(t);
         stepSword(dt,p,c,t);
         stepHurricane(dt,p,c,t);
         stepQuake(dt,p,c,t);
@@ -585,17 +688,7 @@
             popHit(def,rpm);
         }
         if(t>=ch.until-16){
-            const avg=(atk.swordHits||[0.4]).reduce((a,b)=>a+b,0)/Math.max(1,(atk.swordHits||[]).length);
-            const mag=Math.min(KNOCK_CAP, 0.086*avg);
-            const ox=-(atk.swordFrom?.x||1);
-            const oy=-(atk.swordFrom?.y||0);
-            applyShove(def, ox, oy, mag);
-            applyShove(atk, atk.swordFrom?.x||1, atk.swordFrom?.y||0, mag*0.4);
-            atk.abilityHold=false;
-            def.abilityHold=false;
-            atk.ninjaFlick=1;
-            atk.swordFreezeUntil=0;
-            def.swordFreezeUntil=0;
+            finishSword(atk,def);
         }
     }
 
@@ -770,8 +863,10 @@
         hidePegasusStick();
         s.abilityHidden=false;
         s.abilityHold=false;
-        s.x=pg.aim.x;
-        s.y=pg.aim.y;
+        const ax=Number(pg.aim?.x);
+        const ay=Number(pg.aim?.y);
+        s.x=Number.isFinite(ax)?clamp(ax,-0.78,0.78):s.x;
+        s.y=Number.isFinite(ay)?clamp(ay,-0.68,0.78):s.y;
         state.pegasusCrash=nowMs()+420;
         state.pegasusSide=pg.side;
         const markerR=13.2/39;
@@ -1226,10 +1321,15 @@
 
     global.SpinWarsAbilities={
         kitId, kitMeta, emblemSVG, abilityChipHTML,
-        resetMatch, resetRound, tryDash, tryAbility,
+        resetMatch, resetRound, restoreCharges, matchStillHoldsCharges, onForeground,
+        tryDash, tryAbility,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
         cpuShouldDash, cpuShouldAbility, readFight,
         SWORD_R, STORM_R, QUAKE_R, KITS, META
     };
+    if(typeof window!=="undefined"){
+        window.addEventListener("pagehide", persistCharges);
+        window.addEventListener("beforeunload", persistCharges);
+    }
 })(window);
