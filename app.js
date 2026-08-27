@@ -2799,6 +2799,7 @@ function tryDashKillCam(s,now){
     return true;
 }
 window.tryDashKillCam=tryDashKillCam;
+window.KILL_CAM=KILL_CAM;
 
 function endKillCam(){
     const cam=killCamState();
@@ -2841,7 +2842,7 @@ function applyKillCamTransform(now){
 
 function paintRpmGhostBars(p,c,dt){
     const ghost=NEW_BATTLE.rpmGhost||(NEW_BATTLE.rpmGhost={player:null,cpu:null});
-    const tau=0.55;
+    const tau=0.85;
     const k=1-Math.exp(-Math.max(0.001,Number(dt)||1/60)/tau);
     const rows=[
         {
