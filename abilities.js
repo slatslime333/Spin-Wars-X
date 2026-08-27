@@ -1001,8 +1001,8 @@
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
             html+=`<g class="fx-aim">
-                <circle cx="${v.x}" cy="${v.y}" r="11.8" fill="none" stroke="#7ef0ff" stroke-width="1.7"/>
-                <circle cx="${v.x}" cy="${v.y}" r="3.4" fill="#7ef0ff" fill-opacity="0.55"/>
+                <circle cx="${v.x}" cy="${v.y}" r="13.2" fill="#7ef0ff" fill-opacity="0.12"/>
+                <circle cx="${v.x}" cy="${v.y}" r="11.8" fill="none" stroke="#7ef0ff" stroke-width="2.1"/>
             </g>`;
         }
         if(state.pegasusCrash && state.pegasusCrash>t){
