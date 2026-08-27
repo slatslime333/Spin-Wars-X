@@ -64,7 +64,7 @@
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
-            blurb:"2 uses a match. 2s lift, then 3s to aim. Hit: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
+            blurb:"2 uses a match. 2s lift, then 3s to aim. Hit if the glow marker even grazes them: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
         },
         "flame-trail":{
             name:"Flame Trail", active:true,
@@ -250,7 +250,10 @@
         s.impactScale=Math.max(s.impactScale||1,1.28);
         s.hitFlash=Math.max(s.hitFlash||0,0.28);
         state.dashAt[side]=t+DASH_CD*1000;
-        if(side==="player") rememberPlayerCombat("dash");
+        if(side==="player"){
+            rememberPlayerCombat("dash");
+            if(typeof global.tryDashKillCam==="function") global.tryDashKillCam(s,t);
+        }
         updateDock();
         return true;
     }
@@ -729,7 +732,8 @@
         s.y=pg.aim.y;
         state.pegasusCrash=nowMs()+420;
         state.pegasusSide=pg.side;
-        const hit=Math.hypot(s.x-foe.x,s.y-foe.y)<=foe.radius*1.45;
+        const markerR=13.2/39;
+        const hit=Math.hypot(pg.aim.x-foe.x,pg.aim.y-foe.y)<=(foe.radius+markerR);
         if(hit){
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
