@@ -4,14 +4,20 @@
  Physics still uses the existing clash shove / RPM drain.
 ==================================*/
 (function(global){
-    const DASH_CD=5;
+    const DASH_CD=3.8;
     const DASH_SHOVE=0.062;
     const ABILITY_USES=2;
     const SIMUL_MS=120;
     const KNOCK_CAP=0.086;
-    const SWORD_R=0.36;
-    const STORM_R=0.42;
-    const QUAKE_R=0.40;
+    const SWORD_R=0.54;
+    const SWORD_MS=2500;
+    const STORM_R=0.84;
+    const HURRICANE_MS=3000;
+    const QUAKE_R=0.62;
+    const QUAKE_MS=3000;
+    const IRON_MS=3000;
+    const FLAME_MS=2300;
+    const FLAME_PHASE2_MS=1000;
     const KITS={
         "Dran Sword":"ancient-sword",
         "Viper Tail":"ancient-sword",
@@ -99,7 +105,6 @@
     }
     function blocked(s){
         if(!s||!battleLive()) return true;
-        if(camHot()) return true;
         if(s.railEngaged) return true;
         if(dropStalling(s)) return true;
         if(s.rpm<=0.001) return true;
@@ -118,8 +123,6 @@
             el.textContent=text;
             el.setAttribute("opacity","1");
         }
-        const hud=document.getElementById("combatToast");
-        if(hud) hud.textContent=text;
     }
     function popHit(victim,amount){
         const lost=Math.max(0,Number(amount)||0);
@@ -206,6 +209,13 @@
             s.swordFreezeUntil=0;
             s.metallic=false;
             s.quakePulse=1;
+            s.quakeCracks=null;
+            s.flamePhase=0;
+            s.flameOn=0;
+            s.flameHits=0;
+            s.hurricaneGain=0;
+            s.stormHit=false;
+            s.dashBurst=null;
         });
         hidePegasusStick();
     }
@@ -231,8 +241,12 @@
         s.vx+=hx*DASH_SHOVE;
         s.vy+=hy*DASH_SHOVE;
         s.impactMomentumState=Math.max(s.impactMomentumState||0,0.42);
-        s.dashGust={hx,hy,x:s.x,y:s.y,until:nowMs()+280};
-        state.dashAt[side]=nowMs()+DASH_CD*1000;
+        const t=nowMs();
+        s.dashGust={hx,hy,x:s.x,y:s.y,until:t+560};
+        s.dashBurst={until:t+480,hx,hy,born:t};
+        s.impactScale=Math.max(s.impactScale||1,1.28);
+        s.hitFlash=Math.max(s.hitFlash||0,0.28);
+        state.dashAt[side]=t+DASH_CD*1000;
         updateDock();
         return true;
     }
@@ -314,48 +328,53 @@
         foe.vx=0; foe.vy=0;
         s.abilityHold=true;
         foe.abilityHold=true;
-        foe.swordFreezeUntil=nowMs()+1700;
-        s.swordFreezeUntil=nowMs()+1700;
+        foe.swordFreezeUntil=nowMs()+SWORD_MS;
+        s.swordFreezeUntil=nowMs()+SWORD_MS;
         s.swordFrom={x:Math.cos(ang),y:Math.sin(ang)};
         s.swordHits=[];
         s.swordTick=0;
-        s.swordSmoke=nowMs()+1700;
-        beginChannel(side,1700,"ancient-sword");
+        s.swordSmoke=nowMs()+SWORD_MS;
+        beginChannel(side,SWORD_MS,"ancient-sword");
         popup("ANCIENT SWORD");
         return true;
     }
     function startHurricane(side,s){
         spend(side);
-        s.hurricaneUntil=nowMs()+2000;
+        s.hurricaneUntil=nowMs()+HURRICANE_MS;
         s.abilitySpeedMul=1.12;
         s.hurricaneRpm0=s.rpm;
-        beginChannel(side,2000,"hurricane");
+        s.hurricaneGain=(s.rpm||0)*0.15;
+        s.hurricaneGainLeft=s.hurricaneGain;
+        beginChannel(side,HURRICANE_MS,"hurricane");
         popup("HURRICANE");
         return true;
     }
     function startIron(side,s){
         spend(side);
-        s.ironSkinUntil=nowMs()+3000;
+        s.ironSkinUntil=nowMs()+IRON_MS;
         s.metallic=true;
-        beginChannel(side,3000,"iron-skin");
+        beginChannel(side,IRON_MS,"iron-skin");
         popup("IRON SKIN");
         return true;
     }
     function startQuake(side,s){
         spend(side);
-        s.quakeUntil=nowMs()+2000;
+        const t=nowMs();
+        s.quakeUntil=t+QUAKE_MS;
         s.quakeTick=0;
-        beginChannel(side,2000,"earthquake");
+        s.quakeCracks=[];
+        s.quakeNextCrack=t;
+        beginChannel(side,QUAKE_MS,"earthquake");
         popup("EARTHQUAKE");
         return true;
     }
     function startFlame(side,s){
         spend(side);
-        s.flameUntil=nowMs()+3000;
+        s.flameUntil=nowMs()+FLAME_MS;
         s.abilitySpeedMul=1.15;
         state.flame[side]=[];
         s.flamePhase=0;
-        beginChannel(side,3000,"flame-trail");
+        beginChannel(side,FLAME_MS,"flame-trail");
         popup("FLAME TRAIL");
         return true;
     }
@@ -416,20 +435,20 @@
             const roll=Math.random();
             if(roll<1/3){
                 pKnock*=1.20;
-                popup("DOUBLE EDGE");
+                popup("+KB");
             }else if(roll<2/3){
-                pMul=1.15;
-                popup("DOUBLE EDGE");
+                cKnock*=1.20;
+                popup("-KB");
             }
         }
         if(cKit==="double-edge"){
             const roll=Math.random();
             if(roll<1/3){
                 cKnock*=1.20;
-                popup("DOUBLE EDGE");
+                popup("+KB");
             }else if(roll<2/3){
-                cMul=1.15;
-                popup("DOUBLE EDGE");
+                pKnock*=1.20;
+                popup("-KB");
             }
         }
 
@@ -547,51 +566,74 @@
     function stepHurricane(dt,p,c,t){
         [p,c].forEach(s=>{
             if(!s || s.hurricaneUntil<=t) return;
-            const span=2000;
-            const left=s.hurricaneUntil-t;
-            const gained=(s.hurricaneRpm0||s.rpm)*0.15*(dt/(span/1000));
-            s.rpm=clamp(s.rpm+gained,0,1);
+            const span=HURRICANE_MS/1000;
+            const slice=Math.min(s.hurricaneGainLeft||0, (s.hurricaneGain||0)*(dt/span));
+            s.hurricaneGainLeft=Math.max(0,(s.hurricaneGainLeft||0)-slice);
+            s.rpm=clamp(s.rpm+slice,0,1);
             const foe=s===p?c:p;
             if(!foe) return;
             const d=Math.hypot(s.x-foe.x,s.y-foe.y);
             if(d<STORM_R && d>1e-4){
                 const nx=(foe.x-s.x)/d, ny=(foe.y-s.y)/d;
                 if(!foe.stormHit){
-                    applyShove(foe,nx,ny,0.022);
+                    applyShove(foe,nx,ny,0.042);
                     foe.stormHit=true;
                 }
-                foe.vx+=nx*0.00032;
-                foe.vy+=ny*0.00032;
+                foe.vx+=nx*0.00072;
+                foe.vy+=ny*0.00072;
             }else if(foe){
                 foe.stormHit=false;
             }
         });
     }
 
+    function makeQuakeCrack(s,t){
+        const a=Math.random()*Math.PI*2;
+        const d=0.08+Math.random()*(QUAKE_R-0.08);
+        return {
+            x:s.x+Math.cos(a)*d,
+            y:s.y+Math.sin(a)*d,
+            rot:a,
+            born:t,
+            until:t+420+Math.random()*380,
+            hit:false
+        };
+    }
+
     function stepQuake(dt,p,c,t){
         [p,c].forEach(s=>{
             if(!s || s.quakeUntil<=t){
-                if(s) s.quakePulse=1;
+                if(s){
+                    s.quakePulse=1;
+                    s.quakeCracks=null;
+                }
                 return;
             }
-            s.quakePulse=1+0.18*Math.abs(Math.sin(t/90));
-            s.quakeTick=(s.quakeTick||0)+dt;
+            s.quakePulse=1+0.12*Math.abs(Math.sin(t/90));
+            if(!s.quakeCracks) s.quakeCracks=[];
+            s.quakeCracks=s.quakeCracks.filter(k=>k.until>t);
+            while(s.quakeCracks.length<7){
+                s.quakeCracks.push(makeQuakeCrack(s,t));
+            }
             const foe=s===p?c:p;
             if(!foe) return;
-            const d=Math.hypot(s.x-foe.x,s.y-foe.y);
-            if(s.quakeTick>=0.5){
-                s.quakeTick-=0.5;
-                if(d<QUAKE_R){
-                    const chip=0.010+Math.random()*0.010;
+            s.quakeCracks.forEach(k=>{
+                const age=t-k.born;
+                const left=k.until-t;
+                if(age<70 || left<80) return;
+                const d=Math.hypot(foe.x-k.x,foe.y-k.y);
+                if(d<0.11 && !k.hit){
+                    k.hit=true;
+                    const chip=0.012+Math.random()*0.010;
                     foe.rpm=clamp(foe.rpm-chip,0,1);
                     popHit(foe,chip);
-                    const nx=d>1e-4?(foe.x-s.x)/d:1;
-                    const ny=d>1e-4?(foe.y-s.y)/d:0;
+                    const nx=d>1e-4?(foe.x-k.x)/d:1;
+                    const ny=d>1e-4?(foe.y-k.y)/d:0;
                     const sp=Math.hypot(foe.vx,foe.vy);
                     if(sp>1e-6){ foe.vx*=0.18; foe.vy*=0.18; }
-                    applyShove(foe,nx,ny,0.028);
+                    applyShove(foe,nx,ny,0.032);
                 }
-            }
+            });
         });
     }
 
@@ -607,31 +649,35 @@
                 while(trail.length && t-trail[0].t>900) trail.shift();
             }
             const foe=bey(other(side));
-            if(!foe || s.flameUntil<=t) return;
+            if(!foe) return;
+            if(s.flameUntil<=t){
+                if((foe.flameOn||0) && t-(foe.flameOn||0)>FLAME_MS) {
+                    foe.flamePhase=0;
+                    foe.flameOn=0;
+                }
+                return;
+            }
             let hit=false;
             for(const pt of trail){
                 if(t-pt.t<80) continue;
                 if(Math.hypot(foe.x-pt.x,foe.y-pt.y)<s.radius*0.92){ hit=true; break; }
             }
             if(!hit) return;
-            foe.flameTouch=(foe.flameTouch||0)+dt;
-            if((foe.flamePhase||0)<1){
-                foe.flameAcc=(foe.flameAcc||0)+dt;
-                if(foe.flameAcc>=0.3){
-                    foe.flameAcc=0;
-                    foe.rpm=clamp(foe.rpm-0.008,0,1);
-                    popHit(foe,0.008);
-                    foe.flameHits=(foe.flameHits||0)+1;
-                    if(foe.flameHits>=1) foe.flamePhase=1;
-                }
-            }else{
-                foe.flameAcc=(foe.flameAcc||0)+dt;
-                if(foe.flameAcc>=0.5){
-                    foe.flameAcc=0;
-                    const burn=0.016+Math.random()*0.008;
-                    foe.rpm=clamp(foe.rpm-burn,0,1);
-                    popHit(foe,burn);
-                }
+            if(!foe.flameOn){
+                foe.flameOn=t;
+                foe.flamePhase=1;
+                foe.flameAcc=0;
+            }
+            if(foe.flamePhase<2 && (t-foe.flameOn)>=FLAME_PHASE2_MS){
+                foe.flamePhase=2;
+            }
+            foe.flameAcc=(foe.flameAcc||0)+dt;
+            const tick=foe.flamePhase>=2?0.5:0.3;
+            const burn=foe.flamePhase>=2?(0.016+Math.random()*0.008):0.008;
+            if(foe.flameAcc>=tick){
+                foe.flameAcc=0;
+                foe.rpm=clamp(foe.rpm-burn,0,1);
+                popHit(foe,burn);
             }
         });
     }
@@ -819,7 +865,7 @@
         state.cpuThink+=dt;
         if(state.cpuThink<0.12) return;
         state.cpuThink=0;
-        if(!battleLive()||camHot()) return;
+        if(!battleLive()) return;
         const cpu=c;
         const you=p;
         if(!cpu||!you) return;
@@ -873,22 +919,31 @@
                 html+=ring(s,STORM_R,"fx-storm",1.1);
                 const spin=t/80;
                 html+=`<g class="fx-tornado" transform="rotate(${(spin*40)%360} ${pt.x} ${pt.y})">
-                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.55}" ry="${STORM_R*39*0.22}" fill="none" stroke="#bfefff" stroke-width="0.7" opacity="0.8"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.85}" ry="${STORM_R*39*0.34}" fill="none" stroke="#7ec8ff" stroke-width="0.55" opacity="0.55"/>
-                    <path d="M${pt.x} ${pt.y-STORM_R*18} C${pt.x+4} ${pt.y} ${pt.x-4} ${pt.y} ${pt.x} ${pt.y+STORM_R*16}" fill="none" stroke="#e8f7ff" stroke-width="0.8"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.55}" ry="${STORM_R*39*0.22}" fill="none" stroke="#bfefff" stroke-width="0.9" opacity="0.8"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.85}" ry="${STORM_R*39*0.34}" fill="none" stroke="#7ec8ff" stroke-width="0.7" opacity="0.55"/>
+                    <path d="M${pt.x} ${pt.y-STORM_R*18} C${pt.x+4} ${pt.y} ${pt.x-4} ${pt.y} ${pt.x} ${pt.y+STORM_R*16}" fill="none" stroke="#e8f7ff" stroke-width="1"/>
                 </g>`;
+                const shown=Math.max(1,Math.round((s.hurricaneGain||0)*100));
+                html+=`<text class="fx-rpm-gain" x="${pt.x}" y="${pt.y-9.2}" text-anchor="middle" font-size="4.2" font-weight="900" fill="#7ef0ff" stroke="#041018" stroke-width="0.45">+${shown}</text>`;
             }
             if(s.quakeUntil>t){
                 html+=ring(s,QUAKE_R,"fx-quake",1);
-                const j=Math.sin(t/90);
-                html+=`<g class="fx-cracks">
-                    <path d="M${pt.x-8} ${pt.y+j} L${pt.x-2} ${pt.y+4} L${pt.x+3} ${pt.y-1} L${pt.x+9} ${pt.y+3}" fill="none" stroke="#6a4a28" stroke-width="0.7"/>
-                    <path d="M${pt.x} ${pt.y-6} L${pt.x+2} ${pt.y-1} L${pt.x-3} ${pt.y+5}" fill="none" stroke="#8a6230" stroke-width="0.55"/>
-                </g>`;
+                (s.quakeCracks||[]).forEach(k=>{
+                    const life=Math.max(0,Math.min(1,(k.until-t)/180));
+                    const fadeIn=Math.max(0,Math.min(1,(t-k.born)/90));
+                    const op=(life*fadeIn).toFixed(2);
+                    const v=worldToSvg(k.x,k.y);
+                    const dx=Math.cos(k.rot)*4.8, dy=Math.sin(k.rot)*2.2;
+                    html+=`<g class="fx-cracks" opacity="${op}">
+                        <path d="M${v.x-dx} ${v.y-dy} L${v.x} ${v.y+1.2} L${v.x+dx} ${v.y+dy}" fill="none" stroke="#6a4a28" stroke-width="1.15"/>
+                        <path d="M${v.x-dx*0.4} ${v.y-1.6} L${v.x+1.2} ${v.y+2.4}" fill="none" stroke="#8a6230" stroke-width="0.7"/>
+                    </g>`;
+                });
             }
             if(s.metallic){
-                html+=ring(s,s.radius*1.12,"fx-iron",1.2);
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*0.92}" fill="#cfd8e0" fill-opacity="0.22"/>`;
+                html+=ring(s,s.radius*1.22,"fx-iron",1.6);
+                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*1.05}" fill="#dfe7ee" fill-opacity="0.72"/>`;
+                html+=`<circle cx="${pt.x-1.2}" cy="${pt.y-1.4}" r="${s.radius*39*0.35}" fill="#ffffff" fill-opacity="0.35"/>`;
             }
             const trail=state.flame[side];
             if(trail?.length>1){
@@ -902,11 +957,23 @@
             if(s.dashGust && s.dashGust.until>t){
                 const g2=s.dashGust;
                 const gp=worldToSvg(s.x,s.y);
-                const bx=-g2.hx*4.5, by=-g2.hy*4.5;
-                html+=`<g class="fx-gust">
-                    <path d="M${gp.x+bx} ${gp.y+by} q ${bx} ${by*0.2} ${bx*1.6} ${by*0.15}" fill="none" stroke="#d7efe4" stroke-width="0.9"/>
-                    <path d="M${gp.x+bx*0.6} ${gp.y+by*0.6} q ${-by} ${bx} ${bx} ${by}" fill="none" stroke="#9ad7b8" stroke-width="0.7"/>
-                    <path d="M${gp.x+bx*1.1} ${gp.y+by*1.1} q ${by} ${-bx} ${bx*0.8} ${by*0.4}" fill="none" stroke="#ffffff" stroke-width="0.55" opacity="0.8"/>
+                const life=Math.max(0.2,(g2.until-t)/560);
+                const bx=-g2.hx*7.2, by=-g2.hy*7.2;
+                html+=`<g class="fx-gust" opacity="${life.toFixed(2)}">
+                    <circle cx="${gp.x}" cy="${gp.y}" r="${5.4+life*2.2}" fill="none" stroke="#e8fff4" stroke-width="1.35"/>
+                    <path d="M${gp.x+bx} ${gp.y+by} L${gp.x+bx*2.4} ${gp.y+by*2.4}" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+                    <path d="M${gp.x+bx*0.55-by*0.35} ${gp.y+by*0.55+bx*0.35} L${gp.x+bx*1.9-by*0.55} ${gp.y+by*1.9+bx*0.55}" fill="none" stroke="#9ad7b8" stroke-width="1.15"/>
+                    <path d="M${gp.x+bx*0.55+by*0.35} ${gp.y+by*0.55-bx*0.35} L${gp.x+bx*1.9+by*0.55} ${gp.y+by*1.9-bx*0.55}" fill="none" stroke="#d7efe4" stroke-width="1.15"/>
+                    <circle cx="${gp.x+bx*0.4}" cy="${gp.y+by*0.4}" r="2.4" fill="#e8fff4" fill-opacity="0.35"/>
+                </g>`;
+            }
+            if((s.flamePhase||0)>=1){
+                const big=s.flamePhase>=2;
+                const flick=0.7+Math.sin(t/55)*0.3;
+                const fr=big?3.6:1.8;
+                html+=`<g class="fx-burn">
+                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.35}" rx="${fr*0.9}" ry="${fr*1.15}" fill="#ff4a24" fill-opacity="${(0.45*flick).toFixed(2)}"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.7}" rx="${fr*0.45}" ry="${fr*0.7}" fill="#ffe566" fill-opacity="${(0.55*flick).toFixed(2)}"/>
                 </g>`;
             }
             if(s.ninjaFlick!=null && s.abilityHold){
@@ -934,10 +1001,12 @@
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
             html+=`<g class="fx-cross">
-                <circle cx="${v.x}" cy="${v.y}" r="8.4" fill="none" stroke="#7ef0ff" stroke-width="1.15"/>
-                <circle cx="${v.x}" cy="${v.y}" r="2.4" fill="#7ef0ff"/>
-                <line x1="${v.x-12}" y1="${v.y}" x2="${v.x-4.4}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.1"/>
-                <line x1="${v.x+4.4}" y1="${v.y}" x2="${v.x+12}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.1"/>
+                <circle cx="${v.x}" cy="${v.y}" r="16.8" fill="none" stroke="#7ef0ff" stroke-width="1.55"/>
+                <circle cx="${v.x}" cy="${v.y}" r="4.8" fill="#7ef0ff"/>
+                <line x1="${v.x-22}" y1="${v.y}" x2="${v.x-7.2}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.45"/>
+                <line x1="${v.x+7.2}" y1="${v.y}" x2="${v.x+22}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.45"/>
+                <line x1="${v.x}" y1="${v.y-22}" x2="${v.x}" y2="${v.y-7.2}" stroke="#7ef0ff" stroke-width="1.45"/>
+                <line x1="${v.x}" y1="${v.y+7.2}" x2="${v.x}" y2="${v.y+22}" stroke="#7ef0ff" stroke-width="1.45"/>
             </g>`;
         }
         if(state.pegasusCrash && state.pegasusCrash>t){
@@ -969,7 +1038,7 @@
                 <span class="combat-emblem">${emblemSVG(id,28)}</span>
                 <span class="combat-pips">${passive?"PASSIVE":`${charges}/2`}</span>
             </button>
-            <span class="combat-toast" id="combatToast"></span>
+            <span class="combat-toast" id="combatToast" hidden></span>
         </div>`;
     }
 
