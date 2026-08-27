@@ -4,26 +4,27 @@ ABILITY,dash,Dash,How hard the dash shoves you. Clash knock cap is 0.086 so this
 ABILITY,shared,All actives,Uses per match for every ACTIVE kit. Passives do not spend this.,ABILITY_USES,2,uses,,Both you and CPU get this many.
 ABILITY,shared,Simul press,"If both press an active within this window, one is DENIED at random.",SIMUL_MS,120,milliseconds,
 ABILITY,shared,Clash knock cap,Hard cap on any ability shove.,KNOCK_CAP,0.086,knock,,Do not raise for a single kit without talking physics.
-ABILITY,ancient-sword,Ancient Sword,"Dran Sword, Viper Tail, Shark Edge, Shark Scale. 2 uses. If foe is inside range, both freeze 2.5s. 4 cuts every 0.5s, each 1–2 RPM (4–8 total), then a shove. Miss still spends a use.",SWORD_R,0.54,stadium units,,Bigger = easier to land. Stadium radius is about 1.
-ABILITY,ancient-sword,Ancient Sword,How long the freeze/cut lasts if it hits.,SWORD_MS,2500,milliseconds,,Blurb says 2.5s.
-ABILITY,ancient-sword,Ancient Sword,Seconds between cuts. 4 cuts max.,sword_tick,0.5,seconds,
-ABILITY,ancient-sword,Ancient Sword,RPM taken per cut (random in this range). HUD RPM = this × 100.,sword_rpm_per_cut,0.010–0.020,rpm 0–1,,Shows as 1–2 RPM on the bar.
-ABILITY,ancient-sword,Ancient Sword,End shove uses average of 0.35–0.50 × knock cap. You get 40% of that shove back.,sword_end_kb,0.35–0.50 × 0.086,knock,
-ABILITY,hurricane,Hurricane,"Arrow Wizard, Leon Claw, Wizard Rod, Shelter Drake. 2 uses. 3s. +12% move speed. Gain 15% of the RPM you had when you popped it, fed in over 3s. First time foe enters the wind: shove 0.042. Staying in adds a light push.",HURRICANE_MS,3000,milliseconds,
+ABILITY,ancient-sword,Ancient Sword,"Dran Sword, Viper Tail, Shark Edge, Shark Scale. 2 uses. If foe is inside range, both freeze 3s. 4 cuts every 0.6s, each 1–3 RPM (4–12 total), then a stronger shove. Miss still spends a use.",SWORD_R,0.54,stadium units,,Bigger = easier to land. Stadium radius is about 1.
+ABILITY,ancient-sword,Ancient Sword,How long the freeze/cut lasts if it hits.,SWORD_MS,3000,milliseconds,,Blurb says 3s.
+ABILITY,ancient-sword,Ancient Sword,Seconds between cuts. 4 cuts max.,sword_tick,0.6,seconds,
+ABILITY,ancient-sword,Ancient Sword,RPM taken per cut (random in this range). HUD RPM = this × 100.,sword_rpm_per_cut,0.010–0.030,rpm 0–1,,Shows as 1–3 RPM on the bar.
+ABILITY,ancient-sword,Ancient Sword,End shove uses average of 0.48–0.64 × knock cap. You get 40% of that shove back.,sword_end_kb,0.48–0.64 × 0.086,knock,
+ABILITY,hurricane,Hurricane,"Arrow Wizard, Leon Claw, Wizard Rod, Shelter Drake. 2 uses. 3s. +12% move speed. Restore 10 RPM over 3s. First time foe enters the wind: shove 0.042. Staying in adds a light push.",HURRICANE_MS,3000,milliseconds,
 ABILITY,hurricane,Hurricane,Wind radius.,STORM_R,0.84,stadium units,
 ABILITY,hurricane,Hurricane,Move speed while up. 1.00 = normal.,abilitySpeedMul,1.12,multiplier,
-ABILITY,hurricane,Hurricane,"RPM gained = this × RPM at pop, spread over the 3s.",hurricaneGain,0.15,fraction of current RPM,,At 90 RPM you gain about 13.5 over 3s.
+ABILITY,hurricane,Hurricane,Fixed RPM restored over the 3s. HUD shows +10.,HURRICANE_GAIN,0.10,rpm 0–1,,10 on the bar. Not a percent of current RPM.
 ABILITY,hurricane,Hurricane,First-enter shove.,storm_first_shove,0.042,knock,,About half of 0.086.
-ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 3s chrome. Clash RPM on you = 0. Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,3000,milliseconds,
+ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 4.5s chrome. Clash RPM on you = 0. Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,4500,milliseconds,
 ABILITY,iron-skin,Iron Skin,Reflect multiplier on their knock.,iron_reflect,1.20,multiplier,
-ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 20% less knock.,free_spin_chance,0.10,probability,,10%.
-ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.80,multiplier,,20% less knock.
-ABILITY,double-edge,Double Edge,"Unicorn Sting. Always on. Each clash 1/3 +20% your knock (+KB), 1/3 +20% knock on you (−KB), 1/3 nothing.",double_edge_share,1/3 each,probability,
-ABILITY,double-edge,Double Edge,Knock multiplier on a +KB or −KB roll.,double_edge_mul,1.20,multiplier,
-ABILITY,earthquake,Earthquake,"Tyranno Beat. 2 uses. 3s. Up to 7 cracks. Each lives ~0.42–0.80s. Only a Bey that hits a live crack takes 1–2 RPM, 82% of slide dumped, shove 0.032.",QUAKE_MS,3000,milliseconds,
+ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 35% less knock.,free_spin_chance,0.10,probability,,10%.
+ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.65,multiplier,,35% less knock.
+ABILITY,double-edge,Double Edge,"Unicorn Sting. Always on. Each clash 1/3 +28% your knock (+KB), 1/3 −18% your knock (−KB), 1/3 nothing.",double_edge_share,1/3 each,probability,
+ABILITY,double-edge,Double Edge,+KB multiplier on your knock.,double_edge_plus,1.28,multiplier,
+ABILITY,double-edge,Double Edge,−KB multiplier on your knock.,double_edge_minus,0.82,multiplier,
+ABILITY,earthquake,Earthquake,"Tyranno Beat. 2 uses. 3s. Up to 7 cracks. Each lives ~0.42–0.80s. Only a Bey that hits a live crack takes 1–3 RPM, 82% of slide dumped, shove 0.032.",QUAKE_MS,3000,milliseconds,
 ABILITY,earthquake,Earthquake,How far cracks can spawn from you.,QUAKE_R,0.62,stadium units,
 ABILITY,earthquake,Earthquake,Max cracks at once.,quake_max,7,count,
-ABILITY,earthquake,Earthquake,RPM chip per crack hit.,quake_chip,0.012–0.022,rpm 0–1,,1–2 on the bar.
+ABILITY,earthquake,Earthquake,RPM chip per crack hit.,quake_chip,0.010–0.030,rpm 0–1,,1–3 on the bar.
 ABILITY,earthquake,Earthquake,Slide left after a crack hit.,quake_slide_keep,0.18,fraction,,Lower = more stop.
 ABILITY,earthquake,Earthquake,Outward shove on a crack hit.,quake_shove,0.032,knock,
 ABILITY,pegasus-blast,Pegasus Blast,"Aero Pegasus. 2 uses. 2s lift (you vanish), then 3s aim, then crash. Hit if marker is within 1.45× their radius. Hit RPM = 8 + 10% of their remaining RPM (8 empty / 18 full) and 70%-cap shove. Miss: you lose 15 RPM.",lift_ms,2000,milliseconds,

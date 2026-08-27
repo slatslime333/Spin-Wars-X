@@ -1407,8 +1407,10 @@ function bitSpritePath(bit){
 }
 function ratchetSpriteFile(ratchet){
     const n=Number(ratchet?.number);
+    const h=Number(ratchet?.height);
+    const height=h===70||h===80?h:60;
     if(Number.isFinite(n) && n>0){
-        return `assets/blades/ratchets/${n}-60.png`;
+        return `assets/blades/ratchets/${n}-${height}.png`;
     }
     return (typeof ratchet?.sprite==="string" ? ratchet.sprite.trim() : "") || "";
 }
@@ -1436,15 +1438,17 @@ function createBladeCard(blade){
     card.setAttribute("role","button");
     card.tabIndex=0;
     card.innerHTML=`
-        ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
-        ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
+        <div class="blade-card-art">
+            ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
+            ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
+            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
+        </div>
         <div class="blade-card-head">
             <div class="blade-card-title">
                 <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
                 <h2>${blade.name}</h2>
                 <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
             </div>
-            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
             ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
             <div class="blade-stat-grid">
                 ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
@@ -2994,6 +2998,19 @@ function cpuCounterLaunchWeights(cpuBlade, playerHabits, cpuHabits){
         aw["Hard Tilt"]+= (a.Flat||0)*12;
         aw["Slight Tilt"]+= (a.Flat||0)*8;
         aw.Flat+= (a.Flat||0)*6;
+    }
+    const combat=Array.isArray(Game.battle?.playerCombatHistory)?Game.battle.playerCombatHistory:[];
+    const dashes=combat.filter(x=>x?.kind==="dash").length;
+    const abs=combat.filter(x=>x?.kind==="ability").length;
+    if(dashes>=2){
+        if(type==="Attack") w["Direct Clash"]+=10;
+        else w.Center+=8;
+        w["X-Rail"]+=4;
+    }
+    if(abs>=2){
+        w.Center+=6;
+        w["Drop Launch"]+=5;
+        w["Direct Clash"]-=4;
     }
     const lastAngle=cpuHabits?.last?.angle;
     if(lastAngle && aw[lastAngle]!=null) aw[lastAngle]-=8;

@@ -10,12 +10,13 @@
     const SIMUL_MS=120;
     const KNOCK_CAP=0.086;
     const SWORD_R=0.54;
-    const SWORD_MS=2500;
+    const SWORD_MS=3000;
     const STORM_R=0.84;
     const HURRICANE_MS=3000;
+    const HURRICANE_GAIN=0.10;
     const QUAKE_R=0.62;
     const QUAKE_MS=3000;
-    const IRON_MS=3000;
+    const IRON_MS=4500;
     const FLAME_MS=2300;
     const FLAME_PHASE2_MS=1000;
     const KITS={
@@ -39,27 +40,27 @@
     const META={
         "ancient-sword":{
             name:"Ancient Sword", active:true,
-            blurb:"2 uses a match. 2.5s if it lands. Range is a wide ring around you. In range: both freeze, you cut 4 times (every 0.5s, 1–2 RPM each, 4–8 RPM total), then a shove. Outside the ring: MISS, charge still spent."
+            blurb:"2 uses a match. 3s if it lands. Range is a wide ring around you. In range: both freeze, you cut 4 times (every 0.6s, 1–3 RPM each, 4–12 RPM total), then a stronger shove. Outside the ring: MISS, charge still spent."
         },
         "hurricane":{
             name:"Hurricane", active:true,
-            blurb:"2 uses a match. 3s. You move 12% faster and gain 15% of the RPM you had when you popped it, fed in over those 3s. First time they enter the wind they take a medium shove (~half clash cap). Staying in it keeps pushing them out."
+            blurb:"2 uses a match. 3s. You move 12% faster and restore 10 RPM, fed in over those 3s. First time they enter the wind they take a medium shove (~half clash cap). Staying in it keeps pushing them out."
         },
         "iron-skin":{
             name:"Iron Skin", active:true,
-            blurb:"2 uses a match. 3s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
+            blurb:"2 uses a match. 4.5s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
         },
         "free-spin":{
             name:"Free Spin", active:false,
-            blurb:"Always on. Each clash: 10% chance you take 0 RPM from that hit and 20% less knock. FREE SPIN pops when it procs."
+            blurb:"Always on. Each clash: 10% chance you take 0 RPM from that hit and 35% less knock. FREE SPIN pops when it procs."
         },
         "double-edge":{
             name:"Double Edge", active:false,
-            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +20% (+KB), 1/3 their knock on you +20% (−KB), 1/3 nothing."
+            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +28% (+KB), 1/3 your knock −18% (−KB), 1/3 nothing."
         },
         "earthquake":{
             name:"Earthquake", active:true,
-            blurb:"2 uses a match. 3s. Up to 7 cracks spawn and fade (about 0.4–0.8s each). Only a Bey that hits a live crack takes 1–2 RPM, loses most of its slide, and gets a small outward shove."
+            blurb:"2 uses a match. 3s. Up to 7 cracks spawn and fade (about 0.4–0.8s each). Only a Bey that hits a live crack takes 1–3 RPM, loses most of its slide, and gets a small outward shove."
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
@@ -189,6 +190,7 @@
         if(global.Game){
             global.Game.battle=global.Game.battle||{};
             global.Game.battle.abilityCharges={...state.charges};
+            global.Game.battle.playerCombatHistory=[];
         }
     }
     function resetRound(p,c){
@@ -248,6 +250,7 @@
         s.impactScale=Math.max(s.impactScale||1,1.28);
         s.hitFlash=Math.max(s.hitFlash||0,0.28);
         state.dashAt[side]=t+DASH_CD*1000;
+        if(side==="player") rememberPlayerCombat("dash");
         updateDock();
         return true;
     }
@@ -288,6 +291,7 @@
     function spend(side){
         state.charges[side]=Math.max(0,(state.charges[side]||0)-1);
         if(global.Game?.battle) global.Game.battle.abilityCharges={...state.charges};
+        if(side==="player") rememberPlayerCombat("ability");
         updateDock();
     }
 
@@ -344,7 +348,7 @@
         s.hurricaneUntil=nowMs()+HURRICANE_MS;
         s.abilitySpeedMul=1.12;
         s.hurricaneRpm0=s.rpm;
-        s.hurricaneGain=(s.rpm||0)*0.15;
+        s.hurricaneGain=HURRICANE_GAIN;
         s.hurricaneGainLeft=s.hurricaneGain;
         beginChannel(side,HURRICANE_MS,"hurricane");
         popup("HURRICANE");
@@ -422,12 +426,12 @@
         const cKit=kitId(c.blade);
 
         if(pKit==="free-spin" && Math.random()<0.10){
-            cKnock*=0.80;
+            cKnock*=0.65;
             pIgnore=true;
             popup("FREE SPIN");
         }
         if(cKit==="free-spin" && Math.random()<0.10){
-            pKnock*=0.80;
+            pKnock*=0.65;
             cIgnore=true;
             popup("FREE SPIN");
         }
@@ -435,20 +439,20 @@
         if(pKit==="double-edge"){
             const roll=Math.random();
             if(roll<1/3){
-                pKnock*=1.20;
+                pKnock*=1.28;
                 popup("+KB");
             }else if(roll<2/3){
-                cKnock*=1.20;
+                pKnock*=0.82;
                 popup("-KB");
             }
         }
         if(cKit==="double-edge"){
             const roll=Math.random();
             if(roll<1/3){
-                cKnock*=1.20;
+                cKnock*=1.28;
                 popup("+KB");
             }else if(roll<2/3){
-                pKnock*=1.20;
+                cKnock*=0.82;
                 popup("-KB");
             }
         }
@@ -540,10 +544,10 @@
         atk.y=def.y+(atk.swordFrom?.y||0)*0.018;
         atk.swordTick=(atk.swordTick||0)+dt;
         atk.ninjaFlick=Math.sin(t/40)>0 ? 1 : 0.15;
-        if(atk.swordTick>=0.5 && (atk.swordHits||[]).length<4){
-            atk.swordTick-=0.5;
-            const kb=0.35+Math.random()*0.15;
-            const rpm=0.010+Math.random()*0.010;
+        if(atk.swordTick>=0.6 && (atk.swordHits||[]).length<4){
+            atk.swordTick-=0.6;
+            const kb=0.48+Math.random()*0.16;
+            const rpm=0.010+Math.random()*0.020;
             atk.swordHits=atk.swordHits||[];
             atk.swordHits.push(kb);
             def.rpm=clamp(def.rpm-rpm,0,1);
@@ -625,7 +629,7 @@
                 const d=Math.hypot(foe.x-k.x,foe.y-k.y);
                 if(d<0.11 && !k.hit){
                     k.hit=true;
-                    const chip=0.012+Math.random()*0.010;
+                    const chip=0.010+Math.random()*0.020;
                     foe.rpm=clamp(foe.rpm-chip,0,1);
                     popHit(foe,chip);
                     const nx=d>1e-4?(foe.x-k.x)/d:1;
@@ -792,6 +796,76 @@
         document.querySelector(".battle-shell")?.classList.remove("is-pegasus-aim");
     }
 
+    function rememberPlayerCombat(kind){
+        const G=global.Game;
+        if(!G) return;
+        G.battle=G.battle||{};
+        const list=G.battle.playerCombatHistory=G.battle.playerCombatHistory||[];
+        list.push({
+            kind,
+            t:nowMs(),
+            elapsed:Number(global.NEW_BATTLE?.elapsed)||0
+        });
+        if(list.length>24) list.splice(0,list.length-24);
+    }
+
+    function summarizePlayerCombat(){
+        const list=global.Game?.battle?.playerCombatHistory||[];
+        let dashes=0, abs=0, earlyAbs=0;
+        for(const row of list){
+            if(row?.kind==="dash") dashes++;
+            if(row?.kind==="ability"){
+                abs++;
+                if((row.elapsed||0)<2.4) earlyAbs++;
+            }
+        }
+        return {
+            dashes,
+            abs,
+            earlyAbs,
+            dashy:dashes>=2,
+            abilitySpam:abs>=2 || earlyAbs>=1
+        };
+    }
+
+    function cpuPersona(cpu){
+        const blade=cpu?.blade||{};
+        const p=blade.personality||{};
+        const id=kitId(blade);
+        const agr=(p.aggression||50)/100;
+        const ctl=(p.control||50)/100;
+        const rsk=(p.risk||50)/100;
+        const plans={
+            "ancient-sword":{dash:0.34+agr*0.28, greed:0.16, clutch:0.78, wait:2.4},
+            "hurricane":{dash:0.22+ctl*0.18, greed:0.12, clutch:0.82, wait:2.8},
+            "iron-skin":{dash:0.14, greed:0.08, clutch:0.90, wait:1.6},
+            "earthquake":{dash:0.24+rsk*0.22, greed:0.18, clutch:0.72, wait:2.2},
+            "pegasus-blast":{dash:0.10, greed:0.06, clutch:0.92, wait:3.6},
+            "flame-trail":{dash:0.52+agr*0.28, greed:0.26, clutch:0.52, wait:1.5},
+            "free-spin":{dash:0.18, greed:0, clutch:1, wait:99},
+            "double-edge":{dash:0.38+rsk*0.22, greed:0, clutch:1, wait:99}
+        };
+        const base=plans[id]||{dash:0.28+agr*0.22, greed:0.16, clutch:0.68, wait:2.4};
+        return {
+            id,
+            dashHunger:clamp(base.dash,0.08,0.92),
+            abilityGreed:clamp(base.greed+agr*0.12-ctl*0.14,0.04,0.72),
+            clutchSave:clamp(base.clutch+ctl*0.08,0.45,0.96),
+            minWait:base.wait,
+            aggression:agr,
+            control:ctl,
+            risk:rsk
+        };
+    }
+
+    function scorePressure(f){
+        const p=f.score.player||0;
+        const c=f.score.cpu||0;
+        const gap=p-c;
+        const desperate=gap>=2 || p>=5;
+        return {behind:p>c, gap, desperate, late:p>=5||c>=5||(p+c)>=8};
+    }
+
     function readFight(cpu,you){
         const dx=you.x-cpu.x, dy=you.y-cpu.y;
         const dist=Math.hypot(dx,dy)||1e-6;
@@ -817,12 +891,26 @@
         if(f.cpuSp<0.008) return false;
         if(f.intoHole) return false;
         if(f.elapsed<0.62) return false;
-        if(f.climbingOut) return true;
+        const mind=cpuPersona(cpu);
+        const reads=summarizePlayerCombat();
+        const press=scorePressure(f);
+        if(f.climbingOut) return mind.dashHunger>0.12 || press.desperate;
         const clashWindow=f.approach>0.010 && f.dist>0.16 && f.dist<0.38 && f.eta>0.08 && f.eta<0.70;
-        if(clashWindow) return true;
         const slip=f.approach>0.018 && f.dist<0.20 && f.youSp>f.cpuSp*1.04;
-        if(slip) return true;
-        return false;
+        const playerJustDashed=reads.dashes>0 && (nowMs()-((global.Game?.battle?.playerCombatHistory||[]).filter(x=>x.kind==="dash").slice(-1)[0]?.t||0))<900;
+        let want=false;
+        if(f.climbingOut) want=true;
+        if(clashWindow){
+            if(reads.dashy && mind.aggression<0.42 && !press.desperate) want=false;
+            else want=true;
+        }
+        if(slip) want=mind.control>0.55 || press.desperate || mind.dashHunger>0.45;
+        if(playerJustDashed && clashWindow && mind.aggression>0.55) want=true;
+        if(mind.id==="flame-trail" && f.cpuSp>0.012 && f.dist<0.46) want=want||mind.dashHunger>0.5;
+        if(mind.id==="iron-skin" && clashWindow && mind.dashHunger<0.25) want=false;
+        if(!want) return false;
+        if(press.desperate) return true;
+        return Math.random()<mind.dashHunger;
     }
 
     function cpuShouldAbility(id,cpu,you,f){
@@ -831,29 +919,40 @@
         if((state.charges.cpu||0)<=0) return false;
         if(channelBusy()) return false;
         if(blocked(cpu) && id!=="pegasus-blast") return false;
-        if(f.elapsed<0.28) return false;
+        if(f.elapsed<0.42) return false;
         if(you.abilityHidden||you.abilityHold) return false;
+        const mind=cpuPersona(cpu);
+        const press=scorePressure(f);
+        const reads=summarizePlayerCombat();
         const charges=state.charges.cpu||0;
         const since=nowMs()-(state.cpuLastAbility||0);
-        if(charges===1 && since<3200 && !f.behind && !f.rpmDown) return false;
+        if(charges===2 && f.elapsed<mind.minWait && !press.desperate) return false;
+        if(charges===1){
+            if(since<2800 && !press.desperate && !f.rpmDown) return false;
+            if(!press.desperate && !f.rpmDown && Math.random()<mind.clutchSave) return false;
+            if(f.elapsed<mind.minWait+1.4 && !press.desperate) return false;
+        }
+        if(reads.abilitySpam && !press.desperate && f.elapsed<4.8 && Math.random()>mind.abilityGreed) return false;
+        if(!press.desperate && Math.random()>(0.28+mind.abilityGreed)) return false;
+
+        const playerDashSoon=reads.dashy && f.eta<0.55 && f.dist<0.40;
         if(id==="ancient-sword"){
-            return f.dist<SWORD_R*0.90 && (you.rpm||0)>0.10;
+            return f.dist<SWORD_R*0.88 && (you.rpm||0)>0.10 && (press.desperate||f.approach>0.004||f.dist<SWORD_R*0.62);
         }
         if(id==="hurricane"){
-            return f.dist<STORM_R*0.95 && (
-                f.approach>0.006 || (cpu.rpm||0)<0.82 || f.youSp>f.cpuSp
-            );
+            if((cpu.rpm||0)>0.90 && !press.desperate && !f.rpmDown) return false;
+            return f.dist<STORM_R*0.92 && (f.approach>0.006 || (cpu.rpm||0)<0.72 || f.youSp>f.cpuSp);
         }
         if(id==="iron-skin"){
-            return f.approach>0.008 && f.dist<0.34 && f.eta<0.55;
+            return (playerDashSoon||f.approach>0.010) && f.dist<0.32 && f.eta<0.50;
         }
         if(id==="earthquake"){
-            return f.dist<QUAKE_R*0.92 && (f.youSp>0.012 || f.approach>0.004);
+            return f.dist<QUAKE_R*0.88 && (f.youSp>0.014 || f.approach>0.006 || press.desperate);
         }
         if(id==="pegasus-blast"){
             if(cpu.railEngaged) return false;
-            if((cpu.rpm||0)<0.22) return false;
-            return f.dist>0.24 && f.dist<0.82 && (f.behind||f.rpmDown||f.elapsed>3.2);
+            if((cpu.rpm||0)<0.28) return false;
+            return f.dist>0.26 && f.dist<0.80 && (press.desperate||f.rpmDown||(charges===2&&f.elapsed>4.2));
         }
         if(id==="flame-trail"){
             return f.approach>0.004 && f.dist<0.42 && f.cpuSp>0.010;
@@ -863,7 +962,7 @@
 
     function maybeCpu(dt,p,c){
         state.cpuThink+=dt;
-        if(state.cpuThink<0.12) return;
+        if(state.cpuThink<0.16) return;
         state.cpuThink=0;
         if(!battleLive()) return;
         const cpu=c;
