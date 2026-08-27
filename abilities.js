@@ -19,6 +19,8 @@
     const IRON_MS=4500;
     const FLAME_MS=2300;
     const FLAME_PHASE2_MS=1000;
+    const PEGASUS_LIFT_MS=1300;
+    const PEGASUS_AIM_MS=3000;
     const KITS={
         "Dran Sword":"ancient-sword",
         "Viper Tail":"ancient-sword",
@@ -64,7 +66,7 @@
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
-            blurb:"2 uses a match. 2s lift, then 3s to aim. Hit if the glow marker even grazes them: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
+            blurb:"2 uses a match. 1.3s lift, then 3s to aim. Hit if the glow marker even grazes them: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
         },
         "flame-trail":{
             name:"Flame Trail", active:true,
@@ -392,7 +394,7 @@
         s.abilityHold=true;
         s.abilityHidden=true;
         s.vx=0; s.vy=0;
-        beginChannel(side,5000,"pegasus-blast");
+        beginChannel(side,PEGASUS_LIFT_MS+PEGASUS_AIM_MS,"pegasus-blast");
         let aim,drift,cpuMiss,cpuTrack;
         if(side==="cpu" && foe){
             const missR=0.32+Math.random()*0.28;
@@ -416,7 +418,7 @@
         state.pegasus={
             side,
             phase:"lift",
-            liftUntil:nowMs()+2000,
+            liftUntil:nowMs()+PEGASUS_LIFT_MS,
             aimUntil:0,
             aim,
             stick:{x:0,y:0},
@@ -732,7 +734,7 @@
             }
             if(t>=pg.liftUntil){
                 pg.phase="aim";
-                pg.aimUntil=t+3000;
+                pg.aimUntil=t+PEGASUS_AIM_MS;
                 showPegasusStick(pg);
             }
             return;
