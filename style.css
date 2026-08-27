@@ -48,10 +48,12 @@ button:disabled{opacity:.35!important;cursor:not-allowed!important;transform:non
 #app{width:100%;min-height:100vh}
 html:has(.battle-shell),
 body:has(.battle-shell){
+  min-height:0;
   height:100dvh;
   max-height:100dvh;
   overflow:hidden;
   overscroll-behavior:none;
+  touch-action:manipulation;
 }
 #app:has(.battle-shell){
   min-height:0;
@@ -2281,10 +2283,11 @@ footer{
     overflow:hidden;
   }
   .stadium-cam{
-    width:min(96vw,100%)!important;
+    width:min(100%, calc(100dvh - 252px))!important;
     max-width:100%;
-    max-height:100%;
+    max-height:calc(100dvh - 252px);
   }
+  .battle-hud-parts{display:none}
   .battle-hud-card{padding:5px 7px}
   .battle-hud-top strong{font-size:14px}
   .battle-hud-top span{font-size:9px}
