@@ -12,7 +12,7 @@ ABILITY,ancient-sword,Ancient Sword,Seconds between cuts. 4 cuts max.,sword_tick
 ABILITY,ancient-sword,Ancient Sword,RPM taken per cut (random in this range). HUD RPM = this × 100.,sword_rpm_per_cut,0.010–0.030,rpm 0–1,,Shows as 1–3 RPM on the bar.
 ABILITY,ancient-sword,Ancient Sword,End shove uses average of 0.48–0.64 × knock cap. You get 40% of that shove back.,sword_end_kb,0.48–0.64 × 0.086,knock,
 ABILITY,hurricane,Hurricane,"Arrow Wizard, Leon Claw, Wizard Rod, Shelter Drake. 2 uses. 3s. +12% move speed. Restore 10 RPM over 3s. First time foe enters the wind: shove 0.042. Staying in adds a light push.",HURRICANE_MS,3000,milliseconds,
-ABILITY,hurricane,Hurricane,Wind radius.,STORM_R,0.84,stadium units,
+ABILITY,hurricane,Hurricane,Wind radius (−15% from 0.84).,STORM_R,0.714,stadium units,
 ABILITY,hurricane,Hurricane,Move speed while up. 1.00 = normal.,abilitySpeedMul,1.12,multiplier,
 ABILITY,hurricane,Hurricane,Fixed RPM restored over the 3s. HUD shows +10.,HURRICANE_GAIN,0.10,rpm 0–1,,10 on the bar. Not a percent of current RPM.
 ABILITY,hurricane,Hurricane,First-enter shove.,storm_first_shove,0.042,knock,,About half of 0.086.
@@ -20,8 +20,9 @@ ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 4.5
 ABILITY,iron-skin,Iron Skin,Reflect multiplier on their knock.,iron_reflect,1.20,multiplier,
 ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 35% less knock.,free_spin_chance,0.10,probability,,10%.
 ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.65,multiplier,,35% less knock.
-ABILITY,double-edge,Double Edge,"Unicorn Sting. Always on. Each clash 1/3 +28% your knock (+KB), 1/3 −18% your knock (−KB), 1/3 nothing.",double_edge_share,1/3 each,probability,
+ABILITY,double-edge,Double Edge,"Unicorn Sting. Always on. Each clash 1/3 +28% your knock and 1–3 extra RPM on them (+KB), 1/3 −18% your knock (−KB), 1/3 nothing.",double_edge_share,1/3 each,probability,
 ABILITY,double-edge,Double Edge,+KB multiplier on your knock.,double_edge_plus,1.28,multiplier,
+ABILITY,double-edge,Double Edge,+KB extra RPM on the opponent.,double_edge_plus_rpm,0.010–0.030,rpm 0–1,,1–3 on the bar.
 ABILITY,double-edge,Double Edge,−KB multiplier on your knock.,double_edge_minus,0.82,multiplier,
 ABILITY,earthquake,Earthquake,"Tyranno Beat. 2 uses. 3s. Up to 7 cracks. Each lives ~0.42–0.80s. Only a Bey that hits a live crack takes 1–3 RPM, 82% of slide dumped, shove 0.032.",QUAKE_MS,3000,milliseconds,
 ABILITY,earthquake,Earthquake,How far cracks can spawn from you.,QUAKE_R,0.62,stadium units,
@@ -34,7 +35,7 @@ ABILITY,pegasus-blast,Pegasus Blast,Aim window after lift.,aim_ms,3000,milliseco
 ABILITY,pegasus-blast,Pegasus Blast,Hit RPM = this + 0.10 × foe remaining RPM.,pegasus_hit_base,0.08,rpm 0–1,,8 on the bar.
 ABILITY,pegasus-blast,Pegasus Blast,Extra hit RPM as a fraction of foe remaining RPM.,pegasus_hit_scale,0.10,fraction,
 ABILITY,pegasus-blast,Pegasus Blast,Miss cost on you.,pegasus_miss,0.15,rpm 0–1,,15 on the bar.
-ABILITY,pegasus-blast,Pegasus Blast,Hit shove vs knock cap.,pegasus_shove,0.70 × 0.086,knock,
+ABILITY,pegasus-blast,Pegasus Blast,CPU marker starts on a miss offset 0.32–0.60 from the live player (not a far random spawn). Lift tracks that offset. Aim follows it at ~8–16%/frame — hits some blasts, not a lock-on.,cpu_miss_r,0.32–0.60,stadium units,
 ABILITY,flame-trail,Flame Trail,"Phoenix Wing. 2 uses. 2.3s. +15% move. Fire lasts 0.9s behind you. Own trail does not burn you. If they drive through: 0.8 RPM every 0.3s, then after 1s 1.6–2.4 RPM every 0.5s.",FLAME_MS,2300,milliseconds,
 ABILITY,flame-trail,Flame Trail,When burn ticks get worse.,FLAME_PHASE2_MS,1000,milliseconds,
 ABILITY,flame-trail,Flame Trail,How long each fire point lives.,trail_life_ms,900,milliseconds,
@@ -44,9 +45,10 @@ ABILITY,flame-trail,Flame Trail,Phase 2 burn per tick.,flame_p2,0.016–0.024 / 
 SHOP,common,+2 to a stat,"Hub common. 34% type-lean, 33% patch lowest, 33% random. Always +2 to one of ATK KB DEF MOB BAL STA. No downside.",common_amount,2,stat points,
 SHOP,uncommon,Tradeoff A,"62% type-lean, else random. 42% of uncommons are +4 / −2.",uncommon_plus4_minus2,+4 / -2,stat points,,No free +3.
 SHOP,uncommon,Tradeoff B,The other 58% of uncommons.,uncommon_plus3_minus1,+3 / -1,stat points,
-SHOP,rare,Reforge,50% of rares. Pick a new bit or a new ratchet from 3 offers. Physics change with the part.,rare_reforge_share,0.50,probability,
-SHOP,rare,Peak +4,25% of rares. +4 to type or your peak stat. No catch.,rare_peak,4,stat points,
-SHOP,rare,Pair +2 +2,25% of rares. +2 type and +2 another line.,rare_pair,2 and 2,stat points,
+SHOP,rare,Ability swap,16% of rares. Two random kits from the pool. BACK keeps the current kit.,rare_ability_swap_share,0.16,probability,
+SHOP,rare,Reforge,42% of rares. Pick a new bit or a new ratchet from 3 offers. Physics change with the part.,rare_reforge_share,0.42,probability,
+SHOP,rare,Peak +4,21% of rares. +4 to type or your peak stat. No catch.,rare_peak,4,stat points,
+SHOP,rare,Pair +2 +2,21% of rares. +2 type and +2 another line.,rare_pair,2 and 2,stat points,
 SHOP,legendary,Rogue modifier,Replaces your current modifier. See MODIFIER sheet.,legendary,one modifier,id,
 SHOP,evolve,Evolve form,Silver/Gold step form (Bronze→Silver→Gold). Shop bonuses stay. Bronze-form pull-down eases.,evolve,form step,,Not a stat card.
 SHOP,enhance,Enhanced tier,"One and done. +4 on your best 3 stats, +3 on the rest. Later positive upgrades get +1 extra. Honeycomb plate.",enhance_top3,4,stat points,

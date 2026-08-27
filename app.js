@@ -6608,6 +6608,8 @@ function newPhysicsCollision(dt){
             cKnockback=adj.cKnockback;
             NEW_BATTLE._smashCapP=!!adj.pSmashCap;
             NEW_BATTLE._smashCapC=!!adj.cSmashCap;
+            NEW_BATTLE._pExtraRpm=Number(adj.pExtraRpm)||0;
+            NEW_BATTLE._cExtraRpm=Number(adj.cExtraRpm)||0;
         }
     }
     const pRailBreakForce=cKnockback;
@@ -6996,6 +6998,18 @@ function newPhysicsCollision(dt){
     const __pRpmLoss=cHitRpm;
     let __pExtraRpmLoss=0;
     let __cExtraRpmLoss=0;
+    const pExtra=Number(NEW_BATTLE._pExtraRpm)||0;
+    const cExtra=Number(NEW_BATTLE._cExtraRpm)||0;
+    NEW_BATTLE._pExtraRpm=0;
+    NEW_BATTLE._cExtraRpm=0;
+    if(pExtra>0){
+        c.rpm=newBattleClamp(c.rpm-pExtra,0,1);
+        __cExtraRpmLoss+=pExtra;
+    }
+    if(cExtra>0){
+        p.rpm=newBattleClamp(p.rpm-cExtra,0,1);
+        __pExtraRpmLoss+=cExtra;
+    }
     c.rpm=newBattleClamp(c.rpm-pHitRpm,0,1);
     p.rpm=newBattleClamp(p.rpm-cHitRpm,0,1);
 
