@@ -3275,7 +3275,8 @@ function tiltLeanHudMarkup(side){
                     <span class="tilt-lean-tag">TILT</span>
                     <span class="tilt-lean-down">▼</span>
                   </button>
-                  <div class="tilt-lean-menu" id="${side}TiltLeanMenu" hidden></div>
+                  <p class="tilt-lean-line" id="${side}TiltLeanLine"></p>
+                  <div class="tilt-lean-why" id="${side}TiltLeanWhy" hidden></div>
                 </div>`;
 }
 
@@ -3304,62 +3305,42 @@ function tiltLeanMenuHtml(s){
 }
 
 function paintTiltLeanHud(p,c){
-    const pop=ensureTiltLeanPop();
-    let openRect=null;
-    let openHtml="";
     for(const [side,s] of [["player",p],["cpu",c]]){
         const hud=document.getElementById(`${side}TiltLeanHud`);
         const btn=document.getElementById(`${side}TiltLeanBtn`);
-        if(!hud||!btn||!s) continue;
+        const line=document.getElementById(`${side}TiltLeanLine`);
+        const why=document.getElementById(`${side}TiltLeanWhy`);
+        if(!hud||!btn||!line||!why||!s) continue;
         const lean=launchTiltLean(s);
         const show=lean>=0.07 && (s.launchTilt==="Slight Tilt"||s.launchTilt==="Hard Tilt");
         hud.hidden=!show;
         if(!show){
             if(NEW_BATTLE.tiltMenu===side) NEW_BATTLE.tiltMenu=null;
             btn.setAttribute("aria-expanded","false");
+            why.hidden=true;
             continue;
         }
-        const scale=0.88+lean*0.18;
-        btn.style.transform=`scale(${scale})`;
-        btn.style.opacity=String(0.72+lean*0.28);
+        const sheet=launchTiltStatSheet(s);
+        const fmt=n=>{
+            const r=Math.round(n);
+            if(r>0) return `+${r}`;
+            if(r<0) return String(r);
+            return "0";
+        };
+        line.innerHTML=`<b class="up">ATK ${fmt(sheet.attack)}</b><b class="up">STA ${fmt(sheet.stamina)}</b><b class="down">DEF ${fmt(sheet.defense)}</b><b class="down">BAL ${fmt(sheet.balance)}</b>`;
         const open=NEW_BATTLE.tiltMenu===side;
         btn.setAttribute("aria-expanded",open?"true":"false");
-        if(open){
-            openRect=btn.getBoundingClientRect();
-            openHtml=tiltLeanMenuHtml(s);
-        }
+        why.hidden=!open;
+        if(open) why.innerHTML=tiltLeanMenuHtml(s);
     }
-    if(!pop) return;
-    if(!openHtml || !openRect){
-        pop.hidden=true;
-        pop.innerHTML="";
-        return;
-    }
-    pop.innerHTML=openHtml;
-    pop.hidden=false;
-    const left=Math.max(8, Math.min(window.innerWidth-228, openRect.left));
-    const top=Math.min(window.innerHeight-170, openRect.bottom+6);
-    pop.style.left=`${left}px`;
-    pop.style.top=`${top}px`;
-}
-
-function ensureTiltLeanPop(){
-    let pop=document.getElementById("tiltLeanPop");
-    if(pop) return pop;
-    pop=document.createElement("div");
-    pop.id="tiltLeanPop";
-    pop.className="tilt-lean-pop";
-    pop.hidden=true;
-    pop.addEventListener("click",event=>event.stopPropagation());
-    document.body.appendChild(pop);
-    return pop;
 }
 
 function bindTiltLeanHud(){
     for(const side of ["player","cpu"]){
+        const hud=document.getElementById(`${side}TiltLeanHud`);
         const btn=document.getElementById(`${side}TiltLeanBtn`);
         if(!btn) continue;
-        btn.onclick=event=>{
+        const toggle=event=>{
             event.preventDefault();
             event.stopPropagation();
             NEW_BATTLE.tiltMenu=NEW_BATTLE.tiltMenu===side?null:side;
@@ -3367,19 +3348,8 @@ function bindTiltLeanHud(){
                 paintTiltLeanHud(NEW_BATTLE.player,NEW_BATTLE.cpu);
             }
         };
-        btn.onpointerdown=event=>event.stopPropagation();
-    }
-    if(!window._tiltLeanDocBound){
-        window._tiltLeanDocBound=true;
-        document.addEventListener("pointerdown",event=>{
-            if(event.target?.closest?.(".tilt-lean-hud")) return;
-            if(event.target?.closest?.(".tilt-lean-pop")) return;
-            if(!NEW_BATTLE?.tiltMenu) return;
-            NEW_BATTLE.tiltMenu=null;
-            if(NEW_BATTLE.player && NEW_BATTLE.cpu){
-                paintTiltLeanHud(NEW_BATTLE.player,NEW_BATTLE.cpu);
-            }
-        });
+        btn.onclick=toggle;
+        if(hud) hud.onclick=toggle;
     }
 }
 

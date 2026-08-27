@@ -2058,7 +2058,9 @@ footer{
 .tilt-lean-hud{
   position:relative;
   display:flex;
-  justify-content:flex-start;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px 6px;
   margin:4px 0 2px;
   min-height:16px;
   z-index:6;
@@ -2075,8 +2077,6 @@ footer{
   color:#fff;
   line-height:1;
   cursor:pointer;
-  transform-origin:center;
-  pointer-events:auto;
 }
 .tilt-lean-up{color:#35d26b;font-size:13px;font-weight:900}
 .tilt-lean-down{color:#ff5a5a;font-size:13px;font-weight:900}
@@ -2086,31 +2086,36 @@ footer{
   letter-spacing:.08em;
   color:#ffd43b;
 }
-.tilt-lean-menu{
-  display:none;
+.tilt-lean-line{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px 7px;
+  margin:0;
+  font-size:10px;
+  letter-spacing:.04em;
 }
-.tilt-lean-pop{
-  position:fixed;
-  width:216px;
-  padding:8px 9px;
-  border:2px solid #2a241c;
-  background:#120e0c;
+.tilt-lean-line b.up{color:#35d26b}
+.tilt-lean-line b.down{color:#ff5a5a}
+.tilt-lean-why{
+  flex:1 1 100%;
+  margin-top:2px;
+  padding:6px 7px;
+  border:1px solid #2a241c;
+  background:#0c0a08;
   color:#efe7d6;
-  font-size:11px;
+  font-size:10px;
   line-height:1.35;
   text-align:left;
-  z-index:80;
-  box-shadow:0 10px 0 #000;
 }
-.tilt-lean-pop .tilt-lean-kicker{
+.tilt-lean-why .tilt-lean-kicker{
   font-family:Staatliches,Impact,sans-serif;
-  font-size:14px;
+  font-size:13px;
   letter-spacing:.06em;
   margin:0 0 4px;
   color:#ffd43b;
 }
-.tilt-lean-pop p{margin:0 0 6px}
-.tilt-lean-pop ul{
+.tilt-lean-why p{margin:0 0 6px}
+.tilt-lean-why ul{
   list-style:none;
   margin:0 0 6px;
   padding:0;
@@ -2118,9 +2123,9 @@ footer{
   grid-template-columns:1fr 1fr;
   gap:2px 8px;
 }
-.tilt-lean-pop li{margin:0}
-.tilt-lean-pop b.up{color:#35d26b}
-.tilt-lean-pop b.down{color:#ff5a5a}
+.tilt-lean-why li{margin:0}
+.tilt-lean-why b.up{color:#35d26b}
+.tilt-lean-why b.down{color:#ff5a5a}
 
 .rpm-bar-fill{
   position:absolute;
