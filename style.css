@@ -2294,6 +2294,7 @@ footer{
   .battle-hud-parts{font-size:9px;margin:2px 0 0}
   .rpm-readout{margin-top:3px}
   .rpm-readout b{font-size:16px}
+  .stability-readout{display:none}
   .battle-hud-meta{margin-top:3px;padding:1px 5px 0}
   .battle-hud-meta b{font-size:13px}
   .combat-dock{
