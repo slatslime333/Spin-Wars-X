@@ -1145,6 +1145,7 @@ function renderMainMenu(){
     <main class="home lobby">
         ${homeBowlHTML()}
         ${homeMarkHTML()}
+        <p class="home-ver">ALPHA</p>
         <nav class="home-doors" aria-label="Choose a mode">
             <button class="home-door rip" data-home="quick" type="button">
                 <span class="home-door-kicker">QUICK PLAY</span>
@@ -1319,7 +1320,7 @@ function createBackButton(onClick){
 
     button.className="back-btn";
 
-    button.textContent="← Back";
+    button.textContent="‹ Back";
 
     button.onclick=onClick;
 
@@ -1427,11 +1428,12 @@ function battleHudMetaValue(s,side){
     return Number.isFinite(raw) ? Math.round(raw) : "—";
 }
 function createBladeCard(blade){
-    const card=document.createElement("button");
-    card.type="button";
+    const card=document.createElement("article");
     const sprite=bladeSpritePath(blade);
     const luck=Game.mode==="rogue"?rogueLuckGrade(blade.tier):"";
     card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}`;
+    card.setAttribute("role","button");
+    card.tabIndex=0;
     card.innerHTML=`
         ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
         ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
@@ -1442,15 +1444,30 @@ function createBladeCard(blade){
                 <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
             </div>
             <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
-        </div>
-        <div class="blade-stat-grid">
-            ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-            ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
-            ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
-            ${statMini("BST",blade.card.burst)}
+            ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
+            <details class="swx-drop stats-drop"${typeof window!=="undefined"&&window.innerWidth>=760?" open":""}>
+                <summary><span class="swx-drop-title">STATS</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
+                <div class="blade-stat-grid">
+                    ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
+                    ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
+                    ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
+                    ${statMini("BST",blade.card.burst)}
+                </div>
+            </details>
         </div>
         <div class="select-hint">SELECT BLADE <span>›</span></div>`;
-    card.onclick=()=>chooseBlade(blade,card);
+    card.querySelectorAll(".swx-drop").forEach(drop=>{
+        drop.addEventListener("click",event=>event.stopPropagation());
+        drop.addEventListener("pointerdown",event=>event.stopPropagation());
+    });
+    const pick=()=>chooseBlade(blade,card);
+    card.addEventListener("click",pick);
+    card.addEventListener("keydown",event=>{
+        if(event.key==="Enter"||event.key===" "){
+            event.preventDefault();
+            pick();
+        }
+    });
     return card;
 }
 
@@ -2113,7 +2130,10 @@ function createComboSummaryCard(side,combo){
           <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
           <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
         </div>
-        <div class="vs-stat-groups">
+        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
+        <details class="swx-drop vs-details-drop"${typeof window!=="undefined"&&window.innerWidth>=720?" open":""}>
+          <summary><span class="swx-drop-title">DETAILS</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
+          <div class="vs-stat-groups">
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">HIT</span>
             <div class="vs-stats pair">
@@ -2132,7 +2152,8 @@ function createComboSummaryCard(side,combo){
               ${statBox("MOB","mobility")}${statBox("STA","stamina")}
             </div>
           </div>
-        </div>
+          </div>
+        </details>
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
         ${combo.rogueStack||""}
       </div>
@@ -2143,6 +2164,12 @@ function createComboSummaryCard(side,combo){
 }
 function showComboCard(){
     Game.screen="comboCheck";
+    if(typeof SpinWarsAbilities!=="undefined"){
+        const score=Game.battle?.score;
+        if(!score || (!(score.player||score.cpu) && (Game.battle.round||1)<=1)){
+            SpinWarsAbilities.resetMatch();
+        }
+    }
     if(Game.mode!=="rogue") generateCPUCombo();
     const playerPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("player"):null;
     const cpuPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("cpu"):null;
@@ -2269,6 +2296,10 @@ function showVS(){
     Game.battle.playerLaunchHistory=Game.battle.playerLaunchHistory||[];
     Game.battle.cpuLaunchHistory=Game.battle.cpuLaunchHistory||[];
     Game.cpu.lockedLaunchPlan=null;
+    const score=Game.battle.score||{player:0,cpu:0};
+    if(typeof SpinWarsAbilities!=="undefined" && !(score.player||score.cpu)){
+        SpinWarsAbilities.resetMatch();
+    }
 
     // NEW BATTLE FLOW:
     // VS screen is the final setup screen. CONTINUE enters the new
@@ -2563,6 +2594,8 @@ const NEW_BATTLE = {
     killCam:null,
     killCamPendingFinish:null
 };
+window.Game=Game;
+window.NEW_BATTLE=NEW_BATTLE;
 
 const KILL_CAM={
     zoom:1.48,
@@ -3458,6 +3491,18 @@ function applyDirectClashLaunches(p, c){
     applyDirectClashAim(c, p);
 }
 
+function forfeitLiveMatch(){
+    if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
+    NEW_BATTLE.active=false;
+    NEW_BATTLE.finishPending=false;
+    endKillCam();
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        SpinWarsRogue.showLanding();
+        return;
+    }
+    renderMainMenu();
+}
+
 function startNewBattle(){
     // This is the only function allowed to start the live physics loop.
     // Validate the shared direction convention before any physics runs so
@@ -3512,6 +3557,10 @@ function startNewBattle(){
         resetKillCam();
 
         renderNewBattle();
+        if(typeof SpinWarsAbilities!=="undefined"){
+            SpinWarsAbilities.resetRound(NEW_BATTLE.player,NEW_BATTLE.cpu);
+            SpinWarsAbilities.mountDock();
+        }
         NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 
         return true;
@@ -3666,6 +3715,7 @@ function renderNewBattle(){
                           stroke-linecap="round" stroke-linejoin="round"
                           stroke-opacity="0.38" points=""/>
               </g>
+              ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.fxMarkup():""}
 
               <!-- Beys -->
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
@@ -3759,7 +3809,6 @@ function renderNewBattle(){
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
-                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
                 </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
               </div>
@@ -3770,6 +3819,14 @@ function renderNewBattle(){
                   <b>${Game.battle.score?.cpu||0}</b>
                 </div>
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
+                <details class="swx-drop match-drop">
+                  <summary><span class="swx-drop-title">MATCH</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
+                  <div class="match-drop-body">
+                    <p>META ${battleHudMetaValue(p,"player")} · ${battleHudMetaValue(c,"cpu")}</p>
+                    <p>${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"First to 7"}</p>
+                    <button type="button" class="menu-btn silver" id="forfeitMatchBtn">FORFEIT</button>
+                  </div>
+                </details>
               </div>
               <div class="battle-hud-card battle-hud-cpu">
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
@@ -3777,7 +3834,6 @@ function renderNewBattle(){
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
-                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
               </div>
@@ -3789,6 +3845,7 @@ function renderNewBattle(){
     updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
     updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
+    document.getElementById("forfeitMatchBtn")?.addEventListener("click",forfeitLiveMatch);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
         Game.screen="battle";
@@ -4491,9 +4548,17 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const draw=battleDrawPos(state);
     const cx=50+draw.x*39;
     const cy=46+draw.y*39;
-    const r=4.85*(state.hitFlash>0?(state.impactScale||1):1);
+    const pulse=Number(state.quakePulse);
+    const hitScale=state.hitFlash>0?(state.impactScale||1):1;
+    const jumpScale=pulse>1.02?pulse:1;
+    const r=4.85*hitScale*jumpScale;
     const artScale=Number(state.blade?.battleSpriteScale);
     const artR=r*(artScale>0?artScale:1);
+    if(state.abilityHidden){
+        if(circle) circle.style.display="none";
+        if(spriteEl) spriteEl.style.display="none";
+        return;
+    }
     // SVG positive rotation is clockwise. Right-spin sprites use that.
     const rpm=newBattleClamp(Number(state.rpm)||0,0,1);
     const visualSpin=rpm<=0.0005?0:Math.max(0.16, Math.pow(rpm,0.55));
@@ -4511,6 +4576,7 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.setAttribute("width",String(artR*2));
         spriteEl.setAttribute("height",String(artR*2));
         spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
+        spriteEl.style.filter=state.metallic?"grayscale(1) brightness(1.45) contrast(1.15)":"";
     }else{
         if(spriteEl) spriteEl.style.display="none";
         if(circle){
@@ -4518,6 +4584,7 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
             circle.setAttribute("cx",String(cx));
             circle.setAttribute("cy",String(cy));
             circle.setAttribute("r",String(r));
+            if(state.metallic) circle.setAttribute("fill","#c5d0d8");
         }
     }
 }
@@ -4586,6 +4653,10 @@ function newBattleFrame(now){
             }
 
             newPhysicsCollision(PHYSICS_DT);
+
+            if(typeof SpinWarsAbilities!=="undefined"){
+                SpinWarsAbilities.step(PHYSICS_DT,p,c);
+            }
 
             if(
                 !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -5609,6 +5680,14 @@ function newPhysicsStep(s,dt){
             applyDropLaunchShot(s);
         }
 
+        if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.holdPhysics(s)){
+            s.vx=0;
+            s.vy=0;
+            const freezeDrain=(0.00028+(1-(s.rpm||0))*0.00016)*dt*60;
+            s.rpm=newBattleClamp((s.rpm||0)-freezeDrain,0,1);
+            return;
+        }
+
         /*
           Core movement model:
           RPM supplies available spin energy, while the launch supplies
@@ -5630,6 +5709,7 @@ function newPhysicsStep(s,dt){
             (0.86+0.24*bitStability)*
             (1.02+0.30*movement+0.20*mobility+0.04*attackStat)*
             attackSpeedBoost*
+            (s.abilitySpeedMul||1)*
             (attackBit && rpm<0.60
                 ? 0.76+0.40*(rpm/0.60)
                 : (!attackBit && rpm<0.40
@@ -6094,6 +6174,20 @@ function newPhysicsCollision(dt){
     const dist=Math.hypot(dx,dy);
     const minDist=p.radius+c.radius;
 
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.skipClash(p,c)){
+        if(!(p.abilityHold||c.abilityHold)){
+            if(dist<minDist && dist>1e-6){
+                const nx=dx/dist, ny=dy/dist;
+                const overlap=minDist-dist;
+                p.x-=nx*(overlap*0.52+0.0035);
+                p.y-=ny*(overlap*0.52+0.0035);
+                c.x+=nx*(overlap*0.52+0.0035);
+                c.y+=ny*(overlap*0.52+0.0035);
+            }
+        }
+        return;
+    }
+
     if(dist>minDist) return;
     const nx=dist>1e-6?dx/dist:1;
     const ny=dist>1e-6?dy/dist:0;
@@ -6383,6 +6477,15 @@ function newPhysicsCollision(dt){
     }
     pKnockback=Math.min(0.086, pKnockback);
     cKnockback=Math.min(0.086, cKnockback);
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.onClashKnock){
+        const adj=SpinWarsAbilities.onClashKnock(p,c,{pKnockback,cKnockback});
+        if(adj){
+            pKnockback=adj.pKnockback;
+            cKnockback=adj.cKnockback;
+            NEW_BATTLE._smashCapP=!!adj.pSmashCap;
+            NEW_BATTLE._smashCapC=!!adj.cSmashCap;
+        }
+    }
     const pRailBreakForce=cKnockback;
     const cRailBreakForce=pKnockback;
 
@@ -6758,12 +6861,19 @@ function newPhysicsCollision(dt){
         maximumSingleHitDamage
     );
 
-    const __cRpmLoss=pToCDamage;
-    const __pRpmLoss=cToPDamage;
+    let pHitRpm=pToCDamage;
+    let cHitRpm=cToPDamage;
+    if(c.abilityIgnoreRpm) pHitRpm=0;
+    if(p.abilityIgnoreRpm) cHitRpm=0;
+    pHitRpm*=(c.abilityRpmMul||1);
+    cHitRpm*=(p.abilityRpmMul||1);
+
+    const __cRpmLoss=pHitRpm;
+    const __pRpmLoss=cHitRpm;
     let __pExtraRpmLoss=0;
     let __cExtraRpmLoss=0;
-    c.rpm=newBattleClamp(c.rpm-pToCDamage,0,1);
-    p.rpm=newBattleClamp(p.rpm-cToPDamage,0,1);
+    c.rpm=newBattleClamp(c.rpm-pHitRpm,0,1);
+    p.rpm=newBattleClamp(p.rpm-cHitRpm,0,1);
 
     // Non-attack vs non-attack still uses the same collision impulse.
     // Extra shove/RPM here was making light stamina contacts feel bigger
@@ -6866,6 +6976,8 @@ function newPhysicsCollision(dt){
     */
     if(pRailSwing) p.lastImpactForce=Math.min(Number(p.lastImpactForce)||0, 0.018);
     if(cRailSwing) c.lastImpactForce=Math.min(Number(c.lastImpactForce)||0, 0.018);
+    if(NEW_BATTLE._smashCapP) p.lastImpactForce=Math.min(Number(p.lastImpactForce)||0, 0.018);
+    if(NEW_BATTLE._smashCapC) c.lastImpactForce=Math.min(Number(c.lastImpactForce)||0, 0.018);
     p.lastImpactOpponentSpeed=cSpeed;
     c.lastImpactOpponentSpeed=pSpeed;
     p.lastImpactAttacker="cpu";
