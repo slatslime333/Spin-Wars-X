@@ -1445,15 +1445,12 @@ function createBladeCard(blade){
             </div>
             <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
             ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
-            <details class="swx-drop stats-drop"${typeof window!=="undefined"&&window.innerWidth>=760?" open":""}>
-                <summary><span class="swx-drop-title">STATS</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
-                <div class="blade-stat-grid">
-                    ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-                    ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
-                    ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
-                    ${statMini("BST",blade.card.burst)}
-                </div>
-            </details>
+            <div class="blade-stat-grid">
+                ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
+                ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
+                ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
+                ${statMini("BST",blade.card.burst)}
+            </div>
         </div>
         <div class="select-hint">SELECT BLADE <span>›</span></div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{
@@ -2131,9 +2128,7 @@ function createComboSummaryCard(side,combo){
           <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
         </div>
         ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
-        <details class="swx-drop vs-details-drop"${typeof window!=="undefined"&&window.innerWidth>=720?" open":""}>
-          <summary><span class="swx-drop-title">DETAILS</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
-          <div class="vs-stat-groups">
+        <div class="vs-stat-groups">
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">HIT</span>
             <div class="vs-stats pair">
@@ -2152,8 +2147,7 @@ function createComboSummaryCard(side,combo){
               ${statBox("MOB","mobility")}${statBox("STA","stamina")}
             </div>
           </div>
-          </div>
-        </details>
+        </div>
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
         ${combo.rogueStack||""}
       </div>
@@ -3806,6 +3800,7 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-player">
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
+                <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
@@ -3819,18 +3814,12 @@ function renderNewBattle(){
                   <b>${Game.battle.score?.cpu||0}</b>
                 </div>
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
-                <details class="swx-drop match-drop">
-                  <summary><span class="swx-drop-title">MATCH</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
-                  <div class="match-drop-body">
-                    <p>META ${battleHudMetaValue(p,"player")} · ${battleHudMetaValue(c,"cpu")}</p>
-                    <p>${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"First to 7"}</p>
-                    <button type="button" class="menu-btn silver" id="forfeitMatchBtn">FORFEIT</button>
-                  </div>
-                </details>
+                <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
               </div>
               <div class="battle-hud-card battle-hud-cpu">
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
                 ${battleHudPartsLine(c)}
+                <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>

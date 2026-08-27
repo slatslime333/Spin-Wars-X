@@ -1522,22 +1522,23 @@ function showHelp(){
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-                <p>You pick a starting Bey. Bit and ratchet are random. Each match is first to 7 on the live stadium. Win, take one upgrade. Lose, the run is over. Matches 6 and 12 are mini bosses. Match 18 is Shark Scale — a hidden Final Boss. Beat him and the night does not end.</p>
-            <p>Blade cards show luck in Rogue only: Bronze A, Silver B, Gold C. Bronze starts poorer and the shop fattens late. Silver is the middle table. Gold opens a step above Bronze, but the shop stays thin because Gold can evolve — that form ladder is the paycheck. Commons stay +2. Uncommons are always a trade (+3/−1 or +4/−2). Rares are reforge, a +4 peak, or two +2s.</p>
-            <p>Bronze never evolves — they take Enhanced instead (one and done: +4 on the best 3 stats, +3 on the rest, +1 on later bumps, honeycomb plate). Silver starts in Bronze form, evolves once to Silver, then can Enhance. Gold starts in Bronze form and can step to Gold. Form pity injects the missing step after a dry spell, and after minis 6 and 12.</p>
-            <p>CPU power is scaled to yours. Mini bosses carry extra visible upgrade boxes, not a silent stat nuke. Green and red mark your upgrades. After every match the CPU takes the same number of upgrades you have locked in, plus starter-tier pressure: Bronze 1–3 extras, Silver 1–2, Gold 1. Minis add more boxes. Close the browser and Continue puts you back.</p>
+            <p>Pick one Bey to start. Your bit and ratchet are random. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
+            <p>A run is 18 matches. Matches 6 and 12 are mini bosses. Match 18 is Shark Scale, a secret final boss. Beat him and the night keeps going.</p>
+            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Bronze starts weaker, but the shop gets kinder later. Gold starts stronger; the shop stays thinner because Gold can evolve.</p>
+            <p>Bronze cannot evolve. After enough wins it can Enhance once — a honeycomb look and a big stat bump. Silver starts in Bronze form, can grow into Silver, then Enhance. Gold starts in Bronze form and can climb all the way to Gold.</p>
+            <p>The CPU grows with you. After each match it gets as many upgrades as you have, plus a little extra based on your starter. Mini bosses show extra boxes. Close the app and hit Continue to pick up where you left off.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 LEAN / PATCH / WILD</strong><small>Always +2. Type line, lowest line, or random.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>+3 / −1 OR +4 / −2</strong><small>A real bump with a tax. No clean +3.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · PEAK · PAIR</strong><small>New bit or ratchet, +4 on one line, or two +2s.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A condition in battle. Psyshock stores knock. Equipping a new one drops the old one.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Bronze Enhance. Silver evolve then Enhance. Gold evolve to Gold. Never both stolen from the shop lottery.</small></article>
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 TO A STAT</strong><small>A small bump. It might hit your type, your weakest line, or a random one.</small></article>
+            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>A BIGGER BUMP WITH A COST</strong><small>You gain more on one line, and lose a little on another. There is no free +3.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · PEAK · PAIR</strong><small>Swap your bit or ratchet, push one stat hard, or take two smaller bumps.</small></article>
+            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A special rule for the rest of the run. Picking a new one replaces the old one.</small></article>
+            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Bronze enhances once. Silver can evolve, then enhance. Gold can evolve up to Gold.</small></article>
         </div>
         <section class="menu-card rogue-help-card">
             <p class="eyebrow">MODIFIERS</p>
-            <p>Last Stand and Final Spin wake up when the RPM is gone. Berserker and First Blood hit while you are still healthy. Psyshock is +5 KB for 5s, then every clash is 60% knock and the next dumps the stored 40% — it never stops cycling. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor plant in the bowl. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+            <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock stores some of each clash and dumps it on the next one. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));

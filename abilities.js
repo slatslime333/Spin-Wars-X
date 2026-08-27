@@ -4,8 +4,8 @@
  Physics still uses the existing clash shove / RPM drain.
 ==================================*/
 (function(global){
-    const DASH_CD=3;
-    const DASH_SHOVE=0.015;
+    const DASH_CD=5;
+    const DASH_SHOVE=0.062;
     const ABILITY_USES=2;
     const SIMUL_MS=120;
     const KNOCK_CAP=0.086;
@@ -33,35 +33,35 @@
     const META={
         "ancient-sword":{
             name:"Ancient Sword", active:true,
-            blurb:"Teleport onto the foe if they sit in the glow. Four cuts, then one shove the other way. Misses spend the charge."
+            blurb:"Get close until the glow reaches them, then vanish and cut. If they are outside the ring, you miss — and still use a charge."
         },
         "hurricane":{
             name:"Hurricane", active:true,
-            blurb:"A 2s tornado. Restore a little RPM, move quicker, and shove anyone who enters the wind."
+            blurb:"Whip up a wind around you. You pick up a little spin and move quicker. Anyone who flies through the wind gets blown aside."
         },
         "iron-skin":{
             name:"Iron Skin", active:true,
-            blurb:"3s metallic shell. Ignore incoming RPM and knock, bounce the attacker 20% harder. Still dies to drain and pockets."
+            blurb:"Turn to metal for a few seconds. Hits bounce off and shove them harder. You still slow down over time, and falling in a hole still ends the point."
         },
         "free-spin":{
             name:"Free Spin", active:false,
-            blurb:"Passive. 10% of hits: take 20% less knock and ignore that hit's RPM. FREE SPIN pops up."
+            blurb:"Always on. Sometimes a hit barely moves you and takes no spin. FREE SPIN pops up when it happens."
         },
         "double-edge":{
             name:"Double Edge", active:false,
-            blurb:"Passive. On impact, equal chance: +20% knock dealt, +15% RPM taken, or a normal hit."
+            blurb:"Always on. Each clash might hit them harder, sting you extra, or play out like a normal hit."
         },
         "earthquake":{
             name:"Earthquake", active:true,
-            blurb:"2s stomps. Cracks shove outward and kill momentum. 1–2 RPM each half-second while they stay in."
+            blurb:"Stomp the stadium. Cracks knock them outward and stop their slide. If they stay in the cracks, they lose spin."
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
-            blurb:"Lift off, aim the crash. Hit: 0.08 RPM plus 10% of what's left. Miss: you lose 0.15."
+            blurb:"A beam lifts you off the stadium. Steer the marker onto them, then crash. Land it to take a chunk of their spin. Miss, and you lose some of yours."
         },
         "flame-trail":{
             name:"Flame Trail", active:true,
-            blurb:"3s fire wake. You are immune to it. +15% speed. Touching the trail chips RPM."
+            blurb:"Leave a trail of fire and run faster. If they drive through the fire, they lose spin. Your own trail will not burn you."
         }
     };
 
@@ -120,6 +120,23 @@
         }
         const hud=document.getElementById("combatToast");
         if(hud) hud.textContent=text;
+    }
+    function popHit(victim,amount){
+        const lost=Math.max(0,Number(amount)||0);
+        if(!victim||lost<0.0005) return;
+        const NB=global.NEW_BATTLE;
+        if(!NB) return;
+        const isPlayer=victim.side==="player"||victim===bey("player");
+        NB.lastImpact={
+            x:victim.x,
+            y:victim.y,
+            time:nowMs(),
+            strength:0.9,
+            impactClass:"light",
+            playerRpmLoss:isPlayer?lost:0,
+            cpuRpmLoss:isPlayer?0:lost,
+            kb:0
+        };
     }
     function channelBusy(){
         return !!(state.channel && state.channel.until>nowMs());
@@ -213,8 +230,9 @@
         const hx=s.vx/sp, hy=s.vy/sp;
         s.vx+=hx*DASH_SHOVE;
         s.vy+=hy*DASH_SHOVE;
+        s.impactMomentumState=Math.max(s.impactMomentumState||0,0.42);
+        s.dashGust={hx,hy,x:s.x,y:s.y,until:nowMs()+280};
         state.dashAt[side]=nowMs()+DASH_CD*1000;
-        s.impactMomentumState=Math.max(s.impactMomentumState||0,0.18);
         updateDock();
         return true;
     }
@@ -286,6 +304,7 @@
         if(d>SWORD_R){
             popup("MISS");
             s.hitFlash=0.4;
+            s.swordSmoke=nowMs()+500;
             return true;
         }
         const ang=Math.atan2(s.y-foe.y,s.x-foe.x);
@@ -300,6 +319,7 @@
         s.swordFrom={x:Math.cos(ang),y:Math.sin(ang)};
         s.swordHits=[];
         s.swordTick=0;
+        s.swordSmoke=nowMs()+1700;
         beginChannel(side,1700,"ancient-sword");
         popup("ANCIENT SWORD");
         return true;
@@ -507,6 +527,7 @@
             atk.swordHits=atk.swordHits||[];
             atk.swordHits.push(kb);
             def.rpm=clamp(def.rpm-rpm,0,1);
+            popHit(def,rpm);
         }
         if(t>=ch.until-16){
             const avg=(atk.swordHits||[0.4]).reduce((a,b)=>a+b,0)/Math.max(1,(atk.swordHits||[]).length);
@@ -561,7 +582,9 @@
             if(s.quakeTick>=0.5){
                 s.quakeTick-=0.5;
                 if(d<QUAKE_R){
-                    foe.rpm=clamp(foe.rpm-(0.010+Math.random()*0.010),0,1);
+                    const chip=0.010+Math.random()*0.010;
+                    foe.rpm=clamp(foe.rpm-chip,0,1);
+                    popHit(foe,chip);
                     const nx=d>1e-4?(foe.x-s.x)/d:1;
                     const ny=d>1e-4?(foe.y-s.y)/d:0;
                     const sp=Math.hypot(foe.vx,foe.vy);
@@ -597,6 +620,7 @@
                 if(foe.flameAcc>=0.3){
                     foe.flameAcc=0;
                     foe.rpm=clamp(foe.rpm-0.008,0,1);
+                    popHit(foe,0.008);
                     foe.flameHits=(foe.flameHits||0)+1;
                     if(foe.flameHits>=1) foe.flamePhase=1;
                 }
@@ -604,7 +628,9 @@
                 foe.flameAcc=(foe.flameAcc||0)+dt;
                 if(foe.flameAcc>=0.5){
                     foe.flameAcc=0;
-                    foe.rpm=clamp(foe.rpm-(0.016+Math.random()*0.008),0,1);
+                    const burn=0.016+Math.random()*0.008;
+                    foe.rpm=clamp(foe.rpm-burn,0,1);
+                    popHit(foe,burn);
                 }
             }
         });
@@ -650,14 +676,18 @@
         s.abilityHold=false;
         s.x=pg.aim.x;
         s.y=pg.aim.y;
+        state.pegasusCrash=nowMs()+420;
+        state.pegasusSide=pg.side;
         const hit=Math.hypot(s.x-foe.x,s.y-foe.y)<=foe.radius*1.20;
         if(hit){
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
+            popHit(foe,dmg);
             applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.70);
             popup("PEGASUS HIT");
         }else{
             s.rpm=clamp(s.rpm-0.15,0,1);
+            popHit(s,0.15);
             popup("MISS");
         }
         s.hitFlash=0.5;
@@ -798,32 +828,80 @@
     function paintFx(p,c,t){
         const g=document.getElementById("abilityFx");
         if(!g) return;
+        const NS=true;
         let html="";
-        const ring=(s,r,cls)=>{
+        const ring=(s,r,cls,sw)=>{
             if(!s) return "";
             const pt=worldToSvg(s.x,s.y);
-            return `<circle class="${cls}" cx="${pt.x}" cy="${pt.y}" r="${r*39}" fill="none" stroke-width="0.7"/>`;
+            return `<circle class="${cls}" cx="${pt.x.toFixed(2)}" cy="${pt.y.toFixed(2)}" r="${(r*39).toFixed(2)}" fill="none" stroke-width="${sw||0.85}"/>`;
+        };
+        const smoke=(s)=>{
+            if(!s||!(s.swordSmoke>t)) return "";
+            const pt=worldToSvg(s.x,s.y);
+            const age=1-Math.max(0,(s.swordSmoke-t)/1700);
+            let out="";
+            for(let i=0;i<5;i++){
+                const a=i*1.256+t/180;
+                const rad=2.2+i*1.1+age*2;
+                out+=`<circle class="fx-smoke" cx="${(pt.x+Math.cos(a)*rad).toFixed(1)}" cy="${(pt.y+Math.sin(a)*rad*0.7).toFixed(1)}" r="${(1.4+i*0.35).toFixed(1)}" fill="#9aa3ad" fill-opacity="${(0.28-age*0.18).toFixed(2)}"/>`;
+            }
+            return out;
         };
         [["player",p],["cpu",c]].forEach(([side,s])=>{
             if(!s) return;
             const id=kitId(s.blade);
+            const pt=worldToSvg(s.x,s.y);
             if(id==="ancient-sword" && (state.charges[side]||0)>0 && !s.abilityHold){
-                html+=ring(s,SWORD_R,"fx-sword-radius");
+                html+=ring(s,SWORD_R,"fx-sword-radius",0.9);
             }
-            if(s.hurricaneUntil>t) html+=ring(s,STORM_R,"fx-storm");
+            html+=smoke(s);
+            if(s.abilityHold && id==="ancient-sword"){
+                const flick=Math.sin(t/45);
+                const ox=flick*2.4;
+                html+=`<g class="fx-slash">
+                    <line x1="${pt.x-5+ox}" y1="${pt.y-4}" x2="${pt.x+6-ox}" y2="${pt.y+5}" stroke="#f4f0e4" stroke-width="0.9"/>
+                    <line x1="${pt.x+5}" y1="${pt.y-5}" x2="${pt.x-4}" y2="${pt.y+6}" stroke="#c9b48a" stroke-width="0.7"/>
+                </g>`;
+            }
+            if(s.hurricaneUntil>t){
+                html+=ring(s,STORM_R,"fx-storm",1.1);
+                const spin=t/80;
+                html+=`<g class="fx-tornado" transform="rotate(${(spin*40)%360} ${pt.x} ${pt.y})">
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.55}" ry="${STORM_R*39*0.22}" fill="none" stroke="#bfefff" stroke-width="0.7" opacity="0.8"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.85}" ry="${STORM_R*39*0.34}" fill="none" stroke="#7ec8ff" stroke-width="0.55" opacity="0.55"/>
+                    <path d="M${pt.x} ${pt.y-STORM_R*18} C${pt.x+4} ${pt.y} ${pt.x-4} ${pt.y} ${pt.x} ${pt.y+STORM_R*16}" fill="none" stroke="#e8f7ff" stroke-width="0.8"/>
+                </g>`;
+            }
             if(s.quakeUntil>t){
-                html+=ring(s,QUAKE_R,"fx-quake");
-                const pt=worldToSvg(s.x,s.y);
-                html+=`<path class="fx-crack" d="M${pt.x-6} ${pt.y} L${pt.x-1} ${pt.y+3} L${pt.x+5} ${pt.y-2}" fill="none" stroke-width="0.55"/>`;
+                html+=ring(s,QUAKE_R,"fx-quake",1);
+                const j=Math.sin(t/90);
+                html+=`<g class="fx-cracks">
+                    <path d="M${pt.x-8} ${pt.y+j} L${pt.x-2} ${pt.y+4} L${pt.x+3} ${pt.y-1} L${pt.x+9} ${pt.y+3}" fill="none" stroke="#6a4a28" stroke-width="0.7"/>
+                    <path d="M${pt.x} ${pt.y-6} L${pt.x+2} ${pt.y-1} L${pt.x-3} ${pt.y+5}" fill="none" stroke="#8a6230" stroke-width="0.55"/>
+                </g>`;
             }
-            if(s.metallic) html+=ring(s,s.radius*1.05,"fx-iron");
+            if(s.metallic){
+                html+=ring(s,s.radius*1.12,"fx-iron",1.2);
+                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*0.92}" fill="#cfd8e0" fill-opacity="0.22"/>`;
+            }
             const trail=state.flame[side];
             if(trail?.length>1){
                 const pts=trail.map(q=>{
                     const v=worldToSvg(q.x,q.y);
-                    return `${v.x},${v.y}`;
+                    return `${v.x.toFixed(1)},${v.y.toFixed(1)}`;
                 }).join(" ");
-                html+=`<polyline class="fx-flame" points="${pts}" fill="none" stroke-width="2.2" stroke-linecap="round"/>`;
+                html+=`<polyline class="fx-flame-under" points="${pts}" fill="none" stroke="#7a1208" stroke-width="3.4" stroke-linecap="round" opacity="0.45"/>`;
+                html+=`<polyline class="fx-flame" points="${pts}" fill="none" stroke="#ff4a24" stroke-width="2.1" stroke-linecap="round"/>`;
+            }
+            if(s.dashGust && s.dashGust.until>t){
+                const g2=s.dashGust;
+                const gp=worldToSvg(s.x,s.y);
+                const bx=-g2.hx*4.5, by=-g2.hy*4.5;
+                html+=`<g class="fx-gust">
+                    <path d="M${gp.x+bx} ${gp.y+by} q ${bx} ${by*0.2} ${bx*1.6} ${by*0.15}" fill="none" stroke="#d7efe4" stroke-width="0.9"/>
+                    <path d="M${gp.x+bx*0.6} ${gp.y+by*0.6} q ${-by} ${bx} ${bx} ${by}" fill="none" stroke="#9ad7b8" stroke-width="0.7"/>
+                    <path d="M${gp.x+bx*1.1} ${gp.y+by*1.1} q ${by} ${-bx} ${bx*0.8} ${by*0.4}" fill="none" stroke="#ffffff" stroke-width="0.55" opacity="0.8"/>
+                </g>`;
             }
             if(s.ninjaFlick!=null && s.abilityHold){
                 const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
@@ -837,8 +915,11 @@
                 const cir=document.getElementById(side==="player"?"newPlayerBey":"newCpuBey");
                 if(spr) spr.style.display="none";
                 if(cir) cir.style.display="none";
-                const pt=worldToSvg(s.x,s.y);
-                html+=`<g class="fx-ufo"><ellipse cx="${pt.x}" cy="${pt.y-8}" rx="6" ry="2.2"/><line x1="${pt.x}" y1="${pt.y-6}" x2="${pt.x}" y2="${pt.y+2}" stroke-width="1.4"/></g>`;
+                html+=`<g class="fx-ufo">
+                    <ellipse cx="${pt.x}" cy="${pt.y-9}" rx="7.2" ry="2.4" fill="#8fd0ff" fill-opacity="0.85"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y-10.2}" rx="3.2" ry="1.4" fill="#e8f7ff"/>
+                    <path d="M${pt.x-5} ${pt.y-7} L${pt.x} ${pt.y+3} L${pt.x+5} ${pt.y-7}" fill="#b8e8ff" fill-opacity="0.35"/>
+                </g>`;
             }
             if(s.quakePulse && s.quakePulse!==1){
                 s.impactScale=s.quakePulse;
@@ -846,7 +927,20 @@
         });
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
-            html+=`<g class="fx-cross"><circle cx="${v.x}" cy="${v.y}" r="3.2" fill="none" stroke-width="0.7"/><circle cx="${v.x}" cy="${v.y}" r="1.1" fill="#7ef0ff"/></g>`;
+            html+=`<g class="fx-cross">
+                <circle cx="${v.x}" cy="${v.y}" r="4.2" fill="none" stroke="#7ef0ff" stroke-width="0.8"/>
+                <circle cx="${v.x}" cy="${v.y}" r="1.2" fill="#7ef0ff"/>
+                <line x1="${v.x-6}" y1="${v.y}" x2="${v.x-2.2}" y2="${v.y}" stroke="#7ef0ff" stroke-width="0.6"/>
+                <line x1="${v.x+2.2}" y1="${v.y}" x2="${v.x+6}" y2="${v.y}" stroke="#7ef0ff" stroke-width="0.6"/>
+            </g>`;
+        }
+        if(state.pegasusCrash && state.pegasusCrash>t){
+            const v=worldToSvg(p.x,p.y);
+            const focus=state.pegasusSide==="cpu"?c:p;
+            const w=worldToSvg(focus.x,focus.y);
+            html+=`<g class="fx-bolt">
+                <path d="M${w.x+2} ${w.y-10} L${w.x-2} ${w.y-2} L${w.x+1} ${w.y-2} L${w.x-3} ${w.y+8}" fill="#fff8a8" stroke="#ffe566" stroke-width="0.4"/>
+            </g>`;
         }
         g.innerHTML=html;
     }
