@@ -2775,6 +2775,22 @@ button:focus-visible{
   display:block;
   color:#f6e6b8;
   flex:0 0 auto;
+  overflow:visible;
+}
+.emblem-ancient-sword{color:#efe4c4}
+.emblem-hurricane{color:#8fd4ff}
+.emblem-iron-skin{color:#d5dee6}
+.emblem-free-spin{color:#f0d070}
+.emblem-double-edge{color:#f3b7c4}
+.emblem-earthquake{color:#d4a06a}
+.emblem-pegasus-blast{color:#7ef0ff}
+.emblem-flame-trail{color:#ff6a32}
+.swx-drop-mark{
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
 }
 .ability-chip.empty{
   margin-top:8px;
