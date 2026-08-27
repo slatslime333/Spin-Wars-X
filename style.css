@@ -739,8 +739,8 @@ footer{
   position:relative;
   display:flex!important;
   flex-direction:column!important;
-  justify-content:flex-end;
-  min-height:355px;
+  justify-content:flex-start;
+  min-height:0;
   padding:0!important;
   overflow:hidden;
   text-align:left;
@@ -799,37 +799,52 @@ footer{
 }
 
 .blade-card.game-blade-card:before{
+  content:none;
+}
+.blade-card-art{
+  position:relative;
+  flex:0 0 auto;
+  height:176px;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at 50% 46%,rgba(255,255,255,.06),transparent 42%),
+    #0c1116;
+  border-bottom:1px solid #303b47;
+}
+.blade-card.game-blade-card.tier-gold .blade-card-art{
+  background:
+    radial-gradient(circle at 50% 42%,rgba(255,220,80,.22),transparent 48%),
+    #4a3408;
+}
+.blade-card.game-blade-card.tier-silver .blade-card-art{
+  background:
+    radial-gradient(circle at 50% 42%,rgba(255,255,255,.16),transparent 48%),
+    #2c343e;
+}
+.blade-card.game-blade-card.tier-bronze .blade-card-art{
+  background:
+    radial-gradient(circle at 50% 42%,rgba(255,170,90,.18),transparent 48%),
+    #3a2010;
+}
+.blade-card.game-blade-card:not(.has-sprite) .blade-card-art:before{
   content:"BEY IMAGE";
   position:absolute;
-  inset:0 0 118px 0;
+  inset:0;
   display:grid;
   place-items:center;
   color:#46525f;
   font-size:8px;
   font-weight:950;
   letter-spacing:1.5px;
-  background:
-    radial-gradient(circle at 50% 50%,rgba(255,255,255,.035),transparent 32%),
-    #0c1116;
-  border-bottom:1px solid #303b47;
-}
-.blade-card.game-blade-card.has-sprite:before{
-  content:none;
-  background:
-    radial-gradient(circle at 50% 42%,rgba(255,255,255,.04),transparent 34%),
-    #0c1116;
 }
 .blade-card-sprite{
-  position:absolute;
-  left:16px;
-  right:16px;
-  top:0;
+  position:relative;
   z-index:1;
-  width:calc(100% - 32px);
-  height:58%;
-  transform:none;
+  width:88%;
+  height:92%;
   object-fit:contain;
-  object-position:50% 28%;
+  object-position:center;
   pointer-events:none;
 }
 .luck-grade{
@@ -880,13 +895,12 @@ footer{
 .blade-card-head{
   position:relative;
   z-index:2;
-  margin-top:auto;
-  padding:10px 10px 7px;
-  background:linear-gradient(180deg,transparent 0%,rgba(10,14,19,.88) 20%,#11171e 100%);
+  margin-top:0;
+  padding:8px 8px 6px;
+  background:#11171e;
 }
-
 .blade-card-title{
-  padding-right:43px;
+  padding-right:0;
 }
 
 .tier-ribbon{
@@ -959,7 +973,7 @@ footer{
   width:100%;
   display:grid;
   grid-template-columns:repeat(7,1fr);
-  margin-top:16px;
+  margin-top:8px;
   border-top:1px solid #2f3a45;
   background:#10161d;
 }
@@ -1950,12 +1964,32 @@ footer{
   margin-top:4px;
 }
 .rpm-bar-shell{
+  position:relative;
   flex:1;
   min-width:0;
   width:100%;
   height:6px;
   overflow:hidden;
   background:#1b1510;
+}
+.rpm-bar-ghost{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:0;
+  pointer-events:none;
+  opacity:0;
+}
+.rpm-bar-ghost-loss{
+  background:rgba(255,176,64,.62);
+  box-shadow:inset 0 0 0 1px rgba(255,210,110,.55);
+  z-index:1;
+}
+.rpm-bar-ghost-gain{
+  background:rgba(70,230,255,.70);
+  box-shadow:inset 0 0 0 1px rgba(160,245,255,.5);
+  z-index:1;
 }
 .battle-hud-meta{
   display:inline-flex;
@@ -1981,9 +2015,12 @@ footer{
 }
 
 .rpm-bar-fill{
+  position:absolute;
+  left:0;
+  top:0;
+  z-index:2;
   width:100%;
   height:100%;
-  transition:width .12s linear;
 }
 
 .rpm-bar-player{background:var(--green)}
@@ -2269,7 +2306,11 @@ footer{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
 
-  .blade-card.game-blade-card{min-height:325px}
+  .blade-card-art{height:148px}
+  .blade-card-title h2{font-size:16px!important}
+  .blade-stat-grid{margin-top:6px}
+  .mini-stat{padding:5px 1px 4px}
+  .select-hint{padding:5px 8px}
 
   .combo-matchup-grid,.vs-board{grid-template-columns:1fr}
   .vs-stamp{display:none}
@@ -2323,8 +2364,8 @@ footer{
 @media(max-width:480px){
   .menu-card{padding:10px!important}
   .selection-header h1{font-size:19px!important}
-  .selection-card{grid-template-columns:1fr!important}
-  .blade-card.game-blade-card{min-height:310px}
+  .selection-card{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;padding:8px!important}
+  .blade-card-art{height:132px}
   .part-select-card{min-height:225px}
 
   .launch-quality-reveal{
@@ -2842,10 +2883,10 @@ button:focus-visible{
 }
 
 .blade-card.game-blade-card .swx-drop{
-  margin:8px 10px 4px;
+  margin:6px 0 0;
 }
 .blade-card.game-blade-card .blade-card-head{
-  padding-bottom:10px;
+  padding-bottom:8px;
 }
 .blade-card.game-blade-card{
   cursor:pointer;

@@ -1407,8 +1407,10 @@ function bitSpritePath(bit){
 }
 function ratchetSpriteFile(ratchet){
     const n=Number(ratchet?.number);
+    const h=Number(ratchet?.height);
+    const height=h===70||h===80?h:60;
     if(Number.isFinite(n) && n>0){
-        return `assets/blades/ratchets/${n}-60.png`;
+        return `assets/blades/ratchets/${n}-${height}.png`;
     }
     return (typeof ratchet?.sprite==="string" ? ratchet.sprite.trim() : "") || "";
 }
@@ -1436,15 +1438,17 @@ function createBladeCard(blade){
     card.setAttribute("role","button");
     card.tabIndex=0;
     card.innerHTML=`
-        ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
-        ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
+        <div class="blade-card-art">
+            ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
+            ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
+            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
+        </div>
         <div class="blade-card-head">
             <div class="blade-card-title">
                 <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
                 <h2>${blade.name}</h2>
                 <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
             </div>
-            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
             ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
             <div class="blade-stat-grid">
                 ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
@@ -2612,7 +2616,10 @@ const KILL_CAM={
     openDelay:0.55,
     chance:0.5,
     shakeMs:170,
-    shakePx:5.2
+    shakePx:5.2,
+    dashChance:0.40,
+    dashHoldMs:1500,
+    dashSlow:0.42
 };
 
 function resetKillCam(){
@@ -2629,7 +2636,8 @@ function resetKillCam(){
         shakeUntil:0,
         shakeAmp:0,
         victim:null,
-        startedAt:0
+        startedAt:0,
+        mode:null
     };
     NEW_BATTLE.killCamPendingFinish=null;
     clearKillCamDom();
@@ -2755,15 +2763,43 @@ function startKillCam(focus,now){
     cam.used=false;
     cam.hitAt=0;
     cam.startedAt=now;
-    cam.slow=newBattleClamp(eta/KILL_CAM.windupWall,KILL_CAM.slowMin,KILL_CAM.slowMax);
-    cam.until=now+KILL_CAM.holdMaxMs;
+    cam.mode=focus.mode||"smash";
+    cam.slow=Number.isFinite(focus.slow)
+        ? newBattleClamp(focus.slow,KILL_CAM.slowMin,KILL_CAM.slowMax)
+        : newBattleClamp(eta/KILL_CAM.windupWall,KILL_CAM.slowMin,KILL_CAM.slowMax);
+    const hold=Number(focus.holdMs);
+    cam.until=now+(hold>0?hold:KILL_CAM.holdMaxMs);
     cam.originX=origin.x;
     cam.originY=origin.y;
     cam.victim=focus.victim||null;
-    if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onKillCam){
+    if(!focus.skipCall && typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onKillCam){
         SpinWarsVsCall.onKillCam(focus.victim,focus.other,now);
     }
 }
+
+function tryDashKillCam(s,now){
+    if(!s) return false;
+    const cam=killCamState();
+    if(cam.active) return false;
+    if(Math.random()>=KILL_CAM.dashChance) return false;
+    const t=now||performance.now();
+    const other=s===NEW_BATTLE.player?NEW_BATTLE.cpu:NEW_BATTLE.player;
+    startKillCam({
+        x:s.x,
+        y:s.y,
+        victim:s,
+        other,
+        eta:0.90,
+        slow:KILL_CAM.dashSlow,
+        holdMs:KILL_CAM.dashHoldMs,
+        mode:"dash",
+        skipCall:true
+    },t);
+    pulseKillCamShake(t,3.4);
+    return true;
+}
+window.tryDashKillCam=tryDashKillCam;
+window.KILL_CAM=KILL_CAM;
 
 function endKillCam(){
     const cam=killCamState();
@@ -2771,6 +2807,7 @@ function endKillCam(){
     cam.until=0;
     cam.shakeUntil=0;
     cam.shakeAmp=0;
+    cam.mode=null;
     const st=killCamLens();
     if(!st) return;
     st.classList.add("kill-cam-out");
@@ -2803,6 +2840,68 @@ function applyKillCamTransform(now){
     st.style.transform=`translate(${sx.toFixed(2)}px,${sy.toFixed(2)}px) scale(${zoom})`;
 }
 
+function paintRpmGhostBars(p,c,dt){
+    const ghost=NEW_BATTLE.rpmGhost||(NEW_BATTLE.rpmGhost={player:null,cpu:null});
+    const tau=0.85;
+    const k=1-Math.exp(-Math.max(0.001,Number(dt)||1/60)/tau);
+    const rows=[
+        {
+            side:"player",
+            live:Math.max(0,Math.min(1,Number(p?.rpm)||0)),
+            fill:"newPlayerRPMBar",
+            loss:"newPlayerRPMGhostLoss",
+            gain:"newPlayerRPMGhostGain"
+        },
+        {
+            side:"cpu",
+            live:Math.max(0,Math.min(1,Number(c?.rpm)||0)),
+            fill:"newCpuRPMBar",
+            loss:"newCpuRPMGhostLoss",
+            gain:"newCpuRPMGhostGain"
+        }
+    ];
+    for(const row of rows){
+        let st=ghost[row.side];
+        if(!st||!Number.isFinite(st.delay)) st=ghost[row.side]={delay:row.live};
+        const live=row.live;
+        if(live<st.delay-0.0004 || live>st.delay+0.0004){
+            st.delay+= (live-st.delay)*k;
+        }else{
+            st.delay=live;
+        }
+        const livePct=live*100;
+        const delayPct=Math.max(0,Math.min(100,st.delay*100));
+        const fill=document.getElementById(row.fill);
+        const loss=document.getElementById(row.loss);
+        const gain=document.getElementById(row.gain);
+        if(fill){
+            const shown=live<st.delay?livePct:delayPct;
+            fill.style.width=`${shown}%`;
+            fill.setAttribute("aria-valuenow",String(Math.round(livePct)));
+        }
+        if(loss){
+            if(st.delay>live+0.002){
+                loss.style.width=`${delayPct}%`;
+                loss.style.opacity="1";
+            }else{
+                loss.style.width="0%";
+                loss.style.opacity="0";
+            }
+        }
+        if(gain){
+            if(live>st.delay+0.002){
+                gain.style.left=`${delayPct}%`;
+                gain.style.width=`${livePct-delayPct}%`;
+                gain.style.opacity="1";
+            }else{
+                gain.style.left="0%";
+                gain.style.width="0%";
+                gain.style.opacity="0";
+            }
+        }
+    }
+}
+
 function considerKillCam(p,c,now){
     const cam=killCamState();
     const imp=NEW_BATTLE.lastImpact;
@@ -2818,7 +2917,10 @@ function considerKillCam(p,c,now){
             pulseKillCamShake(now,imp.impactClass==="heavy"?KILL_CAM.shakePx+1.4:KILL_CAM.shakePx);
         }
         const aim=follow?killCamAim(follow):null;
-        if(!cam.hitAt&&aim&&!aim.ticks&&!aim.near&&!aim.inHole&&(now-(cam.startedAt||now))>280){
+        if(
+            cam.mode!=="dash" &&
+            !cam.hitAt&&aim&&!aim.ticks&&!aim.near&&!aim.inHole&&(now-(cam.startedAt||now))>280
+        ){
             endKillCam();
             applyKillCamTransform(now);
             return;
@@ -2994,6 +3096,19 @@ function cpuCounterLaunchWeights(cpuBlade, playerHabits, cpuHabits){
         aw["Hard Tilt"]+= (a.Flat||0)*12;
         aw["Slight Tilt"]+= (a.Flat||0)*8;
         aw.Flat+= (a.Flat||0)*6;
+    }
+    const combat=Array.isArray(Game.battle?.playerCombatHistory)?Game.battle.playerCombatHistory:[];
+    const dashes=combat.filter(x=>x?.kind==="dash").length;
+    const abs=combat.filter(x=>x?.kind==="ability").length;
+    if(dashes>=2){
+        if(type==="Attack") w["Direct Clash"]+=10;
+        else w.Center+=8;
+        w["X-Rail"]+=4;
+    }
+    if(abs>=2){
+        w.Center+=6;
+        w["Drop Launch"]+=5;
+        w["Direct Clash"]-=4;
     }
     const lastAngle=cpuHabits?.last?.angle;
     if(lastAngle && aw[lastAngle]!=null) aw[lastAngle]-=8;
@@ -3556,6 +3671,7 @@ function startNewBattle(){
         NEW_BATTLE.active=true;
         NEW_BATTLE.last=performance.now();
         resetKillCam();
+        NEW_BATTLE.rpmGhost={player:null,cpu:null};
 
         renderNewBattle();
         document.querySelector(".battle-shell")?.classList.remove("is-launching");
@@ -3814,7 +3930,11 @@ function renderNewBattle(){
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
-                  <div class="rpm-bar-shell"><div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div></div>
+                  <div class="rpm-bar-shell">
+                    <div id="newPlayerRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
+                    <div id="newPlayerRPMGhostGain" class="rpm-bar-ghost rpm-bar-ghost-gain"></div>
+                    <div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div>
+                  </div>
                 </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
               </div>
@@ -3833,7 +3953,11 @@ function renderNewBattle(){
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
-                  <div class="rpm-bar-shell"><div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div></div>
+                  <div class="rpm-bar-shell">
+                    <div id="newCpuRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
+                    <div id="newCpuRPMGhostGain" class="rpm-bar-ghost rpm-bar-ghost-gain"></div>
+                    <div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div>
+                  </div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
               </div>
@@ -4854,14 +4978,7 @@ function newBattleFrame(now){
             const el=document.getElementById(id);
             if(el) el.textContent=Math.round(v*100);
         }
-        for(const [id,v] of [["newPlayerRPMBar",p.rpm],["newCpuRPMBar",c.rpm]]){
-            const bar=document.getElementById(id);
-            if(bar){
-                const pct=Math.max(0,Math.min(100,v*100));
-                bar.style.width=`${pct}%`;
-                bar.setAttribute("aria-valuenow",String(Math.round(pct)));
-            }
-        }
+        paintRpmGhostBars(p,c,frameDt);
 
         considerKillCam(p,c,now);
 
