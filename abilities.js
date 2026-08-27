@@ -39,35 +39,35 @@
     const META={
         "ancient-sword":{
             name:"Ancient Sword", active:true,
-            blurb:"Get close until the glow reaches them, then vanish and cut. If they are outside the ring, you miss — and still use a charge."
+            blurb:"2 uses a match. 2.5s if it lands. Range is a wide ring around you. In range: both freeze, you cut 4 times (every 0.5s, 1–2 RPM each, 4–8 RPM total), then a shove. Outside the ring: MISS, charge still spent."
         },
         "hurricane":{
             name:"Hurricane", active:true,
-            blurb:"Whip up a wind around you. You pick up a little spin and move quicker. Anyone who flies through the wind gets blown aside."
+            blurb:"2 uses a match. 3s. You move 12% faster and gain 15% of the RPM you had when you popped it, fed in over those 3s. First time they enter the wind they take a medium shove (~half clash cap). Staying in it keeps pushing them out."
         },
         "iron-skin":{
             name:"Iron Skin", active:true,
-            blurb:"Turn to metal for a few seconds. Hits bounce off and shove them harder. You still slow down over time, and falling in a hole still ends the point."
+            blurb:"2 uses a match. 3s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
         },
         "free-spin":{
             name:"Free Spin", active:false,
-            blurb:"Always on. Sometimes a hit barely moves you and takes no spin. FREE SPIN pops up when it happens."
+            blurb:"Always on. Each clash: 10% chance you take 0 RPM from that hit and 20% less knock. FREE SPIN pops when it procs."
         },
         "double-edge":{
             name:"Double Edge", active:false,
-            blurb:"Always on. Each clash might hit them harder, sting you extra, or play out like a normal hit."
+            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +20% (+KB), 1/3 their knock on you +20% (−KB), 1/3 nothing."
         },
         "earthquake":{
             name:"Earthquake", active:true,
-            blurb:"Stomp the stadium. Cracks knock them outward and stop their slide. If they stay in the cracks, they lose spin."
+            blurb:"2 uses a match. 3s. Up to 7 cracks spawn and fade (about 0.4–0.8s each). Only a Bey that hits a live crack takes 1–2 RPM, loses most of its slide, and gets a small outward shove."
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
-            blurb:"A beam lifts you off the stadium. Steer the marker onto them, then crash. Land it to take a chunk of their spin. Miss, and you lose some of yours."
+            blurb:"2 uses a match. 2s lift, then 3s to aim. Hit: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
         },
         "flame-trail":{
             name:"Flame Trail", active:true,
-            blurb:"Leave a trail of fire and run faster. If they drive through the fire, they lose spin. Your own trail will not burn you."
+            blurb:"2 uses a match. 2.3s. You move 15% faster. Fire lasts 0.9s behind you and will not burn you. If they drive through it: 0.8 RPM every 0.3s, then after 1s 1.6–2.4 RPM every 0.5s."
         }
     };
 
