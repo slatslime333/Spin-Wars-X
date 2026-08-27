@@ -3710,7 +3710,6 @@ function renderNewBattle(){
                           stroke-linecap="round" stroke-linejoin="round"
                           stroke-opacity="0.38" points=""/>
               </g>
-              ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.fxMarkup():""}
 
               <!-- Beys -->
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
@@ -3723,6 +3722,8 @@ function renderNewBattle(){
               <image id="newCpuBeySprite" href="" x="${cx-4.85}" y="${cy-4.85}"
                      width="9.7" height="9.7" preserveAspectRatio="xMidYMid meet"
                      style="display:none"/>
+
+              ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.fxMarkup():""}
 
               <!-- Actual battle impact renderer. These IDs are the targets
                    updated by newBattleFrame() on every collision. -->
