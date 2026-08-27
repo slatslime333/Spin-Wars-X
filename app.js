@@ -3272,6 +3272,7 @@ function tiltLeanHudMarkup(side){
                 <div class="tilt-lean-hud tilt-lean-${side}" id="${side}TiltLeanHud" hidden>
                   <button type="button" class="tilt-lean-btn" id="${side}TiltLeanBtn" aria-expanded="false" aria-label="Launch tilt trade">
                     <span class="tilt-lean-up">▲</span>
+                    <span class="tilt-lean-tag">TILT</span>
                     <span class="tilt-lean-down">▼</span>
                   </button>
                   <div class="tilt-lean-menu" id="${side}TiltLeanMenu" hidden></div>
@@ -3317,10 +3318,10 @@ function paintTiltLeanHud(p,c){
             btn.setAttribute("aria-expanded","false");
             continue;
         }
-        const scale=0.72+lean*0.38;
+        const scale=0.88+lean*0.18;
         btn.style.setProperty("--tilt-lean",String(lean));
         btn.style.transform=`scale(${scale})`;
-        btn.style.opacity=String(0.55+lean*0.45);
+        btn.style.opacity=String(0.72+lean*0.28);
         const open=NEW_BATTLE.tiltMenu===side;
         menu.hidden=!open;
         btn.setAttribute("aria-expanded",open?"true":"false");

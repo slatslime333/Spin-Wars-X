@@ -2067,17 +2067,25 @@ footer{
 .tilt-lean-btn{
   display:flex;
   align-items:center;
-  gap:3px;
-  padding:1px 6px 2px;
-  border:1px solid rgba(255,255,255,.18);
+  gap:5px;
+  min-height:22px;
+  padding:3px 8px;
+  border:1px solid rgba(255,255,255,.28);
   background:#1a1612;
   color:#fff;
   line-height:1;
   cursor:pointer;
   transform-origin:center;
+  pointer-events:auto;
 }
-.tilt-lean-up{color:#35d26b;font-size:11px}
-.tilt-lean-down{color:#ff5a5a;font-size:11px}
+.tilt-lean-up{color:#35d26b;font-size:13px;font-weight:900}
+.tilt-lean-down{color:#ff5a5a;font-size:13px;font-weight:900}
+.tilt-lean-tag{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:11px;
+  letter-spacing:.08em;
+  color:#ffd43b;
+}
 .tilt-lean-menu{
   position:static;
   width:100%;
