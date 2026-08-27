@@ -773,6 +773,9 @@ footer{
   letter-spacing:.14em;
   color:var(--muted);
 }
+.menu.selection-screen{
+  padding-bottom:calc(72px + env(safe-area-inset-bottom, 0px));
+}
 .selection-screen .back-btn{
   grid-column:1 / -1;
 }
@@ -2370,6 +2373,9 @@ footer{
   .blade-pick-grid .blade-card-art{height:168px}
   .blade-card-title h2{font-size:16px!important}
   .blade-stat-grid{margin-top:6px}
+  .blade-pick-grid .blade-stat-grid{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
   .mini-stat{padding:5px 2px 4px}
   .mini-stat span{font-size:7px;letter-spacing:.2px}
   .mini-stat b{font-size:11px}
