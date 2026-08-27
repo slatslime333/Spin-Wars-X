@@ -3304,29 +3304,55 @@ function tiltLeanMenuHtml(s){
 }
 
 function paintTiltLeanHud(p,c){
+    const pop=ensureTiltLeanPop();
+    let openRect=null;
+    let openHtml="";
     for(const [side,s] of [["player",p],["cpu",c]]){
         const hud=document.getElementById(`${side}TiltLeanHud`);
         const btn=document.getElementById(`${side}TiltLeanBtn`);
-        const menu=document.getElementById(`${side}TiltLeanMenu`);
         if(!hud||!btn||!s) continue;
         const lean=launchTiltLean(s);
         const show=lean>=0.07 && (s.launchTilt==="Slight Tilt"||s.launchTilt==="Hard Tilt");
         hud.hidden=!show;
         if(!show){
             if(NEW_BATTLE.tiltMenu===side) NEW_BATTLE.tiltMenu=null;
-            menu.hidden=true;
             btn.setAttribute("aria-expanded","false");
             continue;
         }
         const scale=0.88+lean*0.18;
-        btn.style.setProperty("--tilt-lean",String(lean));
         btn.style.transform=`scale(${scale})`;
         btn.style.opacity=String(0.72+lean*0.28);
         const open=NEW_BATTLE.tiltMenu===side;
-        menu.hidden=!open;
         btn.setAttribute("aria-expanded",open?"true":"false");
-        if(open) menu.innerHTML=tiltLeanMenuHtml(s);
+        if(open){
+            openRect=btn.getBoundingClientRect();
+            openHtml=tiltLeanMenuHtml(s);
+        }
     }
+    if(!pop) return;
+    if(!openHtml || !openRect){
+        pop.hidden=true;
+        pop.innerHTML="";
+        return;
+    }
+    pop.innerHTML=openHtml;
+    pop.hidden=false;
+    const left=Math.max(8, Math.min(window.innerWidth-228, openRect.left));
+    const top=Math.min(window.innerHeight-170, openRect.bottom+6);
+    pop.style.left=`${left}px`;
+    pop.style.top=`${top}px`;
+}
+
+function ensureTiltLeanPop(){
+    let pop=document.getElementById("tiltLeanPop");
+    if(pop) return pop;
+    pop=document.createElement("div");
+    pop.id="tiltLeanPop";
+    pop.className="tilt-lean-pop";
+    pop.hidden=true;
+    pop.addEventListener("click",event=>event.stopPropagation());
+    document.body.appendChild(pop);
+    return pop;
 }
 
 function bindTiltLeanHud(){
@@ -3341,11 +3367,13 @@ function bindTiltLeanHud(){
                 paintTiltLeanHud(NEW_BATTLE.player,NEW_BATTLE.cpu);
             }
         };
+        btn.onpointerdown=event=>event.stopPropagation();
     }
     if(!window._tiltLeanDocBound){
         window._tiltLeanDocBound=true;
-        document.addEventListener("click",event=>{
+        document.addEventListener("pointerdown",event=>{
             if(event.target?.closest?.(".tilt-lean-hud")) return;
+            if(event.target?.closest?.(".tilt-lean-pop")) return;
             if(!NEW_BATTLE?.tiltMenu) return;
             NEW_BATTLE.tiltMenu=null;
             if(NEW_BATTLE.player && NEW_BATTLE.cpu){

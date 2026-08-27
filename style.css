@@ -2087,28 +2087,30 @@ footer{
   color:#ffd43b;
 }
 .tilt-lean-menu{
-  position:static;
-  width:100%;
-  margin-top:4px;
+  display:none;
+}
+.tilt-lean-pop{
+  position:fixed;
+  width:216px;
   padding:8px 9px;
   border:2px solid #2a241c;
-  background:#0c0a08;
+  background:#120e0c;
   color:#efe7d6;
   font-size:11px;
   line-height:1.35;
   text-align:left;
-  z-index:8;
+  z-index:80;
+  box-shadow:0 10px 0 #000;
 }
-.tilt-lean-cpu .tilt-lean-menu{left:auto;right:0}
-.tilt-lean-menu .tilt-lean-kicker{
+.tilt-lean-pop .tilt-lean-kicker{
   font-family:Staatliches,Impact,sans-serif;
   font-size:14px;
   letter-spacing:.06em;
   margin:0 0 4px;
   color:#ffd43b;
 }
-.tilt-lean-menu p{margin:0 0 6px}
-.tilt-lean-menu ul{
+.tilt-lean-pop p{margin:0 0 6px}
+.tilt-lean-pop ul{
   list-style:none;
   margin:0 0 6px;
   padding:0;
@@ -2116,9 +2118,9 @@ footer{
   grid-template-columns:1fr 1fr;
   gap:2px 8px;
 }
-.tilt-lean-menu li{margin:0}
-.tilt-lean-menu b.up{color:#35d26b}
-.tilt-lean-menu b.down{color:#ff5a5a}
+.tilt-lean-pop li{margin:0}
+.tilt-lean-pop b.up{color:#35d26b}
+.tilt-lean-pop b.down{color:#ff5a5a}
 
 .rpm-bar-fill{
   position:absolute;
