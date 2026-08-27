@@ -38,6 +38,76 @@ function comboBase(blade,ratchet,bit){
     return raw?{...raw.stats}:emptyBonuses();
 }
 
+function partsMeta(blade,ratchet,bit){
+    const raw=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,bit):null;
+    return Number(raw?.meta)||70;
+}
+
+function formMetaAdj(form,enhanced){
+    const f=String(form||"Bronze");
+    let n=f==="Gold"?0:f==="Silver"?-5:-10;
+    if(enhanced) n+=3;
+    return n;
+}
+
+function stackMetaBonus(bonuses,blade){
+    const b=bonuses||{};
+    const role=String(blade?.type||"Balance");
+    let focus=0;
+    if(role==="Attack"){
+        focus=(Number(b.attack)||0)+(Number(b.knockback)||0)+(Number(b.mobility)||0)*0.7;
+    }else if(role==="Defense"){
+        focus=(Number(b.defense)||0)+(Number(b.balance)||0)*0.7+(Number(b.stamina)||0)*0.7;
+    }else if(role==="Stamina"){
+        focus=(Number(b.stamina)||0)+(Number(b.balance)||0)*0.7+(Number(b.defense)||0)*0.5;
+    }else{
+        focus=["attack","knockback","defense","mobility","balance","stamina"]
+            .reduce((s,k)=>s+(Number(b[k])||0),0)*0.45;
+    }
+    return clamp(Math.round(6*(1-Math.exp(-Math.max(0,focus)/14))),0,14);
+}
+
+function rogueDisplayMeta(side){
+    const r=run();
+    if(!r) return 70;
+    const blade=side==="cpu"?r.cpuBlade:r.blade;
+    const ratchet=side==="cpu"?r.cpuRatchet:r.ratchet;
+    const bit=side==="cpu"?r.cpuBit:r.bit;
+    const bonuses=side==="cpu"?r.cpuBonuses:r.bonuses;
+    let meta=partsMeta(blade,ratchet,bit);
+    if(side==="cpu"){
+        if(r.cpuEnhanced) meta+=3;
+    }else{
+        meta+=formMetaAdj(r.currentRogueTier,r.enhanced);
+    }
+    meta+=stackMetaBonus(bonuses,blade);
+    return clamp(round(meta),40,99);
+}
+
+function sharkBossParts(){
+    const ratchet=(typeof RATCHETS!=="undefined"&&RATCHETS.find(x=>x.name==="1-60"))
+        ||{name:"1-60",number:1,height:60};
+    const bits=typeof selectableBits==="function"?selectableBits():[];
+    const bit=bits.find(b=>b.name==="Orb")||{name:"Orb"};
+    return {ratchet,bit};
+}
+
+function claimSharkScale(){
+    const r=run();
+    const shark=sharkScaleBlade();
+    if(!r||!shark) return false;
+    const parts=sharkBossParts();
+    r.blade=shark;
+    r.ratchet=parts.ratchet;
+    r.bit=parts.bit;
+    r.currentRogueTier="Gold";
+    r.claimedShark=true;
+    r.startScale=emptyBonuses();
+    syncLoadout();
+    persist();
+    return true;
+}
+
 function mergeStats(base,bonuses){
     const out={};
     const keys=["attack","knockback","defense","mobility","balance","stamina","burst"];
@@ -542,7 +612,7 @@ function bossExtraStacks(){
 function battleCombo(side){
     const stats=side==="cpu"?cpuEffective():playerEffective();
     const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/7);
-    return {stats,ovr,meta:ovr,compatibility:80,physical:{}};
+    return {stats,ovr,meta:rogueDisplayMeta(side),compatibility:80,physical:{}};
 }
 
 function applyLiveToBattle(){
@@ -692,7 +762,7 @@ function generateCpu(){
 
     if(match===18){
         r.cpuBlade=sharkScaleBlade()||pick(playableBlades());
-        const parts=pickCommittedParts(r.cpuBlade);
+        const parts=sharkBossParts();
         r.cpuRatchet=parts.ratchet;
         r.cpuBit=parts.bit;
     }else{
@@ -1004,7 +1074,7 @@ function plateDecor(side){
     const mark=side==="cpu"?(r.finalBoss||r.matchIndex===18?"final":(r.matchIndex===6||r.matchIndex===12?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
     return {
-        stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        stats,ovr,meta:rogueDisplayMeta(side),delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
         bossMark:mark||""
@@ -1291,6 +1361,7 @@ function buildSave(){
             cpuHistory:(r.cpuHistory||[]).map(packCard),
             cpuModifier:packModifier(r.cpuModifier),
             enhanced:!!r.enhanced,
+            claimedShark:!!r.claimedShark,
             hubsWithoutForm:Number(r.hubsWithoutForm)||0
         }
     };
@@ -1367,6 +1438,7 @@ function hydrate(data){
         startingTier:raw.startingTier||blade.tier||"Silver",
         currentRogueTier:raw.currentRogueTier||"Bronze",
         enhanced:!!raw.enhanced,
+        claimedShark:!!raw.claimedShark,
         hubsWithoutForm:Number(raw.hubsWithoutForm)||0,
         blade,ratchet,bit,
         starterBlade:bladeByName(raw.starterBladeName)||blade,
@@ -1523,7 +1595,7 @@ function showHelp(){
         </div>
         <section class="menu-card rogue-help-card">
             <p>Pick one Bey to start. Your bit and ratchet are random. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
-            <p>A run is 18 matches. Matches 6 and 12 are mini bosses. Match 18 is Shark Scale, a secret final boss. Beat him and the night keeps going.</p>
+            <p>A run is 18 matches. Matches 6 and 12 are mini bosses. The last match is a secret. Beat it and the night keeps going.</p>
             <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Bronze starts weaker, but the shop gets kinder later. Gold starts stronger; the shop stays thinner because Gold can evolve.</p>
             <p>Bronze cannot evolve. After enough wins it can Enhance once — a honeycomb look and a big stat bump. Silver starts in Bronze form, can grow into Silver, then Enhance. Gold starts in Bronze form and can climb all the way to Gold.</p>
             <p>The CPU grows with you. After each match it gets as many upgrades as you have, plus a little extra based on your starter. Mini bosses show extra boxes. Close the app and hit Continue to pick up where you left off.</p>
@@ -1567,6 +1639,7 @@ function beginRun(blade){
         history:[],
         offers:[],
         lastResult:null,
+        claimedShark:false,
         cpuPowerTarget:0,
         cpuHistory:[],
         boss:false
@@ -1612,20 +1685,31 @@ function showResults(){
     }
     Game.screen="rogueResults";
     const win=res.winner==="player";
+    const offerClaim=win && r.matchIndex===18 && !r.claimedShark && !!sharkScaleBlade();
     const app=document.getElementById("app");
+    const actions=offerClaim
+        ? `<p class="rogue-result-copy">Take the fallen Bey for the rest of the night, or keep the one that beat it.</p>
+        <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
+        <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
+        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>`;
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(r.matchIndex===18?"FINAL BOSS DOWN":(r.matchIndex===6||r.matchIndex===12?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(r.matchIndex===18?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
         <p class="rogue-result-copy">${res.commentary||""}</p>
-        <button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>
+        ${actions}
     </main>`;
-    document.getElementById("rogueResultsGo").onclick=()=>{
+    const goHub=()=>{generateOffers();showHub();};
+    document.getElementById("rogueResultsGo")?.addEventListener("click",()=>{
         if(!win){endRun("lost");renderMainMenu();return;}
-        generateOffers();
-        showHub();
-    };
+        goHub();
+    });
+    document.getElementById("rogueClaimShark")?.addEventListener("click",()=>{
+        claimSharkScale();
+        goHub();
+    });
+    document.getElementById("rogueKeepBey")?.addEventListener("click",goHub);
     mountDevButton();
     persist();
 }
@@ -1819,13 +1903,19 @@ function paintSharkOmen(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background omen-bg"></div>
     <main class="rogue-omen" id="rogueOmen">
+        <div class="omen-storm" aria-hidden="true">
+            <svg class="omen-bolt b1" viewBox="0 0 48 140"><polygon points="28,0 16,52 30,52 12,140 36,68 22,68"/></svg>
+            <svg class="omen-bolt b2" viewBox="0 0 48 140"><polygon points="20,0 34,48 20,48 40,140 14,72 28,72"/></svg>
+            <svg class="omen-bolt b3" viewBox="0 0 48 140"><polygon points="24,0 18,44 32,44 10,140 30,64 16,64"/></svg>
+            <svg class="omen-bolt b4" viewBox="0 0 48 140"><polygon points="26,0 14,58 26,58 8,128 34,74 20,74"/></svg>
+        </div>
         <div class="omen-figure" aria-hidden="true">
             <div class="omen-circle"></div>
             <div class="omen-soul"></div>
             <span class="omen-eye left"></span>
             <span class="omen-eye right"></span>
         </div>
-        <p class="omen-line">a dark presence watched you</p>
+        <p class="omen-line">a dark presence watches you</p>
     </main>`;
 }
 

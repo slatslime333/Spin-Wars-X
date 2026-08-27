@@ -823,13 +823,13 @@ footer{
   position:absolute;
   left:16px;
   right:16px;
-  top:14px;
+  top:0;
   z-index:1;
   width:calc(100% - 32px);
-  height:50%;
+  height:58%;
   transform:none;
   object-fit:contain;
-  object-position:50% 50%;
+  object-position:50% 28%;
   pointer-events:none;
 }
 .luck-grade{
@@ -2359,6 +2359,7 @@ button:focus-visible{
 }
 .rogue-intro-card .rip-btn,
 .rogue-results .rip-btn{margin-top:18px}
+.rogue-results .menu-btn{margin-top:10px}
 
 .rogue-round-banner{
   margin:0 auto;
@@ -2610,6 +2611,36 @@ button:focus-visible{
   position:relative;
   overflow:hidden;
   background:#000;
+}
+.omen-storm{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  overflow:hidden;
+}
+.omen-bolt{
+  position:absolute;
+  z-index:1;
+  fill:#e9d5ff;
+  stroke:#c084fc;
+  stroke-width:2.4;
+  filter:drop-shadow(0 0 10px #a855f7) drop-shadow(0 0 22px #6d28d9);
+  opacity:0;
+  animation:omenBolt 6s ease-in-out infinite;
+}
+.omen-bolt.b1{left:4%;top:-10%;width:30%;height:92%;animation-delay:0s;transform:rotate(-14deg)}
+.omen-bolt.b2{right:2%;top:-6%;width:28%;height:96%;animation-delay:.22s;transform:rotate(16deg)}
+.omen-bolt.b3{left:38%;top:-16%;width:22%;height:80%;animation-delay:.48s;transform:rotate(4deg)}
+.omen-bolt.b4{left:18%;top:8%;width:20%;height:62%;animation-delay:.9s;transform:rotate(-6deg)}
+@keyframes omenBolt{
+  0%,12%{opacity:0;transform:scaleY(.9)}
+  16%{opacity:.95}
+  22%{opacity:.12}
+  28%{opacity:.85}
+  38%{opacity:.18}
+  52%{opacity:.7}
+  68%,100%{opacity:.08}
 }
 .omen-circle{
   position:absolute;
