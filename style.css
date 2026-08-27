@@ -2564,6 +2564,14 @@ button:focus-visible{
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
 }
+.ability-swap-box{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:min(420px,100%);
+  padding:12px;
+}
+.ability-swap-box .rogue-offer{min-height:0;}
 .rogue-offer{
   min-height:168px;
   padding:12px;

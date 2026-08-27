@@ -538,8 +538,9 @@ function makeOfferCard(rarity,blade,modifierId,opts){
     }
     if(rarity==="rare"){
         const roll=Math.random();
-        if(roll<0.50) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
-        if(roll<0.75){
+        if(roll<0.16) return makeAbilitySwapCard(blade||r?.blade, forCpu?r?.cpuAbilityId:r?.abilityId);
+        if(roll<0.58) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        if(roll<0.79){
             const peak=peakStat(forCpu?cpuEffective():playerEffective());
             const card=makeStatCard("rare",Math.random()<0.7?focusedStat(blade||r?.blade):peak,4);
             card.body=`Peak. +4 ${LABEL[card.stat]}. No catch.`;
@@ -577,6 +578,9 @@ function applyCpuCard(card){
         });
         if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
         else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
+    }else if(card.kind==="ability-swap"){
+        const pickId=pick(card.choices&&card.choices.length?card.choices:["hurricane"]);
+        r.cpuAbilityId=pickId;
     }
     r.cpuHistory=r.cpuHistory||[];
     r.cpuHistory.push(card);
@@ -588,6 +592,7 @@ function grantCpuStack(){
     r.cpuBonuses=emptyBonuses();
     r.cpuHistory=[];
     r.cpuModifier=null;
+    r.cpuAbilityId=null;
     for(let i=0;i<n;i++){
         const card=makeOfferCard(
             rarityRoll(r.matchIndex,r.startingTier),
@@ -631,7 +636,7 @@ function refreshAfterDebug(){
 function syncLoadout(){
     const r=run();
     if(!r) return;
-    Game.player.blade=r.blade;
+    Game.player.blade=Object.assign({}, r.blade||{}, r.abilityId?{abilityId:r.abilityId}:{});
     Game.player.ratchet=r.ratchet;
     Game.player.bit=r.bit;
     Game.player.spin=r.blade?.spin||"Right";
@@ -639,7 +644,7 @@ function syncLoadout(){
     Game.player.stats=p.stats;
     Game.player.comboOVR=p.ovr;
     Game.player.comboMeta=p.meta;
-    Game.cpu.blade=r.cpuBlade;
+    Game.cpu.blade=Object.assign({}, r.cpuBlade||{}, r.cpuAbilityId?{abilityId:r.cpuAbilityId}:{});
     Game.cpu.ratchet=r.cpuRatchet;
     Game.cpu.bit=r.cpuBit;
     Game.cpu.spin=r.cpuBlade?.spin||"Right";
@@ -875,6 +880,29 @@ function makeEvolveCard(type){
     };
 }
 
+function currentAbilityId(blade,override){
+    if(override && typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META?.[override]) return override;
+    if(typeof SpinWarsAbilities==="undefined") return null;
+    return SpinWarsAbilities.KITS?.[blade?.name]||null;
+}
+
+function pickAbilityChoices(blade,override){
+    const meta=(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META)||{};
+    const cur=currentAbilityId(blade,override);
+    const pool=Object.keys(meta).filter(id=>id!==cur);
+    return shuffle(pool).slice(0,2);
+}
+
+function makeAbilitySwapCard(blade,override){
+    const choices=pickAbilityChoices(blade,override);
+    return {
+        id:"ability-swap-"+Math.random().toString(16).slice(2),
+        rarity:"rare",kind:"ability-swap",choices,
+        title:"ABILITY SWAP",kicker:"RARE",
+        body:"See two kits from the pool. Pick one, or back out and keep yours."
+    };
+}
+
 function generateOffers(){
     const r=run();
     const cards=[];
@@ -970,10 +998,12 @@ function applyDebugCard(card){
     if(card.kind==="modifier") applyModifierCard(card);
     if(card.kind==="evolve") applyEvolveCard(card);
     if(card.kind==="reforge") return "reforge";
+    if(card.kind==="ability-swap") return "ability-swap";
     return "ok";
 }
 
 function allCatalog(){
+    const r=run();
     const list=[];
     STATS.forEach(stat=>{
         list.push(makeStatCard("common",stat,2));
@@ -985,6 +1015,7 @@ function allCatalog(){
     list.push(makeStatCard("rare","attack",4));
     list.push(makeReforgeCard("bit"));
     list.push(makeReforgeCard("ratchet"));
+    list.push(makeAbilitySwapCard(r?.blade, r?.abilityId));
     MODIFIERS.forEach(m=>list.push(makeModifierCard(m)));
     list.push(makeEvolveCard("enhance"));
     list.push(makeEvolveCard("evolve"));
@@ -1013,6 +1044,7 @@ function commentaryFor(result){
         return `${name} stays itself — the plate just stepped up a form.`;
     }
     if(card.kind==="reforge") return `New ${card.part}. The stadium will feel it.`;
+    if(card.kind==="ability-swap") return `${name} takes ${result.abilityName||"a new kit"}. The old one is gone.`;
     return "Build updated.";
 }
 
@@ -1114,6 +1146,9 @@ function upgradeStack(side){
         }
         if(card.kind==="reforge"){
             boxes.push({kicker:"REFORGE",title:card.title||"REFORGE",rarity:"rare"});
+        }
+        if(card.kind==="ability-swap"){
+            boxes.push({kicker:"ABILITY",title:card.title||"ABILITY SWAP",rarity:"rare"});
         }
     });
     return boxes;
@@ -1246,6 +1281,11 @@ function renderDevList(){
                 openReforge(card,true);
                 return;
             }
+            if(card.kind==="ability-swap"){
+                document.getElementById("rogueDevPanel")?.remove();
+                openAbilitySwap(card,true);
+                return;
+            }
             applyDebugCard(card);
             if(card.kind!=="reforge") r.history.push(card);
             renderDevList();
@@ -1279,7 +1319,8 @@ function packCard(card){
         amount:card.amount,downStat:card.downStat,downAmt:card.downAmt,
         title:card.title,kicker:card.kicker,body:card.body,
         part:card.part,modifierId:card.modifierId,evolve:card.evolve,
-        secondStat:card.secondStat,secondAmt:card.secondAmt
+        secondStat:card.secondStat,secondAmt:card.secondAmt,
+        choices:card.choices,abilityId:card.abilityId
     };
 }
 function packUpgrade(u){
@@ -1290,6 +1331,8 @@ function packUpgrade(u){
         after:u.after||null,
         partName:u.part?.name||null,
         partKind:u.card?.part||null,
+        abilityId:u.abilityId||null,
+        abilityName:u.abilityName||null,
         lostId:u.lost?.id||null,
         nowId:u.now?.id||null,
         tier:u.tier||null
@@ -1308,6 +1351,8 @@ function unpackUpgrade(raw){
     }
     if(raw.lostId) u.lost=modifierById(raw.lostId);
     if(raw.nowId) u.now=modifierById(raw.nowId);
+    if(raw.abilityId) u.abilityId=raw.abilityId;
+    if(raw.abilityName) u.abilityName=raw.abilityName;
     return u;
 }
 
@@ -1351,6 +1396,9 @@ function buildSave(){
             lastResult:r.lastResult||null,
             lastUpgrade:packUpgrade(r.lastUpgrade),
             pendingReforge:packCard(r.pendingReforge),
+            pendingAbilitySwap:packCard(r.pendingAbilitySwap),
+            abilityId:r.abilityId||null,
+            cpuAbilityId:r.cpuAbilityId||null,
             cpuPowerTarget:r.cpuPowerTarget||0,
             boss:!!r.boss,
             cpuBladeName:r.cpuBlade?.name,
@@ -1452,6 +1500,9 @@ function hydrate(data){
         lastResult:raw.lastResult||null,
         lastUpgrade:unpackUpgrade(raw.lastUpgrade),
         pendingReforge:raw.pendingReforge||null,
+        pendingAbilitySwap:raw.pendingAbilitySwap||null,
+        abilityId:raw.abilityId||null,
+        cpuAbilityId:raw.cpuAbilityId||null,
         cpuPowerTarget:raw.cpuPowerTarget||0,
         boss:!!raw.boss,
         cpuBlade:bladeByName(raw.cpuBladeName),
@@ -1496,6 +1547,7 @@ function resumeSave(){
     else if(screen==="rogueResults") showResults();
     else if(screen==="rogueUpgrade") showUpgradeResult();
     else if(screen==="rogueReforge" && run().pendingReforge) openReforge(run().pendingReforge,false);
+    else if(screen==="rogueAbilitySwap" && run().pendingAbilitySwap) openAbilitySwap(run().pendingAbilitySwap,false);
     else if(screen==="rogueWin") showRunWin();
     else if(screen==="rogueOmen"){
         generateCpu();
@@ -1604,7 +1656,7 @@ function showHelp(){
         <div class="rogue-offers rogue-help-offers">
             <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 TO A STAT</strong><small>A small bump. It might hit your type, your weakest line, or a random one.</small></article>
             <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>A BIGGER BUMP WITH A COST</strong><small>You gain more on one line, and lose a little on another. There is no free +3.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · PEAK · PAIR</strong><small>Swap your bit or ratchet, push one stat hard, or take two smaller bumps.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · PEAK · PAIR</strong><small>Swap your bit or ratchet, rarely swap your ability (two kits, BACK to keep yours), push one stat hard, or take two smaller bumps.</small></article>
             <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A special rule for the rest of the run. Picking a new one replaces the old one.</small></article>
             <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Bronze enhances once. Silver can evolve, then enhance. Gold can evolve up to Gold.</small></article>
         </div>
@@ -1639,6 +1691,8 @@ function beginRun(blade){
         history:[],
         offers:[],
         lastResult:null,
+        abilityId:null,
+        pendingAbilitySwap:null,
         claimedShark:false,
         cpuPowerTarget:0,
         cpuHistory:[],
@@ -1791,6 +1845,7 @@ function chooseOffer(index){
     const card=r.offers[index];
     if(!card) return;
     if(card.kind==="reforge"){openReforge(card,false);return;}
+    if(card.kind==="ability-swap"){openAbilitySwap(card,false);return;}
     let result;
     if(card.kind==="stat") result=applyStatCard(card);
     else if(card.kind==="modifier") result=applyModifierCard(card);
@@ -1843,6 +1898,58 @@ function openReforge(card,fromDev){
     persist();
 }
 
+function openAbilitySwap(card,fromDev){
+    const r=run();
+    r.pendingAbilitySwap=packCard(card);
+    Game.screen="rogueAbilitySwap";
+    const meta=(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META)||{};
+    const choices=(card.choices||[]).filter(id=>meta[id]).slice(0,2);
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background"></div>
+    <main class="menu selection-screen">
+        <div class="selection-header"><div class="selection-icon">✦</div>
+        <div><span class="eyebrow">RARE SWAP</span><h1>PICK AN ABILITY</h1>
+        <p>Two kits. Back keeps the one you have.</p></div></div>
+        <section class="menu-card ability-swap-box" id="abilitySwapBox"></section>
+        <button type="button" class="menu-btn silver" id="abilitySwapBack">BACK</button>
+    </main>`;
+    const box=document.getElementById("abilitySwapBox");
+    choices.forEach(id=>{
+        const kit=meta[id];
+        const btn=el(`<button type="button" class="rogue-offer rare">
+            <span class="rogue-offer-kicker">${kit.active?"ACTIVE":"PASSIVE"}</span>
+            <strong>${kit.name}</strong>
+            <small>${kit.blurb}</small>
+        </button>`);
+        btn.onclick=()=>{
+            r.abilityId=id;
+            syncLoadout();
+            r.pendingAbilitySwap=null;
+            r.lastUpgrade={card,abilityId:id,abilityName:kit.name};
+            r.history.push(card);
+            if(fromDev){
+                showComboCard();
+                toggleDev();
+                return;
+            }
+            showUpgradeResult();
+        };
+        box.appendChild(btn);
+    });
+    document.getElementById("abilitySwapBack").onclick=()=>{
+        r.pendingAbilitySwap=null;
+        if(fromDev){
+            if(r.offers && r.offers.length) showHub();
+            else showComboCard();
+            toggleDev();
+            return;
+        }
+        showHub();
+    };
+    mountDevButton();
+    persist();
+}
+
 function showUpgradeResult(){
     const r=run();
     const u=r.lastUpgrade||{};
@@ -1867,6 +1974,9 @@ function showUpgradeResult(){
     }
     if(card.kind==="modifier"){
         body=`<p class="rogue-mod-line">${u.lost?`LOST ${u.lost.name} · `:""}EQUIPPED ${u.now?.name||""}</p><p>${u.now?.blurb||""}</p>`+body;
+    }
+    if(card.kind==="ability-swap"){
+        body=`<p class="rogue-part-swap">ABILITY → ${u.abilityName||u.abilityId||""}</p>`+body;
     }
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>

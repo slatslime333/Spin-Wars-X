@@ -11,7 +11,7 @@
     const KNOCK_CAP=0.086;
     const SWORD_R=0.54;
     const SWORD_MS=3000;
-    const STORM_R=0.84;
+    const STORM_R=0.714;
     const HURRICANE_MS=3000;
     const HURRICANE_GAIN=0.10;
     const QUAKE_R=0.62;
@@ -56,7 +56,7 @@
         },
         "double-edge":{
             name:"Double Edge", active:false,
-            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +28% (+KB), 1/3 your knock −18% (−KB), 1/3 nothing."
+            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +28% and 1–3 extra RPM on them (+KB), 1/3 your knock −18% (−KB), 1/3 nothing."
         },
         "earthquake":{
             name:"Earthquake", active:true,
@@ -86,6 +86,7 @@
     };
 
     function kitId(blade){
+        if(blade?.abilityId && META[blade.abilityId]) return blade.abilityId;
         const name=blade?.name||blade||"";
         return KITS[name]||null;
     }
@@ -392,16 +393,36 @@
         s.abilityHidden=true;
         s.vx=0; s.vy=0;
         beginChannel(side,5000,"pegasus-blast");
-        const away=Math.atan2(s.y-foe.y,s.x-foe.x)+ (Math.random()-0.5)*1.2;
-        const dist=0.42+Math.random()*0.22;
+        let aim,drift,cpuMiss,cpuTrack;
+        if(side==="cpu" && foe){
+            const missR=0.32+Math.random()*0.28;
+            const ang=Math.random()*Math.PI*2;
+            cpuMiss={x:Math.cos(ang)*missR,y:Math.sin(ang)*missR};
+            cpuTrack=0.08+Math.random()*0.08;
+            aim={
+                x:clamp(foe.x+cpuMiss.x,-0.72,0.72),
+                y:clamp(foe.y+cpuMiss.y,-0.62,0.72)
+            };
+            drift={x:0,y:0};
+        }else{
+            const away=Math.atan2(s.y-foe.y,s.x-foe.x)+(Math.random()-0.5)*1.2;
+            const dist=0.42+Math.random()*0.22;
+            aim={
+                x:clamp(foe.x+Math.cos(away)*dist,-0.72,0.72),
+                y:clamp(foe.y+Math.sin(away)*dist,-0.62,0.72)
+            };
+            drift={x:(Math.random()-0.5)*0.12,y:(Math.random()-0.5)*0.12};
+        }
         state.pegasus={
             side,
             phase:"lift",
             liftUntil:nowMs()+2000,
             aimUntil:0,
-            aim:{x:clamp(foe.x+Math.cos(away)*dist,-0.72,0.72), y:clamp(foe.y+Math.sin(away)*dist,-0.62,0.72)},
+            aim,
             stick:{x:0,y:0},
-            drift:{x:(Math.random()-0.5)*0.12,y:(Math.random()-0.5)*0.12}
+            drift,
+            cpuMiss,
+            cpuTrack
         };
         popup("PEGASUS BLAST");
         return true;
@@ -422,6 +443,7 @@
         let cKnock=knocks.cKnockback;
         let pIgnore=false, cIgnore=false;
         let pMul=1, cMul=1;
+        let pExtraRpm=0, cExtraRpm=0;
         const t=nowMs();
         const pIron=p.ironSkinUntil>t;
         const cIron=c.ironSkinUntil>t;
@@ -443,6 +465,7 @@
             const roll=Math.random();
             if(roll<1/3){
                 pKnock*=1.28;
+                pExtraRpm=0.010+Math.random()*0.020;
                 popup("+KB");
             }else if(roll<2/3){
                 pKnock*=0.82;
@@ -453,6 +476,7 @@
             const roll=Math.random();
             if(roll<1/3){
                 cKnock*=1.28;
+                cExtraRpm=0.010+Math.random()*0.020;
                 popup("+KB");
             }else if(roll<2/3){
                 cKnock*=0.82;
@@ -483,7 +507,9 @@
         return {
             pKnockback:Math.min(KNOCK_CAP,pKnock),
             cKnockback:Math.min(KNOCK_CAP,cKnock),
-            pSmashCap,cSmashCap
+            pSmashCap,cSmashCap,
+            pExtraRpm:cIgnore?0:pExtraRpm,
+            cExtraRpm:pIgnore?0:cExtraRpm
         };
     }
 
@@ -700,6 +726,10 @@
             s.abilityHidden=true;
             s.abilityHold=true;
             s.vx=0; s.vy=0;
+            if(pg.side==="cpu" && foe && pg.cpuMiss){
+                pg.aim.x=clamp(foe.x+pg.cpuMiss.x,-0.72,0.72);
+                pg.aim.y=clamp(foe.y+pg.cpuMiss.y,-0.62,0.72);
+            }
             if(t>=pg.liftUntil){
                 pg.phase="aim";
                 pg.aimUntil=t+3000;
@@ -708,6 +738,16 @@
             return;
         }
         if(pg.phase==="aim"){
+            if(pg.side==="cpu" && foe){
+                const lead=0.12;
+                const tx=foe.x+(foe.vx||0)*lead+(pg.cpuMiss?.x||0);
+                const ty=foe.y+(foe.vy||0)*lead+(pg.cpuMiss?.y||0);
+                const k=1-Math.pow(1-(pg.cpuTrack||0.10), Math.max(0,dt*60));
+                pg.aim.x=clamp(pg.aim.x+(tx-pg.aim.x)*k,-0.78,0.78);
+                pg.aim.y=clamp(pg.aim.y+(ty-pg.aim.y)*k,-0.68,0.78);
+                if(t>=pg.aimUntil) crashPegasus(pg,s,foe);
+                return;
+            }
             const st=pg.stick||{x:0,y:0};
             const keys=state.keys||{x:0,y:0};
             const ix=clamp(st.x+keys.x,-1,1);
@@ -752,15 +792,7 @@
     }
 
     function showPegasusStick(pg){
-        if(pg.side==="cpu"){
-            const foe=bey("player");
-            if(foe){
-                const dx=foe.x-pg.aim.x, dy=foe.y-pg.aim.y;
-                const m=Math.hypot(dx,dy)||1;
-                pg.stick={x:(dx/m)*0.55,y:(dy/m)*0.55};
-            }
-            return;
-        }
+        if(pg.side==="cpu") return;
         const host=document.querySelector(".battle-shell")||document.body;
         host.classList.add("is-pegasus-aim");
         let box=document.getElementById("pegasusAim");
