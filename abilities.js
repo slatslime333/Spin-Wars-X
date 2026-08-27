@@ -163,6 +163,8 @@
         state.flame={player:[],cpu:[]};
         state.pegasus=null;
         state.popUntil=0;
+        state.cpuLastAbility=0;
+        state.cpuThink=0;
         if(global.Game){
             global.Game.battle=global.Game.battle||{};
             global.Game.battle.abilityCharges={...state.charges};
@@ -708,31 +710,89 @@
         if(box) box.hidden=true;
     }
 
-    function maybeCpu(dt,p,c,t){
+    function readFight(cpu,you){
+        const dx=you.x-cpu.x, dy=you.y-cpu.y;
+        const dist=Math.hypot(dx,dy)||1e-6;
+        const relVx=you.vx-cpu.vx, relVy=you.vy-cpu.vy;
+        const approach=-(dx*relVx+dy*relVy)/dist;
+        const closeRate=approach*60;
+        const eta=closeRate>0.004?dist/closeRate:999;
+        const cpuSp=Math.hypot(cpu.vx,cpu.vy);
+        const youSp=Math.hypot(you.vx,you.vy);
+        const score=global.Game?.battle?.score||{player:0,cpu:0};
+        const behind=(score.player||0)>(score.cpu||0);
+        const rpmDown=(cpu.rpm||0)+0.08<(you.rpm||0);
+        const elapsed=Number(global.NEW_BATTLE?.elapsed)||0;
+        const lower=cpu.y>0.50;
+        const intoHole=lower && cpu.vy>0.003 && Math.abs(cpu.x)<0.82;
+        const climbingOut=lower && cpu.vy<-0.004;
+        return {dist,approach,eta,cpuSp,youSp,behind,rpmDown,elapsed,intoHole,climbingOut,score};
+    }
+
+    function cpuShouldDash(cpu,you,f){
+        if(!cpu||!you||blocked(cpu)) return false;
+        if((state.dashAt.cpu||0)>nowMs()) return false;
+        if(f.cpuSp<0.008) return false;
+        if(f.intoHole) return false;
+        if(f.elapsed<0.62) return false;
+        if(f.climbingOut) return true;
+        const clashWindow=f.approach>0.010 && f.dist>0.16 && f.dist<0.38 && f.eta>0.08 && f.eta<0.70;
+        if(clashWindow) return true;
+        const slip=f.approach>0.018 && f.dist<0.20 && f.youSp>f.cpuSp*1.04;
+        if(slip) return true;
+        return false;
+    }
+
+    function cpuShouldAbility(id,cpu,you,f){
+        if(!id||!cpu||!you) return false;
+        if(!kitMeta(id)?.active) return false;
+        if((state.charges.cpu||0)<=0) return false;
+        if(channelBusy()) return false;
+        if(blocked(cpu) && id!=="pegasus-blast") return false;
+        if(f.elapsed<0.28) return false;
+        if(you.abilityHidden||you.abilityHold) return false;
+        const charges=state.charges.cpu||0;
+        const since=nowMs()-(state.cpuLastAbility||0);
+        if(charges===1 && since<3200 && !f.behind && !f.rpmDown) return false;
+        if(id==="ancient-sword"){
+            return f.dist<SWORD_R*0.90 && (you.rpm||0)>0.10;
+        }
+        if(id==="hurricane"){
+            return f.dist<STORM_R*0.95 && (
+                f.approach>0.006 || (cpu.rpm||0)<0.82 || f.youSp>f.cpuSp
+            );
+        }
+        if(id==="iron-skin"){
+            return f.approach>0.008 && f.dist<0.34 && f.eta<0.55;
+        }
+        if(id==="earthquake"){
+            return f.dist<QUAKE_R*0.92 && (f.youSp>0.012 || f.approach>0.004);
+        }
+        if(id==="pegasus-blast"){
+            if(cpu.railEngaged) return false;
+            if((cpu.rpm||0)<0.22) return false;
+            return f.dist>0.24 && f.dist<0.82 && (f.behind||f.rpmDown||f.elapsed>3.2);
+        }
+        if(id==="flame-trail"){
+            return f.approach>0.004 && f.dist<0.42 && f.cpuSp>0.010;
+        }
+        return false;
+    }
+
+    function maybeCpu(dt,p,c){
         state.cpuThink+=dt;
-        if(state.cpuThink<0.22) return;
+        if(state.cpuThink<0.12) return;
         state.cpuThink=0;
         if(!battleLive()||camHot()) return;
         const cpu=c;
         const you=p;
         if(!cpu||!you) return;
-        const dist=Math.hypot(cpu.x-you.x,cpu.y-you.y);
-        const closing=((you.x-cpu.x)*cpu.vx+(you.y-cpu.y)*cpu.vy);
+        const f=readFight(cpu,you);
+        if(cpuShouldDash(cpu,you,f)) tryDash("cpu");
         const id=kitId(cpu.blade);
-        const meta=kitMeta(id);
-
-        if(!blocked(cpu) && Math.hypot(cpu.vx,cpu.vy)>0.01 && Math.random()<0.40){
-            const nearHole=cpu.y>0.55 && Math.abs(cpu.x)<0.85;
-            if((closing>0 && dist<0.34) || nearHole) tryDash("cpu");
+        if(cpuShouldAbility(id,cpu,you,f) && tryAbility("cpu")){
+            state.cpuLastAbility=nowMs();
         }
-        if(!meta?.active || (state.charges.cpu||0)<=0) return;
-        if(Math.random()>0.35) return;
-        if(id==="ancient-sword" && dist<SWORD_R*0.92) tryAbility("cpu");
-        else if(id==="hurricane" && dist<STORM_R) tryAbility("cpu");
-        else if(id==="iron-skin" && dist<0.32 && closing>0) tryAbility("cpu");
-        else if(id==="earthquake" && dist<QUAKE_R) tryAbility("cpu");
-        else if(id==="pegasus-blast" && !cpu.railEngaged && dist>0.22) tryAbility("cpu");
-        else if(id==="flame-trail" && dist<0.40 && closing>0) tryAbility("cpu");
     }
 
     function paintFx(p,c,t){
@@ -867,6 +927,7 @@
         resetMatch, resetRound, tryDash, tryAbility,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
+        cpuShouldDash, cpuShouldAbility, readFight,
         SWORD_R, STORM_R, QUAKE_R, KITS, META
     };
 })(window);
