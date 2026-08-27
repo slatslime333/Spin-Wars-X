@@ -147,17 +147,17 @@
 
     function emblemSVG(id,size){
         const s=size||24;
-        const paths={
-            "ancient-sword":`<path d="M12 3 L14 11 L21 12 L14 13 L12 21 L10 13 L3 12 L10 11 Z" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "hurricane":`<path d="M12 4 C18 6 18 12 12 12 C6 12 7 18 12 20 C17 18 19 12 12 12" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "iron-skin":`<path d="M12 3 L19 6 V12 C19 17 12 21 12 21 C12 21 5 17 5 12 V6 Z" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "free-spin":`<circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="7" r="1.6" fill="currentColor"/>`,
-            "double-edge":`<path d="M7 19 L12 4 L17 19 M9 13 H15" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "earthquake":`<path d="M4 16 L8 10 L11 14 L14 8 L20 16 M3 19 H21" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "pegasus-blast":`<path d="M5 14 L12 5 L19 14 M12 5 V20 M8 10 C6 8 6 6 8 5" fill="none" stroke="currentColor" stroke-width="1.8"/>`,
-            "flame-trail":`<path d="M12 20 C8 16 8 12 12 6 C16 12 17 16 12 20 Z" fill="none" stroke="currentColor" stroke-width="1.8"/>`
+        const art={
+            "ancient-sword":`<path fill="currentColor" d="M12 1.8 L13.45 3.8 V14.1 H10.55 V3.8 Z"/><rect x="11.45" y="4.1" width="1.1" height="9.2" fill="#120c08" opacity=".32"/><path fill="currentColor" d="M6.2 14 H17.8 L16.6 16.4 H7.4 Z"/><rect x="10.55" y="16.2" width="2.9" height="4.6" rx=".45" fill="currentColor"/><circle cx="12" cy="21.4" r="1.45" fill="currentColor"/>`,
+            "hurricane":`<path fill="currentColor" d="M12.1 2.4 C18.2 2.8 21.2 8.4 17.4 12 C22.2 12.6 21.4 19.2 15.2 20.4 C18.6 22.6 14.2 23.4 12 21.8 C9.2 23.5 4.6 21.4 7.8 18.8 C3.2 16.6 4.8 10.2 10.1 10.6 C6.2 7.4 8.2 2.6 12.1 2.4 Z"/><ellipse cx="12" cy="12.4" rx="2.05" ry="3.2" fill="#0b0908" opacity=".38"/>`,
+            "iron-skin":`<path fill="currentColor" d="M12 2 L20.4 5.5 V12.4 C20.4 17.8 15.6 21.6 12 22.4 C8.4 21.6 3.6 17.8 3.6 12.4 V5.5 Z"/><path fill="none" stroke="#0b0908" stroke-width="1.15" opacity=".4" d="M12 5.4 V18.6 M7.4 9.6 H16.6"/><circle cx="12" cy="11.6" r="2.15" fill="#0b0908" opacity=".28"/>`,
+            "free-spin":`<circle cx="12" cy="12" r="8.1" fill="none" stroke="currentColor" stroke-width="1.7"/><path fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" d="M12 3.9 A8.1 8.1 0 0 1 20.1 12"/><path fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" d="M12 20.1 A8.1 8.1 0 0 1 3.9 12"/><circle cx="12" cy="12" r="3.15" fill="currentColor"/><circle cx="12" cy="12" r="1.15" fill="#0b0908" opacity=".45"/>`,
+            "double-edge":`<path fill="currentColor" d="M12 1.7 L16.2 9.6 L12 11.2 L7.8 9.6 Z"/><path fill="currentColor" d="M12 22.3 L7.8 14.4 L12 12.8 L16.2 14.4 Z"/><rect x="10.45" y="10.7" width="3.1" height="2.6" rx=".35" fill="currentColor"/><path fill="none" stroke="#0b0908" stroke-width=".9" opacity=".35" d="M12 3.6 V20.4"/>`,
+            "earthquake":`<path fill="currentColor" d="M2.2 18.2 L6.6 10.2 L9.4 14.1 L12.5 6.8 L16.4 13.4 L19.6 9.4 L21.8 18.2 Z"/><rect x="2" y="17.4" width="20" height="3.4" rx=".35" fill="currentColor"/><path fill="none" stroke="#0b0908" stroke-width="1.2" stroke-linejoin="round" opacity=".42" d="M6.6 10.2 L9.4 14.1 L12.5 6.8 L16.4 13.4 L19.6 9.4"/>`,
+            "pegasus-blast":`<path fill="currentColor" d="M4.6 15.2 C4.4 8.6 9.2 4.6 12.2 3.6 C11.2 8.2 11.1 11.2 12.8 13.4 C8.2 13.2 5.4 14.8 4.6 17.6 Z"/><path fill="currentColor" opacity=".55" d="M7.2 15.6 C7.8 12.4 10.2 11 12.2 10.4 C11 12.8 10.6 14.4 11.4 16.4 C9 16.4 7.6 16.2 7.2 15.6 Z"/><path fill="currentColor" d="M13.2 6.2 L21.2 12 L13.2 17.8 V14.6 L17.4 12 L13.2 9.4 Z"/>`,
+            "flame-trail":`<path fill="currentColor" d="M12 21.4 C6.8 21.4 4.6 16.6 7.2 11.6 C8.6 8.8 9.4 7.2 12 3.2 C14.8 6.8 17.2 9.6 16.8 13.2 C16.4 17.8 14.6 21.4 12 21.4 Z"/><path fill="#ffe08a" d="M12 19.2 C9.5 19.2 8.4 16.4 9.8 13.8 C10.6 12.4 11.1 11.4 12 9 C13.4 11.2 14.4 12.8 14.2 14.8 C14 17.4 13.2 19.2 12 19.2 Z"/>`
         };
-        return `<svg class="ability-emblem emblem-${id||"none"}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${paths[id]||`<circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/>`}</svg>`;
+        return `<svg class="ability-emblem emblem-${id||"none"}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true">${art[id]||`<circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" stroke-width="1.8"/>`}</svg>`;
     }
 
     function abilityChipHTML(blade,opts){
@@ -1035,7 +1035,7 @@
             </button>
             <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="abilityBtn" ${passive?"disabled":""}>
                 <span class="combat-fill" style="height:${abPct}%"></span>
-                <span class="combat-emblem">${emblemSVG(id,28)}</span>
+                <span class="combat-emblem">${emblemSVG(id,32)}</span>
                 <span class="combat-pips">${passive?"PASSIVE":`${charges}/2`}</span>
             </button>
             <span class="combat-toast" id="combatToast" hidden></span>
