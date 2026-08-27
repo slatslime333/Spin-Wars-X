@@ -1347,7 +1347,7 @@ function renderBladeDraft(){
     const pool=Game.selection?.bladePool||[], page=Game.selection?.bladePage||0, size=3;
     const total=Math.max(1,Math.ceil(pool.length/size)), safe=Math.min(Math.max(page,0),total-1); Game.selection.bladePage=safe;
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL"}</p></div></div><section class="menu-card selection-card" id="bladeContainer"></section></main>`;
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL"}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
     const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
     if(total>1){
         const nav=document.createElement("div"); nav.className="selection-nav";;
@@ -1440,8 +1440,10 @@ function createBladeCard(blade){
     card.innerHTML=`
         <div class="blade-card-art">
             ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
-            ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
-            <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
+            <div class="blade-card-badges">
+                <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
+                ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
+            </div>
         </div>
         <div class="blade-card-head">
             <div class="blade-card-title">

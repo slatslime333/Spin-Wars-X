@@ -784,7 +784,7 @@ footer{
   justify-content:flex-start;
   min-height:0;
   padding:0!important;
-  overflow:hidden;
+  overflow:visible;
   text-align:left;
   color:#fff;
   background:linear-gradient(180deg,#2a2420 0%,#14110f 100%)!important;
@@ -847,6 +847,7 @@ footer{
   position:relative;
   flex:0 0 auto;
   height:176px;
+  overflow:hidden;
   display:grid;
   place-items:center;
   background:
@@ -889,13 +890,22 @@ footer{
   object-position:center;
   pointer-events:none;
 }
-.luck-grade{
+.blade-card-badges{
   position:absolute;
-  top:8px;
-  right:8px;
+  inset:8px 8px auto 8px;
   z-index:4;
-  width:40px;
-  padding:4px 0 3px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  pointer-events:none;
+}
+.luck-grade{
+  position:static;
+  z-index:4;
+  width:auto;
+  min-width:36px;
+  padding:4px 6px 3px;
   text-align:center;
   border:1px solid rgba(0,0,0,.45);
   background:rgba(8,8,10,.72);
@@ -940,6 +950,10 @@ footer{
   margin-top:0;
   padding:8px 8px 6px;
   background:#11171e;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
 }
 .blade-card-title{
   padding-right:0;
@@ -985,11 +999,10 @@ footer{
 }
 
 .ovr-badge{
-  position:absolute;
-  top:8px;
-  right:9px;
+  position:static;
   z-index:3;
-  width:38px;
+  width:auto;
+  min-width:36px;
   text-align:center;
   text-shadow:0 2px 4px #000;
 }
@@ -1022,7 +1035,7 @@ footer{
 
 .mini-stat{
   min-width:0;
-  padding:7px 2px 6px;
+  padding:7px 3px 6px;
   text-align:center;
   border-right:1px solid rgba(255,255,255,.055);
 }
@@ -1048,6 +1061,7 @@ footer{
 .select-hint{
   position:relative;
   z-index:3;
+  margin-top:auto;
   padding:7px 10px;
   border-top:1px solid rgba(255,255,255,.045);
   background:#0b1015;
@@ -2347,11 +2361,18 @@ footer{
   .selection-card{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
+  .blade-pick-grid{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
 
   .blade-card-art{height:148px}
+  .blade-pick-grid .blade-card-art{height:168px}
   .blade-card-title h2{font-size:16px!important}
   .blade-stat-grid{margin-top:6px}
-  .mini-stat{padding:5px 1px 4px}
+  .mini-stat{padding:5px 2px 4px}
+  .mini-stat span{font-size:7px;letter-spacing:.2px}
+  .mini-stat b{font-size:11px}
   .select-hint{padding:5px 8px}
 
   .combo-matchup-grid,.vs-board{grid-template-columns:1fr}
@@ -2407,7 +2428,9 @@ footer{
   .menu-card{padding:10px!important}
   .selection-header h1{font-size:19px!important}
   .selection-card{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;padding:8px!important}
+  .blade-pick-grid{grid-template-columns:1fr!important;gap:10px!important}
   .blade-card-art{height:132px}
+  .blade-pick-grid .blade-card-art{height:172px}
   .part-select-card{min-height:225px}
 
   .launch-quality-reveal{
@@ -2593,8 +2616,10 @@ button:focus-visible{
 
 .rogue-dev-btn{
   position:fixed;
-  top:10px;
-  right:10px;
+  top:auto;
+  right:auto;
+  bottom:max(12px, env(safe-area-inset-bottom, 0px));
+  left:max(10px, env(safe-area-inset-left, 0px));
   z-index:90;
   min-width:52px;
   min-height:36px;
@@ -2611,10 +2636,13 @@ button:focus-visible{
 .rogue-dev-btn:hover{filter:brightness(1.1)}
 .rogue-dev-panel{
   position:fixed;
-  top:52px;
+  top:auto;
+  bottom:calc(56px + env(safe-area-inset-bottom, 0px));
   right:10px;
+  left:10px;
   z-index:91;
-  width:min(360px,calc(100vw - 20px));
+  width:auto;
+  max-width:360px;
   max-height:min(78vh,640px);
   overflow:auto;
   padding:12px;
@@ -2862,6 +2890,21 @@ button:focus-visible{
   list-style:none;
   user-select:none;
 }
+.blade-card.game-blade-card .swx-drop summary{
+  gap:6px;
+  padding:6px 8px;
+  min-width:0;
+}
+.blade-card.game-blade-card .swx-drop-title{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.blade-card.game-blade-card .swx-drop-tag{
+  flex:0 0 auto;
+  margin-left:auto;
+}
 .swx-drop summary::-webkit-details-marker{display:none}
 .swx-drop-title{
   flex:1;
@@ -3098,7 +3141,7 @@ button:focus-visible{
 }
 
 @media(max-width:760px){
-  .blade-card.game-blade-card{min-height:300px}
+  .blade-card.game-blade-card{min-height:0}
   .battle-shell #newStadium{
     width:100%!important;
     max-width:none;
