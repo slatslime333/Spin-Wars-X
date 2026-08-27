@@ -30,6 +30,7 @@
 html,body{
   width:100%;
   min-height:100%;
+  min-height:100dvh;
   background:var(--ink);
 }
 
@@ -1236,27 +1237,24 @@ footer{
   inset:0;
   pointer-events:none;
   z-index:0;
-  opacity:1;
-  background-color:rgba(4,4,6,.3);
-  background-image:
-    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,255,255,.32) 11px 13px, rgba(0,0,0,.72) 13px 15px),
-    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px),
-    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,255,255,.28) 11px 13px, rgba(0,0,0,.7) 13px 15px);
-  backdrop-filter:blur(5px) saturate(.75);
+  opacity:.55;
+  background-color:transparent;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='21' viewBox='0 0 24 21'><path d='M12 .8 L22.2 6.5 V15.3 L12 20.2 L1.8 15.3 V6.5 Z' fill='none' stroke='rgba(255,226,160,.22)' stroke-width='1'/></svg>");
+  background-size:24px 21px;
+  backdrop-filter:none;
+  animation:hexDrift 22s linear infinite;
 }
 .vs-plate.tier-bronze.enhanced:after,
 .rogue-build.tier-bronze.enhanced:after{
-  background-image:
-    repeating-linear-gradient(0deg, transparent 0 11px, rgba(255,186,120,.55) 11px 13px, rgba(0,0,0,.78) 13px 15px),
-    repeating-linear-gradient(60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px),
-    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(255,186,120,.48) 11px 13px, rgba(0,0,0,.75) 13px 15px);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='21' viewBox='0 0 24 21'><path d='M12 .8 L22.2 6.5 V15.3 L12 20.2 L1.8 15.3 V6.5 Z' fill='none' stroke='rgba(232,168,110,.26)' stroke-width='1'/></svg>");
 }
 .vs-plate.tier-silver.enhanced:after,
 .rogue-build.tier-silver.enhanced:after{
-  background-image:
-    repeating-linear-gradient(0deg, transparent 0 11px, rgba(236,244,255,.58) 11px 13px, rgba(0,0,0,.75) 13px 15px),
-    repeating-linear-gradient(60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px),
-    repeating-linear-gradient(-60deg, transparent 0 11px, rgba(236,244,255,.48) 11px 13px, rgba(0,0,0,.72) 13px 15px);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='21' viewBox='0 0 24 21'><path d='M12 .8 L22.2 6.5 V15.3 L12 20.2 L1.8 15.3 V6.5 Z' fill='none' stroke='rgba(210,224,236,.24)' stroke-width='1'/></svg>");
+}
+@keyframes hexDrift{
+  from{background-position:0 0}
+  to{background-position:24px 21px}
 }
 .vs-plate.enhanced > *,
 .rogue-build.enhanced > *{position:relative;z-index:1}
@@ -2592,3 +2590,290 @@ button:focus-visible{
   45%{opacity:1}
   100%{opacity:1}
 }
+
+/* =========================================================
+   UI SKIN — windows, dropdowns, combat dock, responsive
+   ========================================================= */
+
+.home-ver{
+  position:relative;
+  z-index:1;
+  margin:0 0 4px;
+  color:#7a7268;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.32em;
+}
+
+.menu-card,
+.vs-call,
+.battle-callout,
+.launch-pad,
+.launch-quality-column{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.06),
+    0 10px 0 #000;
+}
+
+.swx-drop{
+  position:relative;
+  z-index:2;
+  margin-top:8px;
+  border:2px solid rgba(240,180,41,.42);
+  background:rgba(8,6,5,.72);
+  color:var(--text);
+}
+.swx-drop summary{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:36px;
+  padding:6px 10px;
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+}
+.swx-drop summary::-webkit-details-marker{display:none}
+.swx-drop-title{
+  flex:1;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+.swx-drop-tag{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.14em;
+  color:var(--gold);
+}
+.swx-drop-caret{
+  font-size:14px;
+  color:var(--gold);
+  transition:transform .16s ease;
+}
+.swx-drop[open] .swx-drop-caret{transform:rotate(-180deg)}
+.swx-drop-body,
+.match-drop-body,
+.swx-drop .blade-stat-grid,
+.vs-details-drop .vs-stat-groups{
+  padding:8px 10px 10px;
+  border-top:1px solid rgba(240,180,41,.28);
+}
+.swx-drop-body{
+  margin:0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+  font-weight:600;
+}
+.ability-emblem{
+  display:block;
+  color:#f6e6b8;
+  flex:0 0 auto;
+}
+.ability-chip.empty{
+  margin-top:8px;
+  padding:6px 8px;
+  border:1px dashed #53483c;
+  color:var(--muted);
+  font-size:11px;
+}
+
+.blade-card.game-blade-card .swx-drop{
+  margin:8px 10px 0;
+}
+.blade-card.game-blade-card .blade-card-head{
+  padding-bottom:10px;
+}
+.blade-card.game-blade-card{
+  cursor:pointer;
+}
+
+.vs-details-drop{grid-column:1 / -1}
+
+.match-drop{
+  margin-top:6px;
+  width:100%;
+  border-width:1px;
+}
+.match-drop-body p{
+  margin:0 0 6px;
+  color:var(--muted);
+  font-size:11px;
+}
+.match-drop-body .menu-btn{
+  width:100%;
+}
+
+.combat-dock{
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  gap:12px;
+  padding:8px 8px calc(10px + env(safe-area-inset-bottom,0px));
+}
+.combat-btn{
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  gap:4px;
+  border:2px solid #3a3128;
+  background:#120e0c;
+  color:#f6f0e6;
+  cursor:pointer;
+  touch-action:manipulation;
+  box-shadow:0 6px 0 #000;
+}
+.combat-fill{
+  position:absolute;
+  left:0;right:0;bottom:0;
+  background:linear-gradient(180deg,rgba(26,209,90,.55),rgba(26,209,90,.18));
+  pointer-events:none;
+  transition:height .12s linear;
+}
+.combat-btn.ready{border-color:var(--green)}
+.dash-btn{
+  min-width:132px;
+  min-height:76px;
+  padding:10px 16px 12px;
+}
+.dash-btn .combat-label{
+  position:relative;
+  z-index:1;
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:28px;
+  letter-spacing:.12em;
+}
+.ability-btn{
+  min-width:72px;
+  min-height:72px;
+  padding:8px;
+}
+.ability-btn .combat-emblem,
+.ability-btn .combat-pips{
+  position:relative;
+  z-index:1;
+}
+.ability-btn .combat-pips{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  color:var(--gold);
+}
+.ability-btn.is-passive{
+  opacity:.55;
+  cursor:default;
+}
+.combat-toast{
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 6px);
+  transform:translateX(-50%);
+  min-height:0;
+  color:var(--gold);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.16em;
+  pointer-events:none;
+}
+#launchDock{position:relative}
+
+.pegasus-aim{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  padding:8px 0 4px;
+}
+.pegasus-aim p{
+  margin:0;
+  color:var(--gold);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.18em;
+}
+.pegasus-stick{
+  width:96px;
+  height:96px;
+  border:2px solid #3a3128;
+  border-radius:50%;
+  background:#0c0a0d;
+  position:relative;
+  touch-action:none;
+}
+.pegasus-stick i{
+  position:absolute;
+  left:50%;top:50%;
+  width:28px;height:28px;
+  margin:-14px 0 0 -14px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 10px rgba(26,209,90,.45);
+}
+
+.fx-sword-radius{stroke:#f0d070;opacity:.42}
+.fx-storm{stroke:#9ee7ff;opacity:.5}
+.fx-quake{stroke:#c4a06a;opacity:.7}
+.fx-crack{stroke:#8a6230}
+.fx-iron{stroke:#e8eef4;opacity:.8}
+.fx-flame{stroke:#ff4a24;opacity:.72}
+.fx-ufo{fill:#7ec8ff;stroke:#7ec8ff}
+.fx-cross{stroke:#7ef0ff}
+
+#abilityCallout{paint-order:stroke}
+
+@media(min-width:900px){
+  .battle-shell{
+    width:min(100%,920px);
+    padding:14px 18px 24px;
+  }
+  .stadium-cam{
+    width:min(58vw,62vh,560px)!important;
+    max-width:560px;
+  }
+  .menu,.vs-screen{
+    width:min(100%,980px)!important;
+  }
+  .home-doors{width:min(480px,100%)}
+  .dash-btn{min-width:160px;min-height:84px}
+}
+
+@media(max-width:760px){
+  .blade-card.game-blade-card{min-height:300px}
+  .combat-dock{gap:10px}
+  .dash-btn{min-width:118px;min-height:70px}
+  .dash-btn .combat-label{font-size:24px}
+  .ability-btn{min-width:64px;min-height:64px}
+  .stadium-cam{
+    width:min(92vw,58vh,480px)!important;
+  }
+  .battle-callout{min-height:48px;padding:8px 10px}
+  .battle-callout-copy{font-size:13px}
+}
+
+@media(max-width:480px){
+  .home{padding:18px 12px calc(20px + env(safe-area-inset-bottom,0px))}
+  .home-mark h1{font-size:clamp(40px,14vw,64px)}
+  .vs-plate{
+    grid-template-columns:72px 1fr;
+    padding:10px;
+  }
+  .vs-art{width:72px;height:72px}
+  .vs-copy h2{font-size:22px}
+  .battle-fighters{gap:6px}
+  .battle-score{min-width:72px;padding:4px 6px}
+  .battle-score b{font-size:20px}
+  .stability-readout{display:none}
+  .combat-dock{
+    position:sticky;
+    bottom:0;
+    z-index:6;
+    background:linear-gradient(180deg,transparent,rgba(7,6,10,.92) 28%);
+  }
+  .dash-btn{min-width:42vw;min-height:74px}
+  .pegasus-stick{width:84px;height:84px}
+}
+
