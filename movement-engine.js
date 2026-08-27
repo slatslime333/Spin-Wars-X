@@ -107,6 +107,7 @@ function bitOrbitProfile(opts){
   const stab=Number.isFinite(opts.bitStability)?opts.bitStability:0.60;
   const rpm=clamp01(opts.rpm);
   const gimmick=clamp01(opts.attackGimmick);
+  const lean=clamp01(opts.launchTiltLean);
   const klass=bitOrbitClass(opts.bitName,opts.bitType,movement);
   const attack=attackOrbitBase(Math.max(movement,0.80),center,stab)*orbitRpmFactor(rpm,"attack");
   const stable=stableOrbitBase(movement,center)*orbitRpmFactor(rpm,"stable");
@@ -117,6 +118,9 @@ function bitOrbitProfile(opts){
     const rideShrink=Math.min(0.05,(Number(opts.railUses)||0)*0.018);
     const floor=rpm>=0.22?0.26:0.14;
     home=Math.max(floor,Math.min(0.78,attack-rideShrink));
+    if(lean>0.02){
+      home=Math.max(floor, home*(1-lean*0.20));
+    }
     attackWeight=1;
   }else if(klass==="hybrid"){
     const mix=String(opts.bitName||"").toLowerCase()==="kick"?0.58:0.42;
@@ -138,6 +142,10 @@ function bitOrbitProfile(opts){
   */
   if(klass!=="attack"){
     const tight=klass==="hybrid"?0.08:0.055;
+    if(lean>0.02){
+      const extra=lean*(klass==="gimmick"?0.10:0.16);
+      home=Math.min(0.50, home+extra);
+    }
     if(rpm<=0.30){
       home=Math.min(home, tight+(klass==="gimmick"?0.025:0.012));
     }else if(rpm<0.55){
@@ -267,11 +275,17 @@ const orbit=bitOrbitProfile({
     attackGimmick:Number.isFinite(ctx.attackGimmick)
         ? ctx.attackGimmick
         : (Number(s.dynamicBitAggression)||0),
-    railUses:Number(s.railUses)||0
+    railUses:Number(s.railUses)||0,
+    launchTiltLean:clamp01(s.launchTiltBias)
 });
 let preferredRadius=orbit.home;
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
+const lean=clamp01(s.launchTiltBias);
+if(attackLike && lean>0.02){
+    const ang=Math.atan2(s.y,s.x);
+    preferredRadius*=1-lean*0.09*Math.cos(2*ang);
+}
 /*
   Existing bit traits decide how planted a settle feels. Ball/Orb
   (high friction, high center, low movement) still sit heavier than
@@ -735,6 +749,10 @@ if(radius>wall){
         s.surfaceRecovery=0.20;
         s.tiltLevel=clamp(
             (s.tiltLevel||0)+0.06+outward*0.25,
+            0,1
+        );
+        s.launchTiltBias=clamp(
+            (s.launchTiltBias||0)*0.72-0.04,
             0,1
         );
         s.motionPhase+=0.45+Math.random()*0.40;

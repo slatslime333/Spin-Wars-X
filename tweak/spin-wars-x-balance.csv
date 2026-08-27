@@ -69,3 +69,7 @@ MODIFIER,anchor,ANCHOR,Always +7 DEF +5 STA −5 MOB.,def_sta_mob,+7 +5 / -5,sta
 MODIFIER,first_blood,FIRST BLOOD,First 5s: +8 KB +4 ATK. Then gone.,window_s,5,seconds,
 MODIFIER,late_bloom,LATE BLOOM,Before 10s: −2 MOB. After 10s: +6 ATK +4 BAL.,gate_s,10,seconds,
 MODIFIER,psyshock,PSYSHOCK,"First 5s: +5 KB. Clash knock cycles 60% now, store 40%, dump on next clash, reset.",split,0.60 / 0.40,fraction,
+LAUNCH,tilt,Flat,Honest default. No stat swap, normal Attack ring, normal hook.,headingRad,0,radians,,Quality still owns miss cone.
+LAUNCH,tilt,Slight Tilt,Lean 0.48. Peak trade scales with remaining lean. Attack oval / tank extra orbit. Harder hook.,headingRad,0.12,radians,bias,0.48
+LAUNCH,tilt,Hard Tilt,Lean 1.00. Same trade at full: ATK +4 STA +3 DEF -6 BAL -6. Longer lean. Easier to miss the rail.,headingRad,0.22,radians,bias,1.00
+LAUNCH,tilt,Live lean,Decays ~0.11/s. Hits shave it; smash dumps most. Combat wobble does not grant ATK.,decay,0.11,/s,
