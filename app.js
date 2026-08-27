@@ -870,6 +870,7 @@ const BLADE_ENGINE = {
         rogueBoss:true,
         spin:"Right",
         weight:38.6,
+        sprite:"assets/blades/sharkscale.png",
         card:{ovr:95,attack:96,knockback:98,defense:71,mobility:85,balance:78,stamina:70,burst:85},
         physics:{weightClass:"Heavy",centerOfGravity:"Low",contactShape:"Upper Smash",recoil:"High",lockStrength:88,weightDistribution:"Forward"},
         behavior:{attackStyle:"Rush Smash",smashPower:97,upperPower:96,barragePower:80,counterPower:36,movementControl:86,spinRetention:70,lad:62,burstResistance:85,winConditions:{spin:28,burst:88,knockout:99,counter:34}},
