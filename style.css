@@ -27,6 +27,48 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 
+@font-face{
+  font-family:Kanit;
+  font-style:normal;
+  font-weight:500;
+  font-display:swap;
+  src:url("assets/fonts/kanit-500.woff2") format("woff2");
+}
+@font-face{
+  font-family:Kanit;
+  font-style:normal;
+  font-weight:700;
+  font-display:swap;
+  src:url("assets/fonts/kanit-700.woff2") format("woff2");
+}
+@font-face{
+  font-family:Kanit;
+  font-style:normal;
+  font-weight:800;
+  font-display:swap;
+  src:url("assets/fonts/kanit-800.woff2") format("woff2");
+}
+@font-face{
+  font-family:Kanit;
+  font-style:normal;
+  font-weight:900;
+  font-display:swap;
+  src:url("assets/fonts/kanit-900.woff2") format("woff2");
+}
+@font-face{
+  font-family:Staatliches;
+  font-style:normal;
+  font-weight:400;
+  font-display:swap;
+  src:url("assets/fonts/staatliches-400.woff2") format("woff2");
+}
+
+@media (display-mode: standalone){
+  html,body{
+    background:#07060a;
+  }
+}
+
 html,body{
   width:100%;
   min-height:100%;
