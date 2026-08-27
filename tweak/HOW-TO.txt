@@ -1,0 +1,13 @@
+SPIN WARS X — TWEAK SHEET (iPhone)
+
+Open tweak/spin-wars-x-balance.csv on your iPhone:
+1. Files (or the GitHub file) → Share → Numbers, or Google Sheets, or Excel.
+2. Edit only the YOUR_VALUE column. Leave CURRENT as-is so I can see what you changed.
+3. Send the file back (AirDrop, iMessage, email, or paste the changed rows).
+
+RPM on this sheet is the battle bar number (0–100). Knock cap is 0.086 (same as a full clash shove).
+
+Sheets in the CSV (filter the "sheet" column):
+- ABILITY — kits + dash
+- SHOP — Rogue hub cards
+- MODIFIER — legendary Rogue modifiers

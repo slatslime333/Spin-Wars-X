@@ -1,0 +1,68 @@
+﻿sheet,id,name,what_it_does,code_name,current,unit,your_value,notes
+ABILITY,dash,Dash,"Burst of speed in the direction you are already moving. Blocked on rail, drop stall, 0 RPM, or while another ability holds you.",DASH_CD,3.8,seconds,,Cooldown after a dash.
+ABILITY,dash,Dash,How hard the dash shoves you. Clash knock cap is 0.086 so this is a strong shove but under a full clash.,DASH_SHOVE,0.062,knock,,Raise = longer dash. Stay under 0.086.
+ABILITY,shared,All actives,Uses per match for every ACTIVE kit. Passives do not spend this.,ABILITY_USES,2,uses,,Both you and CPU get this many.
+ABILITY,shared,Simul press,"If both press an active within this window, one is DENIED at random.",SIMUL_MS,120,milliseconds,
+ABILITY,shared,Clash knock cap,Hard cap on any ability shove.,KNOCK_CAP,0.086,knock,,Do not raise for a single kit without talking physics.
+ABILITY,ancient-sword,Ancient Sword,"Dran Sword, Viper Tail, Shark Edge, Shark Scale. 2 uses. If foe is inside range, both freeze 2.5s. 4 cuts every 0.5s, each 1–2 RPM (4–8 total), then a shove. Miss still spends a use.",SWORD_R,0.54,stadium units,,Bigger = easier to land. Stadium radius is about 1.
+ABILITY,ancient-sword,Ancient Sword,How long the freeze/cut lasts if it hits.,SWORD_MS,2500,milliseconds,,Blurb says 2.5s.
+ABILITY,ancient-sword,Ancient Sword,Seconds between cuts. 4 cuts max.,sword_tick,0.5,seconds,
+ABILITY,ancient-sword,Ancient Sword,RPM taken per cut (random in this range). HUD RPM = this × 100.,sword_rpm_per_cut,0.010–0.020,rpm 0–1,,Shows as 1–2 RPM on the bar.
+ABILITY,ancient-sword,Ancient Sword,End shove uses average of 0.35–0.50 × knock cap. You get 40% of that shove back.,sword_end_kb,0.35–0.50 × 0.086,knock,
+ABILITY,hurricane,Hurricane,"Arrow Wizard, Leon Claw, Wizard Rod, Shelter Drake. 2 uses. 3s. +12% move speed. Gain 15% of the RPM you had when you popped it, fed in over 3s. First time foe enters the wind: shove 0.042. Staying in adds a light push.",HURRICANE_MS,3000,milliseconds,
+ABILITY,hurricane,Hurricane,Wind radius.,STORM_R,0.84,stadium units,
+ABILITY,hurricane,Hurricane,Move speed while up. 1.00 = normal.,abilitySpeedMul,1.12,multiplier,
+ABILITY,hurricane,Hurricane,"RPM gained = this × RPM at pop, spread over the 3s.",hurricaneGain,0.15,fraction of current RPM,,At 90 RPM you gain about 13.5 over 3s.
+ABILITY,hurricane,Hurricane,First-enter shove.,storm_first_shove,0.042,knock,,About half of 0.086.
+ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 3s chrome. Clash RPM on you = 0. Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,3000,milliseconds,
+ABILITY,iron-skin,Iron Skin,Reflect multiplier on their knock.,iron_reflect,1.20,multiplier,
+ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 20% less knock.,free_spin_chance,0.10,probability,,10%.
+ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.80,multiplier,,20% less knock.
+ABILITY,double-edge,Double Edge,"Unicorn Sting. Always on. Each clash 1/3 +20% your knock (+KB), 1/3 +20% knock on you (−KB), 1/3 nothing.",double_edge_share,1/3 each,probability,
+ABILITY,double-edge,Double Edge,Knock multiplier on a +KB or −KB roll.,double_edge_mul,1.20,multiplier,
+ABILITY,earthquake,Earthquake,"Tyranno Beat. 2 uses. 3s. Up to 7 cracks. Each lives ~0.42–0.80s. Only a Bey that hits a live crack takes 1–2 RPM, 82% of slide dumped, shove 0.032.",QUAKE_MS,3000,milliseconds,
+ABILITY,earthquake,Earthquake,How far cracks can spawn from you.,QUAKE_R,0.62,stadium units,
+ABILITY,earthquake,Earthquake,Max cracks at once.,quake_max,7,count,
+ABILITY,earthquake,Earthquake,RPM chip per crack hit.,quake_chip,0.012–0.022,rpm 0–1,,1–2 on the bar.
+ABILITY,earthquake,Earthquake,Slide left after a crack hit.,quake_slide_keep,0.18,fraction,,Lower = more stop.
+ABILITY,earthquake,Earthquake,Outward shove on a crack hit.,quake_shove,0.032,knock,
+ABILITY,pegasus-blast,Pegasus Blast,"Aero Pegasus. 2 uses. 2s lift (you vanish), then 3s aim, then crash. Hit if marker is within 1.45× their radius. Hit RPM = 8 + 10% of their remaining RPM (8 empty / 18 full) and 70%-cap shove. Miss: you lose 15 RPM.",lift_ms,2000,milliseconds,
+ABILITY,pegasus-blast,Pegasus Blast,Aim window after lift.,aim_ms,3000,milliseconds,
+ABILITY,pegasus-blast,Pegasus Blast,Hit RPM = this + 0.10 × foe remaining RPM.,pegasus_hit_base,0.08,rpm 0–1,,8 on the bar.
+ABILITY,pegasus-blast,Pegasus Blast,Extra hit RPM as a fraction of foe remaining RPM.,pegasus_hit_scale,0.10,fraction,
+ABILITY,pegasus-blast,Pegasus Blast,Miss cost on you.,pegasus_miss,0.15,rpm 0–1,,15 on the bar.
+ABILITY,pegasus-blast,Pegasus Blast,Hit shove vs knock cap.,pegasus_shove,0.70 × 0.086,knock,
+ABILITY,flame-trail,Flame Trail,"Phoenix Wing. 2 uses. 2.3s. +15% move. Fire lasts 0.9s behind you. Own trail does not burn you. If they drive through: 0.8 RPM every 0.3s, then after 1s 1.6–2.4 RPM every 0.5s.",FLAME_MS,2300,milliseconds,
+ABILITY,flame-trail,Flame Trail,When burn ticks get worse.,FLAME_PHASE2_MS,1000,milliseconds,
+ABILITY,flame-trail,Flame Trail,How long each fire point lives.,trail_life_ms,900,milliseconds,
+ABILITY,flame-trail,Flame Trail,Move speed while trailing.,flame_speed,1.15,multiplier,
+ABILITY,flame-trail,Flame Trail,Phase 1 burn per tick.,flame_p1,0.008 / 0.3s,rpm,,0.8 RPM every 0.3s.
+ABILITY,flame-trail,Flame Trail,Phase 2 burn per tick.,flame_p2,0.016–0.024 / 0.5s,rpm,,1.6–2.4 RPM every 0.5s.
+SHOP,common,+2 to a stat,"Hub common. 34% type-lean, 33% patch lowest, 33% random. Always +2 to one of ATK KB DEF MOB BAL STA. No downside.",common_amount,2,stat points,
+SHOP,uncommon,Tradeoff A,"62% type-lean, else random. 42% of uncommons are +4 / −2.",uncommon_plus4_minus2,+4 / -2,stat points,,No free +3.
+SHOP,uncommon,Tradeoff B,The other 58% of uncommons.,uncommon_plus3_minus1,+3 / -1,stat points,
+SHOP,rare,Reforge,50% of rares. Pick a new bit or a new ratchet from 3 offers. Physics change with the part.,rare_reforge_share,0.50,probability,
+SHOP,rare,Peak +4,25% of rares. +4 to type or your peak stat. No catch.,rare_peak,4,stat points,
+SHOP,rare,Pair +2 +2,25% of rares. +2 type and +2 another line.,rare_pair,2 and 2,stat points,
+SHOP,legendary,Rogue modifier,Replaces your current modifier. See MODIFIER sheet.,legendary,one modifier,id,
+SHOP,evolve,Evolve form,Silver/Gold step form (Bronze→Silver→Gold). Shop bonuses stay. Bronze-form pull-down eases.,evolve,form step,,Not a stat card.
+SHOP,enhance,Enhanced tier,"One and done. +4 on your best 3 stats, +3 on the rest. Later positive upgrades get +1 extra. Honeycomb plate.",enhance_top3,4,stat points,
+SHOP,enhance,Enhanced rest,The other 3 stats on enhance.,enhance_rest,3,stat points,
+SHOP,enhance,Later extra,"After enhance, every later +stat also gets this extra.",enhance_extra,1,stat points,
+SHOP,pity,Form pity,"If no form card for 4 hubs, last offer becomes evolve/enhance. Always injects on mini bosses 6 and 12.",hubsWithoutForm,4,hubs,
+SHOP,roll,Rarity weights,"Base roll: common 62, uncommon 24, rare 9, legendary 4, evolve 1. Bronze shop kinder, Gold thinner.",rarityRoll,see notes,weights,,Bronze +rare/legend/evolve. Gold +common −evolve.
+MODIFIER,last_stand,LAST STAND,Under 40% RPM: +8 DEF +5 KB. Healthy: −3 MOB.,rpm_gate,0.40,rpm fraction,
+MODIFIER,last_stand,LAST STAND,Low-RPM bonuses.,def_kb,+8 DEF / +5 KB,stat,
+MODIFIER,berserker,BERSERKER,Above 70% RPM: +7 ATK +5 KB. Below 35% RPM: −6 DEF.,high_rpm,0.70,rpm fraction,
+MODIFIER,rail_rush,RAIL RUSH,While riding X-Rail or just after X-Exit: +8 ATK.,atk,8,stat,
+MODIFIER,final_spin,FINAL SPIN,Under 28% RPM: +10 STA. Above 62% RPM: −3 ATK.,low_rpm,0.28,rpm fraction,
+MODIFIER,heavy_contact,HEAVY CONTACT,"After a heavy hit, next clash +7 KB −4 MOB.",kb_mob,+7 / -4,stat,
+MODIFIER,counterweight,COUNTERWEIGHT,"After taking real knock, next hit +8 KB.",kb,8,stat,
+MODIFIER,pin_lock,PIN LOCK,Inside radius 0.42: +6 BAL +4 DEF. Wider than 0.72: −3 ATK.,inner_r,0.42,stadium units,
+MODIFIER,x_exit_swing,X-EXIT SWING,Fresh X-Exit (1s): +6 KB.,window_ms,1000,milliseconds,
+MODIFIER,endurance,ENDURANCE,First 8s: −4 ATK. After: +8 STA +3 DEF.,early_s,8,seconds,
+MODIFIER,glass_cannon,GLASS CANNON,Always +9 ATK +6 KB. −8 DEF −5 BAL.,atk_kb_def_bal,+9 +6 / -8 -5,stat,
+MODIFIER,anchor,ANCHOR,Always +7 DEF +5 STA −5 MOB.,def_sta_mob,+7 +5 / -5,stat,
+MODIFIER,first_blood,FIRST BLOOD,First 5s: +8 KB +4 ATK. Then gone.,window_s,5,seconds,
+MODIFIER,late_bloom,LATE BLOOM,Before 10s: −2 MOB. After 10s: +6 ATK +4 BAL.,gate_s,10,seconds,
+MODIFIER,psyshock,PSYSHOCK,"First 5s: +5 KB. Clash knock cycles 60% now, store 40%, dump on next clash, reset.",split,0.60 / 0.40,fraction,
