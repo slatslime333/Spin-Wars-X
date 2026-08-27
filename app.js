@@ -3180,6 +3180,44 @@ function getAutomaticLaunchPlan(side){
     return {technique,angle,quality};
 }
 
+function launchTiltTune(angle){
+    /*
+      Tilt is heading vs technique, not a second movement layer.
+      Flat stays on the technique line. Slight/Hard open the shot,
+      seed live tilt, and leave a decaying in-bowl bias.
+    */
+    return {
+        Flat:{
+            lateral:0, speed:1, stability:0, rpm:1,
+            headingRad:0, aimCone:0, clashImpact:0,
+            wind:0, outward:0, windup:0,
+            railInward:1, railTangent:0, railSlop:0, railSpeed:1,
+            seedTilt:0.07, bias:0
+        },
+        "Slight Tilt":{
+            lateral:0.055, speed:0.985, stability:0.018, rpm:1.06,
+            headingRad:0.12, aimCone:0.08, clashImpact:0.04,
+            wind:0.08, outward:0.004, windup:0.18,
+            railInward:0.82, railTangent:0.06, railSlop:0, railSpeed:1.06,
+            seedTilt:0.16, bias:0.18
+        },
+        "Hard Tilt":{
+            lateral:0.105, speed:0.965, stability:0.042, rpm:1.14,
+            headingRad:0.22, aimCone:0.16, clashImpact:0.08,
+            wind:0.16, outward:0.010, windup:0.38,
+            railInward:0.62, railTangent:0.04, railSlop:0.10, railSpeed:1.12,
+            seedTilt:0.26, bias:0.32
+        }
+    }[angle] || {
+        lateral:0, speed:1, stability:0, rpm:1,
+        headingRad:0, aimCone:0, clashImpact:0,
+        wind:0, outward:0, windup:0,
+        railInward:1, railTangent:0, railSlop:0, railSpeed:1,
+        seedTilt:0.07, bias:0
+    };
+}
+window.launchTiltTune=launchTiltTune;
+
 function newBattleLaunchState(side){
     const combo=Game[side];
     const comboCalc=Game.mode==="rogue"
@@ -3280,15 +3318,7 @@ function newBattleLaunchState(side){
 
     const direction=(isDropLaunch || isCenterLaunch) ? 0 : launchDirection;
 
-    // Launch angle is a real release vector:
-    // Flat = forward/stable
-    // Slight Tilt = controlled lateral release
-    // Hard Tilt = stronger lateral release + more instability/RPM cost
-    const tilt={
-        "Flat":       {lateral:0.000, speed:1.00, stability:0.000, rpm:1.00},
-        "Slight Tilt":{lateral:0.055, speed:0.985, stability:0.018, rpm:1.06},
-        "Hard Tilt":  {lateral:0.105, speed:0.965, stability:0.042, rpm:1.14}
-    }[plan.angle] || {lateral:0,speed:1,stability:0,rpm:1};
+    const tilt=launchTiltTune(plan.angle);
 
     const techniqueSpeed={
         Center:1.00,
@@ -3315,9 +3345,14 @@ function newBattleLaunchState(side){
         const spinDir=combo.blade?.spin==="Left" ? -1 : 1;
         const windTangent=getSpinOrbitTangent(startX,startY,spinDir);
         const attackTypeBit=String(combo.bit?.type||"").toLowerCase()==="attack";
-        const windSpeed=launchSpeed*(attackTypeBit?0.22:0.10);
+        const tiltWind=attackTypeBit?tilt.wind:tilt.wind*0.35;
+        const windSpeed=launchSpeed*((attackTypeBit?0.22:0.10)+tiltWind);
         vx=windTangent.x*windSpeed;
         vy=windTangent.y*windSpeed;
+        const spawnR=Math.hypot(startX,startY)||1;
+        const tiltOut=attackTypeBit?tilt.outward:tilt.outward*0.35;
+        vx+=(startX/spawnR)*tiltOut;
+        vy+=(startY/spawnR)*tiltOut;
     }
 
     if(isXRailLaunch){
@@ -3369,13 +3404,13 @@ function newBattleLaunchState(side){
         const missX=Math.cos(missAngle)*qualityMiss;
         const missY=Math.sin(missAngle)*qualityMiss;
 
-        const entryOffset={
+        const entryOffset=({
             Horrible:0.165,
             Bad:0.092,
             Okay:0.048,
             Good:0.022,
             Perfect:0.010
-        }[plan.quality]||0.048;
+        }[plan.quality]||0.048)*tilt.railInward;
 
         const actualStartX=
             railTarget.x+
@@ -3410,13 +3445,17 @@ function newBattleLaunchState(side){
         const railTangentX=railTarget.tx*railTravelDirection;
         const railTangentY=railTarget.ty*railTravelDirection;
 
-        const tangentWeight=
-            plan.quality==="Perfect" ? 0.86 :
-            plan.quality==="Good" ? 0.80 :
-            plan.quality==="Okay" ? 0.74 :
-            plan.quality==="Bad" ? 0.64 : 0.54;
+        const tangentWeight=newBattleClamp(
+            (plan.quality==="Perfect" ? 0.86 :
+             plan.quality==="Good" ? 0.80 :
+             plan.quality==="Okay" ? 0.74 :
+             plan.quality==="Bad" ? 0.64 : 0.54)+
+            tilt.railTangent-
+            tilt.railSlop,
+            0.42,0.92
+        );
         const approachWeight=1-tangentWeight;
-        const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
+        const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor)*tilt.railSpeed;
 
         vx=
             (railTangentX*tangentWeight+
@@ -3505,7 +3544,8 @@ function newBattleLaunchState(side){
             ((bitPhysics({bit:combo.bit}).stability||70)/100),
             0.25,1
         ),
-        tiltLevel:0.08,
+        tiltLevel:tilt.seedTilt,
+        launchTiltBias:tilt.bias,
         railUses:0,
         railCaptureCooldown:0,
         railCaptureCooldownPoint:null,
@@ -3515,7 +3555,7 @@ function newBattleLaunchState(side){
 
         // Right spin = counter-clockwise; left spin = the exact reverse.
         spinDirection:(combo.blade?.spin==="Left" ? -1 : 1),
-        centerLaunchWindup:isCenterLaunch?(String(combo.bit?.type||"").toLowerCase()==="attack"?0.70:1.55):0,
+        centerLaunchWindup:isCenterLaunch?(String(combo.bit?.type||"").toLowerCase()==="attack"?0.70:1.55)*(1+tilt.windup):0,
         nonAttackOrbitAngle:Math.atan2(startY,startX),
         railEngaged:false,railProgress:0,railDistance:0,
         railSpeed:0,railRideTime:0,railTravelDistance:0,
@@ -3555,9 +3595,11 @@ function applyDropLaunchShot(s, missOverride){
     const dy=0-s.y;
     const dist=Math.hypot(dx,dy)||1;
     const quality=s.launchQuality || s.launchPlan?.quality || "Okay";
+    const tilt=launchTiltTune(s.launchTilt || s.launchPlan?.angle);
     const miss=Number.isFinite(missOverride)
         ? missOverride
-        : (Math.random()*2-1)*dropLaunchMissRadians(quality);
+        : (Math.random()*2-1)*dropLaunchMissRadians(quality)+
+          (Number(s.launchSideSign)||1)*tilt.headingRad;
     const ux=dx/dist;
     const uy=dy/dist;
     const cos=Math.cos(miss);
@@ -3579,6 +3621,7 @@ function applyDirectClashAim(self, other){
     const dy=other.y-self.y;
     const dist=Math.hypot(dx,dy)||0.001;
     const quality=self.launchQuality || self.launchPlan?.quality || "Okay";
+    const tilt=launchTiltTune(self.launchTilt || self.launchPlan?.angle);
     const missRad={
         Perfect:0.04,
         Great:0.07,
@@ -3589,17 +3632,22 @@ function applyDirectClashAim(self, other){
         Horrible:0.48,
         Terrible:0.48
     }[quality]||0.18;
-    const miss=(Math.random()*2-1)*missRad;
+    const miss=
+        (Math.random()*2-1)*missRad+
+        (Number(self.launchSideSign)||1)*tilt.headingRad*0.55;
     const ux=dx/dist;
     const uy=dy/dist;
     const cos=Math.cos(miss);
     const sin=Math.sin(miss);
     const ax=ux*cos-uy*sin;
     const ay=ux*sin+uy*cos;
-    const speed=Math.max(Number(self.launchSpeed)||0, 0.028);
+    const speed=Math.max(Number(self.launchSpeed)||0, 0.028)*(1+tilt.aimCone*0.20);
     self.vx=ax*speed;
     self.vy=ay*speed;
-    self.impactMomentumState=Math.max(Number(self.impactMomentumState)||0, 0.92);
+    self.impactMomentumState=Math.max(
+        Number(self.impactMomentumState)||0,
+        0.92+tilt.clashImpact
+    );
 }
 
 function applyDirectClashLaunches(p, c){
@@ -5723,6 +5771,10 @@ function newPhysicsStep(s,dt){
             (s.dynamicBitStaminaEfficiency||1);
         const centerAffinity = (bp.centerAffinity||60)/100;
         let movement = (bp.movement||60)/100;
+        movement=newBattleClamp(
+            movement+(s.tiltLevel||0)*0.07+(s.launchTiltBias||0)*0.05,
+            0,1
+        );
 
         // Point and Level are continuous physical behaviors. Their state
         // changes with actual tilt, RPM and stability during the battle;
@@ -5780,10 +5832,10 @@ function newPhysicsStep(s,dt){
 
         /*
           DROP LAUNCH:
-          Hang still at the top of the stadium, then shoot straight toward
-          the middle. Launch quality is aim accuracy. Harder tilt stalls
-          longer. A real collision from another Bey interrupts the stall
-          by ending it; this block must not overwrite that knockback.
+          Hang still at the top of the stadium, then shoot toward the
+          middle. Launch quality is aim accuracy. Tilt stalls longer and
+          yaws that shot. A real collision from another Bey interrupts
+          the stall by ending it; this block must not overwrite knockback.
         */
         if(s.launchDropActive && !s.launchDropReleased){
             s.launchStallElapsed=(s.launchStallElapsed||0)+dt;
@@ -5890,11 +5942,17 @@ function newPhysicsStep(s,dt){
             0.18,1
         );
 
+        s.launchTiltBias=newBattleClamp(
+            (s.launchTiltBias||0)*Math.max(0,1-dt*0.085),
+            0,1
+        );
+
         const targetTilt=newBattleClamp(
             (1-s.stability)*0.48+
             (1-(s.axisStability||0.70))*0.20+
             (1-rpm)*0.24+
-            (1-speedStability)*0.08,
+            (1-speedStability)*0.08+
+            (s.launchTiltBias||0)*0.55,
             0.02,0.94
         );
 
