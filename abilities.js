@@ -182,6 +182,7 @@
         state.channel=null;
         state.flame={player:[],cpu:[]};
         state.pegasus=null;
+        hidePegasusStick();
         state.popUntil=0;
         state.cpuLastAbility=0;
         state.cpuThink=0;
@@ -787,8 +788,7 @@
         stick.onpointerup=()=>{ pg.stick={x:0,y:0}; if(knob) knob.style.transform="translate(-50%,-50%)"; };
     }
     function hidePegasusStick(){
-        const box=document.getElementById("pegasusAim");
-        if(box) box.hidden=true;
+        document.getElementById("pegasusAim")?.remove();
         document.querySelector(".battle-shell")?.classList.remove("is-pegasus-aim");
     }
 
@@ -1000,13 +1000,9 @@
         });
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
-            html+=`<g class="fx-cross">
-                <circle cx="${v.x}" cy="${v.y}" r="16.8" fill="none" stroke="#7ef0ff" stroke-width="1.55"/>
-                <circle cx="${v.x}" cy="${v.y}" r="4.8" fill="#7ef0ff"/>
-                <line x1="${v.x-22}" y1="${v.y}" x2="${v.x-7.2}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.45"/>
-                <line x1="${v.x+7.2}" y1="${v.y}" x2="${v.x+22}" y2="${v.y}" stroke="#7ef0ff" stroke-width="1.45"/>
-                <line x1="${v.x}" y1="${v.y-22}" x2="${v.x}" y2="${v.y-7.2}" stroke="#7ef0ff" stroke-width="1.45"/>
-                <line x1="${v.x}" y1="${v.y+7.2}" x2="${v.x}" y2="${v.y+22}" stroke="#7ef0ff" stroke-width="1.45"/>
+            html+=`<g class="fx-aim">
+                <circle cx="${v.x}" cy="${v.y}" r="11.8" fill="none" stroke="#7ef0ff" stroke-width="1.7"/>
+                <circle cx="${v.x}" cy="${v.y}" r="3.4" fill="#7ef0ff" fill-opacity="0.55"/>
             </g>`;
         }
         if(state.pegasusCrash && state.pegasusCrash>t){

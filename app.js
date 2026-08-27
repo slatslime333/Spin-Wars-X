@@ -2369,6 +2369,7 @@ function showLetItRip(){
     }
 
     renderNewBattle();
+    document.querySelector(".battle-shell")?.classList.add("is-launching");
 
     const card=document.querySelector("#newStadium")?.parentElement;
     if(!card) return;
@@ -3556,6 +3557,7 @@ function startNewBattle(){
         resetKillCam();
 
         renderNewBattle();
+        document.querySelector(".battle-shell")?.classList.remove("is-launching");
         if(typeof SpinWarsAbilities!=="undefined"){
             SpinWarsAbilities.resetRound(NEW_BATTLE.player,NEW_BATTLE.cpu);
             SpinWarsAbilities.mountDock();
