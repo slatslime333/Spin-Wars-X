@@ -2702,7 +2702,7 @@ function killCamAim(s){
 function isKillCamCandidate(p,c,now){
     if((NEW_BATTLE.elapsed||0)<KILL_CAM.openDelay) return null;
     const cam=killCamState();
-    if(cam.used||cam.active) return null;
+    if(cam.active) return null;
     const weapon=s=>
         recentXExitSwing(s)||recentRailSwing(s)||railCarryIntoFinish(s,now);
     const reads=[
@@ -2741,11 +2741,11 @@ function pulseKillCamShake(now,amp){
 
 function startKillCam(focus,now){
     const cam=killCamState();
-    if(cam.used||cam.active) return;
+    if(cam.active) return;
     const eta=Math.max(KILL_CAM.etaMin,Number(focus.eta)||KILL_CAM.etaMin);
     const origin=stadiumOriginFromWorld(focus.x,focus.y);
     cam.active=true;
-    cam.used=true;
+    cam.used=false;
     cam.hitAt=0;
     cam.startedAt=now;
     cam.slow=newBattleClamp(eta/KILL_CAM.windupWall,KILL_CAM.slowMin,KILL_CAM.slowMax);
@@ -4567,7 +4567,12 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.setAttribute("width",String(artR*2));
         spriteEl.setAttribute("height",String(artR*2));
         spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
-        spriteEl.style.filter=state.metallic?"grayscale(1) brightness(1.45) contrast(1.15)":"";
+        spriteEl.style.filter=state.metallic
+            ?"grayscale(1) saturate(0) brightness(2.15) contrast(1.55)"
+            :"";
+        if(state.dashBurst && (state.dashBurst.until||0)>performance.now()){
+            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 3px #e8fff4)";
+        }
     }else{
         if(spriteEl) spriteEl.style.display="none";
         if(circle){
@@ -4575,7 +4580,7 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
             circle.setAttribute("cx",String(cx));
             circle.setAttribute("cy",String(cy));
             circle.setAttribute("r",String(r));
-            if(state.metallic) circle.setAttribute("fill","#c5d0d8");
+            if(state.metallic) circle.setAttribute("fill","#e8eef4");
         }
     }
 }
