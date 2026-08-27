@@ -2171,9 +2171,15 @@ function createComboSummaryCard(side,combo){
 function showComboCard(){
     Game.screen="comboCheck";
     if(typeof SpinWarsAbilities!=="undefined"){
-        const score=Game.battle?.score;
-        if(!score || (!(score.player||score.cpu) && (Game.battle.round||1)<=1)){
-            SpinWarsAbilities.resetMatch();
+        if(SpinWarsAbilities.matchStillHoldsCharges && SpinWarsAbilities.matchStillHoldsCharges()){
+            SpinWarsAbilities.restoreCharges();
+        }else{
+            const score=Game.battle?.score;
+            if(!score || (!(score.player||score.cpu) && (Game.battle.round||1)<=1)){
+                SpinWarsAbilities.resetMatch();
+            }else{
+                SpinWarsAbilities.restoreCharges();
+            }
         }
     }
     if(Game.mode!=="rogue") generateCPUCombo();
@@ -2303,8 +2309,14 @@ function showVS(){
     Game.battle.cpuLaunchHistory=Game.battle.cpuLaunchHistory||[];
     Game.cpu.lockedLaunchPlan=null;
     const score=Game.battle.score||{player:0,cpu:0};
-    if(typeof SpinWarsAbilities!=="undefined" && !(score.player||score.cpu)){
-        SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsAbilities!=="undefined"){
+        if(SpinWarsAbilities.matchStillHoldsCharges && SpinWarsAbilities.matchStillHoldsCharges()){
+            SpinWarsAbilities.restoreCharges();
+        }else if(!(score.player||score.cpu)){
+            SpinWarsAbilities.resetMatch();
+        }else{
+            SpinWarsAbilities.restoreCharges();
+        }
     }
 
     // NEW BATTLE FLOW:
@@ -5111,8 +5123,20 @@ function newBattleFrame(now){
         return;
     }
 
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+}
+
+function kickBattleLoop(){
+    if(!NEW_BATTLE.active) return;
+    NEW_BATTLE.last=performance.now();
+    NEW_BATTLE.physicsAcc=0;
+    if(typeof SpinWarsAbilities!=="undefined" && typeof SpinWarsAbilities.onForeground==="function"){
+        SpinWarsAbilities.onForeground();
+    }
+    if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
     NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
 }
+
 function getNewXRailGeometry(){
     if(NEW_BATTLE.railGeometry) return NEW_BATTLE.railGeometry;
 
@@ -7154,3 +7178,13 @@ function newPhysicsCollision(dt){
 // The selected launch state is passed directly into the physical engine.
 
 window.addEventListener("DOMContentLoaded",()=>hookMenuButtons());
+window.addEventListener("visibilitychange",()=>{
+    if(document.hidden) return;
+    kickBattleLoop();
+});
+window.addEventListener("pageshow",()=>{
+    kickBattleLoop();
+});
+window.addEventListener("focus",()=>{
+    kickBattleLoop();
+});
