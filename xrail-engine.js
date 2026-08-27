@@ -281,7 +281,7 @@ function getContact(s,p){
  const speed=Math.hypot(s.vx,s.vy),normal=s.vx*nx+s.vy*ny,inward=-normal,tangential=s.vx*p.tx+s.vy*p.ty;
  return{distance,nx,ny,speed,normal,inward,tangential,
   approachRatio:inward/Math.max(speed,0.0001),tangentRatio:tangential/Math.max(speed,0.0001),
-  tilt:Math.abs(Number(s.tiltLevel)||0)};
+  tilt:Math.abs(Number(s.tiltLevel)||0)+Math.max(0,Math.min(1,Number(s.launchTiltBias)||0))*0.24};
 }
 function sweptContact(s,findNearest,prevDistance){
  if(!s||typeof findNearest!=="function")return null;

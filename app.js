@@ -3199,14 +3199,14 @@ function launchTiltTune(angle){
             headingRad:0.12, aimCone:0.08, clashImpact:0.04,
             wind:0.08, outward:0.004, windup:0.18,
             railInward:0.82, railTangent:0.06, railSlop:0, railSpeed:1.06,
-            seedTilt:0.16, bias:0.18
+            seedTilt:0.14, bias:0.48
         },
         "Hard Tilt":{
             lateral:0.105, speed:0.965, stability:0.042, rpm:1.14,
             headingRad:0.22, aimCone:0.16, clashImpact:0.08,
             wind:0.16, outward:0.010, windup:0.38,
             railInward:0.62, railTangent:0.04, railSlop:0.10, railSpeed:1.12,
-            seedTilt:0.26, bias:0.32
+            seedTilt:0.22, bias:1
         }
     }[angle] || {
         lateral:0, speed:1, stability:0, rpm:1,
@@ -3217,6 +3217,142 @@ function launchTiltTune(angle){
     };
 }
 window.launchTiltTune=launchTiltTune;
+
+const LAUNCH_TILT_STAT_PEAK={
+    attack:4,
+    stamina:3,
+    defense:-6,
+    balance:-6
+};
+
+function launchTiltLean(s){
+    return newBattleClamp(Number(s?.launchTiltBias)||0,0,1);
+}
+
+function launchTiltStatDelta(s,key){
+    const lean=launchTiltLean(s);
+    if(lean<0.05) return 0;
+    const peak=LAUNCH_TILT_STAT_PEAK[key];
+    if(!peak) return 0;
+    return peak*lean;
+}
+
+function launchTiltStatSheet(s){
+    return {
+        angle:s?.launchTilt||s?.launchPlan?.angle||"Flat",
+        lean:launchTiltLean(s),
+        attack:launchTiltStatDelta(s,"attack"),
+        stamina:launchTiltStatDelta(s,"stamina"),
+        defense:launchTiltStatDelta(s,"defense"),
+        balance:launchTiltStatDelta(s,"balance")
+    };
+}
+
+function shaveLaunchTiltBias(s,portion){
+    if(!s) return;
+    const cut=newBattleClamp(portion,0,1);
+    s.launchTiltBias=newBattleClamp(
+        (s.launchTiltBias||0)*(1-cut*0.55)-cut*0.05,
+        0,1
+    );
+}
+
+function shaveLaunchTiltFromHit(s,force){
+    const f=Math.abs(Number(force)||0);
+    if(f>=0.028) shaveLaunchTiltBias(s,0.62);
+    else if(f>=0.014) shaveLaunchTiltBias(s,0.22);
+    else shaveLaunchTiltBias(s,0.10);
+}
+
+window.launchTiltLean=launchTiltLean;
+window.launchTiltStatSheet=launchTiltStatSheet;
+
+function tiltLeanHudMarkup(side){
+    return `
+                <div class="tilt-lean-hud tilt-lean-${side}" id="${side}TiltLeanHud" hidden>
+                  <button type="button" class="tilt-lean-btn" id="${side}TiltLeanBtn" aria-expanded="false" aria-label="Launch tilt trade">
+                    <span class="tilt-lean-up">▲</span>
+                    <span class="tilt-lean-down">▼</span>
+                  </button>
+                  <div class="tilt-lean-menu" id="${side}TiltLeanMenu" hidden></div>
+                </div>`;
+}
+
+function tiltLeanMenuHtml(s){
+    const sheet=launchTiltStatSheet(s);
+    const leanPct=Math.round(sheet.lean*100);
+    const fmt=n=>{
+        const r=Math.round(n);
+        if(r>0) return `+${r}`;
+        if(r<0) return String(r);
+        return "0";
+    };
+    const attackLike=String(s?.bit?.type||"").toLowerCase()==="attack";
+    const orbit=attackLike
+        ? "Attack path is a tight oval, not a rail-width circle."
+        : "Non-Attack gets more orbit until it stands up.";
+    return `<p class="tilt-lean-kicker">${sheet.angle}</p>
+      <p>Launch lean ${leanPct}%. Attack/Stamina up, Defense/Balance down until it stands up. Hits shave the lean; they do not delete it.</p>
+      <ul>
+        <li>ATK <b class="up">${fmt(sheet.attack)}</b></li>
+        <li>STA <b class="up">${fmt(sheet.stamina)}</b></li>
+        <li>DEF <b class="down">${fmt(sheet.defense)}</b></li>
+        <li>BAL <b class="down">${fmt(sheet.balance)}</b></li>
+      </ul>
+      <p>${orbit} X-Rail hook is harder. Flat is the honest default.</p>`;
+}
+
+function paintTiltLeanHud(p,c){
+    for(const [side,s] of [["player",p],["cpu",c]]){
+        const hud=document.getElementById(`${side}TiltLeanHud`);
+        const btn=document.getElementById(`${side}TiltLeanBtn`);
+        const menu=document.getElementById(`${side}TiltLeanMenu`);
+        if(!hud||!btn||!s) continue;
+        const lean=launchTiltLean(s);
+        const show=lean>=0.07 && (s.launchTilt==="Slight Tilt"||s.launchTilt==="Hard Tilt");
+        hud.hidden=!show;
+        if(!show){
+            if(NEW_BATTLE.tiltMenu===side) NEW_BATTLE.tiltMenu=null;
+            menu.hidden=true;
+            btn.setAttribute("aria-expanded","false");
+            continue;
+        }
+        const scale=0.72+lean*0.38;
+        btn.style.setProperty("--tilt-lean",String(lean));
+        btn.style.transform=`scale(${scale})`;
+        btn.style.opacity=String(0.55+lean*0.45);
+        const open=NEW_BATTLE.tiltMenu===side;
+        menu.hidden=!open;
+        btn.setAttribute("aria-expanded",open?"true":"false");
+        if(open) menu.innerHTML=tiltLeanMenuHtml(s);
+    }
+}
+
+function bindTiltLeanHud(){
+    for(const side of ["player","cpu"]){
+        const btn=document.getElementById(`${side}TiltLeanBtn`);
+        if(!btn) continue;
+        btn.onclick=event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            NEW_BATTLE.tiltMenu=NEW_BATTLE.tiltMenu===side?null:side;
+            if(NEW_BATTLE.player && NEW_BATTLE.cpu){
+                paintTiltLeanHud(NEW_BATTLE.player,NEW_BATTLE.cpu);
+            }
+        };
+    }
+    if(!window._tiltLeanDocBound){
+        window._tiltLeanDocBound=true;
+        document.addEventListener("click",event=>{
+            if(event.target?.closest?.(".tilt-lean-hud")) return;
+            if(!NEW_BATTLE?.tiltMenu) return;
+            NEW_BATTLE.tiltMenu=null;
+            if(NEW_BATTLE.player && NEW_BATTLE.cpu){
+                paintTiltLeanHud(NEW_BATTLE.player,NEW_BATTLE.cpu);
+            }
+        });
+    }
+}
 
 function newBattleLaunchState(side){
     const combo=Game[side];
@@ -3976,6 +4112,7 @@ function renderNewBattle(){
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
+                ${tiltLeanHudMarkup("player")}
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
@@ -3999,6 +4136,7 @@ function renderNewBattle(){
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
                 ${battleHudPartsLine(c)}
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
+                ${tiltLeanHudMarkup("cpu")}
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
@@ -4018,6 +4156,8 @@ function renderNewBattle(){
     updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
     document.getElementById("forfeitMatchBtn")?.addEventListener("click",forfeitLiveMatch);
+    bindTiltLeanHud();
+    paintTiltLeanHud(p,c);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
         Game.screen="battle";
@@ -5027,6 +5167,7 @@ function newBattleFrame(now){
             if(el) el.textContent=Math.round(v*100);
         }
         paintRpmGhostBars(p,c,frameDt);
+        paintTiltLeanHud(p,c);
 
         considerKillCam(p,c,now);
 
@@ -5445,14 +5586,15 @@ function getBattleStatPoints(s,key,fallback=70){
     const live=typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()
         ? SpinWarsRogue.liveBonus(s,key)
         : 0;
-    const total=(Number.isFinite(value)?value:fallback)+live;
+    const tilt=launchTiltStatDelta(s,key);
+    const total=(Number.isFinite(value)?value:fallback)+live+tilt;
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
         return Math.max(1,Math.min(220,total));
     }
-    if(!Number.isFinite(value)){
+    if(!Number.isFinite(value) && !tilt){
         return Math.max(50,Math.min(99,fallback));
     }
-    return Math.max(50,Math.min(99,value));
+    return Math.max(50,Math.min(99,total));
 }
 
 function battleFoe(s){
@@ -5771,10 +5913,6 @@ function newPhysicsStep(s,dt){
             (s.dynamicBitStaminaEfficiency||1);
         const centerAffinity = (bp.centerAffinity||60)/100;
         let movement = (bp.movement||60)/100;
-        movement=newBattleClamp(
-            movement+(s.tiltLevel||0)*0.07+(s.launchTiltBias||0)*0.05,
-            0,1
-        );
 
         // Point and Level are continuous physical behaviors. Their state
         // changes with actual tilt, RPM and stability during the battle;
@@ -5809,7 +5947,8 @@ function newPhysicsStep(s,dt){
                     bitName,
                     bitType,
                     attackGimmick,
-                    railUses:Number(s.railUses)||0
+                    railUses:Number(s.railUses)||0,
+                    launchTiltLean:launchTiltLean(s)
                 })
                 : {attackWeight:movement>=0.80?1:0};
         const attackBit=orbitPreview.attackWeight>=0.70;
@@ -5943,7 +6082,7 @@ function newPhysicsStep(s,dt){
         );
 
         s.launchTiltBias=newBattleClamp(
-            (s.launchTiltBias||0)*Math.max(0,1-dt*0.085),
+            (s.launchTiltBias||0)*Math.max(0,1-dt*0.11),
             0,1
         );
 
@@ -6331,6 +6470,7 @@ function breakXRailFromImpact(s,nx,ny,force){
         (s.tiltLevel||0)+0.045+force*0.55,
         0,1
     );
+    shaveLaunchTiltFromHit(s,force);
 
     s.surfaceBounce=0.20;
     s.surfaceRecovery=0.12;
@@ -7100,6 +7240,8 @@ function newPhysicsCollision(dt){
 
     p.tiltLevel=newBattleClamp((p.tiltLevel||0)+tiltHit,0,1);
     c.tiltLevel=newBattleClamp((c.tiltLevel||0)+tiltHit,0,1);
+    shaveLaunchTiltFromHit(p,cKnockback);
+    shaveLaunchTiltFromHit(c,pKnockback);
 
     // Every impact changes the precession phase.
     p.motionPhase+=0.62+Math.random()*0.80;
