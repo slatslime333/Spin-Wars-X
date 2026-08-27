@@ -734,7 +734,7 @@
         if((state.dashAt.cpu||0)>nowMs()) return false;
         if(f.cpuSp<0.008) return false;
         if(f.intoHole) return false;
-        if(f.elapsed<1.05) return false;
+        if(f.elapsed<0.62) return false;
         if(f.climbingOut) return true;
         const clashWindow=f.approach>0.010 && f.dist>0.16 && f.dist<0.38 && f.eta>0.08 && f.eta<0.70;
         if(clashWindow) return true;
@@ -749,7 +749,7 @@
         if((state.charges.cpu||0)<=0) return false;
         if(channelBusy()) return false;
         if(blocked(cpu) && id!=="pegasus-blast") return false;
-        if(f.elapsed<1.15) return false;
+        if(f.elapsed<0.28) return false;
         if(you.abilityHidden||you.abilityHold) return false;
         const charges=state.charges.cpu||0;
         const since=nowMs()-(state.cpuLastAbility||0);
