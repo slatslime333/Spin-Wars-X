@@ -3,19 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#07060a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Spin Wars X">
     <title>Spin Wars X</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800;900&family=Staatliches&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=9.14">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
+    <link rel="stylesheet" href="style.css?v=9.15">
 </head>
 <body>
 <div id="app"></div>
-<script src="movement-engine.js?v=9.14"></script>
-<script src="xrail-engine.js?v=9.14"></script>
-<script src="vs-commentary.js?v=9.14"></script>
-<script src="abilities.js?v=9.14"></script>
-<script src="app.js?v=9.14"></script>
-<script src="rogue-mode.js?v=9.14"></script>
+<script src="movement-engine.js?v=9.15"></script>
+<script src="xrail-engine.js?v=9.15"></script>
+<script src="vs-commentary.js?v=9.15"></script>
+<script src="abilities.js?v=9.15"></script>
+<script src="app.js?v=9.15"></script>
+<script src="rogue-mode.js?v=9.15"></script>
+<script>
+if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{
+        navigator.serviceWorker.register("./sw.js").catch(()=>{});
+    });
+}
+</script>
 </body>
 </html>
