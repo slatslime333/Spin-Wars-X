@@ -1,0 +1,112 @@
+/* SPIN WARS X — UI POLISH V3 FIX
+   Small corrective layer for V3 after real viewport review.
+   Presentation only. */
+
+/* PHONE VS: keep Bey artwork visible as a compact top strip instead of
+   deleting it. The information stack then occupies the remaining height. */
+@media(max-width:767px){
+  .vs-screen .vs-plate{
+    display:flex!important;
+    flex-direction:column!important;
+    min-height:0!important;
+    padding:4px!important;
+    gap:3px!important;
+  }
+  .vs-screen .vs-art{
+    flex:0 0 72px!important;
+    width:100%!important;
+    height:72px!important;
+    min-height:72px!important;
+    max-height:72px!important;
+    aspect-ratio:auto!important;
+    opacity:1!important;
+    border:1px solid rgba(246,240,230,.14)!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:hidden!important;
+  }
+  .vs-screen .vs-art img{
+    width:62px!important;
+    height:62px!important;
+    max-width:90%!important;
+    max-height:90%!important;
+    object-fit:contain!important;
+  }
+  .vs-screen .vs-copy{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    width:100%!important;
+    overflow:hidden!important;
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  .vs-screen .vs-who{flex:0 0 auto!important;}
+  .vs-screen .vs-parts{flex:0 0 auto!important;}
+  .vs-screen .vs-ratings{flex:0 0 auto!important;}
+  .vs-screen .vs-stat-groups{flex:1 1 auto!important;min-height:0!important;}
+
+  /* Ability row: never allow the ACTIVE label or ability name to collide. */
+  .vs-screen .ability-chip,
+  .vs-screen .vs-copy .ability-chip,
+  .vs-screen .vs-parts .ability-chip{
+    display:flex!important;
+    align-items:center!important;
+    gap:4px!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+  .vs-screen .ability-chip > *{min-width:0!important;}
+  .vs-screen .ability-chip strong,
+  .vs-screen .ability-chip b,
+  .vs-screen .ability-chip span{
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+
+  /* Existing VS ability/dropdown wrappers also get a bounded layout. */
+  .vs-screen .vs-parts > *{min-width:0!important;max-width:100%!important;}
+  .vs-screen .vs-parts details,
+  .vs-screen .vs-parts summary{
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+  }
+  .vs-screen .vs-parts summary{
+    display:flex!important;
+    align-items:center!important;
+    gap:5px!important;
+  }
+  .vs-screen .vs-parts summary > *{min-width:0!important;}
+  .vs-screen .vs-parts summary span,
+  .vs-screen .vs-parts summary b{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+}
+
+/* Short phones: shrink the art strip and preserve every information block. */
+@media(max-width:767px) and (max-height:700px){
+  .vs-screen .vs-art{flex-basis:58px!important;height:58px!important;min-height:58px!important;max-height:58px!important;}
+  .vs-screen .vs-art img{width:50px!important;height:50px!important;}
+}
+
+/* Selection cards: explicitly reserve space for their information rows so
+   artwork cannot consume the whole card. */
+@media(max-width:767px){
+  .menu.selection-screen .blade-card.game-blade-card,
+  .menu:has(.selection-header) .blade-card.game-blade-card{
+    grid-template-rows:minmax(0,1fr) auto auto auto!important;
+  }
+  .menu.selection-screen .blade-card-head,
+  .menu:has(.selection-header) .blade-card-head{flex:0 0 auto!important;}
+  .menu.selection-screen .blade-stat-grid,
+  .menu:has(.selection-header) .blade-stat-grid{flex:0 0 auto!important;}
+  .menu.selection-screen .select-hint,
+  .menu:has(.selection-header) .select-hint{flex:0 0 auto!important;}
+}
