@@ -1,0 +1,61 @@
+/* SPIN WARS X — UI POLISH V3 FINAL CORRECTION
+   Presentation only: compact the existing ability dropdown so its title,
+   ACTIVE tag, and caret cannot collide in the VS cards. */
+
+.vs-screen .swx-drop{
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  margin-top:3px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+.vs-screen .swx-drop summary{
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  min-width:0!important;
+  max-width:100%!important;
+  min-height:32px!important;
+  padding:4px 6px!important;
+  overflow:hidden!important;
+}
+.vs-screen .swx-drop-mark{
+  width:22px!important;
+  height:22px!important;
+  flex:0 0 22px!important;
+}
+.vs-screen .swx-drop-title{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font-size:10px!important;
+  letter-spacing:.10em!important;
+}
+.vs-screen .swx-drop-tag{
+  flex:0 0 auto!important;
+  margin-left:auto!important;
+  font-size:7px!important;
+  letter-spacing:.08em!important;
+  white-space:nowrap!important;
+}
+.vs-screen .swx-drop-caret{
+  flex:0 0 auto!important;
+  font-size:11px!important;
+}
+.vs-screen .swx-drop-body{
+  padding:5px 6px 6px!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+}
+
+@media(max-width:767px){
+  .vs-screen .swx-drop summary{min-height:28px!important;padding:3px 5px!important;}
+  .vs-screen .swx-drop-mark{width:20px!important;height:20px!important;flex-basis:20px!important;}
+  .vs-screen .swx-drop-title{font-size:8px!important;letter-spacing:.07em!important;}
+  .vs-screen .swx-drop-tag{font-size:6px!important;}
+  .vs-screen .swx-drop-caret{font-size:9px!important;}
+}
