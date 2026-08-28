@@ -1,0 +1,233 @@
+/* Spin Wars X — UI Layout v3
+   Layout-only correction pass.
+   Goals: preserve artwork aspect ratios, no page scroll, compact game viewport,
+   and prevent overlap caused by the v2 sizing rules.
+*/
+
+html, body { height: 100%; }
+body {
+  overflow: hidden !important;
+  margin: 0;
+}
+
+/* Never distort images/SVGs. */
+img, svg, canvas, video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain !important;
+}
+
+/* App/screen shells must fit the viewport rather than determine page height. */
+#app, #game, .app, .game-app, .screen, .page, .view {
+  box-sizing: border-box;
+  max-height: 100dvh;
+}
+
+/* Battle: reserve a real central viewport for the stadium. */
+.battle-screen, .battle-view, .battle-shell, .battle-container {
+  box-sizing: border-box;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.battle-screen .commentary,
+.battle-view .commentary,
+.battle-shell .commentary {
+  flex: 0 0 auto;
+}
+
+.battle-screen .stadium-slot,
+.battle-view .stadium-slot,
+.battle-shell .stadium-slot,
+.battle-screen #stadium-slot,
+.battle-view #stadium-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.battle-screen .stadium-slot > *,
+.battle-view .stadium-slot > *,
+.battle-shell .stadium-slot > *,
+.battle-screen #stadium-slot > *,
+.battle-view #stadium-slot > * {
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: auto;
+}
+
+/* Common stadium wrappers: preserve their natural aspect ratio. */
+#newStadium, #stadium, .stadium, .stadium-wrap, .stadium-camera, .stadium-lens {
+  box-sizing: border-box;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: auto !important;
+}
+
+#newStadium svg, #stadium svg, .stadium svg, .stadium-wrap svg,
+.stadium-camera svg, .stadium-lens svg,
+#newStadium canvas, #stadium canvas, .stadium canvas {
+  display: block;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+}
+
+/* Bottom battle HUD is allowed to shrink, but never overlap the stadium. */
+.battle-screen .battle-hud,
+.battle-view .battle-hud,
+.battle-shell .battle-hud,
+.battle-screen .battle-dock,
+.battle-view .battle-dock,
+.battle-shell .battle-dock {
+  flex: 0 0 auto;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* VS/combo cards: two-column layout on phones, no accidental vertical overlap. */
+.combo-vs, .combo-vs-screen, .vs-screen, .versus-screen {
+  box-sizing: border-box;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.combo-vs .players, .combo-vs-screen .players,
+.vs-screen .players, .versus-screen .players {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(8px, 1.5vw, 20px);
+  min-height: 0;
+}
+
+.combo-vs .player-card, .combo-vs-screen .player-card,
+.vs-screen .player-card, .versus-screen .player-card {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.combo-vs .player-card img, .combo-vs-screen .player-card img,
+.vs-screen .player-card img, .versus-screen .player-card img {
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+/* Combo picker: use side navigation instead of a bottom Back button. */
+.combo-picker, .combo-picker-screen, .starting-bey-screen, .garage-screen {
+  position: relative;
+  box-sizing: border-box;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+.combo-picker .side-nav,
+.combo-picker-screen .side-nav,
+.starting-bey-screen .side-nav,
+.garage-screen .side-nav {
+  position: absolute;
+  inset: 50% auto auto 0;
+  transform: translateY(-50%);
+  width: clamp(38px, 5vw, 64px);
+  height: clamp(76px, 10vh, 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.combo-picker .side-nav.next,
+.combo-picker-screen .side-nav.next,
+.starting-bey-screen .side-nav.next,
+.garage-screen .side-nav.next {
+  left: auto;
+  right: 0;
+}
+
+.combo-picker .side-nav.hidden,
+.combo-picker-screen .side-nav.hidden,
+.starting-bey-screen .side-nav.hidden,
+.garage-screen .side-nav.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Card artwork: never force width/height independently. */
+.combo-card img, .bey-card img, .blade-card img, .part-card img,
+.combo-card .blade-image, .bey-card .blade-image, .blade-card .blade-image {
+  object-fit: contain !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Keep text inside its own box and stop flex/grid children from forcing overflow. */
+* { box-sizing: border-box; }
+.card, .panel, .box, .section, .player-card, .combo-card {
+  min-width: 0;
+}
+
+h1, h2, h3, h4, p, .title, .subtitle, .label, .commentary-text {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Phone tuning. */
+@media (max-width: 700px) {
+  body { font-size: clamp(12px, 1.8vw, 16px); }
+
+  .battle-screen, .battle-view, .battle-shell {
+    padding: 0 !important;
+  }
+
+  .battle-screen .commentary,
+  .battle-view .commentary,
+  .battle-shell .commentary {
+    max-height: 13dvh;
+    overflow: hidden;
+  }
+
+  .battle-screen .stadium-slot,
+  .battle-view .stadium-slot,
+  .battle-shell .stadium-slot {
+    min-height: 0;
+  }
+
+  .combo-vs .players, .combo-vs-screen .players,
+  .vs-screen .players, .versus-screen .players {
+    gap: 8px;
+  }
+
+  .combo-vs .player-card, .combo-vs-screen .player-card,
+  .vs-screen .player-card, .versus-screen .player-card {
+    padding: clamp(6px, 1.8vw, 12px);
+  }
+}
+
+/* Desktop: use the extra width without changing artwork proportions. */
+@media (min-width: 701px) {
+  .battle-screen .stadium-slot,
+  .battle-view .stadium-slot,
+  .battle-shell .stadium-slot {
+    max-width: 1100px;
+    margin-inline: auto;
+  }
+}
