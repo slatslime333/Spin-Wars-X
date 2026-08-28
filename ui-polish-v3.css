@@ -1,0 +1,514 @@
+/*
+  SPIN WARS X — UI POLISH V3
+  Presentation/layout only. No gameplay, physics, stats, RNG, progression,
+  battle logic, or data are changed here.
+
+  Goal: make every game screen behave like a fixed game viewport rather than
+  a responsive webpage. Existing information stays visible; the layout is
+  allowed to become smaller/denser when the viewport is short.
+*/
+
+:root{
+  --v3-bg:#07080b;
+  --v3-panel:#10141a;
+  --v3-panel2:#0b0e13;
+  --v3-line:#303843;
+  --v3-text:#f4f0e8;
+  --v3-muted:#8e98a5;
+  --v3-gold:#e7ad2d;
+  --v3-green:#22d365;
+  --v3-red:#e84b60;
+}
+
+html,body,#app{width:100%;max-width:100%;}
+html,body{height:100%;min-height:0;background:var(--v3-bg)!important;}
+body{overflow:hidden!important;overscroll-behavior:none;}
+#app{height:100dvh!important;min-height:0!important;max-height:100dvh!important;overflow:hidden!important;}
+
+/* ---------------------------------------------------------
+   SELECTION / STARTING BEY
+   The old layout made the artwork consume the entire card and then clipped
+   the information below it. Cards are now compact, information-first cards.
+   --------------------------------------------------------- */
+
+.menu.selection-screen,
+.menu:has(.selection-header){
+  width:100%!important;
+  max-width:1120px!important;
+  height:100dvh!important;
+  min-height:0!important;
+  max-height:100dvh!important;
+  margin:0 auto!important;
+  padding:clamp(10px,2vh,22px) clamp(12px,2vw,28px)!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  gap:clamp(6px,1.2vh,12px)!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+.menu.selection-screen .selection-header,
+.menu:has(.selection-header) .selection-header{
+  min-height:0!important;
+  width:100%!important;
+  max-width:760px!important;
+  margin:0 auto!important;
+  padding:0!important;
+}
+
+/* The card itself is the viewport for the three choices. */
+.menu.selection-screen .selection-card,
+.menu:has(.selection-header) .selection-card{
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0 auto!important;
+  padding:8px!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  gap:8px!important;
+  overflow:hidden!important;
+  align-items:stretch!important;
+  box-sizing:border-box!important;
+}
+
+/* Compact the actual Bey card without changing its contents. */
+.menu.selection-screen .blade-card.game-blade-card,
+.menu:has(.selection-header) .blade-card.game-blade-card{
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  max-height:100%!important;
+  overflow:hidden!important;
+  display:grid!important;
+  grid-template-rows:minmax(0,1fr) auto auto auto!important;
+  align-content:stretch!important;
+  box-shadow:0 7px 0 #000!important;
+}
+
+.menu.selection-screen .blade-card-art,
+.menu:has(.selection-header) .blade-card-art{
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow:hidden!important;
+}
+
+.menu.selection-screen .blade-card-sprite,
+.menu:has(.selection-header) .blade-card-sprite{
+  width:88%!important;
+  height:88%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+}
+
+.menu.selection-screen .blade-card-badges,
+.menu:has(.selection-header) .blade-card-badges{
+  inset:6px 6px auto 6px!important;
+}
+
+.menu.selection-screen .luck-grade,
+.menu:has(.selection-header) .luck-grade{
+  min-width:32px!important;
+  padding:3px 5px!important;
+}
+.menu.selection-screen .luck-grade b,
+.menu:has(.selection-header) .luck-grade b{font-size:19px!important;}
+
+.menu.selection-screen .blade-card-head,
+.menu:has(.selection-header) .blade-card-head{
+  min-height:0!important;
+  padding:6px 7px 5px!important;
+  overflow:hidden!important;
+}
+
+.menu.selection-screen .blade-card-title h2,
+.menu:has(.selection-header) .blade-card-title h2{
+  margin-top:3px!important;
+  font-size:clamp(14px,2vw,20px)!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+.menu.selection-screen .blade-meta,
+.menu:has(.selection-header) .blade-meta{
+  margin-top:3px!important;
+  gap:4px!important;
+  max-height:18px!important;
+  overflow:hidden!important;
+}
+.menu.selection-screen .blade-meta span,
+.menu:has(.selection-header) .blade-meta span{font-size:6px!important;}
+
+.menu.selection-screen .tier-ribbon,
+.menu:has(.selection-header) .tier-ribbon{
+  padding:2px 5px!important;
+  font-size:6px!important;
+}
+
+.menu.selection-screen .ovr-badge b,
+.menu:has(.selection-header) .ovr-badge b{font-size:23px!important;}
+.menu.selection-screen .ovr-badge small,
+.menu:has(.selection-header) .ovr-badge small{font-size:6px!important;}
+
+.menu.selection-screen .blade-stat-grid,
+.menu:has(.selection-header) .blade-stat-grid{
+  margin-top:0!important;
+  min-height:0!important;
+}
+.menu.selection-screen .mini-stat,
+.menu:has(.selection-header) .mini-stat{padding:4px 2px 3px!important;}
+.menu.selection-screen .mini-stat span,
+.menu:has(.selection-header) .mini-stat span{font-size:5px!important;}
+.menu.selection-screen .mini-stat b,
+.menu:has(.selection-header) .mini-stat b{font-size:8px!important;}
+
+.menu.selection-screen .select-hint,
+.menu:has(.selection-header) .select-hint{
+  margin-top:0!important;
+  padding:4px 7px!important;
+  min-height:0!important;
+  font-size:6px!important;
+}
+.menu.selection-screen .select-hint span,
+.menu:has(.selection-header) .select-hint span{font-size:11px!important;}
+
+/* Bottom pagination is moved to fixed side controls by the tiny presentation
+   bridge in index.html. It must not reserve vertical space. */
+.menu.selection-screen .selection-nav,
+.menu:has(.selection-header) .selection-nav{
+  display:none!important;
+}
+.menu.selection-screen .back-btn,
+.menu:has(.selection-header) .back-btn{
+  display:none!important;
+}
+
+/* ---------------------------------------------------------
+   VS / COMBO-VS SCREEN
+   Two information-dense encounter panels must fit at once. The old layout
+   gave each panel a large art block and then clipped the stats/upgrades.
+   --------------------------------------------------------- */
+
+.vs-screen{
+  width:100%!important;
+  max-width:1240px!important;
+  height:100dvh!important;
+  min-height:0!important;
+  max-height:100dvh!important;
+  margin:0 auto!important;
+  padding:clamp(6px,1.4vh,14px) clamp(8px,1.8vw,24px)!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr) auto!important;
+  gap:clamp(5px,1vh,10px)!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+.vs-screen .vs-call{
+  min-height:0!important;
+  max-height:11vh!important;
+  overflow:hidden!important;
+  padding:7px 10px!important;
+}
+.vs-screen .vs-call-copy{
+  font-size:clamp(10px,1.4vw,14px)!important;
+  line-height:1.22!important;
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical!important;
+  -webkit-line-clamp:2!important;
+  overflow:hidden!important;
+}
+
+.vs-screen .vs-board{
+  min-height:0!important;
+  height:100%!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr)!important;
+  gap:7px!important;
+  align-items:stretch!important;
+}
+
+.vs-screen .vs-plate{
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  max-height:100%!important;
+  padding:7px!important;
+  display:grid!important;
+  grid-template-columns:clamp(78px,10vw,120px) minmax(0,1fr)!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  gap:7px!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+}
+
+.vs-screen .vs-art{
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:100%!important;
+  aspect-ratio:1!important;
+  grid-column:1!important;
+  grid-row:1 / span 2!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+}
+.vs-screen .vs-art:after{width:70%!important;height:70%!important;}
+.vs-screen .vs-art img{
+  width:82%!important;
+  height:82%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+}
+
+.vs-screen .vs-copy{
+  min-width:0!important;
+  min-height:0!important;
+  height:100%!important;
+  max-height:100%!important;
+  overflow:hidden!important;
+  padding:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+
+.vs-screen .vs-who{font-size:8px!important;padding:3px 6px!important;}
+.vs-screen .vs-copy h2{
+  margin:4px 0 2px!important;
+  font-size:clamp(18px,2.6vw,28px)!important;
+  line-height:.95!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+.vs-screen .vs-copy p{font-size:9px!important;margin-top:2px!important;}
+.vs-screen .vs-parts{gap:4px!important;min-height:28px!important;}
+.vs-screen .vs-bit-sprite{width:30px!important;height:30px!important;}
+
+.vs-screen .vs-ratings{
+  gap:4px!important;
+  margin:5px 0!important;
+}
+.vs-screen .vs-rating{
+  min-height:38px!important;
+  padding:4px 6px!important;
+}
+.vs-screen .vs-rating small{font-size:7px!important;}
+.vs-screen .vs-rating b{font-size:23px!important;}
+
+.vs-screen .vs-stat-groups{
+  min-height:0!important;
+  overflow:hidden!important;
+  gap:3px!important;
+  margin-top:2px!important;
+}
+.vs-screen .vs-stat-group{
+  min-height:0!important;
+  padding:4px!important;
+}
+.vs-screen .vs-stat-group-label{
+  margin-bottom:3px!important;
+  font-size:7px!important;
+}
+.vs-screen .vs-stats{gap:2px!important;}
+.vs-screen .vs-stat{
+  min-height:26px!important;
+  padding:3px 4px!important;
+  gap:3px!important;
+}
+.vs-screen .vs-stat small{font-size:6px!important;}
+.vs-screen .vs-stat b{font-size:13px!important;}
+.vs-screen .vs-stat i{font-size:8px!important;}
+
+.vs-screen .vs-mod-box{
+  margin-top:4px!important;
+  padding:4px 6px!important;
+}
+.vs-screen .vs-mod-box small{font-size:7px!important;}
+.vs-screen .vs-mod-box b{font-size:15px!important;}
+.vs-screen .vs-mod-box p{font-size:8px!important;line-height:1.2!important;}
+
+.vs-screen .vs-upgrade-stack{
+  margin-top:4px!important;
+  gap:3px!important;
+  flex:0 0 auto!important;
+}
+.vs-screen .vs-upgrade-box{
+  min-width:0!important;
+  flex:1 1 70px!important;
+  padding:4px 6px!important;
+}
+.vs-screen .vs-upgrade-box small{font-size:7px!important;}
+.vs-screen .vs-upgrade-box b{font-size:15px!important;}
+
+.vs-screen .vs-stamp{
+  width:54px!important;
+  height:54px!important;
+  align-self:center!important;
+  justify-self:center!important;
+  font-size:21px!important;
+  z-index:20!important;
+}
+
+.vs-screen .vs-reroll{
+  grid-column:1 / -1!important;
+  min-height:0!important;
+}
+.vs-screen > .back-btn{
+  width:min(260px,50%)!important;
+  max-width:260px!important;
+  min-height:34px!important;
+  margin:0 auto!important;
+}
+
+/* ---------------------------------------------------------
+   PHONE: two-column VS remains side-by-side. This is important: stacking the
+   panels turns the matchup into a scrolling webpage and hides information.
+   --------------------------------------------------------- */
+@media(max-width:767px){
+  .menu.selection-screen,
+  .menu:has(.selection-header){
+    padding:8px 10px!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    gap:5px!important;
+  }
+  .menu.selection-screen .selection-header,
+  .menu:has(.selection-header) .selection-header{
+    max-width:540px!important;
+  }
+  .menu.selection-screen .selection-card,
+  .menu:has(.selection-header) .selection-card{
+    grid-template-columns:1fr!important;
+    grid-template-rows:repeat(3,minmax(0,1fr))!important;
+    gap:5px!important;
+    padding:5px!important;
+  }
+  .menu.selection-screen .blade-card.game-blade-card,
+  .menu:has(.selection-header) .blade-card.game-blade-card{
+    grid-template-rows:minmax(0,1fr) auto auto auto!important;
+  }
+
+  .vs-screen{
+    padding:5px!important;
+    gap:4px!important;
+  }
+  .vs-screen .vs-call{max-height:8vh!important;padding:5px 7px!important;}
+  .vs-screen .vs-call-kicker{font-size:8px!important;margin-bottom:2px!important;}
+  .vs-screen .vs-call-kicker span{font-size:7px!important;}
+  .vs-screen .vs-call-copy{font-size:9px!important;line-height:1.18!important;-webkit-line-clamp:2!important;}
+  .vs-screen .vs-board{
+    grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr)!important;
+    gap:4px!important;
+  }
+  .vs-screen .vs-plate{
+    padding:5px!important;
+    grid-template-columns:0 minmax(0,1fr)!important;
+    gap:0!important;
+  }
+  .vs-screen .vs-art{
+    grid-column:1!important;
+    grid-row:1 / span 2!important;
+    width:0!important;
+    min-width:0!important;
+    opacity:0!important;
+    border:0!important;
+    pointer-events:none!important;
+  }
+  .vs-screen .vs-copy{grid-column:1 / -1!important;}
+  .vs-screen .vs-copy h2{font-size:clamp(15px,4.4vw,21px)!important;}
+  .vs-screen .vs-parts{font-size:7px!important;min-height:25px!important;}
+  .vs-screen .vs-bit-sprite{width:26px!important;height:26px!important;}
+  .vs-screen .vs-rating{min-height:33px!important;padding:3px 4px!important;}
+  .vs-screen .vs-rating small{font-size:6px!important;}
+  .vs-screen .vs-rating b{font-size:20px!important;}
+  .vs-screen .vs-stat-group{padding:3px!important;}
+  .vs-screen .vs-stat-group-label{font-size:6px!important;margin-bottom:2px!important;}
+  .vs-screen .vs-stat{min-height:23px!important;padding:2px 3px!important;}
+  .vs-screen .vs-stat small{font-size:5px!important;}
+  .vs-screen .vs-stat b{font-size:11px!important;}
+  .vs-screen .vs-stat i{font-size:7px!important;}
+  .vs-screen .vs-mod-box{padding:3px 4px!important;margin-top:3px!important;}
+  .vs-screen .vs-mod-box small{font-size:6px!important;}
+  .vs-screen .vs-mod-box b{font-size:13px!important;}
+  .vs-screen .vs-upgrade-box{padding:3px 4px!important;}
+  .vs-screen .vs-upgrade-box small{font-size:6px!important;}
+  .vs-screen .vs-upgrade-box b{font-size:12px!important;}
+  .vs-screen .vs-stamp{width:40px!important;height:40px!important;font-size:15px!important;}
+  .vs-screen > .back-btn{display:block!important;width:46%!important;min-height:30px!important;}
+}
+
+@media(max-width:767px) and (max-height:700px){
+  .menu.selection-screen,
+  .menu:has(.selection-header){padding:5px 7px!important;}
+  .selection-header h1{font-size:17px!important;}
+  .selection-icon{width:34px!important;height:34px!important;min-width:34px!important;}
+  .menu.selection-screen .blade-card-title h2,
+  .menu:has(.selection-header) .blade-card-title h2{font-size:13px!important;}
+  .vs-screen .vs-call{max-height:7vh!important;}
+  .vs-screen .vs-copy h2{font-size:15px!important;}
+  .vs-screen .vs-stat{min-height:20px!important;}
+}
+
+/* ---------------------------------------------------------
+   DESKTOP: use the extra width for larger, readable information while still
+   keeping every screen inside one viewport.
+   --------------------------------------------------------- */
+@media(min-width:768px){
+  .menu.selection-screen .selection-card,
+  .menu:has(.selection-header) .selection-card{max-width:1100px!important;}
+  .vs-screen .vs-board{grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr)!important;gap:10px!important;}
+  .vs-screen .vs-plate{grid-template-columns:clamp(100px,11vw,150px) minmax(0,1fr)!important;gap:10px!important;padding:9px!important;}
+  .vs-screen .vs-art img{width:86%!important;height:86%!important;}
+}
+
+/* Never distort artwork. */
+.menu img,.vs-screen img,.battle-shell img{
+  object-fit:contain!important;
+  object-position:center!important;
+}
+
+/* ---------------------------------------------------------
+   SIDE NAVIGATION CREATED BY THE PRESENTATION BRIDGE
+   --------------------------------------------------------- */
+.sw-selection-side-nav{
+  position:fixed!important;
+  inset:0!important;
+  z-index:100!important;
+  pointer-events:none!important;
+}
+.sw-selection-side-arrow{
+  position:absolute!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  width:54px!important;
+  height:68px!important;
+  padding:0!important;
+  display:grid!important;
+  place-items:center!important;
+  pointer-events:auto!important;
+  border:2px solid #343b45!important;
+  background:#10141a!important;
+  color:#f4f0e8!important;
+  font-family:Arial,sans-serif!important;
+  font-size:38px!important;
+  line-height:1!important;
+  box-shadow:0 7px 0 #000!important;
+  clip-path:polygon(0 50%,12% 0,100% 0,100% 100%,12% 100%)!important;
+}
+.sw-selection-side-arrow.left{left:8px!important;}
+.sw-selection-side-arrow.right{right:8px!important;transform:translateY(-50%) scaleX(-1)!important;}
+.sw-selection-side-arrow.right::first-letter{display:block;}
+.sw-selection-side-arrow[hidden]{display:none!important;}
+
+@media(max-width:767px){
+  .sw-selection-side-arrow{width:42px!important;height:58px!important;font-size:32px!important;}
+  .sw-selection-side-arrow.left{left:3px!important;}
+  .sw-selection-side-arrow.right{right:3px!important;}
+}
