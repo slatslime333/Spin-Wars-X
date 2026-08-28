@@ -243,6 +243,14 @@
         return matchInProgress(saved);
     }
     function syncMatchCharges(){
+        const g=global.Game||{};
+        const battle=g.battle||{};
+        const pts=(Number(battle.score?.player)||0)+(Number(battle.score?.cpu)||0);
+        const freshLeague=!battle.matchStarted && pts===0 && g.mode!=="rogue";
+        if(freshLeague){
+            resetMatch();
+            return "reset";
+        }
         const saved=readStoredCharges();
         const key=matchChargeKey();
         if(saved && (!saved.key || saved.key===key) && matchInProgress(saved)){
