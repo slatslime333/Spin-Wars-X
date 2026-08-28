@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="ui-layout-v2.css?v=2.1">
     <link rel="stylesheet" href="ui-layout-v2-fix.css?v=1.0">
     <link rel="stylesheet" href="ui-polish-v3.css?v=3.0">
+    <link rel="stylesheet" href="ui-polish-v3-fix.css?v=3.1">
 </head>
 <body>
 <div id="app"></div>
@@ -119,8 +120,6 @@
     var prev=buttons.length ? buttons[0] : null;
     var next=buttons.length>1 ? buttons[buttons.length-1] : null;
 
-    /* Page 1 uses the actual BACK action. Once a previous page exists, the
-       same left arrow becomes the real previous-page button. */
     var leftTarget=(prev && !prev.disabled) ? prev : back;
     var rightTarget=(next && !next.disabled) ? next : null;
 
