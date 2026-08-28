@@ -1,0 +1,20 @@
+name: Create UI Overhaul Backup
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current game
+        uses: actions/checkout@v4
+      - name: Create ZIP
+        run: zip -r Spin-Wars-X-before-UI-overhaul-2026-08-28.zip . -x '.git/*'
+      - name: Upload backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spin-Wars-X-before-UI-overhaul-2026-08-28
+          path: Spin-Wars-X-before-UI-overhaul-2026-08-28.zip
+          retention-days: 90
