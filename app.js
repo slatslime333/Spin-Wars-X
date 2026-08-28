@@ -1208,6 +1208,8 @@ function renderLeagueSelect(){
         button.onclick=()=>{
             Game.quickMatch=false;
             Game.mode=button.dataset.mode;
+            Game.battle={score:{player:0,cpu:0},round:1};
+            if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
             startDraft();
         };
     });
@@ -1253,6 +1255,7 @@ function startQuickMatch(){
     Game.cpu.blade=null;
     Game.cpu.ratchet=null;
     Game.cpu.bit=null;
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
     randomizeCombo("player");
     randomizeCombo("cpu");
     showComboCard();
@@ -2170,19 +2173,11 @@ function createComboSummaryCard(side,combo){
 }
 function showComboCard(){
     Game.screen="comboCheck";
-    if(typeof SpinWarsAbilities!=="undefined"){
-        if(SpinWarsAbilities.matchStillHoldsCharges && SpinWarsAbilities.matchStillHoldsCharges()){
-            SpinWarsAbilities.restoreCharges();
-        }else{
-            const score=Game.battle?.score;
-            if(!score || (!(score.player||score.cpu) && (Game.battle.round||1)<=1)){
-                SpinWarsAbilities.resetMatch();
-            }else{
-                SpinWarsAbilities.restoreCharges();
-            }
-        }
-    }
     if(Game.mode!=="rogue") generateCPUCombo();
+    if(typeof SpinWarsAbilities!=="undefined"){
+        if(SpinWarsAbilities.syncMatchCharges) SpinWarsAbilities.syncMatchCharges();
+        else if(SpinWarsAbilities.resetMatch) SpinWarsAbilities.resetMatch();
+    }
     const playerPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("player"):null;
     const cpuPlate=Game.mode==="rogue"?SpinWarsRogue.plateDecor("cpu"):null;
     const playerCombo=playerPlate||calculateComboStats(Game.player.blade,Game.player.ratchet,Game.player.bit);
@@ -2308,14 +2303,10 @@ function showVS(){
     Game.battle.playerLaunchHistory=Game.battle.playerLaunchHistory||[];
     Game.battle.cpuLaunchHistory=Game.battle.cpuLaunchHistory||[];
     Game.cpu.lockedLaunchPlan=null;
-    const score=Game.battle.score||{player:0,cpu:0};
     if(typeof SpinWarsAbilities!=="undefined"){
-        if(SpinWarsAbilities.matchStillHoldsCharges && SpinWarsAbilities.matchStillHoldsCharges()){
-            SpinWarsAbilities.restoreCharges();
-        }else if(!(score.player||score.cpu)){
+        if(SpinWarsAbilities.syncMatchCharges) SpinWarsAbilities.syncMatchCharges();
+        else if(!(Game.battle.score?.player||Game.battle.score?.cpu) && SpinWarsAbilities.resetMatch){
             SpinWarsAbilities.resetMatch();
-        }else{
-            SpinWarsAbilities.restoreCharges();
         }
     }
 
