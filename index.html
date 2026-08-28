@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="style.css?v=9.25">
     <link rel="stylesheet" href="ui-overhaul.css?v=1.1">
     <link rel="stylesheet" href="ui-layout-v2.css?v=2.1">
+    <link rel="stylesheet" href="ui-layout-v2-fix.css?v=1.0">
 </head>
 <body>
 <div id="app"></div>
@@ -29,6 +30,21 @@
 <script src="rogue-shop-balance.js?v=1.0"></script>
 <script src="rogue-balance-final.js?v=1.1"></script>
 <script>
+/* Presentation-only SVG safeguard. Preserve the renderer's intrinsic aspect
+   ratio even when the surrounding viewport changes between phone/desktop. */
+(function(){
+  function fitBattleSvg(){
+    var svg=document.getElementById('newBattleSvg');
+    if(!svg) return;
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    svg.style.objectFit='contain';
+    svg.style.objectPosition='center';
+  }
+  window.addEventListener('resize',fitBattleSvg,{passive:true});
+  window.addEventListener('orientationchange',function(){setTimeout(fitBattleSvg,50);},{passive:true});
+  new MutationObserver(fitBattleSvg).observe(document.documentElement,{childList:true,subtree:true});
+  setTimeout(fitBattleSvg,0);
+})();
 if("serviceWorker" in navigator){
     window.addEventListener("load",()=>{
         navigator.serviceWorker.register("./sw.js").catch(()=>{});
