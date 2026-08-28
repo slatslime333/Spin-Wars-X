@@ -1,14 +1,6 @@
 /* SPIN WARS X — ROGUE FINAL BALANCE PATCH
  * Final convergence pass layered after rogue-balance.js + rogue-shop-balance.js.
  * Quick Play is intentionally untouched.
- *
- * Design:
- * - Bronze: hard early -> player earns the advantage by late run.
- * - Silver: neutral throughout.
- * - Gold: player-favorable early -> CPU pressure rises into late run.
- * - All three tiers converge into the same general pre-final-boss power band.
- * - CPU retains its actual combo/upgrade identity; scaling is deliberately soft.
- * - CPU upgrade count remains the existing same/+1/+2 system.
  */
 (function(global){
   "use strict";
@@ -30,78 +22,43 @@
     try{return typeof global.calculateComboStats==="function"?global.calculateComboStats(blade,ratchet,bit)||{}:{};}catch(_){return {};}
   }
   function playerStats(){
-    const r=run();
-    const raw=comboStats(r?.blade,r?.ratchet,r?.bit);
-    const out={};
+    const r=run(),raw=comboStats(r?.blade,r?.ratchet,r?.bit),out={};
     STATS.forEach(k=>out[k]=round((Number(raw?.stats?.[k])||70)+(Number(r?.startScale?.[k])||0)+(Number(r?.bonuses?.[k])||0)));
     return out;
   }
   function cpuBaseStats(){
-    const r=run();
-    const raw=comboStats(r?.cpuBlade,r?.cpuRatchet,r?.cpuBit);
-    const out={};
+    const r=run(),raw=comboStats(r?.cpuBlade,r?.cpuRatchet,r?.cpuBit),out={};
     STATS.forEach(k=>out[k]=round((Number(raw?.stats?.[k])||70)+(Number(r?.cpuBonuses?.[k])||0)));
     return out;
   }
-
-  /*
-   * Target ratio is intentionally a CURVE, not a tier power ranking.
-   * By match 17 every tier is in the same 0.99–1.03 neighborhood.
-   * Bosses then create the intentional tier-step spike.
-   */
   function targetRatio(){
     const t=tier(),m=match();
     let ratio;
-    if(t==="Bronze"){
-      ratio=m<=2?1.025:m<=5?1.005:m<=11?0.995:m<=17?0.985:1.075;
-    }else if(t==="Silver"){
-      ratio=m<=5?1.000:m<=11?1.000:m<=17?1.005:1.090;
-    }else{
-      ratio=m<=2?0.965:m<=5?0.985:m<=11?1.005:m<=17?1.025:1.105;
-    }
-    if(m===6)ratio=t==="Bronze"?1.040:t==="Silver"?1.050:1.060;
-    if(m===12)ratio=t==="Bronze"?1.050:t==="Silver"?1.065:1.080;
-    if(m===18)ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    if(t==="Bronze") ratio=m<=2?1.025:m<=5?1.005:m<=11?0.995:m<=17?0.985:1.075;
+    else if(t==="Silver") ratio=m<=5?1:m<=11?1:m<=17?1.005:1.09;
+    else ratio=m<=2?0.965:m<=5?0.985:m<=11?1.005:m<=17?1.025:1.105;
+    if(m===6)ratio=t==="Bronze"?1.04:t==="Silver"?1.05:1.06;
+    if(m===12)ratio=t==="Bronze"?1.05:t==="Silver"?1.065:1.08;
+    if(m===18)ratio=t==="Bronze"?1.075:t==="Silver"?1.09:1.105;
     return ratio;
   }
-
   function applySoftConvergence(){
     const r=run();
     if(!r||!r.cpuBlade||!global.Game?.player||!global.Game?.cpu)return;
-
-    const p=statsAvg(playerStats());
-    const base=cpuBaseStats();
-    const c=statsAvg(base);
-    const target=p*targetRatio();
-
-    /*
-     * Only correct 48% of the gap, capped tightly. This keeps actual Bey
-     * identity and random CPU upgrades meaningful instead of rubber-banding
-     * every stat to a player's average.
-     */
-    const delta=clamp((target-c)*0.48,-7,8);
-    const scale=empty();
-    STATS.forEach(k=>{
-      const identity=(Number(base[k])-c)*0.06;
-      scale[k]=round(clamp(delta+identity,-7,8));
-    });
+    const p=statsAvg(playerStats()),base=cpuBaseStats(),c=statsAvg(base),target=p*targetRatio();
+    const delta=clamp((target-c)*0.48,-7,8),scale=empty();
+    STATS.forEach(k=>scale[k]=round(clamp(delta+(Number(base[k])-c)*0.06,-7,8)));
     r.cpuScale=scale;
     r.cpuPowerTarget=target;
-
     const cEff={};
     STATS.forEach(k=>cEff[k]=round(base[k]+scale[k]));
     global.Game.cpu.stats=cEff;
     global.Game.cpu.comboOVR=round(statsAvg(cEff));
-
-    /* Rogue Meta uses the same converged effective power without touching
-       Quick Play's meta calculation. */
     if(typeof global.Game.cpu.comboMeta==="number"){
-      const old=Number(global.Game.cpu.comboMeta)||70;
       const physical=Number(global.Game.cpu.comboMeta)||70;
       global.Game.cpu.comboMeta=round(clamp(physical*0.65+statsAvg(cEff)*0.35,40,99));
     }
   }
-
   function bossInfo(){
     const m=match();
     if(m===6)return {label:"MINI BOSS · TIER CHECK I",cls:"mini"};
@@ -110,18 +67,31 @@
     return null;
   }
 
+  /* Idempotent: never remove/reinsert the marker if it is already correct.
+     This is important because the battle renderer changes the DOM frequently. */
   function installBossLabel(){
     const info=bossInfo();
-    document.getElementById("rogueFinalBossTag")?.remove();
-    if(!info)return;
-    const r=run();
-    const name=String(r?.cpuBlade?.name||"").trim();
+    const existing=document.getElementById("rogueFinalBossTag");
+    if(!info){ existing?.remove(); return; }
+
+    const r=run(),name=String(r?.cpuBlade?.name||"").trim();
     if(!name)return;
+
+    if(existing){
+      const expectedClass="rogue-final-boss-tag rogue-final-boss-tag--"+info.cls;
+      if(existing.className!==expectedClass||existing.textContent!==info.label){
+        existing.className=expectedClass;
+        existing.textContent=info.label;
+      }
+      return;
+    }
+
     const nodes=[...document.querySelectorAll("*")].filter(el=>el.children.length===0&&el.textContent.trim()===name);
     if(!nodes.length)return;
     const nameEl=nodes.find(el=>el.closest("article,section,[class*='card'],[class*='vs'],[class*='combo']"))||nodes[0];
     const card=nameEl.closest("article,section,[class*='vs-'],[class*='combo-'],[class*='vs_'],[class*='combo_']")||nameEl.parentElement||nameEl;
     if(!card)return;
+
     const tag=document.createElement("div");
     tag.id="rogueFinalBossTag";
     tag.className="rogue-final-boss-tag rogue-final-boss-tag--"+info.cls;
@@ -140,6 +110,13 @@
     document.head.appendChild(s);
   }
 
+  let scheduled=false;
+  function scheduleLabel(){
+    if(scheduled)return;
+    scheduled=true;
+    const later=()=>{scheduled=false;try{installBossLabel();}catch(_){} };
+    if(global.requestAnimationFrame)global.requestAnimationFrame(later);else setTimeout(later,0);
+  }
   function tick(){
     if(!run())return;
     try{applySoftConvergence();installBossLabel();}catch(_){/* never break the battle */}
@@ -152,9 +129,10 @@
   global.addEventListener?.("load",tick);
   document.addEventListener?.("DOMContentLoaded",tick);
 
-  /* Re-apply after UI changes so the boss marker survives combo-card renders. */
+  /* Observe renderer changes, but the callback is throttled and idempotent.
+     It no longer causes a remove -> insert -> observer -> infinite mutation loop. */
   if(global.MutationObserver){
-    const observer=new MutationObserver(()=>{if(bossInfo())installBossLabel();});
+    const observer=new MutationObserver(()=>{if(bossInfo())scheduleLabel();});
     observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 })(window);
