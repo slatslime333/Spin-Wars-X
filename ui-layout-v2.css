@@ -1,286 +1,83 @@
 /* =========================================================
-   SPIN WARS X — UI LAYOUT V2
-   Presentation-only. No gameplay, physics, RNG, stats,
-   progression, scoring, or battle logic is changed.
-
-   One game engine, two deliberate presentations:
-   - Mobile portrait: iPhone-first, no page scrolling.
-   - Desktop: wider game HUD, stadium-centered, no page scrolling.
+   SPIN WARS X — UI LAYOUT V2.1
+   Presentation-only. Gameplay/physics/RNG/progression untouched.
    ========================================================= */
-
 :root{
-  --sw-bg:#07080b;
-  --sw-panel:#10141a;
-  --sw-line:#303843;
-  --sw-muted:#8e98a5;
-  --sw-text:#f4f0e8;
-  --sw-gold:#e7ad2d;
-  --sw-green:#22d365;
-  --sw-red:#e84b60;
+  --sw-bg:#07080b;--sw-panel:#10141a;--sw-line:#303843;--sw-muted:#8e98a5;
+  --sw-text:#f4f0e8;--sw-gold:#e7ad2d;--sw-green:#22d365;--sw-red:#e84b60;
   --sw-shadow:0 14px 34px rgba(0,0,0,.42);
 }
+html,body,#app{width:100%;max-width:100%;}
+html,body{min-height:100dvh;background:var(--sw-bg)!important;}
+body{overflow:hidden!important;overscroll-behavior:none;}
+#app{height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;}
+.home,.menu,.vs-screen,.battle-shell{box-sizing:border-box!important;height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;overflow:hidden!important;}
+.background{background:radial-gradient(circle at 50% -20%,rgba(231,173,45,.10),transparent 36%),radial-gradient(circle at 0 100%,rgba(34,211,101,.055),transparent 30%),radial-gradient(circle at 100% 100%,rgba(232,75,96,.045),transparent 30%),linear-gradient(180deg,#0b0d11 0%,#07080b 100%)!important;}
 
-/* ==================== VIEWPORT ==================== */
-html,body,#app{
-  width:100%;
-  max-width:100%;
-}
-html,body{
-  min-height:100dvh;
-  background:var(--sw-bg)!important;
-}
-body{
-  overflow:hidden!important;
-  overscroll-behavior:none;
-}
-#app{
-  height:100dvh!important;
-  min-height:100dvh!important;
-  max-height:100dvh!important;
-  overflow:hidden!important;
-}
+/* HOME */
+.home{width:100%!important;padding:clamp(12px,3vh,30px) 16px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:clamp(10px,2vh,20px)!important;}
+.home-bowl,.home-bowl-x,.home-pocket{display:none!important;}
+.home-mark{flex:0 0 auto!important;z-index:2!important;max-width:min(560px,92vw)!important;}
+.home-mark h1{line-height:.86!important;text-shadow:0 4px 0 #000,0 10px 26px rgba(0,0,0,.45)!important;}
+.home-doors,.home-leagues{flex:0 0 auto!important;z-index:2!important;}
+.home-door,.home-league{box-shadow:var(--sw-shadow)!important;}
 
-.home,.menu,.vs-screen,.battle-shell{
-  box-sizing:border-box!important;
-  height:100dvh!important;
-  min-height:100dvh!important;
-  max-height:100dvh!important;
-  overflow:hidden!important;
-}
+/* MENUS */
+.menu{width:100%!important;margin:0 auto!important;padding:clamp(10px,2vh,20px) clamp(12px,2vw,24px)!important;justify-content:center!important;}
+.menu-card{min-width:0!important;}
 
-.background{
-  background:
-    radial-gradient(circle at 50% -20%,rgba(231,173,45,.10),transparent 36%),
-    radial-gradient(circle at 0 100%,rgba(34,211,101,.055),transparent 30%),
-    radial-gradient(circle at 100% 100%,rgba(232,75,96,.045),transparent 30%),
-    linear-gradient(180deg,#0b0d11 0%,#07080b 100%)!important;
-}
+/* COMBO / VS */
+.vs-screen{width:100%!important;margin:0!important;padding:clamp(8px,1.8vh,18px) clamp(10px,2vw,28px)!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;gap:clamp(6px,1.2vh,12px)!important;position:relative!important;}
+.vs-board{min-height:0!important;width:100%!important;position:relative!important;display:grid!important;grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr)!important;gap:10px!important;align-items:stretch!important;}
+.vs-plate{min-width:0!important;min-height:0!important;height:100%!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;}
+.vs-art{flex:0 0 clamp(120px,19vh,190px)!important;min-height:0!important;height:auto!important;display:grid!important;place-items:center!important;overflow:hidden!important;position:relative!important;}
+.vs-art img{width:auto!important;height:auto!important;max-width:88%!important;max-height:88%!important;object-fit:contain!important;position:relative!important;z-index:2!important;}
+.vs-copy{min-height:0!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;padding:clamp(7px,1.2vh,12px)!important;}
+.vs-ratings{flex:0 0 auto!important;}.vs-stat-groups{min-height:0!important;overflow:hidden!important;}
+.vs-stat-group{min-width:0!important;}.vs-stamp{position:relative!important;align-self:center!important;justify-self:center!important;z-index:20!important;}.vs-board>.vs-stamp{pointer-events:none!important;}
 
-/* ==================== HOME ==================== */
-.home{
-  width:100%!important;
-  padding:clamp(12px,3vh,30px) 16px!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  gap:clamp(10px,2vh,20px)!important;
-}
-
-/* The old decorative bowl created a second X behind the real logo. */
-.home-bowl,.home-bowl-x,.home-pocket{display:none!important}
-.home-mark{flex:0 0 auto!important;z-index:2!important;max-width:min(560px,92vw)!important}
-.home-mark h1{line-height:.86!important;text-shadow:0 4px 0 #000,0 10px 26px rgba(0,0,0,.45)!important}
-.home-doors,.home-leagues{flex:0 0 auto!important;z-index:2!important}
-.home-door,.home-league{box-shadow:var(--sw-shadow)!important}
-
-/* ==================== MENUS ==================== */
-.menu{
-  width:100%!important;
-  margin:0 auto!important;
-  padding:clamp(10px,2vh,20px) clamp(12px,2vw,24px)!important;
-  justify-content:center!important;
-}
-.menu-card{min-width:0!important}
-
-/* ==================== COMBO / VS ==================== */
-.vs-screen{
-  width:100%!important;
-  margin:0!important;
-  padding:clamp(8px,1.8vh,18px) clamp(10px,2vw,28px)!important;
-  display:grid!important;
-  grid-template-rows:auto minmax(0,1fr) auto!important;
-  gap:clamp(6px,1.2vh,12px)!important;
-  position:relative!important;
-}
-.vs-board{
-  min-height:0!important;
-  width:100%!important;
-  position:relative!important;
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr)!important;
-  gap:10px!important;
-  align-items:stretch!important;
-}
-.vs-plate{
-  min-width:0!important;
-  min-height:0!important;
-  height:100%!important;
-  display:flex!important;
-  flex-direction:column!important;
-  overflow:hidden!important;
-}
-.vs-art{
-  flex:0 0 clamp(120px,19vh,190px)!important;
-  min-height:0!important;
-  height:auto!important;
-  display:grid!important;
-  place-items:center!important;
-  overflow:hidden!important;
-}
-.vs-art img{
-  width:auto!important;
-  height:auto!important;
-  max-width:88%!important;
-  max-height:88%!important;
-  object-fit:contain!important;
-}
-.vs-copy{
-  min-height:0!important;
-  overflow:hidden!important;
-  display:flex!important;
-  flex-direction:column!important;
-  padding:clamp(7px,1.2vh,12px)!important;
-}
-.vs-ratings{flex:0 0 auto!important}
-.vs-stat-groups{min-height:0!important;overflow:hidden!important}
-.vs-stat-group{min-width:0!important}
-.vs-stamp{position:relative!important;align-self:center!important;justify-self:center!important;z-index:20!important}
-.vs-board>.vs-stamp{pointer-events:none!important}
-
-/* ==================== BATTLE / STADIUM ==================== */
+/* =========================================================
+   BATTLE — explicit four-level sizing so the stadium cannot collapse.
+   The game renderer is: battle-shell > stadium-slot > stadium-cam >
+   stadium-lens > newStadium. Every level gets a real grid/flex size.
+   ========================================================= */
 .battle-shell{
-  width:100%!important;
+  width:100%!important;height:100dvh!important;min-height:0!important;max-height:100dvh!important;
   padding:clamp(5px,1vh,12px) clamp(6px,1.4vw,18px)!important;
-  display:grid!important;
-  grid-template-rows:auto minmax(0,1fr) auto!important;
-  gap:clamp(4px,1vh,9px)!important;
+  display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;gap:clamp(4px,1vh,9px)!important;
+  position:relative!important;z-index:1!important;
 }
-.battle-callout{min-height:0!important;height:auto!important;max-height:12vh!important;overflow:hidden!important}
-.stadium-slot{
-  min-height:0!important;
-  width:100%!important;
-  height:100%!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  overflow:hidden!important;
-}
-.stadium-cam,.stadium-lens{min-height:0!important;max-height:100%!important;height:100%!important;width:100%!important}
-#newStadium{
-  width:min(100%,900px)!important;
-  height:100%!important;
-  max-width:100%!important;
-  max-height:100%!important;
-  margin:0 auto!important;
-  box-sizing:border-box!important;
-}
-#newBattleSvg{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important}
-.battle-dock{
-  width:100%!important;
-  max-width:1100px!important;
-  min-height:0!important;
-  margin:0 auto!important;
-  padding:clamp(3px,.7vh,7px)!important;
-  overflow:hidden!important;
-}
-.battle-fighters,.battle-hud-card,#launchDock,.launch-panel,.launch-pad{min-height:0!important}
-.battle-hud-card{min-width:0!important;overflow:hidden!important}
+.battle-callout{grid-row:1!important;min-height:0!important;height:auto!important;max-height:12vh!important;overflow:hidden!important;}
+.stadium-slot{grid-row:2!important;position:relative!important;min-height:0!important;height:100%!important;width:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+.stadium-cam{position:relative!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;}
+.stadium-lens{position:relative!important;min-width:0!important;min-height:0!important;width:100%!important;height:100%!important;display:block!important;overflow:hidden!important;}
+#newStadium{position:relative!important;display:block!important;flex:1 1 auto!important;width:100%!important;height:100%!important;min-width:0!important;min-height:0!important;max-width:100%!important;max-height:100%!important;margin:0 auto!important;box-sizing:border-box!important;visibility:visible!important;opacity:1!important;}
+#newBattleSvg{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;max-width:none!important;max-height:none!important;}
+.battle-dock{grid-row:3!important;width:100%!important;max-width:1100px!important;min-height:0!important;margin:0 auto!important;padding:clamp(3px,.7vh,7px)!important;overflow:hidden!important;}
+.battle-fighters,.battle-hud-card,#launchDock,.launch-panel,.launch-pad{min-height:0!important;}.battle-hud-card{min-width:0!important;overflow:hidden!important;}
 
-/* ==================== MOBILE PORTRAIT ==================== */
-@media (max-width:767px){
-  .home{padding:10px 12px 14px!important;gap:8px!important}
-  .home-mark{max-width:96vw!important}
-  .home-mark h1{font-size:clamp(42px,12vw,66px)!important}
-  .home-doors{width:min(430px,100%)!important;gap:8px!important}
-  .home-door{min-height:60px!important;padding:10px 12px!important}
-  .home-door.rip{min-height:72px!important}
-  .home-door b{font-size:23px!important}
-  .home-door small{font-size:11px!important}
-  .home-door-row{gap:8px!important}
-  .home-leagues{width:min(430px,100%)!important;gap:8px!important}
-  .home-league{min-height:56px!important;padding:9px 12px!important}
+/* Make the stadium visually obvious even when the renderer is waiting for the first frame. */
+.stadium-lens #newStadium{background:#c9cdd0!important;border:1px solid #3d444b!important;border-radius:0!important;box-shadow:0 10px 28px rgba(0,0,0,.35)!important;}
 
-  /* Two fighters stay visible together on a phone. */
-  .vs-screen{padding:6px 6px 7px!important;gap:5px!important}
-  .vs-board{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:5px!important;min-height:0!important}
-  .vs-plate{height:100%!important}
-  .vs-art{flex-basis:clamp(68px,12vh,105px)!important}
-  .vs-art img{max-width:82%!important;max-height:82%!important}
-  .vs-copy{padding:5px!important}
-  .vs-who{font-size:8px!important;padding:2px 5px!important}
-  .vs-copy h2{font-size:clamp(15px,4.2vw,22px)!important;margin:4px 0 2px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-  .vs-parts{font-size:8px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-  .vs-ratings{gap:4px!important;margin:4px 0!important}
-  .vs-rating{min-height:35px!important;padding:3px 5px!important}
-  .vs-rating small{font-size:7px!important}
-  .vs-rating b{font-size:19px!important}
-  .vs-stat-groups{gap:3px!important}
-  .vs-stat-group{padding:4px!important}
-  .vs-stat-group-label{font-size:7px!important;margin-bottom:3px!important}
-  .vs-stats{gap:2px!important}
-  .vs-stat{min-height:24px!important;padding:2px 3px!important}
-  .vs-stat small{font-size:6px!important}
-  .vs-stat-val b{font-size:12px!important}
-  .vs-stat-val i{font-size:7px!important}
-  .vs-stamp{
-    position:absolute!important;
-    left:50%!important;
-    top:50%!important;
-    transform:translate(-50%,-50%)!important;
-    width:40px!important;height:40px!important;
-    font-size:14px!important;
-    background:#080b0f!important;
-  }
-
-  /* Battle: keep the stadium as the center of the screen. */
-  .battle-shell{padding:4px 5px 5px!important;gap:4px!important}
-  .battle-callout{max-height:8vh!important;padding:5px 7px!important;font-size:10px!important;line-height:1.2!important}
-  #newStadium{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important}
-  .battle-dock{padding:3px!important}
-  .battle-fighters{grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr)!important;gap:3px!important}
-  .battle-hud-card{padding:5px!important}
-  .battle-hud-top strong{font-size:10px!important}
-  .battle-hud-top span{font-size:7px!important}
-  .battle-hud-parts{font-size:7px!important}
-  .battle-hud-meta{position:static!important;width:max-content!important;margin-top:2px!important;padding:1px 3px!important}
-  .battle-hud-meta small{font-size:6px!important}
-  .battle-hud-meta b{font-size:10px!important}
-  .rpm-readout{margin-top:2px!important}
-  .rpm-readout span{font-size:7px!important}
-  .rpm-readout b{font-size:13px!important}
-  .rpm-bar-shell{height:6px!important}
-  .stability-readout{font-size:6px!important}
-  .stability-readout b{font-size:8px!important}
-  .battle-score-line{font-size:21px!important;gap:3px!important}
-  .battle-score-vs{font-size:10px!important}
-  .battle-score-ft{font-size:6px!important}
-  .forfeit-btn{margin-top:2px!important;min-height:20px!important;font-size:6px!important}
-  #launchDock{margin-top:3px!important}
-  .launch-panel{padding-top:3px!important}
-  .launch-row{gap:3px!important}
-  .menu-btn{min-height:34px!important;padding:5px 7px!important;font-size:11px!important}
-  .launch-pad p,#launchInfo{font-size:7px!important}
+@media(max-width:767px){
+  .home{padding:10px 12px 14px!important;gap:8px!important}.home-mark{max-width:96vw!important}.home-mark h1{font-size:clamp(42px,12vw,66px)!important}
+  .home-doors{width:min(430px,100%)!important;gap:8px!important}.home-door{min-height:60px!important;padding:10px 12px!important}.home-door.rip{min-height:72px!important}.home-door b{font-size:23px!important}.home-door small{font-size:11px!important}.home-door-row{gap:8px!important}.home-leagues{width:min(430px,100%)!important;gap:8px!important}.home-league{min-height:56px!important;padding:9px 12px!important}
+  .vs-screen{padding:6px!important;gap:5px!important}.vs-board{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:5px!important}.vs-art{flex-basis:clamp(68px,12vh,105px)!important}.vs-art img{max-width:82%!important;max-height:82%!important}.vs-copy{padding:5px!important}.vs-who{font-size:8px!important;padding:2px 5px!important}.vs-copy h2{font-size:clamp(15px,4.2vw,22px)!important;margin:4px 0 2px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.vs-parts{font-size:8px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.vs-ratings{gap:4px!important;margin:4px 0!important}.vs-rating{min-height:35px!important;padding:3px 5px!important}.vs-rating small{font-size:7px!important}.vs-rating b{font-size:19px!important}.vs-stat-groups{gap:3px!important}.vs-stat-group{padding:4px!important}.vs-stat-group-label{font-size:7px!important;margin-bottom:3px!important}.vs-stats{gap:2px!important}.vs-stat{min-height:24px!important;padding:2px 3px!important}.vs-stat small{font-size:6px!important}.vs-stat-val b{font-size:12px!important}.vs-stat-val i{font-size:7px!important}
+  .vs-stamp{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;width:40px!important;height:40px!important;font-size:14px!important;background:#080b0f!important;}
+  .battle-shell{padding:4px 5px 5px!important;gap:4px!important;}
+  .battle-callout{max-height:8vh!important;padding:5px 7px!important;font-size:10px!important;line-height:1.2!important;}
+  .stadium-slot{min-height:0!important;height:100%!important;}
+  .stadium-lens #newStadium{border-radius:0!important;}
+  .battle-dock{padding:3px!important;}
+  .battle-fighters{grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr)!important;gap:3px!important}.battle-hud-card{padding:5px!important}.battle-hud-top strong{font-size:10px!important}.battle-hud-top span{font-size:7px!important}.battle-hud-parts{font-size:7px!important}.battle-hud-meta{position:static!important;width:max-content!important;margin-top:2px!important;padding:1px 3px!important}.battle-hud-meta small{font-size:6px!important}.battle-hud-meta b{font-size:10px!important}.rpm-readout{margin-top:2px!important}.rpm-readout span{font-size:7px!important}.rpm-readout b{font-size:13px!important}.rpm-bar-shell{height:6px!important}.stability-readout{font-size:6px!important}.stability-readout b{font-size:8px!important}.battle-score-line{font-size:21px!important;gap:3px!important}.battle-score-vs{font-size:10px!important}.battle-score-ft{font-size:6px!important}.forfeit-btn{margin-top:2px!important;min-height:20px!important;font-size:6px!important}#launchDock{margin-top:3px!important}.launch-panel{padding-top:3px!important}.launch-row{gap:3px!important}.menu-btn{min-height:34px!important;padding:5px 7px!important;font-size:11px!important}.launch-pad p,#launchInfo{font-size:7px!important}
 }
-
-/* ==================== DESKTOP ==================== */
-@media (min-width:768px){
-  .home{padding:20px 28px!important}
-  .home-mark h1{font-size:clamp(56px,7vw,88px)!important}
-  .home-doors{width:min(760px,72vw)!important}
-  .vs-screen{padding:12px 22px 14px!important}
-  .vs-art{flex-basis:clamp(120px,23vh,210px)!important}
-  .vs-art img{max-width:175px!important;max-height:175px!important}
-  .vs-copy{padding:10px!important}
-  .battle-shell{padding-left:18px!important;padding-right:18px!important}
-  .battle-callout{max-height:10vh!important}
+@media(max-width:767px) and (max-height:700px){
+  .home{gap:5px!important;padding-top:7px!important;padding-bottom:7px!important}.home-mark h1{font-size:42px!important}.home-door{min-height:52px!important;padding:7px 10px!important}.home-door.rip{min-height:60px!important}.home-door b{font-size:20px!important}.vs-screen{padding-top:3px!important;padding-bottom:3px!important}.vs-art{flex-basis:58px!important}.vs-rating{min-height:29px!important}.vs-stat{min-height:21px!important}.vs-stat-val b{font-size:10px!important}.battle-callout{max-height:7vh!important}
 }
-
-/* Short phones: tighten spacing instead of introducing scrolling. */
-@media (max-width:767px) and (max-height:700px){
-  .home{gap:5px!important;padding-top:7px!important;padding-bottom:7px!important}
-  .home-mark h1{font-size:42px!important}
-  .home-door{min-height:52px!important;padding:7px 10px!important}
-  .home-door.rip{min-height:60px!important}
-  .home-door b{font-size:20px!important}
-  .vs-screen{padding-top:3px!important;padding-bottom:3px!important}
-  .vs-art{flex-basis:58px!important}
-  .vs-rating{min-height:29px!important}
-  .vs-stat{min-height:21px!important}
-  .vs-stat-val b{font-size:10px!important}
-  .battle-callout{max-height:7vh!important}
+@media(min-width:768px){
+  .home{padding:20px 28px!important}.home-mark h1{font-size:clamp(56px,7vw,88px)!important}.home-doors{width:min(760px,72vw)!important}.vs-screen{padding:12px 22px 14px!important}.vs-art{flex-basis:clamp(120px,23vh,210px)!important}.vs-art img{max-width:175px!important;max-height:175px!important}.vs-copy{padding:10px!important}.battle-shell{padding-left:18px!important;padding-right:18px!important}.battle-callout{max-height:10vh!important}
 }
-
-/* Touch targets remain interactive; layout never becomes scrollable. */
-button,.home-door,.home-league,.menu-btn,.rip-btn,.vs-reroll,.back-btn{
-  touch-action:manipulation;
+@media(min-width:900px){
+  .battle-shell{grid-template-rows:auto minmax(0,1fr) auto!important;}.stadium-slot{min-height:0!important;}.stadium-lens #newStadium{max-width:1100px!important;}
 }
+button,.home-door,.home-league,.menu-btn,.rip-btn,.vs-reroll,.back-btn{touch-action:manipulation;}
