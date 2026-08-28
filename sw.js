@@ -1,10 +1,10 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.23-rogue2';
+const CACHE='spin-wars-x-9.23-rogue3';
 const PRECACHE=[
   './','./index.html','./manifest.webmanifest',
   './style.css?v=9.23','./movement-engine.js?v=9.23','./xrail-engine.js?v=9.23',
   './vs-commentary.js?v=9.23','./abilities.js?v=9.23','./app.js?v=9.23',
-  './rogue-mode.js?v=9.23','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.0','./sw.js',
+  './rogue-mode.js?v=9.23','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.0','./rogue-shop-balance.js?v=1.0','./sw.js',
   './assets/blades/Aeropegasus.png','./assets/blades/Dransword%20%281%29.png','./assets/blades/KnightMail.png',
   './assets/blades/Leoncrest.png','./assets/blades/Leonfang.png','./assets/blades/Sharkedge.png',
   './assets/blades/Silverwolf.png','./assets/blades/Unicornsting.png','./assets/blades/Vipertail.png',
@@ -19,7 +19,7 @@ const PRECACHE=[
   './assets/blades/ratchets/4-60.png','./assets/blades/ratchets/4-70.png','./assets/blades/ratchets/4-80.png',
   './assets/blades/ratchets/5-60.png','./assets/blades/ratchets/5-70.png','./assets/blades/ratchets/5-80.png',
   './assets/blades/ratchets/6-60.png','./assets/blades/ratchets/6-70.png','./assets/blades/ratchets/6-80.png',
-  './assets/blades/ratchets/7-60.png','./assets/blades/ratchets/7-70.png','./assets/blades/7-80.png',
+  './assets/blades/ratchets/7-60.png','./assets/blades/ratchets/7-70.png','./assets/blades/ratchets/7-80.png',
   './assets/blades/ratchets/9-60.png','./assets/blades/ratchets/9-70.png','./assets/blades/ratchets/9-80.png',
   './assets/blades/sharkscale.png','./assets/blades/shelterdrake.png','./assets/blades/tyrannoBeat.png',
   './assets/fonts/kanit-500.woff2','./assets/fonts/kanit-700.woff2','./assets/fonts/kanit-800.woff2','./assets/fonts/kanit-900.woff2',
