@@ -1,0 +1,66 @@
+/* SPIN WARS X — UI OVERHAUL SAFETY/FIT LAYER
+   Presentation only. Restores intrinsic proportions and viewport fitting. */
+
+html,body{overflow:hidden!important;width:100%!important;height:100%!important}
+#app{overflow:hidden!important;width:100%!important;height:100dvh!important}
+
+/* Never let media become stretched by a viewport-sized parent. */
+img,svg,video,canvas{max-width:100%;}
+
+/* BATTLE: reserve space for the stadium, then fit it proportionally. */
+.battle-shell{height:100dvh!important;max-height:100dvh!important;min-height:0!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;overflow:hidden!important}
+.stadium-slot{min-width:0!important;min-height:0!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+.stadium-cam,.stadium-lens{min-width:0!important;min-height:0!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important}
+
+/* The stadium is intentionally NOT width:100% + height:100%.
+   Its aspect ratio is maintained by the renderer/JS and by contain sizing. */
+#newStadium{display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;flex:0 1 auto!important;width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;aspect-ratio:auto!important;overflow:hidden!important}
+#newStadium #newBattleSvg,
+#newBattleSvg{display:block!important;position:relative!important;inset:auto!important;flex:0 1 auto!important;width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important;object-position:center!important}
+
+/* If the renderer gives the SVG explicit dimensions, contain it instead of
+   allowing the CSS viewport to distort it. */
+#newStadium>svg{width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}
+
+/* PHONE BATTLE: keep the original stadium proportions and give it the largest
+   proportional rectangle that fits between commentary and HUD. */
+@media(max-width:767px){
+  .battle-shell{padding:4px 5px 5px!important;gap:4px!important}
+  .battle-callout{flex:none!important;max-height:8vh!important;overflow:hidden!important}
+  .stadium-slot{height:100%!important;min-height:0!important}
+  .battle-dock{min-height:0!important;overflow:hidden!important}
+  #newStadium,#newBattleSvg{max-width:100%!important;max-height:100%!important}
+}
+
+/* DESKTOP: more breathing room without changing the stadium's shape. */
+@media(min-width:768px){
+  .battle-shell{padding:8px 16px 10px!important;gap:6px!important}
+  #newStadium,#newBattleSvg{max-width:min(1100px,100%)!important;max-height:100%!important}
+}
+
+/* COMBO/SELECTION SCREENS: a bounded game viewport, never a long web page. */
+.menu:has(.selection-header){height:100dvh!important;max-height:100dvh!important;min-height:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) auto!important;align-content:stretch!important}
+.menu:has(.selection-header) .selection-header{min-height:0!important}
+.menu:has(.selection-header) .part-select-grid,
+.menu:has(.selection-header) .blade-grid,
+.menu:has(.selection-header) .selection-grid{min-height:0!important;overflow:hidden!important}
+.menu:has(.selection-header) .part-select-card,
+.menu:has(.selection-header) .blade-card{min-height:0!important;overflow:hidden!important;box-sizing:border-box!important}
+.menu:has(.selection-header) .part-select-card img,
+.menu:has(.selection-header) .blade-card img{width:auto!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}
+
+/* Side navigation: retain the existing back action but present it as a
+   compact game-navigation arrow instead of a bottom web-page button. */
+.menu:has(.selection-header) .back-btn{position:fixed!important;left:10px!important;top:50%!important;transform:translateY(-50%)!important;width:48px!important;height:64px!important;min-height:0!important;padding:0!important;z-index:50!important;background:#10141a!important;border:2px solid #343b45!important;clip-path:polygon(0 50%,14% 0,100% 0,100% 100%,14% 100%)!important;color:transparent!important;font-size:0!important;box-shadow:0 8px 18px rgba(0,0,0,.4)!important}
+.menu:has(.selection-header) .back-btn::after{content:"‹";position:absolute;inset:0;display:grid;place-items:center;color:#f4f0e8;font-size:42px;line-height:1;font-weight:700}
+
+/* Keep navigation unobtrusive on very small screens. */
+@media(max-width:767px){
+  .menu:has(.selection-header) .back-btn{left:4px;width:38px;height:52px}
+  .menu:has(.selection-header) .back-btn::after{font-size:34px}
+}
+
+/* Prevent common text collisions introduced by compressed cards. */
+.menu-card,.part-select-card,.blade-card,.vs-plate,.battle-hud-card{box-sizing:border-box!important}
+.menu-card *,.part-select-card *,.blade-card *,.vs-plate *,.battle-hud-card *{min-width:0}
+.menu-card h1,.menu-card h2,.part-select-card h2,.blade-card h2,.vs-plate h1,.vs-plate h2{overflow-wrap:normal!important;word-break:normal!important}
