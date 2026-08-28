@@ -1,16 +1,16 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.20';
+const CACHE='spin-wars-x-9.21';
 const PRECACHE=[
   './',
   './index.html',
   './manifest.webmanifest',
-  './style.css?v=9.20',
-  './movement-engine.js?v=9.20',
-  './xrail-engine.js?v=9.20',
-  './vs-commentary.js?v=9.20',
-  './abilities.js?v=9.20',
-  './app.js?v=9.20',
-  './rogue-mode.js?v=9.20',
+  './style.css?v=9.21',
+  './movement-engine.js?v=9.21',
+  './xrail-engine.js?v=9.21',
+  './vs-commentary.js?v=9.21',
+  './abilities.js?v=9.21',
+  './app.js?v=9.21',
+  './rogue-mode.js?v=9.21',
   './sw.js',
   './assets/blades/Aeropegasus.png',
   './assets/blades/Dransword%20%281%29.png',

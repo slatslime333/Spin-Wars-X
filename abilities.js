@@ -16,7 +16,8 @@
     const HURRICANE_GAIN=0.10;
     const QUAKE_R=0.62;
     const QUAKE_MS=3000;
-    const IRON_MS=4500;
+    const IRON_MS=3000;
+    const FREE_SPIN_CHANCE=0.15;
     const FLAME_MS=2300;
     const FLAME_PHASE2_MS=1000;
     const PEGASUS_LIFT_MS=1300;
@@ -50,15 +51,15 @@
         },
         "iron-skin":{
             name:"Iron Skin", active:true,
-            blurb:"2 uses a match. 4.5s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
+            blurb:"2 uses a match. 3s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
         },
         "free-spin":{
             name:"Free Spin", active:false,
-            blurb:"Always on. Each clash: 10% chance you take 0 RPM from that hit and 35% less knock. FREE SPIN pops when it procs."
+            blurb:"Always on. Each clash: 15% chance you take 0 RPM from that hit and 35% less knock. FREE SPIN pops when it procs."
         },
         "double-edge":{
             name:"Double Edge", active:false,
-            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +28% and 1–3 extra RPM on them (+KB), 1/3 your knock −18% (−KB), 1/3 nothing."
+            blurb:"Always on. Each clash rolls evenly: 1/3 your knock +28% and 1–4 extra RPM on them (+KB), 1/3 your knock −18% (−KB), 1/3 nothing."
         },
         "earthquake":{
             name:"Earthquake", active:true,
@@ -180,50 +181,76 @@
         </details>`;
     }
 
+    function matchChargeKey(){
+        const g=global.Game||{};
+        const p=g.player?.blade?.name||"";
+        const c=g.cpu?.blade?.name||"";
+        const mode=g.mode||"";
+        const qm=g.quickMatch?"qm":"std";
+        const ri=(g.mode==="rogue" && g.rogue)?String(g.rogue.matchIndex||0):"x";
+        return [mode,qm,ri,p,c].join("|");
+    }
     function persistCharges(){
         const payload={
             player:clamp(Number(state.charges.player)||0,0,ABILITY_USES),
-            cpu:clamp(Number(state.charges.cpu)||0,0,ABILITY_USES)
+            cpu:clamp(Number(state.charges.cpu)||0,0,ABILITY_USES),
+            key:matchChargeKey()
         };
-        state.charges=payload;
+        state.charges={player:payload.player,cpu:payload.cpu};
         if(global.Game){
             global.Game.battle=global.Game.battle||{};
             global.Game.battle.abilityCharges={...payload};
         }
         try{ sessionStorage.setItem(CHARGE_KEY, JSON.stringify(payload)); }catch(_e){}
     }
+    function packStored(raw){
+        if(!raw || !Number.isFinite(Number(raw.player))) return null;
+        return {
+            player:clamp(Number(raw.player)||0,0,ABILITY_USES),
+            cpu:clamp(Number(raw.cpu)||0,0,ABILITY_USES),
+            key:typeof raw.key==="string"?raw.key:""
+        };
+    }
     function readStoredCharges(){
-        const fromBattle=global.Game?.battle?.abilityCharges;
-        if(fromBattle && Number.isFinite(Number(fromBattle.player))){
-            return {
-                player:clamp(Number(fromBattle.player)||0,0,ABILITY_USES),
-                cpu:clamp(Number(fromBattle.cpu)||0,0,ABILITY_USES)
-            };
-        }
+        const fromBattle=packStored(global.Game?.battle?.abilityCharges);
+        if(fromBattle) return fromBattle;
         try{
-            const raw=JSON.parse(sessionStorage.getItem(CHARGE_KEY)||"null");
-            if(raw && Number.isFinite(Number(raw.player))){
-                return {
-                    player:clamp(Number(raw.player)||0,0,ABILITY_USES),
-                    cpu:clamp(Number(raw.cpu)||0,0,ABILITY_USES)
-                };
-            }
+            return packStored(JSON.parse(sessionStorage.getItem(CHARGE_KEY)||"null"));
         }catch(_e){}
         return null;
     }
     function restoreCharges(){
         const saved=readStoredCharges();
         if(!saved) return false;
-        state.charges=saved;
+        state.charges={player:saved.player,cpu:saved.cpu};
         persistCharges();
         updateDock();
         return true;
     }
+    function matchInProgress(saved){
+        const battle=global.Game?.battle;
+        const score=battle?.score;
+        const pts=(Number(score?.player)||0)+(Number(score?.cpu)||0);
+        if(battle?.matchStarted) return true;
+        if(pts>0) return true;
+        if(global.Game?.mode==="rogue" && global.Game?.rogue && saved) return true;
+        return false;
+    }
     function matchStillHoldsCharges(){
         const saved=readStoredCharges();
-        if(global.Game?.battle?.matchStarted) return true;
         if(!saved) return false;
-        return saved.player<ABILITY_USES || saved.cpu<ABILITY_USES;
+        if(saved.key && saved.key!==matchChargeKey()) return false;
+        return matchInProgress(saved);
+    }
+    function syncMatchCharges(){
+        const saved=readStoredCharges();
+        const key=matchChargeKey();
+        if(saved && (!saved.key || saved.key===key) && matchInProgress(saved)){
+            restoreCharges();
+            return "restore";
+        }
+        resetMatch();
+        return "reset";
     }
 
     function resetMatch(){
@@ -499,12 +526,12 @@
         const pKit=kitId(p.blade);
         const cKit=kitId(c.blade);
 
-        if(pKit==="free-spin" && Math.random()<0.10){
+        if(pKit==="free-spin" && Math.random()<FREE_SPIN_CHANCE){
             cKnock*=0.65;
             pIgnore=true;
             popup("FREE SPIN");
         }
-        if(cKit==="free-spin" && Math.random()<0.10){
+        if(cKit==="free-spin" && Math.random()<FREE_SPIN_CHANCE){
             pKnock*=0.65;
             cIgnore=true;
             popup("FREE SPIN");
@@ -514,7 +541,7 @@
             const roll=Math.random();
             if(roll<1/3){
                 pKnock*=1.28;
-                pExtraRpm=0.010+Math.random()*0.020;
+                pExtraRpm=0.010+Math.random()*0.030;
                 popup("+KB");
             }else if(roll<2/3){
                 pKnock*=0.82;
@@ -525,7 +552,7 @@
             const roll=Math.random();
             if(roll<1/3){
                 cKnock*=1.28;
-                cExtraRpm=0.010+Math.random()*0.020;
+                cExtraRpm=0.010+Math.random()*0.030;
                 popup("+KB");
             }else if(roll<2/3){
                 cKnock*=0.82;
@@ -1321,12 +1348,12 @@
 
     global.SpinWarsAbilities={
         kitId, kitMeta, emblemSVG, abilityChipHTML,
-        resetMatch, resetRound, restoreCharges, matchStillHoldsCharges, onForeground,
+        resetMatch, resetRound, restoreCharges, matchStillHoldsCharges, syncMatchCharges, matchChargeKey, onForeground,
         tryDash, tryAbility,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
         cpuShouldDash, cpuShouldAbility, readFight,
-        SWORD_R, STORM_R, QUAKE_R, KITS, META
+        SWORD_R, STORM_R, QUAKE_R, IRON_MS, FREE_SPIN_CHANCE, KITS, META
     };
     if(typeof window!=="undefined"){
         window.addEventListener("pagehide", persistCharges);

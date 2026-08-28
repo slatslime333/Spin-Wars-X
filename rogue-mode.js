@@ -1537,12 +1537,12 @@ function hydrate(data){
         matchStarted:!!data.battle?.matchStarted,
         abilityCharges:data.battle?.abilityCharges||null
     };
-    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.restoreCharges){
-        SpinWarsAbilities.restoreCharges();
-    }
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.cpu.lockedLaunchPlan=null;
     syncLoadout();
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.restoreCharges){
+        SpinWarsAbilities.restoreCharges();
+    }
     return true;
 }
 
