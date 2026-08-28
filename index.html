@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="ui-overhaul.css?v=1.1">
     <link rel="stylesheet" href="ui-layout-v2.css?v=2.1">
     <link rel="stylesheet" href="ui-layout-v2-fix.css?v=1.0">
+    <link rel="stylesheet" href="ui-polish-v3.css?v=3.0">
 </head>
 <body>
 <div id="app"></div>
@@ -45,6 +46,114 @@
   new MutationObserver(fitBattleSvg).observe(document.documentElement,{childList:true,subtree:true});
   setTimeout(fitBattleSvg,0);
 })();
+
+/*
+  SELECTION NAVIGATION BRIDGE
+  ---------------------------
+  The selection screen used to spend valuable viewport height on a bottom
+  pagination bar plus a separate BACK button. The game now uses one pair of
+  side arrows instead:
+    - LEFT = BACK on page 1; PREVIOUS on later pages.
+    - RIGHT = NEXT when another page exists.
+    - An arrow is hidden when there is no action available.
+
+  It only proxies existing buttons. It does not alter game state or selection
+  logic; the original controls remain the source of truth.
+*/
+(function(){
+  var sideNav=null;
+  var left=null;
+  var right=null;
+  var syncQueued=false;
+
+  function selectionScreen(){
+    var screens=document.querySelectorAll('.menu');
+    for(var i=0;i<screens.length;i++){
+      if(screens[i].querySelector('.selection-header')) return screens[i];
+    }
+    return null;
+  }
+
+  function makeNav(){
+    if(sideNav) return;
+    sideNav=document.createElement('div');
+    sideNav.className='sw-selection-side-nav';
+
+    left=document.createElement('button');
+    left.type='button';
+    left.className='sw-selection-side-arrow left';
+    left.setAttribute('aria-label','Previous screen or back');
+    left.textContent='‹';
+
+    right=document.createElement('button');
+    right.type='button';
+    right.className='sw-selection-side-arrow right';
+    right.setAttribute('aria-label','Next screen');
+    right.textContent='‹';
+
+    sideNav.appendChild(left);
+    sideNav.appendChild(right);
+    document.body.appendChild(sideNav);
+  }
+
+  function hideNav(){
+    if(sideNav) sideNav.remove();
+    sideNav=null;
+    left=null;
+    right=null;
+  }
+
+  function sync(){
+    syncQueued=false;
+    var screen=selectionScreen();
+    if(!screen){
+      hideNav();
+      return;
+    }
+
+    makeNav();
+
+    var back=screen.querySelector('.back-btn');
+    var pager=screen.querySelector('.selection-nav');
+    var buttons=pager ? pager.querySelectorAll('button') : [];
+    var prev=buttons.length ? buttons[0] : null;
+    var next=buttons.length>1 ? buttons[buttons.length-1] : null;
+
+    /* Page 1 uses the actual BACK action. Once a previous page exists, the
+       same left arrow becomes the real previous-page button. */
+    var leftTarget=(prev && !prev.disabled) ? prev : back;
+    var rightTarget=(next && !next.disabled) ? next : null;
+
+    left.hidden=!leftTarget;
+    right.hidden=!rightTarget;
+
+    left.onclick=function(){
+      if(leftTarget && typeof leftTarget.click==='function') leftTarget.click();
+      queueSync();
+    };
+    right.onclick=function(){
+      if(rightTarget && typeof rightTarget.click==='function') rightTarget.click();
+      queueSync();
+    };
+  }
+
+  function queueSync(){
+    if(syncQueued) return;
+    syncQueued=true;
+    requestAnimationFrame(function(){
+      requestAnimationFrame(sync);
+    });
+  }
+
+  new MutationObserver(queueSync).observe(document.getElementById('app'),{
+    childList:true,
+    subtree:true
+  });
+  window.addEventListener('resize',queueSync,{passive:true});
+  window.addEventListener('orientationchange',function(){setTimeout(queueSync,80);},{passive:true});
+  queueSync();
+})();
+
 if("serviceWorker" in navigator){
     window.addEventListener("load",()=>{
         navigator.serviceWorker.register("./sw.js").catch(()=>{});
