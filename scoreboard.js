@@ -38,6 +38,8 @@
             xtreme:0,
             dashes:0,
             xrailDashes:0,
+            xrailRides:0,
+            abilityDamage:0,
             peakRpm:0,
             biggestImpact:0,
             xrailSpin:0,
@@ -106,6 +108,8 @@
             bigImpacts:0,
             dashes:0,
             xrailDashes:0,
+            xrailRides:0,
+            abilityDamage:0,
             peakRpm:0,
             biggestImpact:0,
             battleScores:[],
@@ -146,6 +150,12 @@
             noteEvent(dealer,`${commas(amount)} RPM Damage`);
         }
     }
+    function addAbilityDamage(dealer,amount){
+        if(amount<=0) return;
+        const s=sideOf(dealer);
+        s.abilityDamage=(Number(s.abilityDamage)||0)+amount;
+        noteEvent(dealer,`${commas(amount)} Ability Damage`);
+    }
 
     function onDash(side,bey){
         ensureMatch();
@@ -166,8 +176,14 @@
 
         const pRail=!!p.railEngaged;
         const cRail=!!c.railEngaged;
-        if(pRail && !state.wasRail.player) markRail("player");
-        if(cRail && !state.wasRail.cpu) markRail("cpu");
+        if(pRail && !state.wasRail.player){
+            markRail("player");
+            state.match.player.xrailRides=(Number(state.match.player.xrailRides)||0)+1;
+        }
+        if(cRail && !state.wasRail.cpu){
+            markRail("cpu");
+            state.match.cpu.xrailRides=(Number(state.match.cpu.xrailRides)||0)+1;
+        }
         if(!pRail && state.wasRail.player) markRail("player");
         if(!cRail && state.wasRail.cpu) markRail("cpu");
         state.wasRail.player=pRail;
@@ -177,11 +193,17 @@
         const at=Number(imp?.time)||0;
         if(imp && at && at!==state.lastImpactAt){
             state.lastImpactAt=at;
+            const ability=!!imp.fromAbility;
             const heavy=imp.impactClass==="heavy"||imp.heavy;
             const pLost=hudRpm(imp.playerRpmLoss);
             const cLost=hudRpm(imp.cpuRpmLoss);
-            if(cLost>0) addDamage("player",cLost,heavy && cLost>=SCORE.BIG_IMPACT_MIN_HUD);
-            if(pLost>0) addDamage("cpu",pLost,heavy && pLost>=SCORE.BIG_IMPACT_MIN_HUD);
+            if(ability){
+                if(cLost>0) addAbilityDamage("player",cLost);
+                if(pLost>0) addAbilityDamage("cpu",pLost);
+            }else{
+                if(cLost>0) addDamage("player",cLost,heavy && cLost>=SCORE.BIG_IMPACT_MIN_HUD);
+                if(pLost>0) addDamage("cpu",pLost,heavy && pLost>=SCORE.BIG_IMPACT_MIN_HUD);
+            }
         }
 
         const score=global.Game?.battle?.score;
@@ -247,17 +269,15 @@
     }
 
     function rpmPts(damage){
-        return Math.floor(Math.max(0,damage)/SCORE.RPM_DAMAGE_PER_POINT);
+        return Math.floor(Math.max(0,Number(damage)||0)/SCORE.RPM_DAMAGE_PER_POINT);
     }
     function baseScore(s){
         return rpmPts(s.rpmDamage)
+            + rpmPts(s.abilityDamage)
             + s.bigImpacts*SCORE.BIG_IMPACT
             + s.spin*SCORE.SPIN_FINISH
             + s.over*SCORE.OVER_FINISH
-            + s.xtreme*SCORE.XTREME_FINISH
-            + s.xrailSpin*SCORE.XRAIL_SPIN
-            + s.xrailOver*SCORE.XRAIL_OVER
-            + s.xrailXtreme*SCORE.XRAIL_XTREME;
+            + s.xtreme*SCORE.XTREME_FINISH;
     }
     function dmgPerHit(s){
         if(!s.hits) return 0;
@@ -265,19 +285,42 @@
     }
 
     function breakdown(s){
+        const ability=Number(s.abilityDamage)||0;
+        const rides=Number(s.xrailRides)||0;
         const rows=[
             {key:"rpm",name:"RPM Damage",stat:`${commas(s.rpmDamage)} damage`,pts:rpmPts(s.rpmDamage),score:true},
+            {key:"ability",name:"Ability Damage",stat:`${commas(ability)} damage`,pts:rpmPts(ability),score:true},
             {key:"big",name:"Big Impacts",stat:String(s.bigImpacts),pts:s.bigImpacts*SCORE.BIG_IMPACT,score:true},
             {key:"spin",name:"Spin Finishes",stat:String(s.spin),pts:s.spin*SCORE.SPIN_FINISH,score:true},
             {key:"over",name:"Over Finishes",stat:String(s.over),pts:s.over*SCORE.OVER_FINISH,score:true},
             {key:"xtreme",name:"Xtreme Finishes",stat:String(s.xtreme),pts:s.xtreme*SCORE.XTREME_FINISH,score:true},
-            {key:"xspin",name:"X-Rail → Spin",stat:String(s.xrailSpin),pts:s.xrailSpin*SCORE.XRAIL_SPIN,score:true,hide:!s.xrailSpin},
-            {key:"xover",name:"X-Rail → Over",stat:String(s.xrailOver),pts:s.xrailOver*SCORE.XRAIL_OVER,score:true,hide:!s.xrailOver},
-            {key:"xxtreme",name:"X-Rail → Xtreme",stat:String(s.xrailXtreme),pts:s.xrailXtreme*SCORE.XRAIL_XTREME,score:true,hide:!s.xrailXtreme},
-            {key:"dash",name:"Dashes Used",stat:String(s.dashes),pts:0,score:false},
-            {key:"xdash",name:"X-Rail Dashes",stat:String(s.xrailDashes),pts:0,score:false}
+            {key:"xride",name:"X-Rail Rides",stat:String(rides),pts:0,score:false},
+            {key:"dash",name:"Dashes Used",stat:String(s.dashes),pts:0,score:false}
         ];
         return rows.filter(r=>!r.hide);
+    }
+
+    function qualityFromScore(n){
+        if(n>=88) return "Perfect";
+        if(n>=70) return "Good";
+        if(n>=48) return "Okay";
+        if(n>=28) return "Bad";
+        return "Horrible";
+    }
+    function gameQuality(winner,pScore,cScore,pT){
+        const pts=Number(pT?.final)||0;
+        const ps=Number(pScore)||0;
+        const cs=Number(cScore)||0;
+        let q=0;
+        if(winner==="player"){
+            q=42+(ps-cs)*8;
+            q+=Math.min(28, pts/55);
+            if(cs===0) q+=6;
+        }else{
+            q=6+ps*7;
+            q+=Math.min(16, pts/90);
+        }
+        return qualityFromScore(q);
     }
 
     function victoryLabel(winner,pScore,cScore,winnerRpm){
@@ -330,6 +373,8 @@
         state.run.bigImpacts+=p.bigImpacts;
         state.run.dashes+=p.dashes;
         state.run.xrailDashes+=p.xrailDashes;
+        state.run.xrailRides=(Number(state.run.xrailRides)||0)+(Number(p.xrailRides)||0);
+        state.run.abilityDamage=(Number(state.run.abilityDamage)||0)+(Number(p.abilityDamage)||0);
         if(p.peakRpm>state.run.peakRpm) state.run.peakRpm=p.peakRpm;
         if(p.biggestImpact>state.run.biggestImpact) state.run.biggestImpact=p.biggestImpact;
         state.run.battleScores.push(pT.final);
@@ -395,17 +440,13 @@
                 <p class="sb-chain-line">No scoring sequence</p>
                 <p class="sb-mul">×${SCORE.MUL_NORMAL.toFixed(2)}</p>
                </section>`;
-        const ev=state.lastEvent;
-        const decisive=ev
-            ? `<p class="sb-decisive"><span>DECISIVE HIT</span> ${ev.side==="player"?n.player:n.cpu} — ${ev.label}</p>`
-            : "";
+        const quality=gameQuality(winner,pScore,cScore,packed.pT);
         const boss=opts.rogue?absorbIntoRun(winner,packed.pT)||0:0;
         if(opts.rogue && typeof global.SpinWarsRogue!=="undefined" && SpinWarsRogue.persist){
             SpinWarsRogue.persist();
         }
         const records=`<section class="sb-records">
             <div><small>Peak RPM</small><b>${hudRpm(state.match.player.peakRpm)}</b><i>${hudRpm(state.match.cpu.peakRpm)}</i></div>
-            <div><small>Biggest Impact</small><b>${commas(state.match.player.biggestImpact)}</b><i>${commas(state.match.cpu.biggestImpact)}</i></div>
             <div><small>Damage / Hit</small><b>${dmgPerHit(state.match.player)}</b><i>${dmgPerHit(state.match.cpu)}</i></div>
         </section>`;
         const app=document.getElementById("app");
@@ -428,7 +469,7 @@
                 ${colHTML("CPU",n.cpu,state.match.cpu,packed.cT)}
             </div>
             ${records}
-            ${decisive}
+            <p class="sb-quality"><span>GAME QUALITY</span><b>${quality}</b></p>
             ${boss?`<p class="sb-boss">Rogue boss bonus +${commas(boss)}</p>`:""}
             <div class="sb-actions">${next}</div>
         </main>`;
@@ -446,13 +487,14 @@
 
     function showRunSummary(opts){
         opts=opts||{};
-        const r=state.run||{battleScores:[],battlesWon:0,battles:0,rpmDamage:0,spin:0,over:0,xtreme:0,bigImpacts:0,dashes:0,xrailDashes:0,peakRpm:0,biggestImpact:0,bossBonus:0};
+        const r=opts.run||state.run||{battleScores:[],battlesWon:0,battles:0,rpmDamage:0,spin:0,over:0,xtreme:0,bigImpacts:0,dashes:0,xrailRides:0,abilityDamage:0,peakRpm:0,bossBonus:0};
         const battles=(r.battleScores||[]).reduce((a,b)=>a+b,0);
-        const final=battles+r.bossBonus;
-        const blade=global.Game?.rogue?.blade?.name||global.Game?.player?.blade?.name||"RUN";
+        const final=battles+(Number(r.bossBonus)||0);
+        const blade=opts.bladeName||global.Game?.rogue?.blade?.name||global.Game?.player?.blade?.name||"RUN";
+        const status=opts.status==="won"?"WON":opts.status==="lost"?"LOST":"";
         if(global.Game) global.Game.screen="rogueRunSummary";
         const app=document.getElementById("app");
-        const mark=typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,tag:"ROGUE RUN COMPLETE"}):"";
+        const mark=typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,tag:status==="WON"?"ROGUE RUN WON":status==="LOST"?"ROGUE RUN LOST":"ROGUE RUN COMPLETE"}):"";
         const list=(r.battleScores||[]).map((sc,i)=>`<li>Battle ${i+1} <b>${commas(sc)}</b></li>`).join("");
         app.innerHTML=`<div class="background"></div>
         <main class="sb-screen sb-run">
@@ -461,16 +503,16 @@
             <p class="sb-kicker">FINAL SCORE</p>
             <p class="sb-final sb-run-final">${commas(final)}</p>
             <ul class="sb-run-stats">
-                <li>Battles Won <b>${r.battlesWon}</b></li>
+                <li>Battles Won <b>${r.battlesWon||0}</b></li>
                 <li>Total RPM Damage <b>${commas(r.rpmDamage)}</b></li>
-                <li>Spin Finishes <b>${r.spin}</b></li>
-                <li>Over Finishes <b>${r.over}</b></li>
-                <li>Xtreme Finishes <b>${r.xtreme}</b></li>
-                <li>Big Impacts <b>${r.bigImpacts}</b></li>
-                <li>Dashes <b>${r.dashes}</b></li>
-                <li>X-Rail Dashes <b>${r.xrailDashes}</b></li>
+                <li>Ability Damage <b>${commas(r.abilityDamage)}</b></li>
+                <li>Spin Finishes <b>${r.spin||0}</b></li>
+                <li>Over Finishes <b>${r.over||0}</b></li>
+                <li>Xtreme Finishes <b>${r.xtreme||0}</b></li>
+                <li>Big Impacts <b>${r.bigImpacts||0}</b></li>
+                <li>Dashes <b>${r.dashes||0}</b></li>
+                <li>X-Rail Rides <b>${r.xrailRides||0}</b></li>
                 <li>Peak RPM <b>${hudRpm(r.peakRpm)}</b></li>
-                <li>Biggest Impact <b>${commas(r.biggestImpact)}</b></li>
                 <li>Battle Score Total <b>${commas(battles)}</b></li>
                 <li>Boss Bonuses <b>${pts(r.bossBonus)}</b></li>
             </ul>
@@ -487,7 +529,7 @@
         SCORE, beginMatch, beginPoint, beginRun,
         observe, onDash, onFinish,
         showMatchSummary, showRunSummary,
-        packMatch, tally, baseScore, breakdown, exportRun, importRun, runFinal
+        packMatch, tally, baseScore, breakdown, gameQuality, exportRun, importRun, runFinal
     };
     if(typeof document!=="undefined"){
         document.addEventListener("DOMContentLoaded",()=>{
@@ -503,17 +545,15 @@
                 beginMatch();
                 Object.assign(state.match.player,{
                     rpmDamage:1240,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
-                    dashes:7,xrailDashes:3,peakRpm:0.97,biggestImpact:87,
-                    xrailSpin:0,xrailOver:0,xrailXtreme:1,
+                    dashes:7,xrailRides:5,abilityDamage:180,peakRpm:0.97,
                     bestMul:SCORE.MUL_EXCEPTIONAL,
                     bestChain:"Big Impact → X-Rail → Xtreme Finish"
                 });
                 Object.assign(state.match.cpu,{
                     rpmDamage:860,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
-                    dashes:4,xrailDashes:1,peakRpm:0.88,biggestImpact:64,
+                    dashes:4,xrailRides:2,abilityDamage:40,peakRpm:0.88,
                     bestMul:SCORE.MUL_STRONG,bestChain:"X-Rail → Over"
                 });
-                state.lastEvent={side:"player",label:"Xtreme Finish"};
                 state.maxCpuLead=3;
                 showMatchSummary({
                     matchWinner:"player",playerScore:7,cpuScore:3,rogue:false,

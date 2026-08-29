@@ -3951,9 +3951,9 @@ function renderNewBattle(){
               </div>
               <div class="battle-score">
                 <div class="battle-score-line">
-                  <b>${Game.battle.score?.player||0}</b>
+                  <b id="battleScorePlayer">${Game.battle.score?.player||0}</b>
                   <span class="battle-score-vs">VS</span>
-                  <b>${Game.battle.score?.cpu||0}</b>
+                  <b id="battleScoreCpu">${Game.battle.score?.cpu||0}</b>
                 </div>
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
                 <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
@@ -3988,6 +3988,70 @@ function renderNewBattle(){
     }
 }
 
+function devAwardSpinRound(winnerSide){
+    winnerSide=winnerSide||"player";
+    Game.battle=Game.battle||{};
+    Game.battle.score=Game.battle.score||{player:0,cpu:0};
+    const live=typeof NEW_BATTLE!=="undefined" && NEW_BATTLE &&
+        (NEW_BATTLE.active || (NEW_BATTLE.player && Game.screen==="battle"));
+    if(live){
+        NEW_BATTLE.finishPending=false;
+        finishNewBattle(winnerSide,"Spin Finish");
+        return;
+    }
+    if(winnerSide==="player") Game.battle.score.player+=1;
+    else Game.battle.score.cpu+=1;
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onFinish){
+        SpinWarsScoreboard.onFinish(winnerSide,"Spin Finish",null);
+    }
+    const playerScore=Game.battle.score.player;
+    const cpuScore=Game.battle.score.cpu;
+    const matchWinner=playerScore>=7?"player":cpuScore>=7?"cpu":null;
+    if(!matchWinner){
+        Game.battle.round=(Game.battle.round||0)+1;
+        if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.persist){
+            SpinWarsRogue.persist();
+        }
+        return;
+    }
+    Game.battle.matchFinished=true;
+    Game.battle.finished=true;
+    Game.battle.winner=matchWinner;
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
+            SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish",{silent:true});
+            SpinWarsScoreboard.showMatchSummary({
+                matchWinner, playerScore, cpuScore, rogue:true,
+                onContinue:()=>{
+                    if(matchWinner==="cpu"){
+                        SpinWarsScoreboard.showRunSummary({
+                            onHome:()=>{SpinWarsRogue.endRun("lost");renderMainMenu();}
+                        });
+                        return;
+                    }
+                    SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish");
+                }
+            });
+            return;
+        }
+        SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish");
+        return;
+    }
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
+        SpinWarsScoreboard.showMatchSummary({
+            matchWinner, playerScore, cpuScore, rogue:false,
+            onContinue:()=>Game.quickMatch?renderLeagueSelect():renderMainMenu(),
+            onRematch:()=>{
+                Game.battle={score:{player:0,cpu:0},round:1};
+                if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+                if(Game.quickMatch) startQuickMatch();
+                else showComboCard();
+            },
+            onExit:()=>renderMainMenu()
+        });
+    }
+}
+
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(NEW_BATTLE.finishPending) return;
 
@@ -4008,6 +4072,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }else{
         Game.battle.score.cpu+=finishPoints;
     }
+    const scoreP=document.getElementById("battleScorePlayer");
+    const scoreC=document.getElementById("battleScoreCpu");
+    if(scoreP) scoreP.textContent=String(Game.battle.score.player);
+    if(scoreC) scoreC.textContent=String(Game.battle.score.cpu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         Game.screen="battle";
         SpinWarsRogue.persist();
@@ -7155,7 +7223,8 @@ function newPhysicsCollision(dt){
         playerRpmLoss:__pRpmLoss+__pExtraRpmLoss,
         cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
         time:performance.now(),
-        kb:(pKnockback+cKnockback)*0.5
+        kb:(pKnockback+cKnockback)*0.5,
+        fromAbility:false
     };
 
     p.lastKnockback=pKnockback;

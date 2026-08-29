@@ -2,12 +2,14 @@
  * Safety net only. Does not alter battle/gameplay rules.
  * If the Rogue final-boss omen remains mounted, this guarantees the
  * existing final-battle setup is reached after the intended omen beat.
+ * Hands off once per omen so it cannot loop the VS screen.
  */
 (function(){
     "use strict";
 
     var enteredAt=0;
     var lastRunId=null;
+    var handedOff=false;
     var timer=null;
 
     function getRogue(){
@@ -19,11 +21,17 @@
     }
 
     function transition(){
+        if(handedOff) return;
+        handedOff=true;
+        try{
+            if(window.SpinWarsRogue && typeof window.SpinWarsRogue.handoffOmen === "function"){
+                window.SpinWarsRogue.handoffOmen();
+                return;
+            }
+        }catch(_e){ /* fall through to the local copy */ }
         var rogue=getRogue();
         if(!rogue || rogue.matchIndex!==18) return;
         if(window.Game && window.Game.screen!=="rogueOmen") return;
-
-        /* Use the same final-battle setup as the existing Rogue flow. */
         try{
             if(typeof window.SpinWarsRogue.generateCpu === "function"){
                 window.SpinWarsRogue.generateCpu();
@@ -48,6 +56,7 @@
         if(!game || !rogue || game.screen!=="rogueOmen" || rogue.matchIndex!==18){
             enteredAt=0;
             lastRunId=null;
+            handedOff=false;
             return;
         }
 
@@ -55,8 +64,10 @@
         if(lastRunId!==runId){
             lastRunId=runId;
             enteredAt=Date.now();
+            handedOff=false;
         }
         if(!enteredAt) enteredAt=Date.now();
+        if(handedOff || rogue._omenHandoff) return;
 
         if(Date.now()-enteredAt>=6100){
             transition();

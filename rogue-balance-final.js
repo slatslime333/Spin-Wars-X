@@ -111,8 +111,11 @@
   }
 
   function installBossLabel(){
+    /* VS plates already mount .vs-boss-mark. Never strip/re-insert on
+       MutationObserver ticks — that looped the tab. */
+    if(document.querySelector(".vs-boss-mark")) return;
+    if(document.getElementById("rogueFinalBossTag")) return;
     const info=bossInfo();
-    document.getElementById("rogueFinalBossTag")?.remove();
     if(!info)return;
     const r=run();
     const name=String(r?.cpuBlade?.name||"").trim();
@@ -154,7 +157,10 @@
 
   /* Re-apply after UI changes so the boss marker survives combo-card renders. */
   if(global.MutationObserver){
-    const observer=new MutationObserver(()=>{if(bossInfo())installBossLabel();});
+    const observer=new MutationObserver(()=>{
+      if(document.querySelector(".vs-boss-mark")||document.getElementById("rogueFinalBossTag")) return;
+      if(bossInfo())installBossLabel();
+    });
     observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 })(window);

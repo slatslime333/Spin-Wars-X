@@ -144,7 +144,8 @@
             impactClass:"light",
             playerRpmLoss:isPlayer?lost:0,
             cpuRpmLoss:isPlayer?0:lost,
-            kb:0
+            kb:0,
+            fromAbility:true
         };
     }
     function channelBusy(){
