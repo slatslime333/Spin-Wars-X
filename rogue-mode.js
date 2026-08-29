@@ -1229,13 +1229,11 @@ function toggleDev(){
         renderDevList();
         refreshAfterDebug();
     };
-    document.getElementById("rogueDevJump17")?.addEventListener("click",()=>{
-        const r=run();
-        if(!r) return;
-        r.matchIndex=17;
+    document.getElementById("rogueDevJump17")?.addEventListener("click",event=>{
+        event.preventDefault();
+        event.stopPropagation();
         closeDev();
-        generateOffers();
-        showHub();
+        jumpToMatch(17);
     });
     document.getElementById("rogueDevOmen")?.addEventListener("click",()=>{
         closeDev();
@@ -1345,6 +1343,28 @@ function ensureRun(){
     const blade=pick(playableBlades());
     if(!blade) return null;
     return createRun(blade);
+}
+
+function jumpToMatch(index){
+    stopLiveBattle();
+    const r=ensureRun();
+    if(!r) return;
+    const n=Math.max(1,Math.min(Number(index)||1,FINAL_MATCH));
+    r.matchIndex=n;
+    r._omenHandoff=false;
+    r.offers=[];
+    r.skipShop=false;
+    r.shopRounds=1;
+    r._scenarioDone=false;
+    Game.mode="rogue";
+    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginMatch();
+    Game.player.launch={angle:"Flat",technique:"Center"};
+    Game.cpu.lockedLaunchPlan=null;
+    generateCpu();
+    showComboCard();
+    persist();
 }
 
 function jumpToFinalBoss(opts){
@@ -2086,7 +2106,10 @@ function scenarioCopy(){
             kicker:"SIDELINE",
             body:`A kid with a toolkit jogs up, out of breath. "I can tune ${you}. Won't even charge you."`,
             choices:[
-                {id:"accept",label:"ACCEPT"},
+                {id:"accept",label:"ACCEPT",odds:[
+                    {p:"40%",text:"+5% Knockback, +5% Stamina, +1 Mobility"},
+                    {p:"60%",text:"−2 Defense, −2 Balance, +1 Attack"}
+                ]},
                 {id:"deny",label:"DENY"}
             ]
         },
@@ -2095,7 +2118,10 @@ function scenarioCopy(){
             kicker:"SIDELINE",
             body:"A dealer pops a case on the bench and slides a part toward you. \"Been saving this for someone special.\" You are not sure it is legal — or even good.",
             choices:[
-                {id:"take",label:"TAKE THE PART"},
+                {id:"take",label:"TAKE THE PART",odds:[
+                    {p:"50%",text:"+3 Attack, +2 Knockback"},
+                    {p:"50%",text:"−3 Stamina, −2 Balance"}
+                ]},
                 {id:"leave",label:"WALK AWAY"}
             ]
         },
@@ -2113,7 +2139,9 @@ function scenarioCopy(){
             kicker:"ARENA",
             body:"You spot a side hall that dumps you at the next arena. Security is looking the other way.",
             choices:[
-                {id:"take",label:"TAKE THE SHORTCUT"},
+                {id:"take",label:"TAKE THE SHORTCUT",odds:[
+                    {text:"Skip the next match as a win. Random upgrade. −2 Stamina."}
+                ]},
                 {id:"long",label:"TAKE THE LONG ROUTE"}
             ]
         },
@@ -2122,8 +2150,8 @@ function scenarioCopy(){
             kicker:"SIDELINE",
             body:"A stranger parks a coin on the table and grins. \"Heads or tails. Your call.\"",
             choices:[
-                {id:"heads",label:"HEADS"},
-                {id:"tails",label:"TAILS"},
+                {id:"heads",label:"HEADS",odds:[{text:"+5% a random stat"}]},
+                {id:"tails",label:"TAILS",odds:[{text:"−5% a random stat"}]},
                 {id:"kick",label:"KICK ROCKS"}
             ]
         },
@@ -2137,7 +2165,10 @@ function scenarioCopy(){
             kicker:"SIDELINE",
             body:"A gambler clocks you from the last fight. \"You've been winning. Let's see if your luck holds.\"",
             choices:[
-                {id:"bet",label:"TAKE THE BET"},
+                {id:"bet",label:"TAKE THE BET",odds:[
+                    {p:"55%",text:"Two shop upgrades"},
+                    {p:"45%",text:"Lose this shop"}
+                ]},
                 {id:"leave",label:"WALK AWAY"}
             ]
         },
@@ -2165,7 +2196,10 @@ function scenarioCopy(){
             kicker:"STADIUM",
             body:"A scratched Bey part is sitting near the stadium. It might still have some life left in it.",
             choices:[
-                {id:"use",label:"USE IT"},
+                {id:"use",label:"USE IT",odds:[
+                    {p:"50%",text:"−1 Defense, +2 Stamina, plus a random ratchet"},
+                    {p:"50%",text:"−2 Balance, −1 Knockback, plus a random ratchet"}
+                ]},
                 {id:"leave",label:"LEAVE IT"}
             ]
         },
@@ -2174,7 +2208,11 @@ function scenarioCopy(){
             kicker:"PIT",
             body:"A technician holds out a vial. \"Experimental lubricant. Totally safe. Probably.\"",
             choices:[
-                {id:"try",label:"TRY IT"},
+                {id:"try",label:"TRY IT",odds:[
+                    {p:"50%",text:"+3 Stamina"},
+                    {p:"30%",text:"+2 Mobility, +1 Stamina, −2 Defense"},
+                    {p:"20%",text:"−2 Stamina"}
+                ]},
                 {id:"leave",label:"PASS"}
             ]
         },
@@ -2183,7 +2221,9 @@ function scenarioCopy(){
             kicker:"ARENA",
             body:"The crew is making last-minute tweaks. One worker nods at you. \"Give us a hand?\"",
             choices:[
-                {id:"help",label:"HELP THEM"},
+                {id:"help",label:"HELP THEM",odds:[
+                    {text:"Skip this shop. Next 2 matches, every launch is Perfect."}
+                ]},
                 {id:"leave",label:"LEAVE THEM TO IT"}
             ]
         },
@@ -2337,6 +2377,15 @@ function resolveScenario(id,choice){
     return {body:"Nothing happens."};
 }
 
+function scenarioOddsHTML(choice){
+    const rows=choice?.odds;
+    if(!rows||!rows.length) return "";
+    return `<ul class="rogue-scenario-odds">${rows.map(row=>{
+        const chance=row.p?`<b>${row.p}</b>`:"";
+        return `<li>${chance}<span>${row.text||""}</span></li>`;
+    }).join("")}</ul>`;
+}
+
 function showScenario(id){
     const r=run();
     if(!r) return enterShop();
@@ -2345,7 +2394,10 @@ function showScenario(id){
     const app=document.getElementById("app");
     const choices=pack.choices||[];
     const btns=choices.length
-        ? choices.map(c=>`<button class="menu-btn ${c.id==="kick"||c.id==="leave"||c.id==="deny"||c.id==="long"?"silver":"gold"}" type="button" data-scene-choice="${c.id}">${c.label}</button>`).join("")
+        ? choices.map(c=>`<div class="rogue-scenario-choice">
+            <button class="menu-btn ${c.id==="kick"||c.id==="leave"||c.id==="deny"||c.id==="long"?"silver":"gold"}" type="button" data-scene-choice="${c.id}">${c.label}</button>
+            ${scenarioOddsHTML(c)}
+          </div>`).join("")
         : `<button class="rip-btn" type="button" data-scene-choice="ok">CONTINUE</button>`;
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-scenario">
