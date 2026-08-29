@@ -9,6 +9,7 @@
         OVER_FINISH:350,
         XTREME_FINISH:500,
         BIG_IMPACT:50,
+        BIG_IMPACT_MIN_HUD:8,
         RPM_DAMAGE_PER_POINT:10,
         HUD_RPM_SCALE:100,
         XRAIL_SPIN:75,
@@ -176,11 +177,11 @@
         const at=Number(imp?.time)||0;
         if(imp && at && at!==state.lastImpactAt){
             state.lastImpactAt=at;
-            const big=imp.impactClass==="heavy"||imp.heavy;
+            const heavy=imp.impactClass==="heavy"||imp.heavy;
             const pLost=hudRpm(imp.playerRpmLoss);
             const cLost=hudRpm(imp.cpuRpmLoss);
-            if(cLost>0) addDamage("player",cLost,big);
-            if(pLost>0) addDamage("cpu",pLost,big);
+            if(cLost>0) addDamage("player",cLost,heavy && cLost>=SCORE.BIG_IMPACT_MIN_HUD);
+            if(pLost>0) addDamage("cpu",pLost,heavy && pLost>=SCORE.BIG_IMPACT_MIN_HUD);
         }
 
         const score=global.Game?.battle?.score;

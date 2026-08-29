@@ -28,6 +28,7 @@ const xdash = rows.find(r => r.key === "xdash");
 if (!xdash || xdash.pts !== 0) throw new Error("xrail dashes must be +0");
 if (S.SPIN_FINISH !== 200 || S.OVER_FINISH !== 350 || S.XTREME_FINISH !== 500) throw new Error("finish pts");
 if (S.BIG_IMPACT !== 50 || S.RPM_DAMAGE_PER_POINT !== 10) throw new Error("damage pts");
+if (S.BIG_IMPACT_MIN_HUD !== 8) throw new Error("big impact min");
 if (S.XRAIL_XTREME !== 200) throw new Error("xrail xtreme bonus");
 console.log("ok base", base, "final", t.final);
 console.log("all scoreboard asserts passed");
