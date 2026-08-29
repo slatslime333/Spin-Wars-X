@@ -1178,16 +1178,16 @@ function toggleDev(){
     if(existing){existing.remove();return;}
     const panel=el(`<aside id="rogueDevPanel" class="rogue-dev-panel">
         <header><b>ROGUE DEV</b><button type="button" id="rogueDevClose">✕</button></header>
-        <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
-        <div class="rogue-dev-list" id="rogueDevList"></div>
         <div class="rogue-dev-actions">
             <button type="button" class="menu-btn silver" id="rogueDevJump17">MATCH 17</button>
             <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
             <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
-            <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
             <button type="button" class="menu-btn gold" id="rogueDevWin">WIN ROUND</button>
             <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
+            <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
         </div>
+        <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
+        <div class="rogue-dev-list" id="rogueDevList"></div>
     </aside>`);
     document.body.appendChild(panel);
     document.getElementById("rogueDevClose").onclick=()=>panel.remove();

@@ -2700,7 +2700,12 @@ button:focus-visible{
   display:flex;
   flex-wrap:wrap;
   gap:6px;
-  margin-top:10px;
+  margin:0 0 10px;
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#100e0c;
+  padding-bottom:8px;
 }
 
 .rogue-run-history{

@@ -3951,9 +3951,9 @@ function renderNewBattle(){
               </div>
               <div class="battle-score">
                 <div class="battle-score-line">
-                  <b>${Game.battle.score?.player||0}</b>
+                  <b id="battleScorePlayer">${Game.battle.score?.player||0}</b>
                   <span class="battle-score-vs">VS</span>
-                  <b>${Game.battle.score?.cpu||0}</b>
+                  <b id="battleScoreCpu">${Game.battle.score?.cpu||0}</b>
                 </div>
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
                 <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
@@ -4072,6 +4072,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }else{
         Game.battle.score.cpu+=finishPoints;
     }
+    const scoreP=document.getElementById("battleScorePlayer");
+    const scoreC=document.getElementById("battleScoreCpu");
+    if(scoreP) scoreP.textContent=String(Game.battle.score.player);
+    if(scoreC) scoreC.textContent=String(Game.battle.score.cpu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         Game.screen="battle";
         SpinWarsRogue.persist();
