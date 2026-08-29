@@ -6779,7 +6779,8 @@ function newPhysicsCollision(dt){
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
-      Over/Xtreme are a bit more reachable. Cap still owns the ceiling.
+      Over/Xtreme are a bit more reachable. Attack bits get a tad more
+      (1.20 vs 1.11). Cap still owns the ceiling.
       Non-Attack bits already use the Attack clash role for that swing.
     */
     if(pRailSwing) pKnockRaw*=pAttackBit?1.20:1.11;
