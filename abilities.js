@@ -335,6 +335,9 @@
         s.impactScale=Math.max(s.impactScale||1,1.28);
         s.hitFlash=Math.max(s.hitFlash||0,0.28);
         state.dashAt[side]=t+DASH_CD*1000;
+        if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onDash){
+            SpinWarsScoreboard.onDash(side,s);
+        }
         if(side==="player"){
             rememberPlayerCombat("dash");
             if(typeof global.tryDashKillCam==="function") global.tryDashKillCam(s,t);

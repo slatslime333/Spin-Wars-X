@@ -1,0 +1,20 @@
+KIND,ID,NAME,NOTES,KEY,VALUE,UNIT,RANGE,COMMENT
+SCORE,spin,Spin Finish,Points for a spin finish. Stadium first-to-7 points are unchanged.,SPIN_FINISH,200,pts,,
+SCORE,over,Over Finish,Points for an Over finish.,OVER_FINISH,350,pts,,
+SCORE,xtreme,Xtreme Finish,Points for an Xtreme finish.,XTREME_FINISH,500,pts,,
+SCORE,big,Big Impact,+50 per heavy clash only.,BIG_IMPACT,50,pts,,
+SCORE,rpm,RPM Damage,HUD RPM damage / this = points. 1240 damage → 124 pts at 10.,RPM_DAMAGE_PER_POINT,10,hud rpm per pt,,
+SCORE,hud,HUD RPM scale,Internal 0–1 RPM × this for display and damage totals.,HUD_RPM_SCALE,100,multiplier,,
+SCORE,xrail-spin,X-Rail → Spin,Bonus only if a Spin finish follows an X-Rail sequence. Riding alone is 0.,XRAIL_SPIN,75,pts,,
+SCORE,xrail-over,X-Rail → Over,Bonus only if an Over finish follows an X-Rail sequence.,XRAIL_OVER,125,pts,,
+SCORE,xrail-xtreme,X-Rail → Xtreme,Bonus only if an Xtreme finish follows an X-Rail sequence.,XRAIL_XTREME,200,pts,,
+SCORE,mul-n,Multiplier normal,No scoring sequence.,MUL_NORMAL,1.00,multiplier,,
+SCORE,mul-s,Multiplier strong,Big Impact → Finish or X-Rail → Finish.,MUL_STRONG,1.25,multiplier,,
+SCORE,mul-e,Multiplier exceptional,Big Impact → X-Rail → Finish. Elite 2.00 needs that Xtreme chain twice.,MUL_EXCEPTIONAL,1.50,multiplier,,
+SCORE,mul-x,Multiplier elite,Very rare: Big Impact → X-Rail → Xtreme twice in one match.,MUL_ELITE,2.00,multiplier,,
+SCORE,boss-b,Bronze boss,Rogue match 6 win bonus. Not a Quick Play score.,BOSS_BRONZE,250,pts,,
+SCORE,boss-s,Silver boss,Rogue match 12 win bonus.,BOSS_SILVER,500,pts,,
+SCORE,boss-g,Gold boss,Reserved. No Gold mini-boss match yet.,BOSS_GOLD,750,pts,,
+SCORE,boss-f,Final boss,Rogue match 18 win bonus.,BOSS_FINAL,1500,pts,,
+SCORE,dash,Dashes,Tracked on the summary. Always +0 pts.,dashes,0,pts,,"Not a score source."
+SCORE,xdash,X-Rail Dashes,Dash during a live X-Rail sequence. Always +0 pts.,xrailDashes,0,pts,,"Not a score source."
