@@ -488,4 +488,39 @@
         showMatchSummary, showRunSummary,
         packMatch, tally, baseScore, breakdown, exportRun, importRun, runFinal
     };
+    if(typeof document!=="undefined"){
+        document.addEventListener("DOMContentLoaded",()=>{
+            if(!/[?&]sb=preview/.test(String(location.search||""))) return;
+            setTimeout(()=>{
+                const g=global.Game;
+                if(g){
+                    g.player=g.player||{};
+                    g.cpu=g.cpu||{};
+                    g.player.blade={name:"Leon Crest"};
+                    g.cpu.blade={name:"Phoenix Wing"};
+                }
+                beginMatch();
+                Object.assign(state.match.player,{
+                    rpmDamage:1240,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
+                    dashes:7,xrailDashes:3,peakRpm:0.97,biggestImpact:87,
+                    xrailSpin:0,xrailOver:0,xrailXtreme:1,
+                    bestMul:SCORE.MUL_EXCEPTIONAL,
+                    bestChain:"Big Impact → X-Rail → Xtreme Finish"
+                });
+                Object.assign(state.match.cpu,{
+                    rpmDamage:860,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
+                    dashes:4,xrailDashes:1,peakRpm:0.88,biggestImpact:64,
+                    bestMul:SCORE.MUL_STRONG,bestChain:"X-Rail → Over"
+                });
+                state.lastEvent={side:"player",label:"Xtreme Finish"};
+                state.maxCpuLead=3;
+                showMatchSummary({
+                    matchWinner:"player",playerScore:7,cpuScore:3,rogue:false,
+                    onContinue:()=>typeof renderMainMenu==="function"&&renderMainMenu(),
+                    onRematch:()=>typeof renderMainMenu==="function"&&renderMainMenu(),
+                    onExit:()=>typeof renderMainMenu==="function"&&renderMainMenu()
+                });
+            },160);
+        });
+    }
 })(typeof window!=="undefined"?window:globalThis);
