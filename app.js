@@ -3652,6 +3652,12 @@ function startNewBattle(){
         Math.floor(Game.battle.round/2)%2;
     NEW_BATTLE.finishPending=false;
 
+    if(typeof SpinWarsScoreboard!=="undefined"){
+        const sc=Game.battle.score||{player:0,cpu:0};
+        if(!(sc.player||sc.cpu)) SpinWarsScoreboard.beginMatch();
+        else SpinWarsScoreboard.beginPoint();
+    }
+
     // Rebuild once from the selected launch choices. This is the ONLY place
     // that starts physical battle state.
     NEW_BATTLE.player=newBattleLaunchState("player");
@@ -4010,6 +4016,10 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     Game.battle.finishType=finishType;
     Game.battle.matchFinished=false;
     Game.battle.finished=false;
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onFinish){
+        const winBey=winnerSide==="player"?NEW_BATTLE.player:NEW_BATTLE.cpu;
+        SpinWarsScoreboard.onFinish(winnerSide,finishType,winBey);
+    }
 
     const winner=winnerSide==="player"
         ? NEW_BATTLE.player
@@ -4098,7 +4108,38 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
             Game.battle.winner=matchWinner;
 
             if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+                if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
+                    SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType,{silent:true});
+                    SpinWarsScoreboard.showMatchSummary({
+                        matchWinner, playerScore, cpuScore, rogue:true,
+                        onContinue:()=>{
+                            if(matchWinner==="cpu"){
+                                SpinWarsScoreboard.showRunSummary({
+                                    onHome:()=>{SpinWarsRogue.endRun("lost");renderMainMenu();}
+                                });
+                                return;
+                            }
+                            SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType);
+                        }
+                    });
+                    return;
+                }
                 SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType);
+                return;
+            }
+
+            if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
+                SpinWarsScoreboard.showMatchSummary({
+                    matchWinner, playerScore, cpuScore, rogue:false,
+                    onContinue:()=>Game.quickMatch?renderLeagueSelect():renderMainMenu(),
+                    onRematch:()=>{
+                        Game.battle={score:{player:0,cpu:0},round:1};
+                        if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+                        if(Game.quickMatch) startQuickMatch();
+                        else showComboCard();
+                    },
+                    onExit:()=>renderMainMenu()
+                });
                 return;
             }
 
@@ -4790,6 +4831,9 @@ function newBattleFrame(now){
 
             if(typeof SpinWarsAbilities!=="undefined"){
                 SpinWarsAbilities.step(PHYSICS_DT,p,c);
+            }
+            if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.observe){
+                SpinWarsScoreboard.observe(p,c,NEW_BATTLE);
             }
 
             if(

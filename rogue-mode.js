@@ -1359,6 +1359,8 @@ function unpackUpgrade(raw){
 function persistScreen(){
     const s=Game.screen;
     if(s==="battle"||s==="comboCheck") return s==="battle"?"battle":"comboCheck";
+    if(s==="matchSummary") return run()?.lastResult?"rogueResults":"comboCheck";
+    if(s==="rogueRunSummary") return "rogueWin";
     return s||"comboCheck";
 }
 
@@ -1412,7 +1414,8 @@ function buildSave(){
             cpuModifier:packModifier(r.cpuModifier),
             enhanced:!!r.enhanced,
             claimedShark:!!r.claimedShark,
-            hubsWithoutForm:Number(r.hubsWithoutForm)||0
+            hubsWithoutForm:Number(r.hubsWithoutForm)||0,
+            scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
         }
     };
 }
@@ -1542,6 +1545,9 @@ function hydrate(data){
     syncLoadout();
     if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.restoreCharges){
         SpinWarsAbilities.restoreCharges();
+    }
+    if(typeof SpinWarsScoreboard!=="undefined" && raw.scoreboardRun){
+        SpinWarsScoreboard.importRun(raw.scoreboardRun);
     }
     return true;
 }
@@ -1708,6 +1714,7 @@ function beginRun(blade){
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
     if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginRun();
     generateCpu();
     showComboCard();
     persist();
@@ -1764,7 +1771,15 @@ function showResults(){
     </main>`;
     const goHub=()=>{generateOffers();showHub();};
     document.getElementById("rogueResultsGo")?.addEventListener("click",()=>{
-        if(!win){endRun("lost");renderMainMenu();return;}
+        if(!win){
+            if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
+                SpinWarsScoreboard.showRunSummary({
+                    onHome:()=>{endRun("lost");renderMainMenu();}
+                });
+                return;
+            }
+            endRun("lost");renderMainMenu();return;
+        }
         goHub();
     });
     document.getElementById("rogueClaimShark")?.addEventListener("click",()=>{
@@ -1780,6 +1795,13 @@ function showRunWin(){
     const r=run();
     r.runStatus="won";
     Game.screen="rogueWin";
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
+        SpinWarsScoreboard.showRunSummary({
+            onHome:()=>{endRun("won");renderMainMenu();}
+        });
+        persist();
+        return;
+    }
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
     <main class="home home-win">
@@ -2006,6 +2028,7 @@ function advanceMatch(){
     r.offers=[];
     Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
     if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginMatch();
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.cpu.lockedLaunchPlan=null;
     if(r.matchIndex===18){
@@ -2051,7 +2074,7 @@ function showSharkOmen(){
     window.setTimeout(go,6000);
 }
 
-function onMatchOver(winner,playerScore,cpuScore,finishType){
+function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     const r=run();
     if(!r) return false;
     r.lastResult={
@@ -2064,14 +2087,15 @@ function onMatchOver(winner,playerScore,cpuScore,finishType){
     };
     Game.battle=Game.battle||{};
     Game.battle.score={player:playerScore,cpu:cpuScore};
-    setTimeout(()=>showResults(),200);
     persist();
+    if(opts&&opts.silent) return true;
+    setTimeout(()=>showResults(),200);
     return true;
 }
 
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
-    showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,
+    showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu
 };
