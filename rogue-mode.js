@@ -920,6 +920,16 @@ function generateOffers(){
         cards.push(makeCommonCard(r.blade,false));
     }
     injectFormPity(cards);
+    if(r.shopGuarantee==="rare-or-legendary"){
+        const g=Math.random()<0.55?"rare":"legendary";
+        const guaranteed=makeOfferCard(g,r.blade,r.activeModifier?.id);
+        if(guaranteed && guaranteed.kind!=="evolve"){
+            const idx=cards.findIndex(c=>c.kind!=="evolve");
+            cards[idx>=0?idx:0]=guaranteed;
+            r._lockedOffer=guaranteed;
+        }
+        r.shopGuarantee=null;
+    }
     r.offers=cards.slice(0,3);
     const hasForm=r.offers.some(c=>c.kind==="evolve");
     r.hubsWithoutForm=hasForm?0:(Number(r.hubsWithoutForm)||0)+1;
@@ -1175,22 +1185,38 @@ function mountDevButton(){
 
 function toggleDev(){
     const existing=document.getElementById("rogueDevPanel");
-    if(existing){existing.remove();return;}
+    if(existing){
+        existing.remove();
+        document.body.classList.remove("rogue-dev-open");
+        return;
+    }
     const panel=el(`<aside id="rogueDevPanel" class="rogue-dev-panel">
         <header><b>ROGUE DEV</b><button type="button" id="rogueDevClose">✕</button></header>
-        <div class="rogue-dev-actions">
-            <button type="button" class="menu-btn silver" id="rogueDevJump17">MATCH 17</button>
-            <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
-            <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
-            <button type="button" class="menu-btn gold" id="rogueDevWin">WIN ROUND</button>
-            <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
-            <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
-        </div>
         <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
         <div class="rogue-dev-list" id="rogueDevList"></div>
+        <details class="rogue-dev-scene">
+            <summary>SCENE SKIP</summary>
+            <div class="rogue-dev-actions">
+                <button type="button" class="menu-btn silver" id="rogueDevJump17">MATCH 17</button>
+                <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
+                <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
+                <button type="button" class="menu-btn gold" id="rogueDevWin">WIN ROUND</button>
+                <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
+                <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
+            </div>
+        </details>
+        <details class="rogue-dev-scene">
+            <summary>GAME CONDITIONS</summary>
+            <div class="rogue-dev-actions" id="rogueDevScenes"></div>
+        </details>
     </aside>`);
     document.body.appendChild(panel);
-    document.getElementById("rogueDevClose").onclick=()=>panel.remove();
+    document.body.classList.add("rogue-dev-open");
+    const closeDev=()=>{
+        panel.remove();
+        document.body.classList.remove("rogue-dev-open");
+    };
+    document.getElementById("rogueDevClose").onclick=closeDev;
     document.getElementById("rogueDevClear").onclick=()=>{
         const r=run();
         if(!r) return;
@@ -1207,21 +1233,21 @@ function toggleDev(){
         const r=run();
         if(!r) return;
         r.matchIndex=17;
-        panel.remove();
+        closeDev();
         generateOffers();
         showHub();
     });
     document.getElementById("rogueDevOmen")?.addEventListener("click",()=>{
-        panel.remove();
+        closeDev();
         jumpToFinalBoss({omen:true});
     });
     document.getElementById("rogueDevFinal")?.addEventListener("click",()=>{
-        panel.remove();
+        closeDev();
         jumpToFinalBoss({omen:false});
     });
     document.getElementById("rogueDevWin").onclick=()=>{
         if(!run()) return;
-        panel.remove();
+        closeDev();
         if(typeof devAwardSpinRound==="function"){
             devAwardSpinRound("player");
             return;
@@ -1240,10 +1266,31 @@ function toggleDev(){
     };
     document.getElementById("rogueDevLose").onclick=()=>{
         if(!run()) return;
-        panel.remove();
+        closeDev();
         stopLiveBattle();
         onMatchOver("cpu",Math.min(6,Game.battle?.score?.player||0),7,"Spin Finish");
     };
+    const sceneBox=document.getElementById("rogueDevScenes");
+    if(sceneBox){
+        const names={
+            "rookie-tuner":"ROOKIE TUNER","parts-dealer":"PARTS DEALER","rival":"RIVAL",
+            "shortcut":"SHORTCUT","coin-flip":"COIN FLIP","shop-secret":"SHOP SECRET",
+            "double-or-nothing":"DOUBLE OR NOTHING","autograph":"AUTOGRAPH","clearance":"CLEARANCE",
+            "bathroom":"WET TILE","salvage":"SALVAGE","lube":"LUBE","stadium-crew":"STADIUM CREW",
+            "coupon":"COUPON"
+        };
+        SCENARIO_IDS.forEach(id=>{
+            const btn=el(`<button type="button" class="menu-btn silver">${names[id]||id}</button>`);
+            btn.onclick=()=>{
+                const live=run();
+                if(!live) return;
+                closeDev();
+                live._scenarioDone=true;
+                showScenario(id);
+            };
+            sceneBox.appendChild(btn);
+        });
+    }
     renderDevList();
 }
 
@@ -1278,7 +1325,13 @@ function createRun(blade){
         claimedShark:false,
         cpuPowerTarget:0,
         cpuHistory:[],
-        boss:false
+        boss:false,
+        shopRounds:1,
+        skipShop:false,
+        shopGuarantee:null,
+        perfectLaunchMatches:0,
+        flavorCall:null,
+        _scenarioDone:false
     };
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
@@ -1438,6 +1491,7 @@ function persistScreen(){
     const s=Game.screen;
     if(s==="battle"||s==="comboCheck") return s==="battle"?"battle":"comboCheck";
     if(s==="matchSummary") return run()?.lastResult?"rogueResults":"comboCheck";
+    if(s==="rogueScenario") return run()?.lastResult?"rogueResults":"comboCheck";
     if(s==="rogueRunSummary") return "rogueWin";
     if(s==="rogueRunHistory") return "rogueLanding";
     return s||"comboCheck";
@@ -1494,6 +1548,11 @@ function buildSave(){
             enhanced:!!r.enhanced,
             claimedShark:!!r.claimedShark,
             hubsWithoutForm:Number(r.hubsWithoutForm)||0,
+            shopRounds:Number(r.shopRounds)||1,
+            skipShop:!!r.skipShop,
+            shopGuarantee:r.shopGuarantee||null,
+            perfectLaunchMatches:Number(r.perfectLaunchMatches)||0,
+            flavorCall:r.flavorCall||null,
             scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
         }
     };
@@ -1696,7 +1755,13 @@ function hydrate(data){
         cpuScale:{...emptyBonuses(),...(raw.cpuScale||(!raw.cpuScale && raw.cpuBonuses?raw.cpuBonuses:{}))},
         cpuBonuses:{...emptyBonuses(),...(raw.cpuScale?raw.cpuBonuses:{})},
         cpuHistory:(raw.cpuHistory||[]).map(c=>c),
-        cpuModifier:raw.cpuModifier||null
+        cpuModifier:raw.cpuModifier||null,
+        shopRounds:Number(raw.shopRounds)||1,
+        skipShop:!!raw.skipShop,
+        shopGuarantee:raw.shopGuarantee||null,
+        perfectLaunchMatches:Number(raw.perfectLaunchMatches)||0,
+        flavorCall:raw.flavorCall||null,
+        _scenarioDone:false
     };
     if(raw.enhanced===undefined && !(raw.history||[]).some(c=>c&&c.kind==="evolve")){
         Game.rogue.currentRogueTier="Bronze";
@@ -1909,6 +1974,408 @@ function scoreboardLabel(){
     return `MATCH ${m}/${FINAL_MATCH} · first to 7`;
 }
 
+const SCENARIO_CHANCE=0.10;
+const SCENARIO_IDS=[
+    "rookie-tuner","parts-dealer","rival","shortcut","coin-flip",
+    "shop-secret","double-or-nothing","autograph","clearance","bathroom",
+    "salvage","lube","stadium-crew","coupon"
+];
+
+function applyFlatBonus(map){
+    const r=run();
+    if(!r) return;
+    r.bonuses=r.bonuses||emptyBonuses();
+    Object.keys(map||{}).forEach(k=>{
+        r.bonuses[k]=(Number(r.bonuses[k])||0)+(Number(map[k])||0);
+    });
+    syncLoadout();
+}
+function applyPercentBonus(stat,pct){
+    const r=run();
+    if(!r) return;
+    const cur=Number(playerEffective()[stat])||70;
+    const d=Math.max(1,round(Math.abs(cur)*Math.abs(pct)));
+    applyFlatBonus({[stat]:pct>=0?d:-d});
+    return d;
+}
+function grantRandomRatchet(){
+    const r=run();
+    if(!r) return null;
+    const pool=(typeof RATCHETS!=="undefined"?RATCHETS:[]).filter(x=>x&&x.name!==r.ratchet?.name);
+    const next=pick(pool.length?pool:(typeof RATCHETS!=="undefined"?RATCHETS:[]));
+    if(!next) return null;
+    r.ratchet=next;
+    syncLoadout();
+    persist();
+    return next;
+}
+function grantRandomUpgrade(){
+    const r=run();
+    if(!r) return null;
+    let card=null;
+    let guard=0;
+    while(guard++<16){
+        const rolled=makeOfferCard(rarityRoll(r.matchIndex,r.startingTier),r.blade,r.activeModifier?.id);
+        if(!rolled) continue;
+        if(rolled.kind==="reforge"||rolled.kind==="ability-swap") continue;
+        if(rolled.kind==="evolve"){
+            const need=nextFormCard();
+            if(!need||rolled.evolve!==need.evolve) continue;
+        }
+        card=rolled;
+        break;
+    }
+    if(!card) card=makeCommonCard(r.blade,false);
+    if(card.kind==="stat") applyStatCard(card);
+    else if(card.kind==="modifier") applyModifierCard(card);
+    else if(card.kind==="evolve") applyEvolveCard(card);
+    r.history=r.history||[];
+    r.history.push(card);
+    syncLoadout();
+    persist();
+    return card;
+}
+function setFlavorCall(line){
+    const r=run();
+    if(!r) return;
+    r.flavorCall=line||null;
+}
+function skipNextMatchAsWin(){
+    const r=run();
+    const next=(Number(r.matchIndex)||1)+1;
+    if(next===6||next===12||next===18) return false;
+    r.matchIndex=next;
+    return true;
+}
+function enterShop(){
+    const r=run();
+    if(!r) return;
+    const rounds=Number(r.shopRounds);
+    if(r.skipShop || (Number.isFinite(rounds)&&rounds<=0)){
+        r.skipShop=false;
+        r.shopRounds=1;
+        advanceMatch();
+        return;
+    }
+    if(!Number.isFinite(rounds)||rounds<1) r.shopRounds=1;
+    generateOffers();
+    showHub();
+}
+function openShopOrScenario(opts){
+    opts=opts||{};
+    const r=run();
+    if(!r) return;
+    const forceId=opts.forceId;
+    const roll=opts.roll!==false && !r._scenarioDone && Math.random()<SCENARIO_CHANCE;
+    if(forceId || roll){
+        r._scenarioDone=true;
+        const id=forceId && SCENARIO_IDS.includes(forceId)?forceId:pick(SCENARIO_IDS);
+        showScenario(id);
+        return;
+    }
+    enterShop();
+}
+
+function scenarioCopy(){
+    const r=run();
+    const you=r?.blade?.name||"your Bey";
+    const foe=r?.cpuBlade?.name||Game.cpu?.blade?.name||"your next opponent";
+    return {
+        "rookie-tuner":{
+            title:"THE ROOKIE TUNER",
+            kicker:"SIDELINE",
+            body:`A kid with a toolkit jogs up, out of breath. "I can tune ${you}. Won't even charge you."`,
+            choices:[
+                {id:"accept",label:"ACCEPT"},
+                {id:"deny",label:"DENY"}
+            ]
+        },
+        "parts-dealer":{
+            title:"THE PARTS DEALER",
+            kicker:"SIDELINE",
+            body:"A dealer pops a case on the bench and slides a part toward you. \"Been saving this for someone special.\" You are not sure it is legal — or even good.",
+            choices:[
+                {id:"take",label:"TAKE THE PART"},
+                {id:"leave",label:"WALK AWAY"}
+            ]
+        },
+        "rival":{
+            title:"RIVAL ENCOUNTER",
+            kicker:"HALLWAY",
+            body:`${foe} walks past you. A few words. That is all it takes.`,
+            choices:[
+                {id:"talk",label:"TRASH TALK"},
+                {id:"quiet",label:"STAY QUIET"}
+            ]
+        },
+        "shortcut":{
+            title:"THE SHORTCUT",
+            kicker:"ARENA",
+            body:"You spot a side hall that dumps you at the next arena. Security is looking the other way.",
+            choices:[
+                {id:"take",label:"TAKE THE SHORTCUT"},
+                {id:"long",label:"TAKE THE LONG ROUTE"}
+            ]
+        },
+        "coin-flip":{
+            title:"THE COIN FLIP",
+            kicker:"SIDELINE",
+            body:"A stranger parks a coin on the table and grins. \"Heads or tails. Your call.\"",
+            choices:[
+                {id:"heads",label:"HEADS"},
+                {id:"tails",label:"TAILS"},
+                {id:"kick",label:"KICK ROCKS"}
+            ]
+        },
+        "shop-secret":{
+            title:"SHOPKEEPER'S SECRET",
+            kicker:"SHOP",
+            body:"The shopkeeper pulls you aside and keeps their voice down. \"Next shipment is loaded. I'm putting something real in your box.\""
+        },
+        "double-or-nothing":{
+            title:"DOUBLE OR NOTHING",
+            kicker:"SIDELINE",
+            body:"A gambler clocks you from the last fight. \"You've been winning. Let's see if your luck holds.\"",
+            choices:[
+                {id:"bet",label:"TAKE THE BET"},
+                {id:"leave",label:"WALK AWAY"}
+            ]
+        },
+        "autograph":{
+            title:"THE AUTOGRAPH",
+            kicker:"CROWD",
+            body:"A kid spots you from the last battle, Bey in both hands. \"Will you sign it?\"",
+            choices:[
+                {id:"sign",label:"SIGN HIS BEY"},
+                {id:"kick",label:"KICK ROCKS"}
+            ]
+        },
+        "clearance":{
+            title:"CLEARANCE BIN",
+            kicker:"SHOP",
+            body:"A forgotten box of old parts sits in the corner, sticker peeling off. Nobody is watching it."
+        },
+        "bathroom":{
+            title:"WET TILE",
+            kicker:"HALLWAY",
+            body:"You slip coming out of the bathroom. The hallway saw it. You feel it in your stance."
+        },
+        "salvage":{
+            title:"SALVAGED PARTS",
+            kicker:"STADIUM",
+            body:"A scratched Bey part is sitting near the stadium. It might still have some life left in it.",
+            choices:[
+                {id:"use",label:"USE IT"},
+                {id:"leave",label:"LEAVE IT"}
+            ]
+        },
+        "lube":{
+            title:"EXPERIMENTAL LUBE",
+            kicker:"PIT",
+            body:"A technician holds out a vial. \"Experimental lubricant. Totally safe. Probably.\"",
+            choices:[
+                {id:"try",label:"TRY IT"},
+                {id:"leave",label:"PASS"}
+            ]
+        },
+        "stadium-crew":{
+            title:"STADIUM CREW",
+            kicker:"ARENA",
+            body:"The crew is making last-minute tweaks. One worker nods at you. \"Give us a hand?\"",
+            choices:[
+                {id:"help",label:"HELP THEM"},
+                {id:"leave",label:"LEAVE THEM TO IT"}
+            ]
+        },
+        "coupon":{
+            title:"COUPON",
+            kicker:"SHOP",
+            body:"You find a crumpled coupon under the bench. Two shops. No fine print you can actually read."
+        }
+    };
+}
+
+function resolveScenario(id,choice){
+    const r=run();
+    const you=r?.blade?.name||"your Bey";
+    const foe=r?.cpuBlade?.name||Game.cpu?.blade?.name||"your next opponent";
+    const pctLabel=(stat,d,sign)=>`${sign}${d} ${LABEL[stat]}`;
+    if(id==="rookie-tuner"){
+        if(choice!=="accept") return {body:"You wave him off. He shrugs and jogs toward someone louder."};
+        if(Math.random()<0.40){
+            const kb=applyPercentBonus("knockback",0.05);
+            const sta=applyPercentBonus("stamina",0.05);
+            applyFlatBonus({mobility:1});
+            return {body:`He actually knows what he is doing. ${you} picks up ${pctLabel("knockback",kb,"+") }, ${pctLabel("stamina",sta,"+")}, and +1 MOB.`};
+        }
+        applyFlatBonus({defense:-2,balance:-2,attack:1});
+        return {body:`He tightens the wrong screw. ${you} loses 2 DEF and 2 BAL, but the extra bite is real: +1 ATK.`};
+    }
+    if(id==="parts-dealer"){
+        if(choice!=="take") return {body:"You keep walking. The case snaps shut behind you."};
+        if(Math.random()<0.50){
+            applyFlatBonus({attack:3,knockback:2});
+            return {body:`The part seats clean. ${you} hits harder: +3 ATK, +2 KB.`};
+        }
+        applyFlatBonus({stamina:-3,balance:-2});
+        return {body:"The part was junk with a fresh coat. −3 STA, −2 BAL. The dealer is already gone."};
+    }
+    if(id==="rival"){
+        if(choice==="talk"){
+            const line=pick([
+                `${foe}: "Talk now. The bowl does not care."`,
+                `${foe}: "Cute. Try that at seven."`,
+                `${foe}: "Save it for the X-Rail."`
+            ]);
+            setFlavorCall(`Pre-rip heat: you got in ${foe}'s ear. ${line}`);
+            return {body:line,close:true};
+        }
+        const line=pick([
+            `${foe}: "Quiet already? I have not even launched."`,
+            `${foe}: "Yeah, keep walking. I'll talk for both of us."`,
+            `${foe}: "Don't blink in there. I won't."`
+        ]);
+        setFlavorCall(`Pre-rip heat: ${foe} talked at you in the hall and you let it ride. ${line}`);
+        return {body:line,close:true};
+    }
+    if(id==="shortcut"){
+        if(choice!=="take") return {body:"You stay on the main concourse. The next fight waits like it should."};
+        applyFlatBonus({stamina:-2});
+        const card=grantRandomUpgrade();
+        const skipped=skipNextMatchAsWin();
+        r.skipShop=true;
+        return {body:skipped
+            ? `The hall dumps you past the next card. ${you} takes a random upgrade${card?` (${card.title})`:""} and loses 2 STA. That match is in the books as a win.`
+            : `The hall does not skip a boss. ${you} still gets a random upgrade${card?` (${card.title})`:""}, loses 2 STA, and skips this shop.`};
+    }
+    if(id==="coin-flip"){
+        if(choice==="kick") return {body:"You tell them to kick rocks. The coin stays on the table."};
+        const stat=pick(STATS);
+        if(choice==="heads"){
+            const d=applyPercentBonus(stat,0.05);
+            return {body:`Heads. ${you} takes ${pctLabel(stat,d,"+")}.`};
+        }
+        const d=applyPercentBonus(stat,-0.05);
+        return {body:`Tails. ${you} drops ${pctLabel(stat,d,"−")}.`};
+    }
+    if(id==="shop-secret"){
+        r.shopGuarantee="rare-or-legendary";
+        return {body:"The next shop has one guaranteed Rare or Legendary sitting in the box."};
+    }
+    if(id==="double-or-nothing"){
+        if(choice!=="bet") return {body:"You keep your shop. The gambler finds another mark."};
+        if(Math.random()<0.55){
+            r.shopRounds=2;
+            return {body:"Luck holds. You get two shops this time."};
+        }
+        r.shopRounds=0;
+        return {body:"The bet dies on the table. No shop this time."};
+    }
+    if(id==="autograph"){
+        if(choice==="sign"){
+            const line=pick([
+                `"No way — ${you} on my Bey. I'm never washing this."`,
+                `"I knew you were cool. Wait until the next fight."`,
+                `"I'm telling everybody. Don't lose now."`
+            ]);
+            setFlavorCall(`A kid in the stands is holding a Bey you signed. ${line}`);
+            return {body:`The kid lights up. ${line}`,close:true};
+        }
+        const line=pick([
+            `"Why you being a jerk? I just wanted a name on it."`,
+            `"Fine. I'll cheer for the other Bey."`,
+            `"Okay rude. I'm still watching though."`
+        ]);
+        setFlavorCall(`That kid you brushed off is still on the rail. ${line}`);
+        return {body:line,close:true};
+    }
+    if(id==="clearance"){
+        const a=grantRandomUpgrade();
+        const b=grantRandomUpgrade();
+        r.shopRounds=0;
+        return {body:`Two dusty upgrades come out of the box${a||b?`: ${[a,b].filter(Boolean).map(c=>c.title).join(" · ")}`:""}. No shop after this.`};
+    }
+    if(id==="bathroom"){
+        applyFlatBonus({defense:-1,balance:-1});
+        return {body:`Embarrassing, and it shows. ${you} is −1 DEF and −1 BAL walking in.`};
+    }
+    if(id==="salvage"){
+        if(choice!=="use") return {body:"You leave it. Someone else's problem."};
+        const rat=grantRandomRatchet();
+        const ratLine=rat?` New ratchet: ${rat.name}.`:"";
+        if(Math.random()<0.50){
+            applyFlatBonus({defense:-1,stamina:2});
+            return {body:`It seats. ${you} is −1 DEF, +2 STA.${ratLine}`};
+        }
+        applyFlatBonus({balance:-2,knockback:-1});
+        return {body:`It seats crooked. ${you} is −2 BAL, −1 KB.${ratLine}`};
+    }
+    if(id==="lube"){
+        if(choice!=="try") return {body:"You pass. The technician looks almost relieved."};
+        const roll=Math.random();
+        if(roll<0.50){
+            applyFlatBonus({stamina:3});
+            return {body:`Smooth as advertised. ${you} is +3 STA.`};
+        }
+        if(roll<0.80){
+            applyFlatBonus({mobility:2,stamina:1,defense:-2});
+            return {body:`It runs slick and a little loose. ${you} is +2 MOB, +1 STA, −2 DEF.`};
+        }
+        applyFlatBonus({stamina:-2});
+        return {body:`The vial was a bad idea. ${you} is −2 STA.`};
+    }
+    if(id==="stadium-crew"){
+        if(choice!=="help") return {body:"You leave them to it. The bowl stays a mystery."};
+        r.skipShop=true;
+        r.perfectLaunchMatches=2;
+        return {body:"You learn the angles and quirks of the stadium. No shop this time, but the next 2 matches every launch lands Perfect — roll does not matter."};
+    }
+    if(id==="coupon"){
+        r.shopRounds=2;
+        return {body:"The clerk squints at the coupon and shrugs. Two shops."};
+    }
+    return {body:"Nothing happens."};
+}
+
+function showScenario(id){
+    const r=run();
+    if(!r) return enterShop();
+    const pack=scenarioCopy()[id]||scenarioCopy()["coupon"];
+    Game.screen="rogueScenario";
+    const app=document.getElementById("app");
+    const choices=pack.choices||[];
+    const btns=choices.length
+        ? choices.map(c=>`<button class="menu-btn ${c.id==="kick"||c.id==="leave"||c.id==="deny"||c.id==="long"?"silver":"gold"}" type="button" data-scene-choice="${c.id}">${c.label}</button>`).join("")
+        : `<button class="rip-btn" type="button" data-scene-choice="ok">CONTINUE</button>`;
+    app.innerHTML=`<div class="background"></div>
+    <main class="home rogue-scenario">
+        ${homeMarkHTML({tag:pack.kicker||"SIDELINE"})}
+        <p class="win-name">${pack.title}</p>
+        <p class="rogue-result-copy" id="sceneBody">${pack.body}</p>
+        <p class="rogue-scenario-result" id="sceneResult" hidden></p>
+        <div class="rogue-scenario-actions" id="sceneActions">${btns}</div>
+    </main>`;
+    const finish=(choice)=>{
+        const out=resolveScenario(id,choice);
+        const result=document.getElementById("sceneResult");
+        const actions=document.getElementById("sceneActions");
+        if(result){
+            result.hidden=false;
+            result.textContent=out.body||"";
+        }
+        if(actions){
+            actions.innerHTML=`<button class="rip-btn" type="button" id="sceneDone">${out.close?"CLOSE":"CONTINUE"}</button>`;
+            document.getElementById("sceneDone").onclick=()=>enterShop();
+        }
+        persist();
+    };
+    app.querySelectorAll("[data-scene-choice]").forEach(btn=>{
+        btn.onclick=()=>finish(btn.getAttribute("data-scene-choice"));
+    });
+    mountDevButton();
+    persist();
+}
+
 function showResults(){
     const r=run();
     const res=r.lastResult;
@@ -1933,7 +2400,7 @@ function showResults(){
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
-    const goHub=()=>{generateOffers();showHub();};
+    const goHub=()=>{openShopOrScenario();};
     document.getElementById("rogueResultsGo")?.addEventListener("click",()=>{
         if(!win){
             if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
@@ -1984,6 +2451,7 @@ function endRun(status){
     if(status==="won"||status==="lost") archiveFinishedRun(status);
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
+    document.body.classList.remove("rogue-dev-open");
     if(status==="won"||status==="lost") clearSave();
 }
 
@@ -2182,7 +2650,17 @@ function showUpgradeResult(){
         <p class="rogue-result-copy">${commentaryFor(u)}</p>
         <button class="rip-btn" id="rogueContinue" type="button">CONTINUE</button>
     </main>`;
-    document.getElementById("rogueContinue").onclick=advanceMatch;
+    document.getElementById("rogueContinue").onclick=()=>{
+        const r=run();
+        if((Number(r?.shopRounds)||1)>1){
+            r.shopRounds=Number(r.shopRounds)-1;
+            generateOffers();
+            showHub();
+            return;
+        }
+        r.shopRounds=1;
+        advanceMatch();
+    };
     mountDevButton();
     persist();
 }
@@ -2191,6 +2669,9 @@ function advanceMatch(){
     const r=run();
     r.matchIndex+=1;
     r.offers=[];
+    r._scenarioDone=false;
+    r.skipShop=false;
+    if(!Number.isFinite(Number(r.shopRounds)) || Number(r.shopRounds)<1) r.shopRounds=1;
     Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
     if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
     if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginMatch();
@@ -2242,6 +2723,12 @@ function showSharkOmen(){
 function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     const r=run();
     if(!r) return false;
+    if(!(opts&&opts.silent)){
+        if(winner==="player" && Number(r.perfectLaunchMatches)>0){
+            r.perfectLaunchMatches=Math.max(0,(Number(r.perfectLaunchMatches)||0)-1);
+        }
+        if(r.flavorCall) r.flavorCall=null;
+    }
     r.lastResult={
         winner,playerScore,cpuScore,finishType,
         commentary:winner==="player"
@@ -2258,11 +2745,19 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     return true;
 }
 
+function perfectLaunchesActive(){
+    return isActive() && Number(run()?.perfectLaunchMatches)>0;
+}
+function flavorCallLine(){
+    return (isActive() && run()?.flavorCall) || "";
+}
+
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss
+    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
+    perfectLaunchesActive,flavorCallLine,openShopOrScenario
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{

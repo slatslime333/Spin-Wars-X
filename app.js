@@ -1622,13 +1622,12 @@ Object.values(BIT_ENGINE).forEach(bit=>{
 //=========================
 
 function getBladeEngine(blade){
-
-    return BLADE_ENGINE[
-        blade.name
-            .toLowerCase()
-            .replace(/ /g,"_")
-    ];
-
+    if(!blade) return null;
+    if(blade.card && blade.name) return blade;
+    const key=String(blade.name||blade)
+        .toLowerCase()
+        .replace(/ /g,"_");
+    return BLADE_ENGINE[key]||null;
 }
 
 
@@ -2263,24 +2262,52 @@ function assignStadiumSides(){
 
 function generateCPUCombo(force=false){
     if(!force && Game.cpu?.blade && Game.cpu?.ratchet && Game.cpu?.bit) return;
-    const playerTier=Game.player.blade?.tier;
     const playerBlade=Game.player.blade;
     const playerRatchet=Game.player.ratchet;
     const playerBit=Game.player.bit;
     const allBlades=playableBlades();
-    const tierPool=Game.mode==="custom" ? allBlades : allBlades.filter(b=>!playerTier || b.tier===playerTier);
-    const differentBlades=tierPool.filter(b=>b!==playerBlade && b.name!==playerBlade?.name);
-    const bladePool=differentBlades.length?differentBlades:tierPool.filter(b=>b!==playerBlade);
-    const finalBladePool=bladePool.length?bladePool:allBlades;
-    // CPU may never share the player's selected Blade, Ratchet, or Bit.
-    const differentRatchets=RATCHETS.filter(r=>r!==playerRatchet && r.name!==playerRatchet?.name);
-    const ratchetPool=differentRatchets.length?differentRatchets:RATCHETS;
-    const allBits=selectableBits();
-    const differentBits=allBits.filter(b=>b!==playerBit && b.name!==playerBit?.name);
-    const bitPool=differentBits.length?differentBits:allBits;
-    Game.cpu.blade=finalBladePool[Math.floor(Math.random()*finalBladePool.length)];
-    Game.cpu.ratchet=ratchetPool[Math.floor(Math.random()*ratchetPool.length)];
-    Game.cpu.bit=bitPool[Math.floor(Math.random()*bitPool.length)];
+    const playerTier=playerBlade?.tier;
+    const leaguePool=Game.mode==="custom" || Game.quickMatch
+        ? allBlades
+        : allBlades.filter(b=>!playerTier || b.tier===playerTier);
+    const bladePool=leaguePool.filter(b=>b && b.name && b.name!==playerBlade?.name);
+    const blades=bladePool.length?bladePool:leaguePool.length?leaguePool:allBlades;
+    let blade=null,ratchet=null,bit=null,guard=0;
+    const roleBits={
+        Attack:["Rush","Low Rush","Flat","Low Flat","Kick","Quake"],
+        Defense:["Needle","Hexa","Wedge","Ball","Orb","Point"],
+        Stamina:["Ball","Orb","Needle","Hexa","Point","Level"]
+    };
+    const roleRats={
+        Attack:[1,3,4,5],
+        Defense:[9,7,6,5],
+        Stamina:[7,9,6,5]
+    };
+    while(guard++<18){
+        blade=blades[Math.floor(Math.random()*blades.length)]||null;
+        if(!blade) continue;
+        const role=String(blade.type||"Balance");
+        const bits=selectableBits();
+        const prefer=(roleBits[role]||["Point","Level","Hexa","Kick"]).filter(n=>n!==playerBit?.name);
+        const bitPool=bits.filter(b=>prefer.includes(b.name));
+        const bitSource=bitPool.length?bitPool:bits.filter(b=>b.name!==playerBit?.name);
+        bit=(bitSource.length?bitSource:bits)[Math.floor(Math.random()*(bitSource.length?bitSource.length:bits.length))]||null;
+        const nums=roleRats[role]||[3,5,7,9];
+        const height=role==="Attack"
+            ? (Math.random()<0.55?60:70)
+            : 60;
+        const rats=RATCHETS.filter(r=>Number(r.height)===height && nums.includes(Number(r.number)) && r.name!==playerRatchet?.name);
+        const ratSource=rats.length?rats:RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
+        ratchet=(ratSource.length?ratSource:RATCHETS)[Math.floor(Math.random()*(ratSource.length?ratSource.length:RATCHETS.length))]||null;
+        if(blade && ratchet && bit && calculateComboStats(blade,ratchet,bit)) break;
+    }
+    if(!blade || !ratchet || !bit){
+        randomizeCombo("cpu");
+        return;
+    }
+    Game.cpu.blade=blade;
+    Game.cpu.ratchet=ratchet;
+    Game.cpu.bit=bit;
     Game.cpu.spin=Game.cpu.blade.spin||"Right";
     Game.cpu.launch={angle:null,technique:null,quality:null};
     syncComboStats("player"); syncComboStats("cpu");
@@ -2907,6 +2934,19 @@ function paintRpmGhostBars(p,c,dt){
     }
 }
 
+function paintMomentumBars(p,c){
+    const cap=0.128;
+    const fill=(id,s)=>{
+        const el=document.getElementById(id);
+        if(!el) return;
+        const speed=Math.hypot(Number(s?.vx)||0,Number(s?.vy)||0);
+        const pct=Math.max(0,Math.min(100,(speed/cap)*100));
+        el.style.width=`${pct}%`;
+    };
+    fill("newPlayerMomBar",p);
+    fill("newCpuMomBar",c);
+}
+
 function considerKillCam(p,c,now){
     const cam=killCamState();
     const imp=NEW_BATTLE.lastImpact;
@@ -2969,6 +3009,9 @@ const LAUNCH_QUALITY_WEIGHTS=[
 ];
 
 function rollRandomLaunchQuality(){
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.perfectLaunchesActive && SpinWarsRogue.perfectLaunchesActive()){
+        return "Perfect";
+    }
     let total=0;
     for(const [,weight] of LAUNCH_QUALITY_WEIGHTS) total+=weight;
     let roll=Math.random()*total;
@@ -3637,6 +3680,14 @@ function startNewBattle(){
         return false;
     }
 
+    if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.perfectLaunchesActive && SpinWarsRogue.perfectLaunchesActive()){
+        Game.player.launch=Game.player.launch||{};
+        Game.cpu.launch=Game.cpu.launch||{};
+        Game.player.launch.quality="Perfect";
+        Game.cpu.launch.quality="Perfect";
+        if(Game.cpu.lockedLaunchPlan) Game.cpu.lockedLaunchPlan.quality="Perfect";
+    }
+
     try{
         cancelAnimationFrame(NEW_BATTLE.raf);
 
@@ -3947,6 +3998,11 @@ function renderNewBattle(){
                     <div id="newPlayerRPMBar" class="rpm-bar-fill rpm-bar-player"></div>
                   </div>
                 </div>
+                <div class="mom-bar-row" title="Momentum">
+                  <div class="mom-bar-shell">
+                    <div id="newPlayerMomBar" class="mom-bar-fill mom-bar-player"></div>
+                  </div>
+                </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
               </div>
               <div class="battle-score">
@@ -3968,6 +4024,11 @@ function renderNewBattle(){
                     <div id="newCpuRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
                     <div id="newCpuRPMGhostGain" class="rpm-bar-ghost rpm-bar-ghost-gain"></div>
                     <div id="newCpuRPMBar" class="rpm-bar-fill rpm-bar-cpu"></div>
+                  </div>
+                </div>
+                <div class="mom-bar-row" title="Momentum">
+                  <div class="mom-bar-shell">
+                    <div id="newCpuMomBar" class="mom-bar-fill mom-bar-cpu"></div>
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
@@ -4293,17 +4354,19 @@ function dumpRailSwingFollowThrough(s, preVx, preVy, throughX, throughY){
     const hy=preVy/pre;
     const along=s.vx*hx+s.vy*hy;
     if(along>0){
-        s.vx-=hx*along*0.78;
-        s.vy-=hy*along*0.78;
+        s.vx-=hx*along*0.94;
+        s.vy-=hy*along*0.94;
     }
     const thruLen=Math.hypot(throughX, throughY)||1;
     const ux=throughX/thruLen;
     const uy=throughY/thruLen;
     const thru=s.vx*ux+s.vy*uy;
     if(thru>0){
-        s.vx-=ux*thru*0.85;
-        s.vy-=uy*thru*0.85;
+        s.vx-=ux*thru*0.96;
+        s.vy-=uy*thru*0.96;
     }
+    s.vx*=0.82;
+    s.vy*=0.82;
 }
 
 /*
@@ -5096,6 +5159,7 @@ function newBattleFrame(now){
             if(el) el.textContent=Math.round(v*100);
         }
         paintRpmGhostBars(p,c,frameDt);
+        paintMomentumBars(p,c);
 
         considerKillCam(p,c,now);
 
@@ -6715,11 +6779,12 @@ function newPhysicsCollision(dt){
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
-      Over/Xtreme are a bit more reachable. Cap still owns the ceiling.
+      Over/Xtreme are a bit more reachable. Attack bits get a tad more
+      (1.20 vs 1.11). Cap still owns the ceiling.
       Non-Attack bits already use the Attack clash role for that swing.
     */
-    if(pRailSwing) pKnockRaw*=1.11;
-    if(cRailSwing) cKnockRaw*=1.11;
+    if(pRailSwing) pKnockRaw*=pAttackBit?1.20:1.11;
+    if(cRailSwing) cKnockRaw*=cAttackBit?1.20:1.11;
     let pKnockback=pKnockRaw*0.82;
     let cKnockback=cKnockRaw*0.82;
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive() && typeof SpinWarsRogue.applyPsyshockKnock==="function"){

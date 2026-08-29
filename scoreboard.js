@@ -446,7 +446,6 @@
             SpinWarsRogue.persist();
         }
         const records=`<section class="sb-records">
-            <div><small>Peak RPM</small><b>${hudRpm(state.match.player.peakRpm)}</b><i>${hudRpm(state.match.cpu.peakRpm)}</i></div>
             <div><small>Damage / Hit</small><b>${dmgPerHit(state.match.player)}</b><i>${dmgPerHit(state.match.cpu)}</i></div>
         </section>`;
         const app=document.getElementById("app");
@@ -495,7 +494,6 @@
         if(global.Game) global.Game.screen="rogueRunSummary";
         const app=document.getElementById("app");
         const mark=typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,tag:status==="WON"?"ROGUE RUN WON":status==="LOST"?"ROGUE RUN LOST":"ROGUE RUN COMPLETE"}):"";
-        const list=(r.battleScores||[]).map((sc,i)=>`<li>Battle ${i+1} <b>${commas(sc)}</b></li>`).join("");
         app.innerHTML=`<div class="background"></div>
         <main class="sb-screen sb-run">
             ${mark}
@@ -512,11 +510,8 @@
                 <li>Big Impacts <b>${r.bigImpacts||0}</b></li>
                 <li>Dashes <b>${r.dashes||0}</b></li>
                 <li>X-Rail Rides <b>${r.xrailRides||0}</b></li>
-                <li>Peak RPM <b>${hudRpm(r.peakRpm)}</b></li>
-                <li>Battle Score Total <b>${commas(battles)}</b></li>
                 <li>Boss Bonuses <b>${pts(r.bossBonus)}</b></li>
             </ul>
-            ${list?`<ol class="sb-battle-list">${list}</ol>`:""}
             <button class="rip-btn" id="sbRunHome" type="button">TITLE</button>
         </main>`;
         document.getElementById("sbRunHome")?.addEventListener("click",()=>{

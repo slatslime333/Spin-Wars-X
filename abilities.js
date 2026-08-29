@@ -16,7 +16,7 @@
     const HURRICANE_GAIN=0.10;
     const QUAKE_R=0.62;
     const QUAKE_MS=3000;
-    const IRON_MS=3000;
+    const IRON_MS=2500;
     const FREE_SPIN_CHANCE=0.15;
     const FLAME_MS=2300;
     const FLAME_PHASE2_MS=1000;
@@ -51,7 +51,7 @@
         },
         "iron-skin":{
             name:"Iron Skin", active:true,
-            blurb:"2 uses a match. 3s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
+            blurb:"2 uses a match. 2.5s. Clash RPM on you is 0. Their knock is cancelled and you shove them at 120% of that knock (still capped). Idle drain and Over/Xtreme still end the point."
         },
         "free-spin":{
             name:"Free Spin", active:false,
