@@ -6025,9 +6025,13 @@ function newPhysicsStep(s,dt){
             (1.02+0.30*movement+0.20*mobility+0.04*attackStat)*
             attackSpeedBoost*
             (s.abilitySpeedMul||1)*
-            (attackBit && rpm<0.60
-                ? 0.76+0.40*(rpm/0.60)
-                : (!attackBit && rpm<0.40
+            (attackBit
+                ? (rpm>=0.80
+                    ? 0.97+0.03*((rpm-0.80)/0.20)
+                    : rpm>=0.50
+                        ? 0.88+0.09*((rpm-0.50)/0.30)
+                        : 0.76+0.12*(rpm/0.50))
+                : (rpm<0.40
                     ? 0.86+0.14*(rpm/0.40)
                     : 1.0));
 
@@ -6046,8 +6050,8 @@ function newPhysicsStep(s,dt){
           while impact or the X-Rail owns the Bey.
         */
         if(!keepImpactSpeed){
-            if(rpm<(attackBit?0.60:0.40) && speedNow>physicalSpeedTarget){
-                const floor=attackBit?0.60:0.40;
+            if(rpm<(attackBit?0.80:0.40) && speedNow>physicalSpeedTarget){
+                const floor=attackBit?0.80:0.40;
                 const lowRpmBrake=(0.0010+(floor-rpm)*0.0030)*dt*60;
                 const brakeScale=newBattleClamp(1-lowRpmBrake,0.92,1);
                 s.vx*=brakeScale;

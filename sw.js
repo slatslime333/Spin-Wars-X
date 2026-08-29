@@ -1,11 +1,11 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.32';
+const CACHE='spin-wars-x-9.33';
 const PRECACHE=[
   './','./index.html','./manifest.webmanifest',
-  './style.css?v=9.32','./movement-engine.js?v=9.23','./xrail-engine.js?v=9.23',
-  './vs-commentary.js?v=9.24','./abilities.js?v=9.27','./scoreboard.js?v=9.27','./app.js?v=9.28',
+  './style.css?v=9.32','./movement-engine.js?v=9.33','./xrail-engine.js?v=9.23',
+  './vs-commentary.js?v=9.24','./abilities.js?v=9.27','./scoreboard.js?v=9.27','./app.js?v=9.33',
   './rogue-mode.js?v=9.32','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.0','./rogue-shop-balance.js?v=1.1',
-  './rogue-balance-final.js?v=1.1','./omen-transition-repair.js?v=1.1','./sw.js',
+  './rogue-balance-final.js?v=1.1','./omen-transition-repair.js?v=1.1','./attack-movement-tuning-v1.js?v=1.1','./sw.js',
   './assets/blades/Aeropegasus.png','./assets/blades/Dransword%20%281%29.png','./assets/blades/KnightMail.png',
   './assets/blades/Leoncrest.png','./assets/blades/Leonfang.png','./assets/blades/Sharkedge.png',
   './assets/blades/Silverwolf.png','./assets/blades/Unicornsting.png','./assets/blades/Vipertail.png',

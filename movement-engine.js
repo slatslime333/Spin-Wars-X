@@ -76,15 +76,18 @@ function stableOrbitBase(movement,centerAffinity){
 function orbitRpmFactor(spin,kind){
   const raw=clamp01(spin);
   /*
-    Attack is slightly inside the rail at full spin. By 50% RPM it
-    should sit just under the X-Rail/X-Exit so laps miss the ring.
-    By the last 20% RPM it pulls into a tight ring like Non-Attack,
-    with a little leftover Attack width.
+    Attack stays wide at full spin so they can still kiss and ride
+    the X-Rail. The drop-off is the nerf, not the opening ring.
+    By 80% RPM they are still Attack-wide (can hook) but a bit
+    inside a fresh launch. By 50% RPM they sit under the
+    X-Rail/X-Exit so laps miss the ring. By the last 20% RPM they
+    pull into a tight ring like Non-Attack, with leftover width.
   */
   if(kind==="attack"){
     const s=Math.max(0.12,raw);
-    if(s>=0.50) return 0.84+0.16*((s-0.50)/0.50);
-    if(s>=0.20) return 0.32+0.52*((s-0.20)/0.30);
+    if(s>=0.80) return 0.90+0.10*((s-0.80)/0.20);
+    if(s>=0.50) return 0.70+0.20*((s-0.50)/0.30);
+    if(s>=0.20) return 0.32+0.38*((s-0.20)/0.30);
     return 0.22+0.10*(s/0.20);
   }
   if(kind==="hybrid"){
@@ -344,7 +347,7 @@ if(centerWinding && !attackLike){
     targetOrbitSpeed*=clamp(rNow/ring, 0.22, 1);
 }else if(attackLike){
     const ring=Math.max(0.28,preferredRadius);
-    if(rNow>ring) targetOrbitSpeed*=clamp(ring/rNow,0.50,1);
+    if(rNow>ring) targetOrbitSpeed*=clamp(ring/rNow, rpm<0.80?0.42:0.50, 1);
     else targetOrbitSpeed*=clamp(rNow/ring,0.52,1);
 }
 
@@ -423,7 +426,7 @@ const steerRadius=windingHome;
 const outsideHome=rNow>preferredRadius+(attackLike?0.025:0.02);
 const tiredCenter=!attackLike && rpm<=0.35;
 const radialGain=attackLike
-    ? (outsideHome?(rpm<0.20?0.34:0.22):0.14)
+    ? (outsideHome?(rpm<0.20?0.34:rpm<0.80?0.26:0.22):0.14)
     : (tiredCenter && outsideHome ? 0.36 : (0.16+0.06*plant));
 const windingOutwardCap=attackLike
     ? 0.006
@@ -848,7 +851,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.4.2",
+    version:"1.4.3",
     step,
     homeOrbitRadius,
     orbitOmega,
