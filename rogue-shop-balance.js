@@ -83,6 +83,11 @@ function rerollOffers(){
         if(!cards.some(c=>c.kind==="evolve"))cards[idx]=form;
     }
     while(cards.length<3)cards.push(makeCard("common"));
+    if(r._lockedOffer && r._lockedOffer.kind){
+        const idx=cards.findIndex(c=>c.kind!=="evolve");
+        cards[idx>=0?idx:0]=r._lockedOffer;
+        r._lockedOffer=null;
+    }
     r.offers=cards.slice(0,3);r._rogueShopStamp=match();
     const box=document.getElementById("rogueOffers");if(!box)return;
     box.innerHTML="";

@@ -209,9 +209,13 @@
 
     function renderHTML(player,cpu,playerCombo,cpuCombo,playerPlate,cpuPlate){
         const copy=buildCopy(player,cpu,playerCombo,cpuCombo,playerPlate,cpuPlate);
+        const flavor=typeof global.SpinWarsRogue!=="undefined" && SpinWarsRogue.flavorCallLine
+            ? SpinWarsRogue.flavorCallLine()
+            : "";
+        const shown=flavor?`${flavor} ${copy}`:copy;
         return `<aside class="vs-call" aria-live="polite">
             <div class="vs-call-kicker"><span>LIVE</span> COMMENTARY</div>
-            <p class="vs-call-copy">${escapeHtml(copy)}</p>
+            <p class="vs-call-copy">${escapeHtml(shown)}</p>
         </aside>`;
     }
 
