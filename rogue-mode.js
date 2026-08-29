@@ -1439,6 +1439,7 @@ function persistScreen(){
     if(s==="battle"||s==="comboCheck") return s==="battle"?"battle":"comboCheck";
     if(s==="matchSummary") return run()?.lastResult?"rogueResults":"comboCheck";
     if(s==="rogueRunSummary") return "rogueWin";
+    if(s==="rogueRunHistory") return "rogueLanding";
     return s||"comboCheck";
 }
 
@@ -1595,6 +1596,50 @@ function archiveFinishedRun(status){
     saveRunArchive(list);
 }
 
+function runHistoryRowHTML(e){
+    const combo=`${e.bladeName||"Bey"} · ${e.ratchetName||"?"} · ${e.bitName||"?"}`;
+    const st=e.status==="won"?"WON":"LOST";
+    const match=e.status==="won"?`Match ${e.matchIndex||18}`:`Fell at ${e.matchIndex||1}`;
+    const statLine=e.stats
+        ? STATS.map(k=>`${LABEL[k]} ${e.stats[k]}`).join(" · ")
+        : "";
+    return `<button type="button" class="rogue-run-row ${e.status}" data-run-id="${e.id}">
+        <span class="rogue-run-row-kicker">${st} · ${match}</span>
+        <b>${combo}</b>
+        <small>OVR ${e.ovr||"—"} · ${Number(e.finalScore)||0} pts</small>
+        ${statLine?`<small class="rogue-run-stats">${statLine}</small>`:""}
+    </button>`;
+}
+
+function bindRunHistoryRows(root){
+    (root||document).querySelectorAll(".rogue-run-row").forEach(btn=>{
+        btn.onclick=()=>openArchivedRun(btn.getAttribute("data-run-id"));
+    });
+}
+
+function showRunHistory(){
+    Game.mode="rogue";
+    Game.quickMatch=false;
+    Game.screen="rogueRunHistory";
+    Game._viewingArchive=false;
+    const past=loadRunArchive();
+    const body=past.length
+        ? past.map(runHistoryRowHTML).join("")
+        : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-landing rogue-run-board">
+        ${homeBowlHTML()}
+        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"RUN SCOREBOARD"})}
+        <section class="rogue-run-history" aria-label="Finished runs">
+            ${body}
+        </section>
+    </main>`;
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
+    bindRunHistoryRows();
+    mountDevButton();
+}
+
 function openArchivedRun(id){
     const entry=loadRunArchive().find(e=>String(e.id)===String(id));
     if(!entry) return;
@@ -1604,7 +1649,7 @@ function openArchivedRun(id){
             run:entry.scoreboard||{},
             bladeName:entry.bladeName,
             status:entry.status,
-            onHome:()=>{Game._viewingArchive=false;showLanding();}
+            onHome:()=>{Game._viewingArchive=false;showRunHistory();}
         });
         return;
     }
@@ -1719,25 +1764,9 @@ function showLanding(){
         ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
         : "No run saved";
     const past=loadRunArchive();
-    const history=past.length
-        ? `<section class="rogue-run-history" aria-label="Finished runs">
-            <p class="eyebrow">RUN SCOREBOARD</p>
-            ${past.map(e=>{
-                const combo=`${e.bladeName||"Bey"} · ${e.ratchetName||"?"} · ${e.bitName||"?"}`;
-                const st=e.status==="won"?"WON":"LOST";
-                const match=e.status==="won"?`Match ${e.matchIndex||18}`:`Fell at ${e.matchIndex||1}`;
-                const statLine=e.stats
-                    ? STATS.map(k=>`${LABEL[k]} ${e.stats[k]}`).join(" · ")
-                    : "";
-                return `<button type="button" class="rogue-run-row ${e.status}" data-run-id="${e.id}">
-                    <span class="rogue-run-row-kicker">${st} · ${match}</span>
-                    <b>${combo}</b>
-                    <small>OVR ${e.ovr||"—"} · ${Number(e.finalScore)||0} pts</small>
-                    ${statLine?`<small class="rogue-run-stats">${statLine}</small>`:""}
-                </button>`;
-            }).join("")}
-           </section>`
-        : "";
+    const boardNote=past.length
+        ? `${past.length} finished run${past.length===1?"":"s"}`
+        : "No finished runs yet";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
@@ -1755,9 +1784,13 @@ function showLanding(){
                 <small>${continueNote}</small>
                 ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
             </button>
+            <button class="home-door rogue" id="rogueScoreboard" type="button">
+                <span class="home-door-kicker">HISTORY</span>
+                <b>RUN SCOREBOARD</b>
+                <small>${boardNote}</small>
+            </button>
             <button class="home-help" id="rogueHelp" type="button">How a run works</button>
         </nav>
-        ${history}
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
@@ -1766,10 +1799,8 @@ function showLanding(){
         if(!canContinue) return;
         resumeSave();
     };
+    document.getElementById("rogueScoreboard").onclick=()=>showRunHistory();
     document.getElementById("rogueHelp").onclick=()=>showHelp();
-    document.querySelectorAll(".rogue-run-row").forEach(btn=>{
-        btn.onclick=()=>openArchivedRun(btn.getAttribute("data-run-id"));
-    });
     mountDevButton();
 }
 
