@@ -2765,10 +2765,38 @@ button:focus-visible{
 .rogue-scenario-actions{
   display:flex;
   flex-direction:column;
-  gap:8px;
+  gap:12px;
   width:min(420px,100%);
   margin-top:16px;
 }
+.rogue-scenario-choice{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.rogue-scenario-odds{
+  list-style:none;
+  margin:0;
+  padding:0 2px 2px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.rogue-scenario-odds li{
+  display:flex;
+  gap:8px;
+  align-items:baseline;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.35;
+}
+.rogue-scenario-odds b{
+  flex:0 0 auto;
+  color:var(--gold);
+  letter-spacing:.08em;
+  font-size:11px;
+}
+.rogue-scenario-odds span{min-width:0}
 .rogue-scenario-actions .menu-btn,
 .rogue-scenario-actions .rip-btn{width:100%}
 
