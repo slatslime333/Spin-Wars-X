@@ -2745,9 +2745,11 @@ button:focus-visible{
 }
 .rogue-run-row b{font-size:14px;line-height:1.25}
 .rogue-run-row small{color:var(--muted);font-size:12px}
-.rogue-run-row .rogue-run-stats{
-  font-size:11px;
-  letter-spacing:.02em;
+.rogue-run-empty{
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.45;
+  padding:12px 4px 4px;
 }
 
 #rogueNewConfirm{
