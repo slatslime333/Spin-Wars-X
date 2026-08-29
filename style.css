@@ -2703,6 +2703,48 @@ button:focus-visible{
   margin-top:10px;
 }
 
+.rogue-run-history{
+  position:relative;
+  z-index:1;
+  width:min(420px,100%);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:4px;
+}
+.rogue-run-history .eyebrow{
+  color:var(--gold);
+  letter-spacing:.16em;
+  font-size:11px;
+}
+.rogue-run-row{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  text-align:left;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  border-radius:var(--radius);
+  cursor:pointer;
+  font:inherit;
+}
+.rogue-run-row:hover{filter:brightness(1.08)}
+.rogue-run-row.won{border-color:#1ad15a}
+.rogue-run-row.lost{border-color:#7a1020}
+.rogue-run-row-kicker{
+  letter-spacing:.14em;
+  font-size:10px;
+  color:var(--gold);
+}
+.rogue-run-row b{font-size:14px;line-height:1.25}
+.rogue-run-row small{color:var(--muted);font-size:12px}
+.rogue-run-row .rogue-run-stats{
+  font-size:11px;
+  letter-spacing:.02em;
+}
+
 #rogueNewConfirm{
   width:min(520px,100%);
   margin:12px auto 0;
@@ -3269,7 +3311,7 @@ button:focus-visible{
 }
 .sb-records{
   display:grid;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:1fr 1fr;
   gap:8px;
 }
 .sb-records div{
@@ -3281,13 +3323,29 @@ button:focus-visible{
 .sb-records small{display:block;color:var(--muted);letter-spacing:.12em;font-size:10px}
 .sb-records b{display:block;color:var(--green);font-size:18px}
 .sb-records i{display:block;color:var(--red);font-style:normal;font-size:16px}
-.sb-decisive{
-  border-left:4px solid var(--gold);
-  padding:8px 10px;
+.sb-quality{
+  align-self:center;
+  text-align:center;
+  border:1px solid var(--line);
   background:var(--panel);
-  font-size:14px;
+  padding:10px 16px;
+  border-radius:var(--radius);
+  min-width:min(280px,90%);
 }
-.sb-decisive span{display:block;letter-spacing:.16em;font-size:10px;color:var(--gold)}
+.sb-quality span{
+  display:block;
+  letter-spacing:.16em;
+  font-size:10px;
+  color:var(--gold);
+}
+.sb-quality b{
+  display:block;
+  margin-top:4px;
+  font-family:Staatliches,Kanit,sans-serif;
+  font-size:28px;
+  letter-spacing:.1em;
+  color:var(--green);
+}
 .sb-boss{text-align:center;color:var(--gold)}
 .sb-actions{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .sb-run-final{text-align:center;font-size:42px}

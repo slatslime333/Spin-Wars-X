@@ -1185,7 +1185,7 @@ function toggleDev(){
             <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
             <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
             <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
-            <button type="button" class="menu-btn gold" id="rogueDevWin">FORCE MATCH WIN</button>
+            <button type="button" class="menu-btn gold" id="rogueDevWin">WIN ROUND</button>
             <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
         </div>
     </aside>`);
@@ -1212,30 +1212,31 @@ function toggleDev(){
         showHub();
     });
     document.getElementById("rogueDevOmen")?.addEventListener("click",()=>{
-        if(!run()) return;
         panel.remove();
-        const hold=Game.screen;
-        paintSharkOmen();
-        window.setTimeout(()=>{
-            if(Game.screen!=="rogueOmen") return;
-            if(hold==="rogueHub") showHub();
-            else if(hold==="comboCheck") showComboCard();
-            else showLanding();
-        },6000);
+        jumpToFinalBoss({omen:true});
     });
     document.getElementById("rogueDevFinal")?.addEventListener("click",()=>{
-        const r=run();
-        if(!r) return;
-        r.matchIndex=18;
         panel.remove();
-        generateCpu();
-        showComboCard();
+        jumpToFinalBoss({omen:false});
     });
     document.getElementById("rogueDevWin").onclick=()=>{
         if(!run()) return;
         panel.remove();
+        if(typeof devAwardSpinRound==="function"){
+            devAwardSpinRound("player");
+            return;
+        }
         stopLiveBattle();
-        onMatchOver("player",7,Math.min(6,Game.battle?.score?.cpu||0),"Spin Finish");
+        Game.battle=Game.battle||{score:{player:0,cpu:0}};
+        Game.battle.score=Game.battle.score||{player:0,cpu:0};
+        Game.battle.score.player=(Number(Game.battle.score.player)||0)+1;
+        if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onFinish){
+            SpinWarsScoreboard.onFinish("player","Spin Finish",null);
+        }
+        const p=Game.battle.score.player;
+        const c=Number(Game.battle.score.cpu)||0;
+        if(p>=7) onMatchOver("player",p,c,"Spin Finish");
+        else persist();
     };
     document.getElementById("rogueDevLose").onclick=()=>{
         if(!run()) return;
@@ -1251,6 +1252,81 @@ function stopLiveBattle(){
     NEW_BATTLE.active=false;
     NEW_BATTLE.finishPending=true;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
+}
+
+function createRun(blade){
+    const parts=starterParts(blade);
+    Game.mode="rogue";
+    Game.rogue={
+        runStatus:"running",
+        matchIndex:1,
+        startingBeyId:blade.name,
+        startingTier:blade.tier||"Silver",
+        currentRogueTier:"Bronze",
+        enhanced:false,
+        hubsWithoutForm:0,
+        blade,ratchet:parts.ratchet,bit:parts.bit,
+        starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
+        startScale:makeStartScale(blade,parts.ratchet,parts.bit),
+        bonuses:emptyBonuses(),
+        activeModifier:null,
+        history:[],
+        offers:[],
+        lastResult:null,
+        abilityId:null,
+        pendingAbilitySwap:null,
+        claimedShark:false,
+        cpuPowerTarget:0,
+        cpuHistory:[],
+        boss:false
+    };
+    Game.player.launch={angle:"Flat",technique:"Center"};
+    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginRun();
+    return Game.rogue;
+}
+
+function ensureRun(){
+    if(run()?.blade) return run();
+    const blade=pick(playableBlades());
+    if(!blade) return null;
+    return createRun(blade);
+}
+
+function jumpToFinalBoss(opts){
+    opts=opts||{};
+    stopLiveBattle();
+    const r=ensureRun();
+    if(!r) return;
+    r.matchIndex=18;
+    r._omenHandoff=false;
+    Game.mode="rogue";
+    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
+    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginMatch();
+    Game.player.launch={angle:"Flat",technique:"Center"};
+    Game.cpu.lockedLaunchPlan=null;
+    if(opts.omen){
+        showSharkOmen();
+        return;
+    }
+    generateCpu();
+    showComboCard();
+    persist();
+}
+
+function handoffOmen(){
+    const r=run();
+    if(!r) return false;
+    if(Game.screen!=="rogueOmen") return false;
+    if(r._omenHandoff) return false;
+    r._omenHandoff=true;
+    r.matchIndex=18;
+    generateCpu();
+    showComboCard();
+    persist();
+    return true;
 }
 
 function renderDevList(){
@@ -1306,7 +1382,9 @@ function bitByName(name){
 }
 
 const SAVE_KEY="spinWarsX.rogue.v1";
+const RUNS_KEY="spinWarsX.rogue.runs.v1";
 const COOKIE_KEY="swx_rogue";
+const RUN_ARCHIVE_CAP=12;
 
 function packModifier(mod){
     if(!mod) return null;
@@ -1441,6 +1519,7 @@ function readCookie(){
     return "";
 }
 function persist(){
+    if(Game._viewingArchive) return false;
     const data=buildSave();
     if(!data) return false;
     let json="";
@@ -1474,6 +1553,62 @@ function peekSave(){
 function clearSave(){
     try{localStorage.removeItem(SAVE_KEY);}catch(_e){}
     try{document.cookie=`${COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`;}catch(_e){}
+}
+
+function loadRunArchive(){
+    try{
+        const raw=JSON.parse(localStorage.getItem(RUNS_KEY)||"[]");
+        return Array.isArray(raw)?raw.filter(e=>e&&(e.status==="won"||e.status==="lost")):[];
+    }catch(_e){return [];}
+}
+
+function saveRunArchive(list){
+    try{localStorage.setItem(RUNS_KEY,JSON.stringify((list||[]).slice(0,RUN_ARCHIVE_CAP)));}catch(_e){}
+}
+
+function archiveFinishedRun(status){
+    if(status!=="won" && status!=="lost") return;
+    const r=run();
+    if(!r||!r.blade) return;
+    const stats=playerEffective();
+    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/STATS.length);
+    const sb=typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():null;
+    const final=typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.runFinal():0;
+    const entry={
+        id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+        endedAt:Date.now(),
+        status,
+        bladeName:r.blade.name,
+        ratchetName:r.ratchet?.name||"",
+        bitName:r.bit?.name||"",
+        startingBeyId:r.startingBeyId||r.blade.name,
+        startingTier:r.startingTier||"",
+        matchIndex:r.matchIndex||1,
+        stats,
+        ovr,
+        lastScore:r.lastResult||null,
+        scoreboard:sb,
+        finalScore:final
+    };
+    const list=loadRunArchive();
+    list.unshift(entry);
+    saveRunArchive(list);
+}
+
+function openArchivedRun(id){
+    const entry=loadRunArchive().find(e=>String(e.id)===String(id));
+    if(!entry) return;
+    Game._viewingArchive=true;
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
+        SpinWarsScoreboard.showRunSummary({
+            run:entry.scoreboard||{},
+            bladeName:entry.bladeName,
+            status:entry.status,
+            onHome:()=>{Game._viewingArchive=false;showLanding();}
+        });
+        return;
+    }
+    Game._viewingArchive=false;
 }
 
 function hydrate(data){
@@ -1577,11 +1712,32 @@ function showLanding(){
     Game.mode="rogue";
     Game.quickMatch=false;
     Game.screen="rogueLanding";
+    Game._viewingArchive=false;
     const save=peekSave();
     const canContinue=!!save && save.blade;
     const continueNote=canContinue
         ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
         : "No run saved";
+    const past=loadRunArchive();
+    const history=past.length
+        ? `<section class="rogue-run-history" aria-label="Finished runs">
+            <p class="eyebrow">RUN SCOREBOARD</p>
+            ${past.map(e=>{
+                const combo=`${e.bladeName||"Bey"} · ${e.ratchetName||"?"} · ${e.bitName||"?"}`;
+                const st=e.status==="won"?"WON":"LOST";
+                const match=e.status==="won"?`Match ${e.matchIndex||18}`:`Fell at ${e.matchIndex||1}`;
+                const statLine=e.stats
+                    ? STATS.map(k=>`${LABEL[k]} ${e.stats[k]}`).join(" · ")
+                    : "";
+                return `<button type="button" class="rogue-run-row ${e.status}" data-run-id="${e.id}">
+                    <span class="rogue-run-row-kicker">${st} · ${match}</span>
+                    <b>${combo}</b>
+                    <small>OVR ${e.ovr||"—"} · ${Number(e.finalScore)||0} pts</small>
+                    ${statLine?`<small class="rogue-run-stats">${statLine}</small>`:""}
+                </button>`;
+            }).join("")}
+           </section>`
+        : "";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
@@ -1601,6 +1757,7 @@ function showLanding(){
             </button>
             <button class="home-help" id="rogueHelp" type="button">How a run works</button>
         </nav>
+        ${history}
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
@@ -1610,6 +1767,9 @@ function showLanding(){
         resumeSave();
     };
     document.getElementById("rogueHelp").onclick=()=>showHelp();
+    document.querySelectorAll(".rogue-run-row").forEach(btn=>{
+        btn.onclick=()=>openArchivedRun(btn.getAttribute("data-run-id"));
+    });
     mountDevButton();
 }
 
@@ -1687,34 +1847,7 @@ function showIntro(){
 }
 
 function beginRun(blade){
-    const parts=starterParts(blade);
-    Game.rogue={
-        runStatus:"running",
-        matchIndex:1,
-        startingBeyId:blade.name,
-        startingTier:blade.tier||"Silver",
-        currentRogueTier:"Bronze",
-        enhanced:false,
-        hubsWithoutForm:0,
-        blade,ratchet:parts.ratchet,bit:parts.bit,
-        starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
-        startScale:makeStartScale(blade,parts.ratchet,parts.bit),
-        bonuses:emptyBonuses(),
-        activeModifier:null,
-        history:[],
-        offers:[],
-        lastResult:null,
-        abilityId:null,
-        pendingAbilitySwap:null,
-        claimedShark:false,
-        cpuPowerTarget:0,
-        cpuHistory:[],
-        boss:false
-    };
-    Game.player.launch={angle:"Flat",technique:"Center"};
-    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
-    if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
-    if(typeof SpinWarsScoreboard!=="undefined") SpinWarsScoreboard.beginRun();
+    createRun(blade);
     generateCpu();
     showComboCard();
     persist();
@@ -1817,6 +1950,7 @@ function showRunWin(){
 
 function endRun(status){
     if(Game.rogue) Game.rogue.runStatus=status;
+    if(status==="won"||status==="lost") archiveFinishedRun(status);
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
     if(status==="won"||status==="lost") clearSave();
@@ -2063,15 +2197,15 @@ function paintSharkOmen(){
 
 function showSharkOmen(){
     const r=run();
+    if(r){
+        r.matchIndex=18;
+        r._omenHandoff=false;
+    }
     paintSharkOmen();
     persist();
-    const go=()=>{
-        if(Game.screen!=="rogueOmen") return;
-        generateCpu();
-        showComboCard();
-        persist();
-    };
-    window.setTimeout(go,6000);
+    window.setTimeout(()=>{
+        handoffOmen();
+    },6000);
 }
 
 function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
@@ -2097,7 +2231,7 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu
+    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{

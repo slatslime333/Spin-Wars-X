@@ -5,10 +5,8 @@ SCORE,xtreme,Xtreme Finish,Points for an Xtreme finish.,XTREME_FINISH,500,pts,,
 SCORE,big,Big Impact,+50 per heavy clash that deals at least this HUD RPM to the opponent.,BIG_IMPACT,50,pts,,
 SCORE,big-min,Big Impact min HUD,Minimum outgoing HUD RPM on a heavy clash to count as a Big Impact.,BIG_IMPACT_MIN_HUD,8,hud rpm,,
 SCORE,rpm,RPM Damage,HUD RPM damage / this = points. 1240 damage → 124 pts at 10.,RPM_DAMAGE_PER_POINT,10,hud rpm per pt,,
+SCORE,ability,Ability Damage,Kit RPM scored like clash RPM. fromAbility hits are not also counted as clash RPM Damage.,ABILITY_DAMAGE_PER_POINT,10,hud rpm per pt,,
 SCORE,hud,HUD RPM scale,Internal 0–1 RPM × this for display and damage totals.,HUD_RPM_SCALE,100,multiplier,,
-SCORE,xrail-spin,X-Rail → Spin,Bonus only if a Spin finish follows an X-Rail sequence. Riding alone is 0.,XRAIL_SPIN,75,pts,,
-SCORE,xrail-over,X-Rail → Over,Bonus only if an Over finish follows an X-Rail sequence.,XRAIL_OVER,125,pts,,
-SCORE,xrail-xtreme,X-Rail → Xtreme,Bonus only if an Xtreme finish follows an X-Rail sequence.,XRAIL_XTREME,200,pts,,
 SCORE,mul-n,Multiplier normal,No scoring sequence.,MUL_NORMAL,1.00,multiplier,,
 SCORE,mul-s,Multiplier strong,Big Impact → Finish or X-Rail → Finish.,MUL_STRONG,1.25,multiplier,,
 SCORE,mul-e,Multiplier exceptional,Big Impact → X-Rail → Finish. Elite 2.00 needs that Xtreme chain twice.,MUL_EXCEPTIONAL,1.50,multiplier,,
@@ -18,4 +16,5 @@ SCORE,boss-s,Silver boss,Rogue match 12 win bonus.,BOSS_SILVER,500,pts,,
 SCORE,boss-g,Gold boss,Reserved. No Gold mini-boss match yet.,BOSS_GOLD,750,pts,,
 SCORE,boss-f,Final boss,Rogue match 18 win bonus.,BOSS_FINAL,1500,pts,,
 SCORE,dash,Dashes,Tracked on the summary. Always +0 pts.,dashes,0,pts,,"Not a score source."
-SCORE,xdash,X-Rail Dashes,Dash during a live X-Rail sequence. Always +0 pts.,xrailDashes,0,pts,,"Not a score source."
+SCORE,xride,X-Rail Rides,Count of rail hooks. Always +0 pts.,xrailRides,0,pts,,"Not a score source."
+SCORE,quality,Game Quality,Horrible / Bad / Okay / Good / Perfect from player result and points scored.,gameQuality,,,,Launch-quality tiers.
