@@ -741,6 +741,8 @@ function makeOfferCard(rarity,blade,modifierId,opts){
         if(!shopBlocked("comeback")) pool.push(makeConsumableCard("comeback"));
         if(!shopBlocked("dashHaste")) pool.push(makeDashHasteCard());
         if(!shopBlocked("abilityCharge")) pool.push(makeAbilityChargeCard());
+        pool.push(makePlus1Plus1Card());
+        pool.push(makePlus3Card());
         pool.push(makeReforgeCard("bit"));
         pool.push(makeReforgeCard("ratchet"));
         pool.push(makeAbilitySwapCard(blade||r?.blade, r?.abilityId));
@@ -2327,9 +2329,9 @@ function showHelp(){
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Nothing is a free clean bump.</small></article>
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Commons always cost something.</small></article>
             <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie, Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · TOYS</strong><small>Bit or ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. No safe +3 sitting next to them.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>GROWTH · REFORGE · TOYS</strong><small>Clean +3 or +1 · +1, plus bit/ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. Rare is the clean bump.</small></article>
             <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too. Gold sees this table less.</small></article>
             <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>That is the real paycheck. Enhance is +5 / +3. Silver evolves then enhances. Gold climbs to Gold form. Toys do not replace this.</small></article>
         </div>
