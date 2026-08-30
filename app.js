@@ -2064,7 +2064,7 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     else if(bitName==="Hexa") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?92:(bladeType==="Balance"?84:68);
     else if(bitName==="Ball"||bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?95:(bladeType==="Balance"?82:58);
 
-    if(blade.rogueBoss && bitName==="Orb") roleFit=96;
+    if(blade.rogueBoss && bitName==="Ball") roleFit=96;
     else if(bitName==="Needle"||bitName==="High Needle") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?78:(bladeType==="Balance"?70:62);
     else if(bitName==="Point"||bitName==="Level") roleFit=(bladeType==="Balance"||bladeType==="Attack")?88:(bladeType==="Defense"?82:78);
     else if(bitName==="Quake") roleFit=bladeType==="Attack"?84:58;
@@ -2072,8 +2072,8 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
 
     let signature=0;
 
-    // Hidden boss kit: Shark Scale 1-60 Orb is a signature, not a dump bit.
-    if(blade.rogueBoss && bitName==="Orb" && ratchet.number===1 && height===60) signature+=1.45;
+    // Hidden boss kit: Shark Scale 1-60 Ball is a signature, not a dump bit.
+    if(blade.rogueBoss && bitName==="Ball" && ratchet.number===1 && height===60) signature+=1.45;
 
     // 1-60 attack identity.
     if(ratchet.number===1 && height===60 && bladeType==="Attack") signature+=1.80;
@@ -2269,6 +2269,7 @@ function createComboSummaryCard(side,combo){
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
+        ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
         <h2>${combo.blade.name}</h2>
         <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
         <div class="vs-ratings">
@@ -2326,7 +2327,7 @@ function showComboCard(){
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;

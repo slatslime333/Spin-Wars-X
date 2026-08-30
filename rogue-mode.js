@@ -88,7 +88,7 @@ function sharkBossParts(){
     const ratchet=(typeof RATCHETS!=="undefined"&&RATCHETS.find(x=>x.name==="1-60"))
         ||{name:"1-60",number:1,height:60};
     const bits=typeof selectableBits==="function"?selectableBits():[];
-    const bit=bits.find(b=>b.name==="Orb")||{name:"Orb"};
+    const bit=bits.find(b=>b.name==="Ball")||{name:"Ball"};
     return {ratchet,bit};
 }
 
@@ -508,22 +508,47 @@ function playerUpgradeCount(){
     return Math.max(fromHist,fromMatch);
 }
 
+function cpuNightRoll(){
+    const x=Math.random();
+    if(x<0.20) return "easy";
+    if(x<0.70) return "even";
+    return "hard";
+}
+
 function cpuStackLead(){
-    const t=String(run()?.startingTier||"");
-    const roll=Math.random();
+    const r=run();
+    const t=String(r?.startingTier||"");
+    const m=Math.max(1,Number(r?.matchIndex)||1);
+    const night=r?.cpuNight||"even";
+    let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
     if(t==="Bronze"){
-        if(roll<0.18) return 0;
-        if(roll<0.58) return 1;
-        return 2;
+        if(m<=5){ even=0.55; plus1=0.32; plus2=0.13; plus3=0; }
+        else if(m<=12){ even=0.48; plus1=0.38; plus2=0.14; plus3=0; }
+        else { even=0.50; plus1=0.38; plus2=0.12; plus3=0; }
+    }else if(t==="Silver"){
+        if(m<=5){ even=0.28; plus1=0.50; plus2=0.20; plus3=0.02; }
+        else if(m<=12){ even=0.22; plus1=0.48; plus2=0.26; plus3=0.04; }
+        else { even=0.20; plus1=0.46; plus2=0.28; plus3=0.06; }
+    }else{
+        if(m<=5){ even=0.42; plus1=0.46; plus2=0.12; plus3=0; }
+        else if(m<=12){ even=0.16; plus1=0.42; plus2=0.32; plus3=0.10; }
+        else { even=0.10; plus1=0.38; plus2=0.36; plus3=0.16; }
     }
-    if(t==="Silver"){
-        if(roll<0.24) return 0;
-        if(roll<0.74) return 1;
-        return 2;
+    if(night==="easy"){
+        even+=0.18; plus1-=0.06; plus2-=0.08; plus3-=0.04;
+    }else if(night==="hard"){
+        even-=0.16; plus1-=0.04; plus2+=0.12; plus3+=0.08;
     }
-    if(roll<0.32) return 0;
-    if(roll<0.82) return 1;
-    return 2;
+    even=Math.max(0.08,even);
+    plus1=Math.max(0.10,plus1);
+    plus2=Math.max(0,plus2);
+    plus3=Math.max(0,plus3);
+    const total=even+plus1+plus2+plus3;
+    let roll=Math.random()*total;
+    if((roll-=even)<0) return 0;
+    if((roll-=plus1)<0) return 1;
+    if((roll-=plus2)<0) return 2;
+    return 3;
 }
 
 function grantCpuPressure(n){
@@ -683,6 +708,7 @@ function shopBlocked(id){
     if(CONSUMABLE_KEYS.includes(id)) return (Number(r.consumables?.[id])||0)>0;
     if(id==="blessed") return !!r.blessed;
     if(id==="dashHaste") return !!r.matchBuffs?.dashHaste;
+    if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1;
     return false;
 }
 function cardKey(card){
@@ -710,13 +736,11 @@ function makeOfferCard(rarity,blade,modifierId,opts){
         if(!shopBlocked("hellsChain")) pool.push(makeConsumableCard("hellsChain"));
         if(!shopBlocked("comeback")) pool.push(makeConsumableCard("comeback"));
         if(!shopBlocked("dashHaste")) pool.push(makeDashHasteCard());
-        pool.push(makeAbilityChargeCard());
-        pool.push(makePlus1Plus1Card());
-        pool.push(makePlus3Card());
+        if(!shopBlocked("abilityCharge")) pool.push(makeAbilityChargeCard());
         pool.push(makeReforgeCard("bit"));
         pool.push(makeReforgeCard("ratchet"));
         pool.push(makeAbilitySwapCard(blade||r?.blade, r?.abilityId));
-        return pick(pool);
+        return pool.length?pick(pool):makePlus2Minus1Card();
     }
     if(rarity==="legendary"){
         const pool=[];
@@ -798,7 +822,7 @@ function bossExtraStacks(){
     const m=Number(run()?.matchIndex)||1;
     if(m===6) return 2;
     if(m===12) return 3;
-    if(m===18) return 4;
+    if(m===18) return 3;
     if(m>FINAL_MATCH) return 1+Math.min(3,Math.floor((m-FINAL_MATCH)/4));
     return 0;
 }
@@ -862,18 +886,22 @@ function canEnhance(){
     const r=run();
     if(!r||r.enhanced||inEndless()) return false;
     const start=startTier();
+    const m=Number(r.matchIndex)||1;
     if(start==="Gold") return false;
-    if(start==="Bronze") return true;
-    return formTier()==="Silver";
+    if(start==="Bronze") return m>=5;
+    return formTier()==="Silver" && m>=8;
 }
 function canEvolve(){
     const r=run();
     if(!r||inEndless()) return false;
     const start=startTier();
     const form=formTier();
+    const m=Number(r.matchIndex)||1;
     if(start==="Bronze") return false;
-    if(start==="Silver") return form==="Bronze";
-    return form!=="Gold";
+    if(start==="Silver") return form==="Bronze" && m>=3;
+    if(form==="Bronze") return m>=3;
+    if(form==="Silver") return m>=9;
+    return false;
 }
 function nextFormCard(){
     if(canEvolve()){
@@ -902,17 +930,22 @@ function peakStat(stats){
 function cpuPowerTarget(playerPow,match,boss){
     const r=run();
     const tier=String(r.startingTier||"");
-    const roll=Math.random();
+    const night=r.cpuNight||cpuNightRoll();
+    r.cpuNight=night;
     let band;
-    if(roll<0.14) band=0.94+Math.random()*0.04;
-    else if(roll<0.40) band=0.99+Math.random()*0.03;
-    else band=1.04+Math.random()*0.06;
-    if(tier==="Gold" && band<1.00) band=0.99+Math.random()*0.04;
-    if(tier==="Bronze" && band<1.00 && Math.random()<0.45) band+=0.04;
     if(boss){
-        if(match===18) band=Math.max(band,1.05+Math.random()*0.02);
-        else if(match===12) band=Math.max(band,1.03+Math.random()*0.015);
-        else band=Math.max(band,1.02+Math.random()*0.012);
+        if(match===18) band=1.08;
+        else if(match===12) band=1.055;
+        else band=1.04;
+        if(night==="easy") band-=0.015;
+        if(night==="hard") band+=0.015;
+    }else if(night==="easy") band=0.94+Math.random()*0.04;
+    else if(night==="even") band=0.99+Math.random()*0.03;
+    else band=1.03+Math.random()*0.04;
+    if(!boss){
+        if(tier==="Gold" && match<=2 && night!=="hard") band=Math.min(band,0.98);
+        if(tier==="Bronze" && match<=2 && night!=="easy") band=Math.min(1.06,band+0.02);
+        band=clamp(band,0.93,1.08);
     }
     return playerPow*band;
 }
@@ -922,12 +955,13 @@ function fillCpuScale(target){
     const base=comboBase(r.cpuBlade,r.cpuRatchet,r.cpuBit);
     const stacked=mergeStats(base,r.cpuBonuses);
     const pow=powerOf(stacked)||70;
-    const factor=target/pow;
+    const gap=(target-pow);
+    const delta=clamp(gap*0.48,-7,8);
     r.cpuScale=emptyBonuses();
     STATS.forEach(k=>{
         const have=Number(stacked[k])||70;
-        const want=have*factor;
-        r.cpuScale[k]=round(clamp(want-have,-14,30));
+        const identity=(have-pow)*0.06;
+        r.cpuScale[k]=round(clamp(delta+identity,-7,8));
     });
 }
 
@@ -947,6 +981,7 @@ function cpuLane(match){
 }
 function generateCpu(){
     const r=run();
+    r.cpuNight=cpuNightRoll();
     const playerPow=powerOf(playerEffective());
     const match=r.matchIndex;
     const boss=!!BOSS_AT[match];
@@ -1128,8 +1163,10 @@ function generateOffers(){
         r.shopGuarantee=null;
     }
     r.offers=cards.slice(0,3);
-    const hasForm=r.offers.some(c=>c.kind==="evolve");
-    r.hubsWithoutForm=hasForm?0:(Number(r.hubsWithoutForm)||0)+1;
+    if(nextFormCard()){
+        const hasForm=r.offers.some(c=>c.kind==="evolve");
+        r.hubsWithoutForm=hasForm?0:(Number(r.hubsWithoutForm)||0)+1;
+    }
 }
 
 function injectFormPity(cards){
@@ -1363,8 +1400,26 @@ function plateDecor(side){
         stats,ovr,meta:rogueDisplayMeta(side),delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
-        bossMark:mark||""
+        bossMark:mark||"",
+        pressure:side==="cpu"?fightPressureLine():"",
+        pressureKind:side==="cpu"?fightPressureKind():""
     };
+}
+
+function fightPressureKind(){
+    const r=run();
+    if(!r) return "";
+    if(r.finalBoss||r.matchIndex===18) return "final";
+    return r.cpuNight||"even";
+}
+
+function fightPressureLine(){
+    const r=run();
+    if(!r) return "";
+    if(r.finalBoss||r.matchIndex===18) return "A dark presence.";
+    if(r.cpuNight==="easy") return "You've got this.";
+    if(r.cpuNight==="hard") return "They're ahead.";
+    return "Even fight.";
 }
 
 function bonusStackBoxes(bonuses){
@@ -1598,6 +1653,7 @@ function createRun(blade){
         abilityId:null,
         pendingAbilitySwap:null,
         claimedShark:false,
+        cpuNight:null,
         cpuPowerTarget:0,
         cpuHistory:[],
         boss:false,
@@ -1853,6 +1909,7 @@ function buildSave(){
             cpuModifier:packModifier(r.cpuModifier),
             enhanced:!!r.enhanced,
             claimedShark:!!r.claimedShark,
+            cpuNight:r.cpuNight||null,
             hubsWithoutForm:Number(r.hubsWithoutForm)||0,
             shopRounds:Number(r.shopRounds)||1,
             skipShop:!!r.skipShop,
@@ -2047,6 +2104,7 @@ function hydrate(data){
         currentRogueTier:raw.currentRogueTier||"Bronze",
         enhanced:!!raw.enhanced,
         claimedShark:!!raw.claimedShark,
+        cpuNight:raw.cpuNight||null,
         hubsWithoutForm:Number(raw.hubsWithoutForm)||0,
         blade,ratchet,bit,
         starterBlade:bladeByName(raw.starterBladeName)||blade,
@@ -2243,18 +2301,18 @@ function showHelp(){
         </div>
         <section class="menu-card rogue-help-card">
             <p>Pick one Bey to start. Your bit and ratchet are random. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
-            <p>A run is 18 matches. Matches 6 and 12 are mini bosses. The last match is a secret. Beat it and the night keeps going.</p>
-            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Bronze starts weaker, but the shop gets kinder later. Gold starts stronger; the shop stays thinner because Gold can evolve.</p>
-            <p>Bronze cannot evolve. After enough wins it can Enhance once — a honeycomb look and a big stat bump. Silver starts in Bronze form, can grow into Silver, then Enhance. Gold starts in Bronze form and can climb all the way to Gold.</p>
-            <p>The CPU grows with you. After each match it gets as many upgrades as you have, plus a little extra based on your starter. Mini bosses show extra boxes. Close the app and hit Continue to pick up where you left off.</p>
+            <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
+            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is the harder start and the kinder shop later. Gold is a slightly easier open and a thinner shop; you get paid by evolving. Silver sits in the middle.</p>
+            <p>Bronze cannot evolve. After match 5 it can Enhance once — honeycomb, +5 on your best 3, +3 on the rest. Silver can evolve after a few wins, then Enhance. Gold can climb Bronze → Silver → Gold. Form cards wait for those windows. BACK keeps your current form.</p>
+            <p>The CPU takes the same number of upgrades you have locked in, rolled not copied, plus a little extra that depends on your starter and the night. Some opponents are easy. Some are ahead. It is not a straight ramp. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games.</small></article>
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Nothing is a free clean bump.</small></article>
             <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie, Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · CHAIN · CHARGE</strong><small>Bit or ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, extra charge, or a random +3 / +1·+1.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Enhance is +5 on your best 3 stats and +3 on the rest, plus slightly better shop luck. Silver can evolve, then enhance. Gold can climb to Gold form.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · TOYS</strong><small>Bit or ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. No safe +3 sitting next to them.</small></article>
+            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too. Gold sees this table less.</small></article>
+            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>That is the real paycheck. Enhance is +5 / +3. Silver evolves then enhances. Gold climbs to Gold form. Toys do not replace this.</small></article>
         </div>
         <section class="menu-card rogue-help-card">
             <p class="eyebrow">MODIFIERS</p>
@@ -2354,7 +2412,7 @@ function grantRandomUpgrade(){
         card=rolled;
         break;
     }
-    if(!card) card=makeCommonCard(r.blade,false);
+    if(!card) card=makePlus2Minus1Card();
     if(card.kind==="stat") applyStatCard(card);
     else if(card.kind==="modifier") applyModifierCard(card);
     else if(card.kind==="evolve") applyEvolveCard(card);
