@@ -762,7 +762,9 @@ function makeCpuOfferCard(rarity,blade,modifierId){
     }
     if(rarity==="rare"){
         const roll=Math.random();
-        if(roll<0.28) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        if(roll<0.28 && Number(run()?.matchIndex)!==18){
+            return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        }
         if(roll<0.58) return makePlus1Plus1Card();
         return makePlus3Card();
     }
@@ -785,12 +787,14 @@ function applyCpuCard(card){
     }else if(card.kind==="evolve"){
         STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+2;});
     }else if(card.kind==="reforge"){
-        const committed=pickCommittedParts(r.cpuBlade,{
-            bitName:r.cpuBit?.name,
-            ratchetName:r.cpuRatchet?.name
-        });
-        if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
-        else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
+        if(Number(r.matchIndex)!==18){
+            const committed=pickCommittedParts(r.cpuBlade,{
+                bitName:r.cpuBit?.name,
+                ratchetName:r.cpuRatchet?.name
+            });
+            if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
+            else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
+        }
     }else if(card.kind==="ability-swap"){
         const pickId=pick(card.choices&&card.choices.length?card.choices:["hurricane"]);
         r.cpuAbilityId=pickId;
@@ -1007,8 +1011,17 @@ function generateCpu(){
         r.cpuBit=parts.bit;
     }
     grantCpuStack();
+    if(match===18) lockSharkKit();
     fillCpuScale(r.cpuPowerTarget);
     syncLoadout();
+}
+
+function lockSharkKit(){
+    const r=run();
+    if(!r) return;
+    const parts=sharkBossParts();
+    r.cpuRatchet=parts.ratchet;
+    r.cpuBit=parts.bit;
 }
 
 function rarityRoll(match,tier){
