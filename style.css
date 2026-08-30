@@ -204,7 +204,7 @@ footer{
   align-items:center;
   gap:22px;
   padding:28px 16px 36px;
-  overflow:hidden;
+  overflow:auto;
   animation:screenIn .22s ease-out;
 }
 
@@ -410,6 +410,11 @@ footer{
 .home-door.locked:active{
   transform:none;
   filter:grayscale(.25);
+}
+
+.home-door.play{
+  border-color:#3a3328;
+  background:linear-gradient(180deg,#1a1612,#120f0c);
 }
 
 .home-help{
@@ -2879,6 +2884,75 @@ button:focus-visible{
   pointer-events:none;
 }
 .rogue-help-offers .rogue-offer.evolve{grid-column:1/-1}
+
+.menu.howto{
+  justify-content:flex-start;
+  max-height:100dvh;
+  overflow:auto;
+  padding-top:max(14px, env(safe-area-inset-top, 0px))!important;
+  padding-bottom:max(36px, env(safe-area-inset-bottom, 0px))!important;
+  scroll-padding-top:12px;
+}
+.howto-head{
+  position:relative;
+  z-index:1;
+  text-align:center;
+  padding:4px 8px 2px;
+}
+.howto-head h1{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:clamp(32px,8vw,46px);
+  font-weight:400;
+  letter-spacing:.06em;
+  line-height:0.95;
+  margin:4px 0 8px;
+}
+.howto-lead{
+  color:#c3cbd4;
+  font-size:14px;
+  line-height:1.45;
+  margin:0 auto;
+  max-width:42em;
+}
+.howto-toc{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+}
+.howto-toc a{
+  color:#c4a056;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  text-decoration:none;
+  border:1px solid #3a3328;
+  border-radius:999px;
+  padding:6px 10px;
+  background:#121014;
+}
+.howto-toc a:hover{color:#f0b429;border-color:#c4a056}
+.howto-card h2{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:22px;
+  font-weight:400;
+  letter-spacing:.05em;
+  color:#f6f0e6;
+  margin:0 0 10px;
+}
+.howto-card p+p,
+.howto-card ul+p,
+.howto-card p+ul{margin-top:10px}
+.howto-card ul{
+  margin:8px 0 0;
+  padding-left:1.15em;
+  color:#c3cbd4;
+  font-size:12px;
+  line-height:1.45;
+}
+.howto-card li+li{margin-top:8px}
+.howto-card strong{color:#f6f0e6}
 
 @media(max-width:720px){
   .rogue-offers{grid-template-columns:1fr}
