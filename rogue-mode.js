@@ -321,10 +321,10 @@ const MODIFIERS=[
          return 0;
      }},
     {id:"late_bloom",name:"LATE BLOOM",tag:"CLOCK",
-     blurb:"After 10s: +6 ATK, +4 BAL. Early fight sits -2 MOB.",
+     blurb:"After 7.5s: +6 ATK and +4 BAL. Early fight sits -2 MOB.",
      live(s,key){
          const t=Number(NEW_BATTLE?.elapsed)||0;
-         if(t<10){
+         if(t<7.5){
              if(key==="mobility") return -2;
              return 0;
          }
@@ -333,12 +333,15 @@ const MODIFIERS=[
          return 0;
      }},
     {id:"psyshock",name:"PSYSHOCK",tag:"KNOCK",
-     blurb:"First 5s: +5 KB. Hits cycle 60% knock, then the held 40% dumps on the next clash, then it resets.",
+     blurb:"First 5s: +5 KB. First hit deals 60% knockback, second hit deals 160% knockback.",
      live(s,key){
          if(key!=="knockback") return 0;
          const t=Number(NEW_BATTLE?.elapsed)||0;
          return t<=5?5:0;
-     }}
+     }},
+    {id:"vampire",name:"VAMPIRE",tag:"DRAIN",
+     blurb:"10% chance to steal 1–2 RPM from the opponent each hit.",
+     live(){ return 0; }}
 ];
 
 function modifierById(id){return MODIFIERS.find(m=>m.id===id)||null;}
@@ -347,11 +350,17 @@ function liveBonus(s,key){
     const r=run();
     if(!r||!s) return 0;
     const side=s===NEW_BATTLE?.cpu?"cpu":"player";
+    let n=0;
     const mod=side==="cpu"?r.cpuModifier:r.activeModifier;
-    if(!mod) return 0;
-    const def=modifierById(mod.id);
-    if(!def||typeof def.live!=="function") return 0;
-    return def.live(s,key)||0;
+    if(mod){
+        const def=modifierById(mod.id);
+        if(def&&typeof def.live==="function") n+=def.live(s,key)||0;
+    }
+    if(side==="player" && key==="knockback"){
+        const pct=Number(r.hellsChainPct)||0;
+        if(pct>0) n+=Math.round((Number(s.stats?.knockback)||70)*pct);
+    }
+    return n;
 }
 
 function hasMod(s,id){
@@ -364,19 +373,14 @@ function hasMod(s,id){
 function applyPsyshockKnock(s,knock){
     const intended=Number(knock)||0;
     if(!isActive()||!s||!hasMod(s,"psyshock")) return intended;
-    if(!s.roguePsyshockArmed){
-        s.roguePsyshockStored=intended*0.4;
-        s.roguePsyshockArmed=true;
-        return intended*0.6;
-    }
-    const dumped=intended+(Number(s.roguePsyshockStored)||0);
-    s.roguePsyshockStored=0;
-    s.roguePsyshockArmed=false;
-    return dumped;
+    s.roguePsyshockHits=(Number(s.roguePsyshockHits)||0)+1;
+    if(s.roguePsyshockHits%2===1) return intended*0.6;
+    return intended*1.6;
 }
 
 function onClash(p,c,pDealt,cDealt){
     if(!isActive()||!p||!c) return;
+    const r=run();
     const pHit=Number(pDealt)||0;
     const cHit=Number(cDealt)||0;
     if(p.rogueHeavyArmed) p.rogueHeavyArmed=false;
@@ -387,6 +391,41 @@ function onClash(p,c,pDealt,cDealt){
     else if(cHit>=0.022) p.rogueCounterArmed=true;
     if(c.rogueCounterArmed && cHit>=0.02) c.rogueCounterArmed=false;
     else if(pHit>=0.022) c.rogueCounterArmed=true;
+    tickHellsChain(pHit);
+    tickVampire(p,c,pHit,cHit);
+    if((r.consumables?.forceField||0)>0 && !p.rogueForceFieldUsed && NEW_BATTLE?.lastImpact?.heavy){
+        p.rogueForceFieldUsed=true;
+        if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.forceFieldStorm){
+            SpinWarsAbilities.forceFieldStorm(p);
+        }
+    }
+}
+
+function stealRpm(from,to,lo,hi){
+    if(!from||!to) return;
+    const steal=lo+Math.random()*(hi-lo);
+    const took=Math.min(steal, Math.max(0,Number(from.rpm)||0));
+    from.rpm=Math.max(0,(Number(from.rpm)||0)-took);
+    to.rpm=Math.min(1,(Number(to.rpm)||0)+took);
+}
+
+function tickVampire(p,c,pHit,cHit){
+    if(hasMod(p,"vampire") && pHit>=0.012 && Math.random()<0.10) stealRpm(c,p,0.01,0.02);
+    if(hasMod(c,"vampire") && cHit>=0.012 && Math.random()<0.10) stealRpm(p,c,0.01,0.02);
+}
+
+function tickHellsChain(pHit){
+    const r=run();
+    if(!r || (r.consumables?.hellsChain||0)<=0) return;
+    if(pHit<0.012) return;
+    const now=performance.now();
+    const last=Number(r.hellsChainLastAt)||0;
+    if(last && (now-last)<=1700){
+        r.hellsChainPct=Math.min(0.70,(Number(r.hellsChainPct)||0)+0.10);
+    }else if(last && (now-last)>1700){
+        r.hellsChainPct=0;
+    }
+    r.hellsChainLastAt=now;
 }
 
 function bronzeBand(){
@@ -428,7 +467,12 @@ function playerEffective(){
     const r=run();
     if(!r) return emptyBonuses();
     const base=comboBase(r.blade,r.ratchet,r.bit);
-    return mergeStats(mergeStats(base,r.startScale),r.bonuses);
+    const merged=mergeStats(mergeStats(base,r.startScale),r.bonuses);
+    const temp=r.matchBuffs||{};
+    if((Number(temp.burst2)||0)>0 && temp.burst2Stat){
+        merged[temp.burst2Stat]=round((Number(merged[temp.burst2Stat])||70)+2);
+    }
+    return merged;
 }
 
 function cpuEffective(){
@@ -522,42 +566,187 @@ function makeDualStatCard(a,aAmt,b,bAmt){
     };
 }
 
+const CONSUMABLE_KEYS=["zombie","luckyLaunch","forceField","pocketSave","hellsChain","comeback"];
+const CONSUMABLE_META={
+    zombie:{name:"ZOMBIE",games:3,shopCd:2,rarity:"uncommon",
+        body:"For the next 3 games, every time your Bey is spin finished only, respawn with 5 RPM where it was finished."},
+    luckyLaunch:{name:"LUCKY LAUNCH",games:3,shopCd:2,rarity:"uncommon",
+        body:"For the next 3 games, every launch for you is 1 tier higher than chosen."},
+    forceField:{name:"FORCE FIELD",games:2,shopCd:2,rarity:"uncommon",
+        body:"For the next 2 games, the first big impact triggers Hurricane on you once for 1.3 seconds every round."},
+    pocketSave:{name:"POCKET SAVE",games:1,shopCd:2,rarity:"uncommon",
+        body:"For the next Xtreme scored on you, it converts to 1 point."},
+    hellsChain:{name:"HELLS CHAIN",games:4,shopCd:2,rarity:"rare",
+        body:"For the next 4 games, if you hit the opponent in 1.7 second successions, gain 10% knockback (stack max 70%)."},
+    comeback:{name:"COMEBACK SPIN",games:4,shopCd:2,rarity:"rare",
+        body:"For the next 4 games, when your RPM becomes 30, you get one small burst of movement and 5 RPM recovery."}
+};
+const TRADEOFFS=[
+    ["attack",3,"stamina",-1],
+    ["knockback",3,"stamina",-1],
+    ["defense",3,"stamina",-1],
+    ["mobility",3,"knockback",-1],
+    ["balance",3,"mobility",-1],
+    ["stamina",3,"balance",-1],
+    ["attack",3,"defense",-1],
+    ["stamina",3,"attack",-1]
+];
+
+function emptyConsumables(){
+    const o={}; CONSUMABLE_KEYS.forEach(k=>o[k]=0); return o;
+}
+function ensureRunShape(r){
+    if(!r) return r;
+    r.consumables={...emptyConsumables(),...(r.consumables||{})};
+    r.shopCooldown=r.shopCooldown||{};
+    r.matchBuffs=Object.assign({burst2:0,burst2Stat:null,dashHaste:false}, r.matchBuffs||{});
+    r.abilityBonus=Number(r.abilityBonus)||0;
+    r.blessed=!!r.blessed;
+    r.hellsChainPct=Number(r.hellsChainPct)||0;
+    r.hellsChainLastAt=Number(r.hellsChainLastAt)||0;
+    return r;
+}
+
+function makePlus2Minus1Card(){
+    const up=pick(STATS);
+    const down=pick(STATS.filter(s=>s!==up));
+    const card=makeStatCard("common",up,2,down,-1);
+    card.shopId="plus2minus1";
+    card.body=`+2 ${LABEL[up]}, −1 ${LABEL[down]}.`;
+    return card;
+}
+function makeBurst2Card(){
+    const a=pick(STATS);
+    const b=pick(STATS.filter(s=>s!==a))||a;
+    return {
+        id:"burst2-"+Math.random().toString(16).slice(2),
+        rarity:"common",kind:"stat",shopId:"burst2",
+        stat:a,amount:3,tempStat:b,tempAmt:2,tempGames:2,
+        title:`${LABEL[a]} +3 · ${LABEL[b]} +2 FOR 2 GAMES`,
+        kicker:"COMMON",
+        body:`+3 ${LABEL[a]} now. +2 ${LABEL[b]} for the next 2 games. Can't stack.`
+    };
+}
+function makeConsumableCard(id){
+    const meta=CONSUMABLE_META[id];
+    return {
+        id:"cons-"+id+"-"+Math.random().toString(16).slice(2),
+        rarity:meta.rarity,kind:"consumable",shopId:id,consumable:id,games:meta.games,
+        title:meta.name,kicker:meta.rarity.toUpperCase(),body:meta.body
+    };
+}
+function makeDashHasteCard(){
+    return {
+        id:"dash-haste-"+Math.random().toString(16).slice(2),
+        rarity:"rare",kind:"dash-haste",shopId:"dashHaste",
+        title:"15% DASH COOLDOWN",kicker:"RARE",
+        body:"Dash cooldown is 15% faster for the rest of this game."
+    };
+}
+function makeAbilityChargeCard(){
+    return {
+        id:"ability-charge-"+Math.random().toString(16).slice(2),
+        rarity:"rare",kind:"ability-charge",shopId:"abilityCharge",
+        title:"+1 ABILITY CHARGE",kicker:"RARE",
+        body:"+1 ability charge for the rest of the run. Permanent."
+    };
+}
+function makeBlessedCard(){
+    return {
+        id:"blessed-"+Math.random().toString(16).slice(2),
+        rarity:"legendary",kind:"blessed",shopId:"blessed",
+        title:"BLESSED",kicker:"LEGENDARY",
+        body:"After every game get +2 in a random stat. Permanent."
+    };
+}
+function makePlus1Plus1Card(){
+    const a=pick(STATS);
+    const b=pick(STATS.filter(s=>s!==a))||a;
+    const card=makeDualStatCard(a,1,b,1);
+    card.shopId="plus1plus1";
+    card.title=`${LABEL[a]} +1 · ${LABEL[b]} +1`;
+    card.body="Random stat +1 · random stat +1.";
+    return card;
+}
+function makePlus3Card(){
+    const stat=pick(STATS);
+    const card=makeStatCard("rare",stat,3);
+    card.shopId="plus3";
+    card.body="Random stat +3. Clean bump.";
+    return card;
+}
+function shopBlocked(id){
+    const r=run();
+    if(!r||!id) return false;
+    if((Number(r.shopCooldown?.[id])||0)>0) return true;
+    if(id==="burst2") return (Number(r.matchBuffs?.burst2)||0)>0;
+    if(CONSUMABLE_KEYS.includes(id)) return (Number(r.consumables?.[id])||0)>0;
+    if(id==="blessed") return !!r.blessed;
+    if(id==="dashHaste") return !!r.matchBuffs?.dashHaste;
+    return false;
+}
+function cardKey(card){
+    return card.shopId||(card.kind+card.title+(card.stat||"")+(card.evolve||"")+(card.modifierId||"")+(card.part||""));
+}
+
 function makeOfferCard(rarity,blade,modifierId,opts){
     const r=run();
     const forCpu=!!opts?.forCpu;
+    if(forCpu) return makeCpuOfferCard(rarity,blade,modifierId);
     if(rarity==="common"){
-        return makeCommonCard(blade||r?.blade,forCpu);
+        const pool=[makePlus2Minus1Card(),makeBurst2Card()].filter(c=>!shopBlocked(c.shopId));
+        return pool.length?pick(pool):makePlus2Minus1Card();
     }
     if(rarity==="uncommon"){
-        const up=Math.random()<0.62?focusedStat(blade||r?.blade):pick(STATS);
-        const down=pick(STATS.filter(s=>s!==up));
-        if(Math.random()<0.42){
-            return makeStatCard("uncommon",up,4,down,-2);
-        }
-        return makeStatCard("uncommon",up,3,down,-1);
+        const cons=["zombie","luckyLaunch","forceField","pocketSave"]
+            .filter(id=>!shopBlocked(id))
+            .map(makeConsumableCard);
+        const trades=TRADEOFFS.map(([a,aa,b,ba])=>makeStatCard("uncommon",a,aa,b,ba));
+        const pool=cons.concat(trades);
+        return pool.length?pick(pool):makePlus2Minus1Card();
+    }
+    if(rarity==="rare"){
+        const pool=[];
+        if(!shopBlocked("hellsChain")) pool.push(makeConsumableCard("hellsChain"));
+        if(!shopBlocked("comeback")) pool.push(makeConsumableCard("comeback"));
+        if(!shopBlocked("dashHaste")) pool.push(makeDashHasteCard());
+        pool.push(makeAbilityChargeCard());
+        pool.push(makePlus1Plus1Card());
+        pool.push(makePlus3Card());
+        pool.push(makeReforgeCard("bit"));
+        pool.push(makeReforgeCard("ratchet"));
+        pool.push(makeAbilitySwapCard(blade||r?.blade, r?.abilityId));
+        return pick(pool);
+    }
+    if(rarity==="legendary"){
+        const pool=[];
+        if(!shopBlocked("blessed")) pool.push(makeBlessedCard());
+        const mods=MODIFIERS.filter(m=>m.id!==modifierId);
+        (mods.length?mods:MODIFIERS).forEach(m=>pool.push(makeModifierCard(m)));
+        return pick(pool.length?pool:[makeBlessedCard()]);
+    }
+    const form=nextFormCard();
+    if(form) return form;
+    return makeOfferCard("uncommon",blade,modifierId);
+}
+
+function makeCpuOfferCard(rarity,blade,modifierId){
+    if(rarity==="common") return makeCommonCard(blade,true);
+    if(rarity==="uncommon"){
+        const row=pick(TRADEOFFS);
+        return makeStatCard("uncommon",row[0],row[1],row[2],row[3]);
     }
     if(rarity==="rare"){
         const roll=Math.random();
-        if(roll<0.16) return makeAbilitySwapCard(blade||r?.blade, forCpu?r?.cpuAbilityId:r?.abilityId);
-        if(roll<0.58) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
-        if(roll<0.79){
-            const peak=peakStat(forCpu?cpuEffective():playerEffective());
-            const card=makeStatCard("rare",Math.random()<0.7?focusedStat(blade||r?.blade):peak,4);
-            card.body=`Peak. +4 ${LABEL[card.stat]}. No catch.`;
-            return card;
-        }
-        const a=focusedStat(blade||r?.blade);
-        const b=pick(STATS.filter(s=>s!==a));
-        return makeDualStatCard(a,2,b,2);
+        if(roll<0.28) return makeReforgeCard(Math.random()<0.5?"bit":"ratchet");
+        if(roll<0.58) return makePlus1Plus1Card();
+        return makePlus3Card();
     }
     if(rarity==="legendary"){
         const pool=MODIFIERS.filter(m=>m.id!==modifierId);
         return makeModifierCard(pick(pool.length?pool:MODIFIERS));
     }
-    if(forCpu) return makeOfferCard("uncommon",blade,modifierId,{forCpu:true});
-    const form=nextFormCard();
-    if(form) return form;
-    return makeOfferCard("uncommon",blade,modifierId);
+    return makeOfferCard("uncommon",blade,modifierId,{forCpu:true});
 }
 
 function applyCpuCard(card){
@@ -804,6 +993,7 @@ function rarityRoll(match,tier){
     }
     if(match>=12 && t==="Bronze"){rare+=1;legendary+=1;evolve+=0.8;}
     if(inEndless()) evolve=0;
+    if(run()?.enhanced){rare+=2;legendary+=1.5;common=Math.max(8,common-3);}
     const total=common+uncommon+rare+legendary+evolve;
     let roll=Math.random()*total;
     if((roll-=common)<0) return "common";
@@ -839,7 +1029,7 @@ function makeReforgeCard(kind){
     const part=kind==="bit"?"BIT":"RATCHET";
     return {
         id:"reforge-"+kind+"-"+Math.random().toString(16).slice(2),
-        rarity:"rare",kind:"reforge",part:kind,
+        rarity:"rare",kind:"reforge",part:kind,shopId:"reforge-"+kind,
         title:part+" REFORGE",kicker:"RARE",
         body:`Offer three ${part.toLowerCase()}s. Pick one. Physics change with the part.`
     };
@@ -859,7 +1049,7 @@ function makeEvolveCard(type){
         enhance:{
             title:"ENHANCED TIER",
             kicker:"ENHANCE",
-            body:"One and done. +4 on your best 3 stats, +3 on the rest. Later upgrades get +1 extra. Permanent honeycomb on the plate."
+            body:"One and done. +5 on your best 3 stats, +3 on the rest. Later upgrades get +1 extra. Permanent honeycomb on the plate. Slightly better shop luck."
         },
         evolve:{
             title:"TIER EVOLUTION",
@@ -905,19 +1095,26 @@ function makeAbilitySwapCard(blade,override){
 
 function generateOffers(){
     const r=run();
+    ensureRunShape(r);
     const cards=[];
     const used=new Set();
     let guard=0;
-    while(cards.length<3 && guard++<28){
+    while(cards.length<3 && guard++<36){
         const rarity=rarityRoll(r.matchIndex,r.startingTier);
         const card=makeOfferCard(rarity,r.blade,r.activeModifier?.id);
-        const key=card.kind+card.title+(card.stat||"")+(card.evolve||"");
+        if(!card) continue;
+        const key=cardKey(card);
         if(used.has(key)) continue;
+        if(shopBlocked(card.shopId)) continue;
         used.add(key);
         cards.push(card);
     }
     while(cards.length<3){
-        cards.push(makeCommonCard(r.blade,false));
+        const fill=makePlus2Minus1Card();
+        const key=cardKey(fill);
+        if(used.has(key)){ cards.push(fill); break; }
+        used.add(key);
+        cards.push(fill);
     }
     injectFormPity(cards);
     if(r.shopGuarantee==="rare-or-legendary"){
@@ -953,12 +1150,13 @@ function enhanceBumps(stats){
     });
     const top=new Set(ranked.slice(0,3));
     const bumps={};
-    STATS.forEach(k=>{bumps[k]=top.has(k)?4:3;});
+    STATS.forEach(k=>{bumps[k]=top.has(k)?5:3;});
     return bumps;
 }
 
 function applyStatCard(card){
     const r=run();
+    ensureRunShape(r);
     const before={...playerEffective()};
     const extra=r.enhanced&&Number(card.amount)>0?1:0;
     r.bonuses[card.stat]=(r.bonuses[card.stat]||0)+card.amount+extra;
@@ -967,8 +1165,45 @@ function applyStatCard(card){
         const extra2=r.enhanced&&Number(card.secondAmt)>0?1:0;
         r.bonuses[card.secondStat]=(r.bonuses[card.secondStat]||0)+card.secondAmt+extra2;
     }
+    if(card.tempStat && card.tempGames){
+        r.matchBuffs.burst2=Number(card.tempGames)||2;
+        r.matchBuffs.burst2Stat=card.tempStat;
+    }
     const after={...playerEffective()};
     return {before,after,card};
+}
+
+function applyConsumableCard(card){
+    const r=run();
+    ensureRunShape(r);
+    const before={...playerEffective()};
+    const id=card.consumable||card.shopId;
+    r.consumables[id]=Number(card.games)||CONSUMABLE_META[id]?.games||1;
+    return {before,after:{...playerEffective()},card};
+}
+function applyBlessedCard(card){
+    const r=run();
+    ensureRunShape(r);
+    const before={...playerEffective()};
+    r.blessed=true;
+    return {before,after:{...playerEffective()},card};
+}
+function applyDashHasteCard(card){
+    const r=run();
+    ensureRunShape(r);
+    const before={...playerEffective()};
+    r.matchBuffs.dashHaste=true;
+    return {before,after:{...playerEffective()},card};
+}
+function applyAbilityChargeCard(card){
+    const r=run();
+    ensureRunShape(r);
+    const before={...playerEffective()};
+    r.abilityBonus=(Number(r.abilityBonus)||0)+1;
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.grantCharge && NEW_BATTLE?.active){
+        SpinWarsAbilities.grantCharge("player");
+    }
+    return {before,after:{...playerEffective()},card};
 }
 
 function applyModifierCard(card){
@@ -1009,23 +1244,28 @@ function applyDebugCard(card){
     if(card.kind==="evolve") applyEvolveCard(card);
     if(card.kind==="reforge") return "reforge";
     if(card.kind==="ability-swap") return "ability-swap";
+    if(card.kind==="consumable") applyConsumableCard(card);
+    if(card.kind==="blessed") applyBlessedCard(card);
+    if(card.kind==="dash-haste") applyDashHasteCard(card);
+    if(card.kind==="ability-charge") applyAbilityChargeCard(card);
     return "ok";
 }
 
 function allCatalog(){
     const r=run();
     const list=[];
-    STATS.forEach(stat=>{
-        list.push(makeStatCard("common",stat,2));
-        list.push(makeStatCard("uncommon",stat,3,pick(STATS.filter(s=>s!==stat)),-1));
-    });
-    list.push(makeStatCard("uncommon","attack",3,"defense",-1));
-    list.push(makeStatCard("uncommon","stamina",3,"attack",-1));
-    list.push(makeDualStatCard("attack",2,"knockback",2));
-    list.push(makeStatCard("rare","attack",4));
+    list.push(makePlus2Minus1Card());
+    list.push(makeBurst2Card());
+    CONSUMABLE_KEYS.forEach(id=>list.push(makeConsumableCard(id)));
+    TRADEOFFS.forEach(([a,aa,b,ba])=>list.push(makeStatCard("uncommon",a,aa,b,ba)));
+    list.push(makeDashHasteCard());
+    list.push(makeAbilityChargeCard());
+    list.push(makePlus1Plus1Card());
+    list.push(makePlus3Card());
     list.push(makeReforgeCard("bit"));
     list.push(makeReforgeCard("ratchet"));
     list.push(makeAbilitySwapCard(r?.blade, r?.abilityId));
+    list.push(makeBlessedCard());
     MODIFIERS.forEach(m=>list.push(makeModifierCard(m)));
     list.push(makeEvolveCard("enhance"));
     list.push(makeEvolveCard("evolve"));
@@ -1055,6 +1295,10 @@ function commentaryFor(result){
     }
     if(card.kind==="reforge") return `New ${card.part}. The stadium will feel it.`;
     if(card.kind==="ability-swap") return `${name} takes ${result.abilityName||"a new kit"}. The old one is gone.`;
+    if(card.kind==="consumable") return `${name} pockets ${card.title}. ${card.games||CONSUMABLE_META[card.consumable]?.games||1} games.`;
+    if(card.kind==="blessed") return `${name} is Blessed. After every match a random stat climbs +2.`;
+    if(card.kind==="dash-haste") return `${name} dashes 15% sooner this game.`;
+    if(card.kind==="ability-charge") return `${name} carries an extra ability charge for the rest of the run.`;
     return "Build updated.";
 }
 
@@ -1161,6 +1405,33 @@ function upgradeStack(side){
             boxes.push({kicker:"ABILITY",title:card.title||"ABILITY SWAP",rarity:"rare"});
         }
     });
+    if(side!=="cpu"){
+        CONSUMABLE_KEYS.forEach(id=>{
+            const n=Number(r.consumables?.[id])||0;
+            if(n>0){
+                boxes.push({
+                    kicker:"LEFT",
+                    title:`${CONSUMABLE_META[id].name} ${n} LEFT`,
+                    rarity:CONSUMABLE_META[id].rarity
+                });
+            }
+        });
+        if((Number(r.matchBuffs?.burst2)||0)>0 && r.matchBuffs.burst2Stat){
+            boxes.push({
+                kicker:"TEMP",
+                title:`${LABEL[r.matchBuffs.burst2Stat]} +2 · ${r.matchBuffs.burst2} LEFT`
+            });
+        }
+        if(r.matchBuffs?.dashHaste){
+            boxes.push({kicker:"MATCH",title:"15% DASH CD",rarity:"rare"});
+        }
+        if(r.blessed){
+            boxes.push({kicker:"PERMANENT",title:"BLESSED",rarity:"legendary"});
+        }
+        if((Number(r.abilityBonus)||0)>0){
+            boxes.push({kicker:"PERMANENT",title:`ABILITY +${r.abilityBonus}`,rarity:"rare"});
+        }
+    }
     return boxes;
 }
 
@@ -1226,6 +1497,12 @@ function toggleDev(){
         r.enhanced=false;
         r.currentRogueTier="Bronze";
         r.startScale=makeStartScale(r.starterBlade||r.blade,r.starterRatchet||r.ratchet,r.starterBit||r.bit);
+        r.consumables=emptyConsumables();
+        r.shopCooldown={};
+        r.matchBuffs={burst2:0,burst2Stat:null,dashHaste:false};
+        r.abilityBonus=0;
+        r.blessed=false;
+        r.hellsChainPct=0;
         renderDevList();
         refreshAfterDebug();
     };
@@ -1327,6 +1604,13 @@ function createRun(blade){
         shopRounds:1,
         skipShop:false,
         shopGuarantee:null,
+        consumables:emptyConsumables(),
+        shopCooldown:{},
+        matchBuffs:{burst2:0,burst2Stat:null,dashHaste:false},
+        abilityBonus:0,
+        blessed:false,
+        hellsChainPct:0,
+        hellsChainLastAt:0,
         perfectLaunchMatches:0,
         flavorCall:null,
         _scenarioDone:false
@@ -1471,6 +1755,8 @@ function packCard(card){
         title:card.title,kicker:card.kicker,body:card.body,
         part:card.part,modifierId:card.modifierId,evolve:card.evolve,
         secondStat:card.secondStat,secondAmt:card.secondAmt,
+        tempStat:card.tempStat,tempAmt:card.tempAmt,tempGames:card.tempGames,
+        shopId:card.shopId,consumable:card.consumable,games:card.games,
         choices:card.choices,abilityId:card.abilityId
     };
 }
@@ -1571,6 +1857,16 @@ function buildSave(){
             shopRounds:Number(r.shopRounds)||1,
             skipShop:!!r.skipShop,
             shopGuarantee:r.shopGuarantee||null,
+            consumables:{...emptyConsumables(),...(r.consumables||{})},
+            shopCooldown:{...(r.shopCooldown||{})},
+            matchBuffs:{
+                burst2:Number(r.matchBuffs?.burst2)||0,
+                burst2Stat:r.matchBuffs?.burst2Stat||null,
+                dashHaste:!!r.matchBuffs?.dashHaste
+            },
+            abilityBonus:Number(r.abilityBonus)||0,
+            blessed:!!r.blessed,
+            hellsChainPct:Number(r.hellsChainPct)||0,
             perfectLaunchMatches:Number(r.perfectLaunchMatches)||0,
             flavorCall:r.flavorCall||null,
             scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
@@ -1779,6 +2075,17 @@ function hydrate(data){
         shopRounds:Number(raw.shopRounds)||1,
         skipShop:!!raw.skipShop,
         shopGuarantee:raw.shopGuarantee||null,
+        consumables:{...emptyConsumables(),...(raw.consumables||{})},
+        shopCooldown:{...(raw.shopCooldown||{})},
+        matchBuffs:{
+            burst2:Number(raw.matchBuffs?.burst2)||0,
+            burst2Stat:raw.matchBuffs?.burst2Stat||null,
+            dashHaste:!!raw.matchBuffs?.dashHaste
+        },
+        abilityBonus:Number(raw.abilityBonus)||0,
+        blessed:!!raw.blessed,
+        hellsChainPct:Number(raw.hellsChainPct)||0,
+        hellsChainLastAt:0,
         perfectLaunchMatches:Number(raw.perfectLaunchMatches)||0,
         flavorCall:raw.flavorCall||null,
         _scenarioDone:false
@@ -1943,15 +2250,15 @@ function showHelp(){
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 TO A STAT</strong><small>A small bump. It might hit your type, your weakest line, or a random one.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>A BIGGER BUMP WITH A COST</strong><small>You gain more on one line, and lose a little on another. There is no free +3.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · PEAK · PAIR</strong><small>Swap your bit or ratchet, rarely swap your ability (two kits, BACK to keep yours), push one stat hard, or take two smaller bumps.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>ROGUE MODIFIER</strong><small>A special rule for the rest of the run. Picking a new one replaces the old one.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Bronze enhances once. Silver can evolve, then enhance. Gold can evolve up to Gold.</small></article>
+            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games.</small></article>
+            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie, Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
+            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>REFORGE · SWAP · CHAIN · CHARGE</strong><small>Bit or ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, extra charge, or a random +3 / +1·+1.</small></article>
+            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too.</small></article>
+            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>Enhance is +5 on your best 3 stats and +3 on the rest, plus slightly better shop luck. Silver can evolve, then enhance. Gold can climb to Gold form.</small></article>
         </div>
         <section class="menu-card rogue-help-card">
             <p class="eyebrow">MODIFIERS</p>
-            <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock stores some of each clash and dumps it on the next one. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+            <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
@@ -2038,6 +2345,8 @@ function grantRandomUpgrade(){
         const rolled=makeOfferCard(rarityRoll(r.matchIndex,r.startingTier),r.blade,r.activeModifier?.id);
         if(!rolled) continue;
         if(rolled.kind==="reforge"||rolled.kind==="ability-swap") continue;
+        if(rolled.kind==="consumable"||rolled.kind==="blessed"||rolled.kind==="dash-haste"||rolled.kind==="ability-charge") continue;
+        if(rolled.shopId==="burst2") continue;
         if(rolled.kind==="evolve"){
             const need=nextFormCard();
             if(!need||rolled.evolve!==need.evolve) continue;
@@ -2150,8 +2459,8 @@ function scenarioCopy(){
             kicker:"SIDELINE",
             body:"A stranger parks a coin on the table and grins. \"Heads or tails. Your call.\"",
             choices:[
-                {id:"heads",label:"HEADS",odds:[{text:"+5% a random stat"}]},
-                {id:"tails",label:"TAILS",odds:[{text:"−5% a random stat"}]},
+                {id:"heads",label:"HEADS"},
+                {id:"tails",label:"TAILS"},
                 {id:"kick",label:"KICK ROCKS"}
             ]
         },
@@ -2564,6 +2873,11 @@ function chooseOffer(index){
     let result;
     if(card.kind==="stat") result=applyStatCard(card);
     else if(card.kind==="modifier") result=applyModifierCard(card);
+    else if(card.kind==="evolve") result=applyEvolveCard(card);
+    else if(card.kind==="consumable") result=applyConsumableCard(card);
+    else if(card.kind==="blessed") result=applyBlessedCard(card);
+    else if(card.kind==="dash-haste") result=applyDashHasteCard(card);
+    else if(card.kind==="ability-charge") result=applyAbilityChargeCard(card);
     else result=applyEvolveCard(card);
     result.card=card;
     r.lastUpgrade=result;
@@ -2576,7 +2890,7 @@ function openReforge(card,fromDev){
     const returnScreen=Game.screen;
     r.pendingReforge=packCard(card);
     Game.screen="rogueReforge";
-    const isBit=card.part==="bit";
+    const isBit=card.part==="bit" || /^BIT\b/i.test(String(card.title||""));
     const pool=isBit
         ? shuffle(selectableBits().filter(b=>b.name!==r.bit.name)).slice(0,3)
         : shuffle(RATCHETS.filter(x=>x.name!==r.ratchet.name)).slice(0,3);
@@ -2693,6 +3007,12 @@ function showUpgradeResult(){
     if(card.kind==="ability-swap"){
         body=`<p class="rogue-part-swap">ABILITY → ${u.abilityName||u.abilityId||""}</p>`+body;
     }
+    if(card.kind==="consumable"){
+        body=`<p class="rogue-mod-line">${card.title} · ${card.games||CONSUMABLE_META[card.consumable]?.games||1} GAMES</p><p>${card.body||""}</p>`+body;
+    }
+    if(card.kind==="blessed"||card.kind==="dash-haste"||card.kind==="ability-charge"){
+        body=`<p class="rogue-mod-line">${card.title}</p><p>${card.body||""}</p>`+body;
+    }
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
@@ -2780,6 +3100,7 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
             r.perfectLaunchMatches=Math.max(0,(Number(r.perfectLaunchMatches)||0)-1);
         }
         if(r.flavorCall) r.flavorCall=null;
+        tickAfterMatch(winner);
     }
     r.lastResult={
         winner,playerScore,cpuScore,finishType,
@@ -2797,6 +3118,127 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     return true;
 }
 
+function tickAfterMatch(winner){
+    const r=run();
+    if(!r) return;
+    ensureRunShape(r);
+    if(winner==="player" && r.blessed){
+        const k=pick(STATS);
+        r.bonuses[k]=(r.bonuses[k]||0)+2;
+    }
+    const cd=r.shopCooldown;
+    Object.keys(cd).forEach(k=>{
+        cd[k]=(Number(cd[k])||0)-1;
+        if(cd[k]<=0) delete cd[k];
+    });
+    const expired=[];
+    CONSUMABLE_KEYS.forEach(id=>{
+        if((Number(r.consumables[id])||0)>0){
+            r.consumables[id]--;
+            if(r.consumables[id]<=0){
+                r.consumables[id]=0;
+                expired.push(id);
+            }
+        }
+    });
+    if((Number(r.matchBuffs.burst2)||0)>0){
+        r.matchBuffs.burst2--;
+        if(r.matchBuffs.burst2<=0){
+            r.matchBuffs.burst2=0;
+            r.matchBuffs.burst2Stat=null;
+            expired.push("burst2");
+        }
+    }
+    if(r.matchBuffs.dashHaste) r.matchBuffs.dashHaste=false;
+    expired.forEach(id=>{
+        const n=id==="burst2"?2:(CONSUMABLE_META[id]?.shopCd||2);
+        cd[id]=n;
+    });
+    r.hellsChainPct=0;
+    r.hellsChainLastAt=0;
+}
+
+function expireConsumable(id){
+    const r=run();
+    if(!r) return;
+    ensureRunShape(r);
+    r.consumables[id]=0;
+    const n=CONSUMABLE_META[id]?.shopCd||2;
+    r.shopCooldown[id]=Math.max(Number(r.shopCooldown[id])||0, n);
+}
+
+function luckyLaunchBump(quality){
+    if(!isActive() || (Number(run()?.consumables?.luckyLaunch)||0)<=0) return quality;
+    const tiers=["Horrible","Bad","Okay","Good","Perfect"];
+    const i=tiers.indexOf(quality);
+    if(i<0) return quality;
+    return tiers[Math.min(i+1, tiers.length-1)];
+}
+
+function dashHasteActive(){
+    return isActive() && !!run()?.matchBuffs?.dashHaste;
+}
+
+function tryZombieRespawn(){
+    if(!isActive()) return false;
+    const r=run();
+    if((Number(r?.consumables?.zombie)||0)<=0) return false;
+    const p=NEW_BATTLE?.player;
+    const c=NEW_BATTLE?.cpu;
+    if(!p||!c) return false;
+    if((Number(p.rpm)||0)>0.001) return false;
+    if((Number(c.rpm)||0)<=0.001) return false;
+    p.rpm=0.05;
+    p.vx=(Number(p.vx)||0)*0.35;
+    p.vy=(Number(p.vy)||0)*0.35;
+    NEW_BATTLE.active=true;
+    NEW_BATTLE.finishPending=false;
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.popup){
+        SpinWarsAbilities.popup("ZOMBIE");
+    }
+    if(typeof newBattleFrame==="function"){
+        NEW_BATTLE.last=performance.now();
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+    }
+    persist();
+    return true;
+}
+
+function tryPocketSave(){
+    if(!isActive()) return false;
+    const r=run();
+    if((Number(r?.consumables?.pocketSave)||0)<=0) return false;
+    expireConsumable("pocketSave");
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.popup){
+        SpinWarsAbilities.popup("POCKET SAVE");
+    }
+    persist();
+    return true;
+}
+
+function tickPoint(p,c){
+    if(!isActive()||!p) return;
+    const r=run();
+    if((Number(r?.consumables?.comeback)||0)<=0) return;
+    if(p.rogueComebackUsed) return;
+    if((Number(p.rpm)||0)>0.30 || (Number(p.rpm)||0)<=0.001) return;
+    p.rogueComebackUsed=true;
+    p.rpm=Math.min(1,(Number(p.rpm)||0)+0.05);
+    const sp=Math.hypot(Number(p.vx)||0,Number(p.vy)||0);
+    if(sp>0.002){
+        p.vx+= (p.vx/sp)*0.028;
+        p.vy+= (p.vy/sp)*0.028;
+    }else{
+        const ang=Math.atan2(p.y||0,p.x||0)+Math.PI/2;
+        p.vx+=Math.cos(ang)*0.028;
+        p.vy+=Math.sin(ang)*0.028;
+    }
+    p.impactMomentumState=Math.max(p.impactMomentumState||0,0.38);
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.popup){
+        SpinWarsAbilities.popup("COMEBACK SPIN");
+    }
+}
+
 function perfectLaunchesActive(){
     return isActive() && Number(run()?.perfectLaunchMatches)>0;
 }
@@ -2809,7 +3251,8 @@ global.SpinWarsRogue={
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
-    perfectLaunchesActive,flavorCallLine,openShopOrScenario
+    perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
+    luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
