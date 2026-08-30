@@ -2893,6 +2893,12 @@ button:focus-visible{
   padding-bottom:max(36px, env(safe-area-inset-bottom, 0px))!important;
   scroll-padding-top:12px;
 }
+.menu.howto > *{
+  flex-shrink:0;
+}
+.menu.howto .menu-card{
+  overflow:visible;
+}
 .howto-head{
   position:relative;
   z-index:1;
