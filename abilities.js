@@ -182,6 +182,28 @@
         </details>`;
     }
 
+    function abilityMax(side){
+        if(side==="player" && typeof global.SpinWarsRogue!=="undefined" && global.SpinWarsRogue.isActive?.()){
+            const bonus=Number(global.SpinWarsRogue.run?.()?.abilityBonus)||0;
+            return ABILITY_USES+Math.max(0,bonus);
+        }
+        return ABILITY_USES;
+    }
+    function grantCharge(side){
+        const max=abilityMax(side);
+        state.charges[side]=Math.min(max,(state.charges[side]||0)+1);
+        persistCharges();
+        updateDock();
+    }
+    function dashCdSec(side){
+        let cd=DASH_CD;
+        if(
+            side==="player" &&
+            typeof global.SpinWarsRogue!=="undefined" &&
+            global.SpinWarsRogue.dashHasteActive?.()
+        ) cd*=0.85;
+        return cd;
+    }
     function matchChargeKey(){
         const g=global.Game||{};
         const p=g.player?.blade?.name||"";
@@ -193,8 +215,8 @@
     }
     function persistCharges(){
         const payload={
-            player:clamp(Number(state.charges.player)||0,0,ABILITY_USES),
-            cpu:clamp(Number(state.charges.cpu)||0,0,ABILITY_USES),
+            player:clamp(Number(state.charges.player)||0,0,abilityMax("player")),
+            cpu:clamp(Number(state.charges.cpu)||0,0,abilityMax("cpu")),
             key:matchChargeKey()
         };
         state.charges={player:payload.player,cpu:payload.cpu};
@@ -207,8 +229,8 @@
     function packStored(raw){
         if(!raw || !Number.isFinite(Number(raw.player))) return null;
         return {
-            player:clamp(Number(raw.player)||0,0,ABILITY_USES),
-            cpu:clamp(Number(raw.cpu)||0,0,ABILITY_USES),
+            player:clamp(Number(raw.player)||0,0,abilityMax("player")),
+            cpu:clamp(Number(raw.cpu)||0,0,abilityMax("cpu")),
             key:typeof raw.key==="string"?raw.key:""
         };
     }
@@ -263,7 +285,7 @@
     }
 
     function resetMatch(){
-        state.charges={player:ABILITY_USES,cpu:ABILITY_USES};
+        state.charges={player:abilityMax("player"),cpu:abilityMax("cpu")};
         persistCharges();
         state.dashAt={player:0,cpu:0};
         state.pending=null;
@@ -313,11 +335,12 @@
         const t=state.dashAt[side]||0;
         const left=t-nowMs();
         if(left<=0) return 1;
-        return clamp(1-left/(DASH_CD*1000),0,1);
+        return clamp(1-left/(dashCdSec(side)*1000),0,1);
     }
     function abilityFill(side){
         const left=state.charges[side]||0;
-        return left/ABILITY_USES;
+        const max=abilityMax(side)||ABILITY_USES;
+        return left/max;
     }
 
     function tryDash(side){
@@ -335,7 +358,7 @@
         s.dashBurst={until:t+480,hx,hy,born:t};
         s.impactScale=Math.max(s.impactScale||1,1.28);
         s.hitFlash=Math.max(s.hitFlash||0,0.28);
-        state.dashAt[side]=t+DASH_CD*1000;
+        state.dashAt[side]=t+dashCdSec(side)*1000;
         if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onDash){
             SpinWarsScoreboard.onDash(side,s);
         }
@@ -438,12 +461,26 @@
     function startHurricane(side,s){
         spend(side);
         s.hurricaneUntil=nowMs()+HURRICANE_MS;
+        s.hurricaneSpanMs=HURRICANE_MS;
         s.abilitySpeedMul=1.12;
         s.hurricaneRpm0=s.rpm;
         s.hurricaneGain=HURRICANE_GAIN;
         s.hurricaneGainLeft=s.hurricaneGain;
         beginChannel(side,HURRICANE_MS,"hurricane");
         popup("HURRICANE");
+        return true;
+    }
+    function forceFieldStorm(s){
+        if(!s) return false;
+        const ms=1300;
+        s.hurricaneUntil=nowMs()+ms;
+        s.hurricaneSpanMs=ms;
+        s.abilitySpeedMul=Math.max(s.abilitySpeedMul||1,1.12);
+        s.hurricaneRpm0=s.rpm;
+        s.hurricaneGain=HURRICANE_GAIN;
+        s.hurricaneGainLeft=s.hurricaneGain;
+        s.stormHit=false;
+        popup("FORCE FIELD");
         return true;
     }
     function startIron(side,s){
@@ -733,8 +770,15 @@
 
     function stepHurricane(dt,p,c,t){
         [p,c].forEach(s=>{
-            if(!s || s.hurricaneUntil<=t) return;
-            const span=HURRICANE_MS/1000;
+            if(!s) return;
+            if(s.hurricaneUntil && s.hurricaneUntil<=t){
+                if((s.flameUntil||0)<=t) s.abilitySpeedMul=1;
+                s.hurricaneUntil=0;
+                s.hurricaneSpanMs=0;
+                return;
+            }
+            if(s.hurricaneUntil<=t) return;
+            const span=(Number(s.hurricaneSpanMs)||HURRICANE_MS)/1000;
             const slice=Math.min(s.hurricaneGainLeft||0, (s.hurricaneGain||0)*(dt/span));
             s.hurricaneGainLeft=Math.max(0,(s.hurricaneGainLeft||0)-slice);
             s.rpm=clamp(s.rpm+slice,0,1);
@@ -1303,7 +1347,7 @@
             <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="abilityBtn" ${passive?"disabled":""}>
                 <span class="combat-fill" style="height:${abPct}%"></span>
                 <span class="combat-emblem">${emblemSVG(id,32)}</span>
-                <span class="combat-pips">${passive?"PASSIVE":`${charges}/2`}</span>
+                <span class="combat-pips">${passive?"PASSIVE":`${charges}/${abilityMax("player")}`}</span>
             </button>
             <span class="combat-toast" id="combatToast" hidden></span>
         </div>`;
@@ -1346,7 +1390,7 @@
         if(ab) ab.style.height=`${Math.round(abilityFill("player")*100)}%`;
         const id=kitId(bey("player")?.blade);
         const meta=kitMeta(id);
-        if(pips && meta?.active) pips.textContent=`${state.charges.player}/2`;
+        if(pips && meta?.active) pips.textContent=`${state.charges.player}/${abilityMax("player")}`;
         const db=document.getElementById("dashBtn");
         const abn=document.getElementById("abilityBtn");
         if(db) db.classList.toggle("ready", dashFill("player")>=1);
@@ -1361,7 +1405,7 @@
     global.SpinWarsAbilities={
         kitId, kitMeta, emblemSVG, abilityChipHTML,
         resetMatch, resetRound, restoreCharges, matchStillHoldsCharges, syncMatchCharges, matchChargeKey, onForeground,
-        tryDash, tryAbility,
+        tryDash, tryAbility, forceFieldStorm, popup, grantCharge, abilityMax,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
         cpuShouldDash, cpuShouldAbility, readFight,

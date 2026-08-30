@@ -2398,11 +2398,12 @@ function showLetItRip(){
 
     NEW_BATTLE.active=false;
 
-    // The CPU's real launch remains undisclosed until the player commits.
+    // Technique/angle stay hidden until LET IT RIP. Quality is locked once
+    // the player confirms the roll so Center/Slight cannot reroll it.
     if(Game.cpu.launch){
         Game.cpu.launch.technique=null;
         Game.cpu.launch.angle=null;
-        Game.cpu.launch.quality=null;
+        if(stage==="quality") Game.cpu.launch.quality=null;
     }
 
     renderNewBattle();
@@ -2506,9 +2507,10 @@ function showLetItRip(){
 
         if(fixedQualityBtn){
             fixedQualityBtn.onclick=()=>{
-                Game.player.launch.quality=
+                Game.player.launch.quality=bumpLuckyLaunchQuality(
                     Game.player.launch.fixedQualityPreview ||
-                    rollRandomLaunchQuality();
+                    rollRandomLaunchQuality()
+                );
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.qualityMode="Fixed";
@@ -2520,6 +2522,7 @@ function showLetItRip(){
         if(rollQualityBtn){
             rollQualityBtn.onclick=()=>{
                 rollLaunchQuality("player");
+                Game.player.launch.quality=bumpLuckyLaunchQuality(Game.player.launch.quality);
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.setupStage="qualityReveal";
@@ -3020,6 +3023,13 @@ function rollRandomLaunchQuality(){
         if(roll<=0) return quality;
     }
     return "Okay";
+}
+
+function bumpLuckyLaunchQuality(quality){
+    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.luckyLaunchBump==="function"){
+        return SpinWarsRogue.luckyLaunchBump(quality)||quality;
+    }
+    return quality;
 }
 
 function rollLaunchQuality(side){
@@ -4116,6 +4126,16 @@ function devAwardSpinRound(winnerSide){
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(NEW_BATTLE.finishPending) return;
 
+    if(
+        winnerSide==="cpu" &&
+        finishType==="Spin Finish" &&
+        typeof SpinWarsRogue!=="undefined" &&
+        typeof SpinWarsRogue.tryZombieRespawn==="function" &&
+        SpinWarsRogue.tryZombieRespawn()
+    ){
+        return;
+    }
+
     NEW_BATTLE.finishPending=true;
     NEW_BATTLE.active=false;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
@@ -4123,10 +4143,19 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
 
-    const finishPoints =
+    let finishPoints =
         finishType==="Xtreme" ? 3 :
         finishType==="Over" ? 2 :
         1;
+    if(
+        winnerSide==="cpu" &&
+        finishType==="Xtreme" &&
+        typeof SpinWarsRogue!=="undefined" &&
+        typeof SpinWarsRogue.tryPocketSave==="function" &&
+        SpinWarsRogue.tryPocketSave()
+    ){
+        finishPoints=1;
+    }
 
     if(winnerSide==="player"){
         Game.battle.score.player+=finishPoints;
@@ -4224,9 +4253,9 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }else if(commentary){
         commentary.textContent=
             finishType==="Xtreme"
-                ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +3`
+                ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +${finishPoints}`
                 : finishType==="Over"
-                    ? `${loser.blade.name} is knocked into the OVER ZONE! ${winner.blade.name} +2`
+                    ? `${loser.blade.name} is knocked into the OVER ZONE! ${winner.blade.name} +${finishPoints}`
                     : `${winner.blade.name} wins by SPIN FINISH. +1`;
     }
 
@@ -4309,6 +4338,8 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
         Game.cpu.lockedLaunchPlan=null;
+        Game.cpu.launch=Game.cpu.launch||{};
+        Game.cpu.launch.quality=null;
 
         NEW_BATTLE.finishPending=false;
         NEW_BATTLE.active=false;
@@ -4962,6 +4993,9 @@ function newBattleFrame(now){
 
             if(typeof SpinWarsAbilities!=="undefined"){
                 SpinWarsAbilities.step(PHYSICS_DT,p,c);
+            }
+            if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.tickPoint==="function"){
+                SpinWarsRogue.tickPoint(p,c);
             }
             if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.observe){
                 SpinWarsScoreboard.observe(p,c,NEW_BATTLE);
