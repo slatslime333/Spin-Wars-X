@@ -1,5 +1,5 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.38';
+const CACHE='spin-wars-x-9.40';
 const PRECACHE=[
   './','./index.html','./manifest.webmanifest',
   './style.css?v=9.38','./movement-engine.js?v=9.33','./xrail-engine.js?v=9.23',

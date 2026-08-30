@@ -88,7 +88,11 @@ function sharkBossParts(){
     const ratchet=(typeof RATCHETS!=="undefined"&&RATCHETS.find(x=>x.name==="1-60"))
         ||{name:"1-60",number:1,height:60};
     const bits=typeof selectableBits==="function"?selectableBits():[];
-    const bit=bits.find(b=>b.name==="Ball")||{name:"Ball"};
+    const fromList=bits.find(b=>b.name==="Ball");
+    const fromEngine=(typeof BIT_ENGINE!=="undefined")
+        ?(BIT_ENGINE.ball||Object.values(BIT_ENGINE).find(b=>b&&b.name==="Ball"))
+        :null;
+    const bit=fromList||fromEngine||{name:"Ball"};
     return {ratchet,bit};
 }
 
@@ -853,6 +857,7 @@ function refreshAfterDebug(){
 function syncLoadout(){
     const r=run();
     if(!r) return;
+    if(Number(r.matchIndex)===18||r.finalBoss) lockSharkKit();
     Game.player.blade=Object.assign({}, r.blade||{}, r.abilityId?{abilityId:r.abilityId}:{});
     Game.player.ratchet=r.ratchet;
     Game.player.bit=r.bit;
@@ -1389,6 +1394,7 @@ function previewModifier(side){
 function plateDecor(side){
     const r=run();
     if(!r) return null;
+    if(side==="cpu" && (Number(r.matchIndex)===18||r.finalBoss)) lockSharkKit();
     const blade=side==="cpu"?r.cpuBlade:r.blade;
     const ratchet=side==="cpu"?r.cpuRatchet:r.ratchet;
     const bit=side==="cpu"?r.cpuBit:r.bit;
