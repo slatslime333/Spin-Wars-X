@@ -219,12 +219,7 @@ function scaleCpuWithoutFlattening(){
 }
 function rebalanceCpu(){
     const r=R();if(!r||!r.cpuBlade)return;
-    const expected=desiredCpuUpgradeCount();
-    if((r.cpuHistory||[]).length!==expected||r._rogueBalanceStamp!==match()){
-        rebuildCpuStack();
-        r._rogueBalanceStamp=match();
-    }
-    scaleCpuWithoutFlattening();
+    /* Stacks and scale are owned by rogue-mode.js generateCpu. */
 }
 function sync(){
     const r=R();if(!r)return;

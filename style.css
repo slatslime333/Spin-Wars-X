@@ -1390,6 +1390,16 @@ footer{
   font-size:11px;
   letter-spacing:.18em;
 }
+.vs-pressure{
+  margin:4px 0 0;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:.03em;
+  color:#c4a056;
+}
+.vs-pressure.easy{color:#7dff9f}
+.vs-pressure.hard{color:#ff8a6a}
+.vs-pressure.final{color:#e8d6ff}
 .vs-copy h2{
   font-family:Staatliches,Impact,sans-serif;
   font-size:28px;

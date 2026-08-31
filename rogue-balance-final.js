@@ -66,40 +66,8 @@
   }
 
   function applySoftConvergence(){
-    const r=run();
-    if(!r||!r.cpuBlade||!global.Game?.player||!global.Game?.cpu)return;
-
-    const p=statsAvg(playerStats());
-    const base=cpuBaseStats();
-    const c=statsAvg(base);
-    const target=p*targetRatio();
-
-    /*
-     * Only correct 48% of the gap, capped tightly. This keeps actual Bey
-     * identity and random CPU upgrades meaningful instead of rubber-banding
-     * every stat to a player's average.
-     */
-    const delta=clamp((target-c)*0.48,-7,8);
-    const scale=empty();
-    STATS.forEach(k=>{
-      const identity=(Number(base[k])-c)*0.06;
-      scale[k]=round(clamp(delta+identity,-7,8));
-    });
-    r.cpuScale=scale;
-    r.cpuPowerTarget=target;
-
-    const cEff={};
-    STATS.forEach(k=>cEff[k]=round(base[k]+scale[k]));
-    global.Game.cpu.stats=cEff;
-    global.Game.cpu.comboOVR=round(statsAvg(cEff));
-
-    /* Rogue Meta uses the same converged effective power without touching
-       Quick Play's meta calculation. */
-    if(typeof global.Game.cpu.comboMeta==="number"){
-      const old=Number(global.Game.cpu.comboMeta)||70;
-      const physical=Number(global.Game.cpu.comboMeta)||70;
-      global.Game.cpu.comboMeta=round(clamp(physical*0.65+statsAvg(cEff)*0.35,40,99));
-    }
+    /* CPU scale is owned by rogue-mode.js generateCpu / fillCpuScale. */
+    return;
   }
 
   function bossInfo(){

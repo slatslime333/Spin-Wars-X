@@ -2064,7 +2064,7 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     else if(bitName==="Hexa") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?92:(bladeType==="Balance"?84:68);
     else if(bitName==="Ball"||bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?95:(bladeType==="Balance"?82:58);
 
-    if(blade.rogueBoss && bitName==="Orb") roleFit=96;
+    if(blade.rogueBoss && bitName==="Ball") roleFit=96;
     else if(bitName==="Needle"||bitName==="High Needle") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?78:(bladeType==="Balance"?70:62);
     else if(bitName==="Point"||bitName==="Level") roleFit=(bladeType==="Balance"||bladeType==="Attack")?88:(bladeType==="Defense"?82:78);
     else if(bitName==="Quake") roleFit=bladeType==="Attack"?84:58;
@@ -2072,8 +2072,8 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
 
     let signature=0;
 
-    // Hidden boss kit: Shark Scale 1-60 Orb is a signature, not a dump bit.
-    if(blade.rogueBoss && bitName==="Orb" && ratchet.number===1 && height===60) signature+=1.45;
+    // Hidden boss kit: Shark Scale 1-60 Ball is a signature, not a dump bit.
+    if(blade.rogueBoss && bitName==="Ball" && ratchet.number===1 && height===60) signature+=1.45;
 
     // 1-60 attack identity.
     if(ratchet.number===1 && height===60 && bladeType==="Attack") signature+=1.80;
@@ -2269,6 +2269,7 @@ function createComboSummaryCard(side,combo){
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
         <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
+        ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
         <h2>${combo.blade.name}</h2>
         <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
         <div class="vs-ratings">
@@ -2326,7 +2327,7 @@ function showComboCard(){
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
@@ -2532,11 +2533,12 @@ function showLetItRip(){
 
     NEW_BATTLE.active=false;
 
-    // The CPU's real launch remains undisclosed until the player commits.
+    // Technique/angle stay hidden until LET IT RIP. Quality is locked once
+    // the player confirms the roll so Center/Slight cannot reroll it.
     if(Game.cpu.launch){
         Game.cpu.launch.technique=null;
         Game.cpu.launch.angle=null;
-        Game.cpu.launch.quality=null;
+        if(stage==="quality") Game.cpu.launch.quality=null;
     }
 
     renderNewBattle();
@@ -2640,9 +2642,10 @@ function showLetItRip(){
 
         if(fixedQualityBtn){
             fixedQualityBtn.onclick=()=>{
-                Game.player.launch.quality=
+                Game.player.launch.quality=bumpLuckyLaunchQuality(
                     Game.player.launch.fixedQualityPreview ||
-                    rollRandomLaunchQuality();
+                    rollRandomLaunchQuality()
+                );
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.qualityMode="Fixed";
@@ -2654,6 +2657,7 @@ function showLetItRip(){
         if(rollQualityBtn){
             rollQualityBtn.onclick=()=>{
                 rollLaunchQuality("player");
+                Game.player.launch.quality=bumpLuckyLaunchQuality(Game.player.launch.quality);
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.setupStage="qualityReveal";
@@ -3154,6 +3158,13 @@ function rollRandomLaunchQuality(){
         if(roll<=0) return quality;
     }
     return "Okay";
+}
+
+function bumpLuckyLaunchQuality(quality){
+    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.luckyLaunchBump==="function"){
+        return SpinWarsRogue.luckyLaunchBump(quality)||quality;
+    }
+    return quality;
 }
 
 function rollLaunchQuality(side){
@@ -4250,6 +4261,16 @@ function devAwardSpinRound(winnerSide){
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
     if(NEW_BATTLE.finishPending) return;
 
+    if(
+        winnerSide==="cpu" &&
+        finishType==="Spin Finish" &&
+        typeof SpinWarsRogue!=="undefined" &&
+        typeof SpinWarsRogue.tryZombieRespawn==="function" &&
+        SpinWarsRogue.tryZombieRespawn()
+    ){
+        return;
+    }
+
     NEW_BATTLE.finishPending=true;
     NEW_BATTLE.active=false;
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
@@ -4257,10 +4278,19 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
     Game.battle.score=Game.battle.score||{player:0,cpu:0};
 
-    const finishPoints =
+    let finishPoints =
         finishType==="Xtreme" ? 3 :
         finishType==="Over" ? 2 :
         1;
+    if(
+        winnerSide==="cpu" &&
+        finishType==="Xtreme" &&
+        typeof SpinWarsRogue!=="undefined" &&
+        typeof SpinWarsRogue.tryPocketSave==="function" &&
+        SpinWarsRogue.tryPocketSave()
+    ){
+        finishPoints=1;
+    }
 
     if(winnerSide==="player"){
         Game.battle.score.player+=finishPoints;
@@ -4358,9 +4388,9 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }else if(commentary){
         commentary.textContent=
             finishType==="Xtreme"
-                ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +3`
+                ? `${loser.blade.name} falls into the XTREME ZONE! ${winner.blade.name} +${finishPoints}`
                 : finishType==="Over"
-                    ? `${loser.blade.name} is knocked into the OVER ZONE! ${winner.blade.name} +2`
+                    ? `${loser.blade.name} is knocked into the OVER ZONE! ${winner.blade.name} +${finishPoints}`
                     : `${winner.blade.name} wins by SPIN FINISH. +1`;
     }
 
@@ -4443,6 +4473,8 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
         Game.cpu.lockedLaunchPlan=null;
+        Game.cpu.launch=Game.cpu.launch||{};
+        Game.cpu.launch.quality=null;
 
         NEW_BATTLE.finishPending=false;
         NEW_BATTLE.active=false;
@@ -5096,6 +5128,9 @@ function newBattleFrame(now){
 
             if(typeof SpinWarsAbilities!=="undefined"){
                 SpinWarsAbilities.step(PHYSICS_DT,p,c);
+            }
+            if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.tickPoint==="function"){
+                SpinWarsRogue.tickPoint(p,c);
             }
             if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.observe){
                 SpinWarsScoreboard.observe(p,c,NEW_BATTLE);
