@@ -193,9 +193,9 @@ const SCREENS = [
     id:"battle", label:"BATTLE",
     note:"Stadium fills the shell. Nameplates overlay corners (ratchet · bit as text, RPM bar + META). Score is a stamp. LIVE sits on the lip. Dash/kit are thumb circles — not a third HUD row under a shrunk bowl.",
     html:`<div class="screen battle">
-      <div class="cam">${stadium()}</div>
+      <div class="cam">${stadium()}
       <div class="np you ticket">
-        <span class="chip meta meta"><small>META</small><b>81</b></span>
+        <span class="chip meta"><small>META</small><b>81</b></span>
         <strong>PHOENIX WING</strong>
         <em>5-60 · Rush</em>
         <div class="bar" style="margin-top:6px"><i style="width:78%"></i></div>
@@ -210,6 +210,7 @@ const SCREENS = [
       <div class="thumbs">
         <button class="thumb kit" type="button">FLAME<br>2/2</button>
         <button class="thumb" type="button">DASH</button>
+      </div>
       </div>
     </div>`
   },
