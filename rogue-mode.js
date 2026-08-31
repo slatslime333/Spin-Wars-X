@@ -210,8 +210,11 @@ function pickCommittedParts(blade,exclude){
 }
 
 function cpuCompetence(match){
+    const t=String(run()?.startingTier||"");
     if(match<=1) return 0;
     if(match===2) return Math.random()<0.45?1:0;
+    // Bronze match 3 is still often committed, not a guaranteed role kit yet.
+    if(t==="Bronze" && match===3) return Math.random()<0.55?1:0;
     return 1;
 }
 
@@ -512,10 +515,50 @@ function playerUpgradeCount(){
     return Math.max(fromHist,fromMatch);
 }
 
+function cardGivesCpuPower(card){
+    const k=card?.kind;
+    return k==="stat"||k==="modifier"||k==="evolve"||k==="blessed";
+}
+
+function cpuStackPlan(){
+    const r=run();
+    const hist=r?.history||[];
+    const matchPad=Math.max(0,(Number(r?.matchIndex)||1)-1);
+    const powerN=hist.filter(cardGivesCpuPower).length;
+    const toyN=Math.max(0, hist.length-powerN);
+    const padN=Math.max(0, matchPad-hist.length);
+    return {powerN,toyN,padN};
+}
+
+function cpuNightMix(tier,match,boss){
+    const t=String(tier||"");
+    const m=Math.max(1,Number(match)||1);
+    if(boss){
+        if(t==="Bronze") return {easy:0.18,even:0.52,hard:0.30};
+        if(t==="Gold") return {easy:0.12,even:0.48,hard:0.40};
+        return {easy:0.16,even:0.50,hard:0.34};
+    }
+    if(t==="Bronze"){
+        if(m<=5) return {easy:0.18,even:0.57,hard:0.25};
+        if(m<=12) return {easy:0.24,even:0.56,hard:0.20};
+        return {easy:0.30,even:0.55,hard:0.15};
+    }
+    if(t==="Gold"){
+        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
+        if(m<=12) return {easy:0.16,even:0.52,hard:0.32};
+        return {easy:0.12,even:0.50,hard:0.38};
+    }
+    if(m<=5) return {easy:0.20,even:0.50,hard:0.30};
+    if(m<=12) return {easy:0.20,even:0.52,hard:0.28};
+    return {easy:0.22,even:0.53,hard:0.25};
+}
+
 function cpuNightRoll(){
+    const r=run();
+    const mix=cpuNightMix(r?.startingTier, r?.matchIndex, !!BOSS_AT[Number(r?.matchIndex)||0]);
     const x=Math.random();
-    if(x<0.20) return "easy";
-    if(x<0.70) return "even";
+    if(x<mix.easy) return "easy";
+    if(x<mix.easy+mix.even) return "even";
     return "hard";
 }
 
@@ -527,16 +570,16 @@ function cpuStackLead(){
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
     if(t==="Bronze"){
         if(m<=5){ even=0.55; plus1=0.32; plus2=0.13; plus3=0; }
-        else if(m<=12){ even=0.48; plus1=0.38; plus2=0.14; plus3=0; }
-        else { even=0.50; plus1=0.38; plus2=0.12; plus3=0; }
+        else if(m<=12){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
+        else { even=0.68; plus1=0.26; plus2=0.06; plus3=0; }
     }else if(t==="Silver"){
         if(m<=5){ even=0.28; plus1=0.50; plus2=0.20; plus3=0.02; }
         else if(m<=12){ even=0.22; plus1=0.48; plus2=0.26; plus3=0.04; }
         else { even=0.20; plus1=0.46; plus2=0.28; plus3=0.06; }
     }else{
-        if(m<=5){ even=0.42; plus1=0.46; plus2=0.12; plus3=0; }
+        if(m<=5){ even=0.48; plus1=0.42; plus2=0.10; plus3=0; }
         else if(m<=12){ even=0.16; plus1=0.42; plus2=0.32; plus3=0.10; }
-        else { even=0.10; plus1=0.38; plus2=0.36; plus3=0.16; }
+        else { even=0.12; plus1=0.40; plus2=0.36; plus3=0.12; }
     }
     if(night==="easy"){
         even+=0.18; plus1-=0.06; plus2-=0.08; plus3-=0.04;
@@ -598,7 +641,7 @@ function makeDualStatCard(a,aAmt,b,bAmt){
 const CONSUMABLE_KEYS=["zombie","luckyLaunch","forceField","pocketSave","hellsChain","comeback"];
 const CONSUMABLE_META={
     zombie:{name:"ZOMBIE",games:3,shopCd:2,rarity:"uncommon",
-        body:"For the next 3 games, every time your Bey is spin finished only, respawn with 5 RPM where it was finished."},
+        body:"For the next 3 games, once per point, if your Bey is spin finished only, respawn with 5 RPM where it was finished."},
     luckyLaunch:{name:"LUCKY LAUNCH",games:3,shopCd:2,rarity:"uncommon",
         body:"For the next 3 games, every launch for you is 1 tier higher than chosen."},
     forceField:{name:"FORCE FIELD",games:2,shopCd:2,rarity:"uncommon",
@@ -811,12 +854,12 @@ function applyCpuCard(card){
 
 function grantCpuStack(){
     const r=run();
-    const n=playerUpgradeCount();
+    const plan=cpuStackPlan();
     r.cpuBonuses=emptyBonuses();
     r.cpuHistory=[];
     r.cpuModifier=null;
     r.cpuAbilityId=null;
-    for(let i=0;i<n;i++){
+    for(let i=0;i<plan.powerN;i++){
         const card=makeOfferCard(
             rarityRoll(r.matchIndex,r.startingTier),
             r.cpuBlade,
@@ -824,6 +867,11 @@ function grantCpuStack(){
             {forCpu:true}
         );
         applyCpuCard(card);
+    }
+    const weakN=plan.toyN+plan.padN;
+    for(let i=0;i<weakN;i++){
+        const focus=focusedStat(r.cpuBlade);
+        applyCpuCard(makeStatCard("common",focus,1));
     }
     grantCpuPressure(cpuStackLead()+bossExtraStacks());
 }
@@ -955,7 +1003,13 @@ function cpuPowerTarget(playerPow,match,boss){
     else band=1.03+Math.random()*0.04;
     if(!boss){
         if(tier==="Gold" && match<=2 && night!=="hard") band=Math.min(band,0.98);
-        if(tier==="Bronze" && match<=2 && night!=="easy") band=Math.min(1.06,band+0.02);
+        // Bronze open stays spicy on even nights. Hard nights already sit above 1.00 — don't stack both.
+        if(tier==="Bronze" && match<=2 && night==="even") band=Math.min(1.06,band+0.02);
+        if(tier==="Bronze" && match>=13){
+            if(night==="easy") band=Math.min(band,0.96);
+            else if(night==="even") band=Math.min(band,0.99);
+            else band=Math.min(band,1.04);
+        }
         band=clamp(band,0.93,1.08);
     }
     return playerPow*band;
@@ -2323,14 +2377,14 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>Pick one Bey to start. Your bit and ratchet are random. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is the harder start and the kinder shop later. Gold is a slightly easier open and a thinner shop; you get paid by evolving. Silver sits in the middle.</p>
+            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is a hard start you can leave, then a kinder shop and kinder nights as you snowball. Gold opens gentler and squeezes later. Silver sits in the middle.</p>
             <p>Bronze cannot evolve. After match 5 it can Enhance once — honeycomb, +5 on your best 3, +3 on the rest. Silver can evolve after a few wins, then Enhance. Gold can climb Bronze → Silver → Gold. Form cards wait for those windows. BACK keeps your current form.</p>
-            <p>The CPU takes the same number of upgrades you have locked in, rolled not copied, plus a little extra that depends on your starter and the night. Some opponents are easy. Some are ahead. It is not a straight ramp. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
+            <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Some opponents are easy. Some are ahead. Bronze stays a fight early and eases off later; Gold is the reverse. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
             <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Commons always cost something.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie, Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
+            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie (once per point on a spin finish), Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
             <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>GROWTH · REFORGE · TOYS</strong><small>Clean +3 or +1 · +1, plus bit/ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. Rare is the clean bump.</small></article>
             <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too. Gold sees this table less.</small></article>
             <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>That is the real paycheck. Enhance is +5 / +3. Silver evolves then enhances. Gold climbs to Gold form. Toys do not replace this.</small></article>
@@ -3265,8 +3319,10 @@ function tryZombieRespawn(){
     const p=NEW_BATTLE?.player;
     const c=NEW_BATTLE?.cpu;
     if(!p||!c) return false;
+    if(p.rogueZombieUsed) return false;
     if((Number(p.rpm)||0)>0.001) return false;
     if((Number(c.rpm)||0)<=0.001) return false;
+    p.rogueZombieUsed=true;
     p.rpm=0.05;
     p.vx=(Number(p.vx)||0)*0.35;
     p.vy=(Number(p.vy)||0)*0.35;
@@ -3329,7 +3385,7 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
+    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
 };
