@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spin Wars X — layout mockups</title>
+<link rel="stylesheet" href="mockups.css">
+</head>
+<body>
+<div class="gallery">
+  <header class="gallery-head">
+    <p class="kicker">LAYOUT MOCKUPS · NOT LIVE</p>
+    <h1>SPIN WARS<i>X</i></h1>
+    <p>Same stadium SVG, fonts, and blade PNGs as the game. Overlay HUD, denser packing. Flip a screen, then desktop vs phone. Approve a layout here before we touch <code>app.js</code>.</p>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <nav class="sizes" id="sizes">
+    <button type="button" data-size="desktop" class="on">DESKTOP 16:9</button>
+    <button type="button" data-size="phone">PHONE</button>
+  </nav>
+  <p class="note" id="note"></p>
+  <div class="stage-wrap">
+    <div class="device desktop" id="device"></div>
+  </div>
+</div>
+<script>
+const PHOENIX="../../assets/blades/phienix_wing1.png";
+const LEON="../../assets/blades/Leonfang.png";
+const DRAKE="../../assets/blades/shelterdrake.png";
+const SWORD="../../assets/blades/Dransword (1).png";
+
+function stadium(opts){
+  const beys = opts && opts.beys !== false;
+  return `<div class="bowl" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none">
+    <polygon points="7,3 93,3 97,7 97,93 93,97 7,97 3,93 3,7" fill="#b9bdc0" stroke="#6d757b" stroke-width="1.2"/>
+    <ellipse cx="50" cy="45" rx="39" ry="39" fill="#e8eaeb" stroke="#9da3a7" stroke-width="1.1"/>
+    <ellipse cx="50" cy="45" rx="34.5" ry="34.5" fill="#d7dbdd" stroke="#b2b7ba" stroke-width=".8"/>
+    <path d="M7 76 L24 76 L29 84 L71 84 L76 76 L93 76 L93 97 L7 97 Z" fill="#aeb3b6" stroke="#777f84" stroke-width="1"/>
+    <path d="M8 78 L29 78 L33 84 L67 84 L71 78 L92 78" fill="none" stroke="#737b80" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M10 82 L27 82 L32 88 L32 94 L10 94 Z" fill="#6f7579"/><path d="M12 84 L25.5 84 L29.5 89 L29.5 93 L12 93 Z" fill="#30363a"/>
+    <path d="M34 84 L66 84 L62 96 L38 96 Z" fill="#777d81"/><path d="M37 86 L63 86 L60 94 L40 94 Z" fill="#363c40"/>
+    <path d="M73 82 L90 82 L90 94 L68 94 L68 88 Z" fill="#6f7579"/><path d="M74.5 84 L88 84 L88 93 L70.5 93 L70.5 89 Z" fill="#30363a"/>
+    <path d="M 44.8 10.3 C 41.6 8.2 37.2 7.2 32.8 9.3 C 20.8 15.1 14.0 29.0 14.7 45.5 C 15.6 63.0 29.6 76.8 50.0 77.7 C 70.4 76.8 84.4 63.0 85.3 45.5 C 86.0 29.0 79.2 15.1 67.2 9.3 C 62.8 7.2 58.4 8.2 55.2 10.3" fill="none" stroke="#18a84a" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M 44.8 10.3 L 50 17.5 L 55.2 10.3 L 52.3 15.2 L 50 21.0 L 47.7 15.2 Z" fill="#18a84a"/>
+    ${beys?`<circle cx="38" cy="42" r="4.85" fill="#d8a82c" stroke="#fff" stroke-width=".65"/><circle cx="62" cy="48" r="4.85" fill="#aeb7c0" stroke="#fff" stroke-width=".65"/>`:""}
+  </svg></div>`;
+}
+
+const SCREENS = [
+  {
+    id:"home", label:"HOME",
+    note:"Stadium is the wallpaper (live SVG, pockets at the bottom). Title top-left, doors stacked in the corner instead of a centered web column.",
+    html:`<div class="screen home-bleed">${stadium({beys:false})}
+      <div class="home-ui">
+        <header>
+          <p class="kicker">X STADIUM</p>
+          <h1 class="title-x">SPIN WARS<i>X</i></h1>
+          <p>Two Beys. X-Rail. First to 7.</p>
+        </header>
+        <nav>
+          <button class="door rip" type="button"><span class="k">RUN</span><b>ROGUE</b><small>18 matches · build the Bey</small></button>
+          <button class="door locked" type="button"><span class="k">STORY</span><b>CAMPAIGN</b><small>Coming soon</small></button>
+          <button class="door" type="button"><span class="k">QUICK PLAY</span><b>LET IT RIP</b><small>Leagues · random fights</small></button>
+          <button class="help" type="button">HOW TO PLAY</button>
+        </nav>
+      </div>
+    </div>`
+  },
+  {
+    id:"league", label:"LEAGUE",
+    note:"Same wallpaper. Title sits on the bowl. Featured Quick Match + 2×2 league plates hug the right (phone: all at the bottom).",
+    html:`<div class="screen home-bleed">${stadium({beys:false})}
+      <div class="league-ui">
+        <div class="left">
+          <p class="kicker" style="color:#c4a056;font-size:11px;font-weight:700;letter-spacing:.28em">QUICK PLAY</p>
+          <h1 class="title-x">SPIN WARS<i>X</i></h1>
+          <p style="color:#c8c0b4;margin-top:6px">Pick a fight. First to 7.</p>
+        </div>
+        <nav>
+          <button class="featured" type="button"><span><b>QUICK MATCH</b><br><small style="color:#b7aea2">Random combos · reroll both</small></span><span class="go">RIP</span></button>
+          <div class="lg">
+            <button type="button"><b>BRONZE</b><small>Starter pool</small></button>
+            <button type="button"><b>SILVER</b><small>Mid-tier pool</small></button>
+            <button type="button"><b>GOLD</b><small>Top-tier pool</small></button>
+            <button type="button"><b>CUSTOM</b><small>Full garage</small></button>
+          </div>
+        </nav>
+      </div>
+    </div>`
+  },
+  {
+    id:"pick", label:"BLADE PICK",
+    note:"One huge Bey, three rows. Gold/silver/bronze tickets stay. Phone is hero on top, list under — no three full-width stacked cards.",
+    html:`<div class="screen pick">
+      <div class="pick-hero ticket gold">
+        <img src="${PHOENIX}" alt="Phoenix Wing">
+        <div class="cap">
+          <span class="chip"><small>OVR</small><b>86</b></span>
+          <h2>PHOENIX WING</h2>
+          <small style="color:#b9a894">GOLD · FLAME · 5-60</small>
+        </div>
+      </div>
+      <div class="pick-list">
+        <p style="color:#c4a056;font-size:10px;font-weight:800;letter-spacing:.2em">BRONZE · BLADE POOL</p>
+        <button class="pick-row ticket gold on" type="button"><img src="${PHOENIX}" alt=""><span><b>PHOENIX WING</b><br><small>Flame · Gold</small></span><span class="chip"><small>OVR</small><b>86</b></span></button>
+        <button class="pick-row ticket silver" type="button"><img src="${LEON}" alt=""><span><b>LEON CLAW</b><br><small>Attack · Silver</small></span><span class="chip"><small>OVR</small><b>82</b></span></button>
+        <button class="pick-row ticket bronze" type="button"><img src="${DRAKE}" alt=""><span><b>SHELTER DRAKE</b><br><small>Defense · Bronze</small></span><span class="chip"><small>OVR</small><b>74</b></span></button>
+      </div>
+    </div>`
+  },
+  {
+    id:"vs", label:"VS",
+    note:"Tickets overlap. Sprites bigger. LIVE strip on top. HIT/HOLD/MOVE collapse to chips so the plate is a poster, not a spreadsheet. LET IT RIP stamp under.",
+    html:`<div class="screen vs">
+      <aside class="live"><small>LIVE COMMENTARY</small><p>Phoenix Wing wants the rail. Leon Claw sits the pin. First to 7.</p></aside>
+      <div class="vs-board">
+        <article class="ticket you gold">
+          <div class="vs-art"><img src="${PHOENIX}" alt=""></div>
+          <div class="vs-copy">
+            <span class="who">YOU</span>
+            <h2>PHOENIX WING</h2>
+            <p>5-60 · Rush</p>
+            <div class="vs-mini">
+              <span class="chip"><small>OVR</small><b>86</b></span>
+              <span class="chip meta"><small>META</small><b>81</b></span>
+              <span class="chip"><small>HIT</small><b>84</b></span>
+              <span class="chip"><small>HOLD</small><b>72</b></span>
+              <span class="chip"><small>MOVE</small><b>79</b></span>
+            </div>
+          </div>
+        </article>
+        <div class="vs-mid">VS</div>
+        <article class="ticket them silver">
+          <div class="vs-art"><img src="${LEON}" alt=""></div>
+          <div class="vs-copy">
+            <span class="who">CPU</span>
+            <h2>LEON CLAW</h2>
+            <p>3-80 · Ball</p>
+            <div class="vs-mini">
+              <span class="chip"><small>OVR</small><b>82</b></span>
+              <span class="chip meta"><small>META</small><b>77</b></span>
+              <span class="chip"><small>HIT</small><b>88</b></span>
+              <span class="chip"><small>HOLD</small><b>70</b></span>
+              <span class="chip"><small>MOVE</small><b>68</b></span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <div class="vs-actions">
+        <button class="stamp ghost" type="button">BACK</button>
+        <button class="stamp" type="button">LET IT RIP</button>
+      </div>
+    </div>`
+  },
+  {
+    id:"launchQ", label:"LAUNCH QUALITY",
+    note:"Stadium stays the hero during ROLL. Quality is a stamp on a side pane (phone: bottom sheet). BACK still returns to VS.",
+    html:`<div class="screen launch">${stadium()}
+      <div class="launch-pane ticket">
+        <p style="color:#c4a056;font-size:10px;font-weight:800;letter-spacing:.18em">QUALITY</p>
+        <div class="q-stamp">OKAY</div>
+        <p class="launch-info">Aim accuracy. Perfect is tight. Horrible is wide.</p>
+        <div class="row" style="grid-template-columns:1fr 1fr">
+          <button class="ghost" type="button">BACK</button>
+          <button class="stamp" type="button">ROLL</button>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:"launchA", label:"LAUNCH ANGLE",
+    note:"After reveal, angle + technique sit on the pane. LET IT RIP only — no BACK to reroll. Stadium still filling the frame.",
+    html:`<div class="screen launch">${stadium()}
+      <div class="launch-pane ticket">
+        <p style="color:#c4a056;font-size:10px;font-weight:800;letter-spacing:.18em">YOU · PERFECT</p>
+        <div class="row three">
+          <button class="on" type="button">FLAT</button>
+          <button type="button">SLIGHT</button>
+          <button type="button">HARD</button>
+        </div>
+        <div class="row four">
+          <button class="on" type="button">CENTER</button>
+          <button type="button">X-RAIL</button>
+          <button type="button">CLASH</button>
+          <button type="button">DROP</button>
+        </div>
+        <p class="launch-info">Flat · Center · Perfect · 100%</p>
+        <button class="stamp" type="button">LET IT RIP</button>
+      </div>
+    </div>`
+  },
+  {
+    id:"battle", label:"BATTLE",
+    note:"Stadium fills the shell. Nameplates overlay corners (ratchet · bit as text, RPM bar + META). Score is a stamp. LIVE sits on the lip. Dash/kit are thumb circles — not a third HUD row under a shrunk bowl.",
+    html:`<div class="screen battle">
+      <div class="cam">${stadium()}</div>
+      <div class="np you ticket">
+        <span class="chip meta meta"><small>META</small><b>81</b></span>
+        <strong>PHOENIX WING</strong>
+        <em>5-60 · Rush</em>
+        <div class="bar" style="margin-top:6px"><i style="width:78%"></i></div>
+      </div>
+      <div class="np them ticket">
+        <strong style="text-align:right">LEON CLAW</strong>
+        <em style="display:block;text-align:right">3-80 · Ball</em>
+        <div class="bar them" style="margin-top:6px"><i style="width:64%"></i></div>
+      </div>
+      <div class="score"><b>2 VS 1</b><small>FIRST TO 7</small></div>
+      <aside class="live"><small>LIVE</small><p>Phoenix Wing catches the rail. Leon Claw sits the pin.</p></aside>
+      <div class="thumbs">
+        <button class="thumb kit" type="button">FLAME<br>2/2</button>
+        <button class="thumb" type="button">DASH</button>
+      </div>
+    </div>`
+  },
+  {
+    id:"hub", label:"ROGUE HUB",
+    note:"Build plate stays a ticket. Offers stack as compact rows instead of three huge cards. Same rarity chrome. Phone: build becomes a thin header.",
+    html:`<div class="screen hub">
+      <section class="build ticket gold">
+        <img src="${PHOENIX}" alt="">
+        <b style="font-family:Staatliches,Impact,sans-serif;font-size:24px;font-weight:400">PHOENIX WING</b>
+        <small style="color:#b9a894">BRONZE FORM · MATCH 4 / 18</small>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+          <span class="chip"><small>ATK</small><b>78</b></span>
+          <span class="chip"><small>KB</small><b>74</b></span>
+          <span class="chip"><small>DEF</small><b>70</b></span>
+          <span class="chip"><small>STA</small><b>72</b></span>
+        </div>
+      </section>
+      <div>
+        <p style="color:#c4a056;font-size:10px;font-weight:800;letter-spacing:.18em;margin-bottom:8px">CHOOSE ONE UPGRADE</p>
+        <div class="offers">
+          <button class="offer ticket" type="button"><span class="k">COMMON</span><strong style="display:block">ATK +2</strong><small>Lock it in. CPU rolls the same count next night.</small></button>
+          <button class="offer ticket rare" type="button"><span class="k">RARE</span><strong style="display:block">REFORGE BIT</strong><small>Three new bits. Blade and ratchet stay.</small></button>
+          <button class="offer ticket" type="button"><span class="k">COMMON</span><strong style="display:block">STA +2</strong><small>Idle drain eases. The clock stretches.</small></button>
+        </div>
+      </div>
+    </div>`
+  },
+  {
+    id:"sum", label:"MATCH SUMMARY",
+    note:"Score is the poster. Two skinny columns, chain under the board, CONTINUE as a stamp. No extra title stack.",
+    html:`<div class="screen sum">
+      <p style="text-align:center;color:#c4a056;font-size:11px;font-weight:800;letter-spacing:.2em">MATCH SUMMARY</p>
+      <p class="board">7 — 4</p>
+      <p style="text-align:center;color:var(--green);font-family:Staatliches,Impact,sans-serif;letter-spacing:.08em">XTREME CHAIN ×1.40</p>
+      <div class="cols">
+        <section class="col ticket you">
+          <h3>YOU · PHOENIX WING</h3>
+          <div class="line"><span>RPM dmg</span><b>1840</b></div>
+          <div class="line"><span>Big impacts</span><b>6</b></div>
+          <div class="line"><span>Xtreme / Over</span><b>1 / 2</b></div>
+          <div class="line"><span>Spin</span><b>1</b></div>
+        </section>
+        <section class="col ticket them">
+          <h3>CPU · LEON CLAW</h3>
+          <div class="line"><span>RPM dmg</span><b>1210</b></div>
+          <div class="line"><span>Big impacts</span><b>3</b></div>
+          <div class="line"><span>Xtreme / Over</span><b>0 / 1</b></div>
+          <div class="line"><span>Spin</span><b>2</b></div>
+        </section>
+      </div>
+      <p style="text-align:center;color:var(--muted);font-size:12px">GAME QUALITY <b style="color:var(--gold)">GOOD</b></p>
+      <button class="stamp" type="button" style="align-self:center">CONTINUE</button>
+    </div>`
+  }
+];
+
+const tabs=document.getElementById("tabs");
+const device=document.getElementById("device");
+const note=document.getElementById("note");
+let current="home";
+let size="desktop";
+
+SCREENS.forEach(s=>{
+  const b=document.createElement("button");
+  b.type="button";
+  b.textContent=s.label;
+  b.dataset.id=s.id;
+  b.onclick=()=>{current=s.id;paint();};
+  tabs.appendChild(b);
+});
+document.getElementById("sizes").onclick=e=>{
+  const btn=e.target.closest("button[data-size]");
+  if(!btn) return;
+  size=btn.dataset.size;
+  paint();
+};
+
+function paint(){
+  const s=SCREENS.find(x=>x.id===current);
+  tabs.querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.id===current));
+  document.querySelectorAll("#sizes button").forEach(b=>b.classList.toggle("on",b.dataset.size===size));
+  device.className="device "+size;
+  device.innerHTML=s.html;
+  note.textContent=s.note;
+}
+paint();
+</script>
+</body>
+</html>
