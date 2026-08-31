@@ -216,7 +216,10 @@ img{display:block;max-width:100%}
 .vs-board{flex:1;position:relative;min-height:0}
 .vs-board .ticket{position:absolute;top:18%;width:54%;padding:12px;display:grid;grid-template-columns:150px 1fr;gap:10px}
 .vs-board .you{left:2%;transform:rotate(-2.4deg);z-index:2}
-.vs-board .them{right:2%;transform:rotate(2.4deg);z-index:1}
+.vs-board .them{right:2%;transform:rotate(2.4deg);z-index:1;grid-template-columns:1fr 150px}
+.vs-board .them .vs-art{grid-column:2;grid-row:1}
+.vs-board .them .vs-copy{grid-column:1;grid-row:1;text-align:right}
+.vs-board .them .vs-mini{justify-content:flex-end}
 .vs-art{width:150px;height:150px;background:rgba(0,0,0,.28);border:2px solid rgba(246,240,230,.14);display:grid;place-items:center}
 .vs-art img{max-width:100%;max-height:100%;object-fit:contain}
 .vs-copy .who{color:var(--gold);font-size:10px;letter-spacing:.18em}
@@ -229,12 +232,12 @@ img{display:block;max-width:100%}
   text-shadow:0 4px 0 #000;z-index:3;pointer-events:none;
 }
 .vs-actions{display:flex;gap:8px;justify-content:center;margin-top:8px}
-.device.phone .vs-board .ticket{width:86%;grid-template-columns:88px 1fr;padding:8px}
-.device.phone .vs-board .you{top:6%;left:6%;transform:rotate(-1.5deg)}
-.device.phone .vs-board .them{top:auto;bottom:4%;right:6%;left:auto;transform:rotate(1.5deg)}
+.device.phone .vs-board .ticket{width:88%;grid-template-columns:88px 1fr;padding:8px}
+.device.phone .vs-board .you{top:14%;left:6%;transform:rotate(-1.5deg)}
+.device.phone .vs-board .them{top:auto;bottom:18%;right:6%;left:auto;transform:rotate(1.5deg);grid-template-columns:1fr 88px}
 .device.phone .vs-art{width:88px;height:88px}
 .device.phone .vs-copy h2{font-size:20px}
-.device.phone .vs-mid{font-size:42px;top:50%}
+.device.phone .vs-mid{font-size:42px;top:48%}
 
 /* LAUNCH */
 .launch{position:absolute;inset:0}
