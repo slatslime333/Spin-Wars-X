@@ -1212,7 +1212,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-modes">
             <h2>The three doors</h2>
-            <p><strong>Rogue</strong> is the main mode. One Bey. Eighteen matches, each first to 7, then the night keeps going if you beat the hidden final. You pick a blade; ratchet and bit are random. Win a match, pick an upgrade in the shop. Lose, and the run is over. Matches 6 and 12 are minis. Continue remembers the run — even a mid-battle close comes back at the saved score. Rogue has its own short help on the landing if you want the shop and luck stuff in one place.</p>
+            <p><strong>Rogue</strong> is the main mode. One Bey. Eighteen matches, each first to 7, then the night keeps going if you beat the hidden final. New Game: pick Bronze / Silver / Gold, then three blades, three ratchets, three bits — same as Quick Play. Win a match, pick an upgrade in the shop. Lose, and the run is over. Matches 6 and 12 are minis. Continue remembers the run — even a mid-battle close comes back at the saved score. Rogue has its own short help on the landing if you want the shop and luck stuff in one place.</p>
             <p><strong>Campaign</strong> is locked. Story is not in yet. That door is a promise, not a bug.</p>
             <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
         </section>
@@ -1265,7 +1265,7 @@ function renderHowTo(){
             <h2>X-Rail and X-Exit</h2>
             <p>The gold ring on the upper stadium is the X-Rail. You hook it from the inner face with remaining counter-clockwise bite and speed, not with peak RPM on a card. Near-misses can still ride. You cannot capture from the back of the rail or while you are already in a painted hole. Failed hooks bounce softer and keep a little CCW, so a high-RPM Attack can wind on instead of skating straight off. Tired wide laps bounce more often — low remaining RPM raises the bar so they do not ride out a dead match.</p>
             <p>Ride speed is the speed you arrived with, plus a light RPM drive. Exit speed is that carried rail speed. A rail-break ejector shoves toward stadium middle, not out through a pocket.</p>
-            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Attack bits dump leftover through-speed after they pass the middle so a healthy exit does not punch Over or Xtreme; a tired dump or a smash after they left the ring can still pocket. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
+            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Beys do not brake themselves off a pocket. If that line hits Over or Xtreme, it rolls: 35% self-KO at 80%+ RPM, 45% from 60–79%, more often when tired. A smash after they left the ring is still a smash. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
             <p>Swinging off that exit into a clash is a real hit. You get a slight knock boost. The swinging Bey dumps leftover follow-through so they bounce instead of riding through into a pocket. Non-Attack bits on that swing hit with Attack-bit weight for that contact. Riding the rail is not that swing.</p>
         </section>
 
@@ -1471,6 +1471,10 @@ function createBackButton(onClick){
 //=========================
 function showBladeDraft(){
     Game.screen="bladeDraft";
+    if(Game.mode==="rogue" && Game.selection?.bladePool?.length){
+        renderBladeDraft();
+        return;
+    }
     const pool=playableBlades().filter(blade=>{
         if(blade.hidden) return false;
         if(Game.mode==="bronze") return blade.tier==="Bronze";
@@ -1483,15 +1487,20 @@ function showBladeDraft(){
 function renderBladeDraft(){
     const pool=Game.selection?.bladePool||[], page=Game.selection?.bladePage||0, size=3;
     const total=Math.max(1,Math.ceil(pool.length/size)), safe=Math.min(Math.max(page,0),total-1); Game.selection.bladePage=safe;
+    const league=Game.mode==="rogue"
+        ? `ROGUE · ${String(Game.selection?.rogueTier||"").toUpperCase()}`
+        : (Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL");
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL"}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${league}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
     const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
     if(total>1){
         const nav=document.createElement("div"); nav.className="selection-nav";;
         nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
         document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
     }
-    container.appendChild(createBackButton(()=>Game.mode==="rogue"?SpinWarsRogue.showLanding():renderLeagueSelect()));
+    container.appendChild(createBackButton(()=>Game.mode==="rogue"
+        ?(typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.showTierPick?SpinWarsRogue.showTierPick():SpinWarsRogue.showLanding())
+        :renderLeagueSelect()));
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 
@@ -1570,7 +1579,7 @@ function battleHudMetaValue(s,side){
 function createBladeCard(blade){
     const card=document.createElement("article");
     const sprite=bladeSpritePath(blade);
-    const luck=Game.mode==="rogue"?rogueLuckGrade(blade.tier):"";
+    const luck=Game.mode==="rogue" && !Game.selection?.rogueTier?rogueLuckGrade(blade.tier):"";
     card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}`;
     card.setAttribute("role","button");
     card.tabIndex=0;
@@ -1624,10 +1633,6 @@ function chooseBlade(blade,card){
     card.style.boxShadow="0 0 30px gold";
 
     setTimeout(()=>{
-        if(Game.mode==="rogue"){
-            SpinWarsRogue.onStarterPicked(blade);
-            return;
-        }
         showRatchetPlaceholder();
     },350);
 
@@ -1675,8 +1680,15 @@ function showRatchetPlaceholder(){
     if(Game.mode==="custom"){
         Game.selection=Game.selection||{}; Game.selection.ratchetPool=[...RATCHETS]; Game.selection.ratchetPage=Game.selection.ratchetPage||0; renderRatchetPage(); return;
     }
-    [...RATCHETS].sort(()=>Math.random()-0.5).slice(0,3).forEach(r=>container.appendChild(ratchetCard(r)));
-    container.appendChild(createBackButton(()=>showBladeDraft()));
+    const pool=Game.mode==="rogue" && Game.selection?.ratchetPool?.length
+        ? Game.selection.ratchetPool
+        : [...RATCHETS].sort(()=>Math.random()-0.5).slice(0,3);
+    pool.forEach(r=>container.appendChild(ratchetCard(r)));
+    const backToBlades=()=>Game.mode==="rogue" && Game.selection?.bladePool?.length
+        ? renderBladeDraft()
+        : showBladeDraft();
+    container.appendChild(createBackButton(backToBlades));
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 function renderRatchetPage(){
     const pool=Game.selection.ratchetPool,page=Game.selection.ratchetPage,size=6,total=Math.max(1,Math.ceil(pool.length/size)),safe=Math.min(Math.max(page,0),total-1); Game.selection.ratchetPage=safe;
@@ -1718,14 +1730,27 @@ function bitCard(bit){
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
         description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
         sprite:bitSpriteFile(bit),
-        onClick:()=>{Game.player.bit=bit;showComboCard();}});
+        onClick:()=>{
+            Game.player.bit=bit;
+            if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+                SpinWarsRogue.onStarterPicked(Game.player.blade,Game.player.ratchet,bit);
+                return;
+            }
+            showComboCard();
+        }});
 }
 
 function showBitDraft(){
     Game.screen="bitDraft"; const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">◉</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BIT</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BITS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="bitContainer"></section></main>`;
     if(Game.mode==="custom"){Game.selection=Game.selection||{};Game.selection.bitPool=selectableBits();Game.selection.bitPage=Game.selection.bitPage||0;renderBitPage();return;}
-    const c=document.getElementById("bitContainer");selectableBits().sort(()=>Math.random()-0.5).slice(0,3).forEach(bit=>c.appendChild(bitCard(bit)));c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
+    const c=document.getElementById("bitContainer");
+    const pool=Game.mode==="rogue" && Game.selection?.bitPool?.length
+        ? Game.selection.bitPool
+        : selectableBits().sort(()=>Math.random()-0.5).slice(0,3);
+    pool.forEach(bit=>c.appendChild(bitCard(bit)));
+    c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 function renderBitPage(){
     const pool=Game.selection.bitPool,page=Game.selection.bitPage,size=6,total=Math.max(1,Math.ceil(pool.length/size)),safe=Math.min(Math.max(page,0),total-1);Game.selection.bitPage=safe;
@@ -4570,29 +4595,28 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
     const heading=newBattleClamp(Number(align)||0,-1,1);
     const into=newBattleClamp((heading-0.05)/0.75,0,1);
     let kind=source||"smash";
-    if(
-        isAttackTypeBit(s) &&
-        recentXExitSwing(s) &&
-        kind==="smash"
-    ){
+    /*
+      X-Exit into a pocket: do not steer them off the hole.
+      Fly the line, then roll. A smash after they left the ring
+      still uses smash recover below.
+    */
+    if(recentXExitSwing(s)){
         const hitAfterExit=
-            (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40;
-        if(!hitAfterExit) kind="rail";
+            (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40 &&
+            force>=FINISH_TUNING.smashForce;
+        if(!hitAfterExit){
+            const roll=typeof SpinWarsXRailEngine!=="undefined" &&
+                typeof SpinWarsXRailEngine.xExitPocketRecoverChance==="function"
+                ? SpinWarsXRailEngine.xExitPocketRecoverChance(rpm)
+                : (rpm>=0.80?0.65:rpm>=0.60?0.55:0.30);
+            return newBattleClamp(roll, 0.05, 0.95);
+        }
     }
     /*
       Smash + straight line + real force beats high RPM.
       Rail miss can still self-KO, but climbs more than a smash.
       Limp dumps climb when healthy.
     */
-    if(kind==="dump"){
-        if(isAttackTypeBit(s) && recentXExitSwing(s)){
-            const hitAfterExit=
-                (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40;
-            if(!(hitAfterExit && force>=FINISH_TUNING.smashForce)){
-                kind="rail";
-            }
-        }
-    }
     if(kind==="dump"){
         const knocked=force>=FINISH_TUNING.mouthForce;
         if(!knocked){
@@ -4610,15 +4634,8 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
             rpm*0.28-
             into*0.14-
             tilt*0.04;
-        if(isAttackTypeBit(s) && recentXExitSwing(s)){
-            chance=
-                0.72+
-                rpm*0.20-
-                into*0.08-
-                tilt*0.03;
-        }
         if(rpm<0.28) chance*=0.48;
-        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, isAttackTypeBit(s)&&recentXExitSwing(s)?0.92:0.88);
+        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.88);
     }
     const glance=Math.pow(1-into,1.35);
     /*
@@ -4720,14 +4737,13 @@ function finishEntrySource(impactQualified,railQualified,s,force,align){
     const fromRail=railQualified||recentRailContext(s,now);
     const smashLine=fromRail?FINISH_TUNING.railSmashAlign:FINISH_TUNING.smashAlign;
     /*
-      Attack X-Exit through-shots must not inherit smash credit from a
-      clash that happened on the rail. A hit after they left the ring
-      is still a smash. Healthy rail dumps climb; they can still KO.
+      X-Exit through-shots must not inherit smash credit from a clash
+      that happened on the rail. A hit after they left the ring is
+      still a smash. Pocket KO is the RPM roll in finishRecoveryChance.
     */
     const hitAfterExit=
         (Number(s?.lastImpactAt)||0)>(Number(s?.railExitAt)||0)+40;
     if(
-        isAttackTypeBit(s) &&
         recentXExitSwing(s) &&
         fromRail &&
         !(hitAfterExit && force>=FINISH_TUNING.smashForce && !parked)

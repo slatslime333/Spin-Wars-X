@@ -1706,14 +1706,15 @@ function stopLiveBattle(){
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
 }
 
-function createRun(blade){
-    const parts=starterParts(blade);
+function createRun(blade,ratchet,bit){
+    const parts=(ratchet&&bit)?{ratchet,bit}:starterParts(blade);
+    const startTier=String(Game.selection?.rogueTier||blade.tier||"Silver");
     Game.mode="rogue";
     Game.rogue={
         runStatus:"running",
         matchIndex:1,
         startingBeyId:blade.name,
-        startingTier:blade.tier||"Silver",
+        startingTier:startTier,
         currentRogueTier:"Bronze",
         enhanced:false,
         hubsWithoutForm:0,
@@ -2301,7 +2302,7 @@ function showLanding(){
             <button class="home-door rip" id="rogueNewGame" type="button">
                 <span class="home-door-kicker">NEW RUN</span>
                 <b>NEW GAME</b>
-                <small>Pick a starting Bey</small>
+                <small>Pick a tier. Build a combo.</small>
             </button>
             <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
                 <span class="home-door-kicker">SAVE</span>
@@ -2331,12 +2332,12 @@ function showLanding(){
 
 function requestNewGame(){
     if(!hasSave()){
-        startBladePick();
+        showTierPick();
         return;
     }
     const save=peekSave();
     const box=document.getElementById("rogueNewConfirm");
-    if(!box){startBladePick();return;}
+    if(!box){showTierPick();return;}
     box.hidden=false;
     box.innerHTML=`<section class="menu-card rogue-intro-card">
         <p class="eyebrow">REPLACE SAVE</p>
@@ -2345,20 +2346,59 @@ function requestNewGame(){
         <button class="rip-btn" id="rogueNewConfirmGo" type="button">START NEW GAME</button>
         <button class="menu-btn silver" id="rogueNewConfirmNo" type="button">BACK</button>
     </section>`;
-    document.getElementById("rogueNewConfirmGo").onclick=()=>startBladePick();
+    document.getElementById("rogueNewConfirmGo").onclick=()=>showTierPick();
     document.getElementById("rogueNewConfirmNo").onclick=()=>{box.hidden=true;box.innerHTML="";};
 }
 
-function startBladePick(){
+function showTierPick(){
     Game.mode="rogue";
-    showBladeDraft();
-    const p=document.querySelector(".selection-header p");
-    if(p) p.textContent="ROGUE · STARTING BEY";
-    const h=document.querySelector(".selection-header h1");
-    if(h) h.textContent="STARTING BEY";
-    const back=document.querySelector(".back-btn");
-    if(back) back.onclick=()=>showLanding();
+    Game.screen="rogueTier";
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-landing">
+        ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
+        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:"Pick a tier. Then three blades, three ratchets, three bits."}):""}
+        <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
+            <button class="home-league bronze" type="button" data-tier="Bronze">
+                <span class="home-league-copy"><b>BRONZE</b><small>Hard early, easier late. Enhance after 5. No evolve.</small></span>
+            </button>
+            <button class="home-league silver" type="button" data-tier="Silver">
+                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance.</small></span>
+            </button>
+            <button class="home-league gold" type="button" data-tier="Gold">
+                <span class="home-league-copy"><b>GOLD</b><small>Easy start, hard late. Climb Bronze → Silver → Gold.</small></span>
+            </button>
+        </nav>
+    </main>`;
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
+    document.querySelectorAll("[data-tier]").forEach(btn=>{
+        btn.onclick=()=>startRogueDraft(btn.dataset.tier);
+    });
     mountDevButton();
+}
+
+function startRogueDraft(tier){
+    Game.mode="rogue";
+    const t=String(tier||"Bronze");
+    const blades=playableBlades().filter(b=>b && !b.hidden && String(b.tier)===t);
+    const bladePool=shuffle(blades).slice(0,3);
+    const ratchetPool=shuffle(typeof RATCHETS!=="undefined"?RATCHETS.slice():[]).slice(0,3);
+    const bitPool=shuffle(
+        typeof selectableBits==="function"?selectableBits():[]
+    ).slice(0,3);
+    Game.selection=Game.selection||{};
+    Game.selection.rogueTier=t;
+    Game.selection.bladePool=bladePool;
+    Game.selection.bladePage=0;
+    Game.selection.ratchetPool=ratchetPool;
+    Game.selection.bitPool=bitPool;
+    if(typeof renderBladeDraft==="function") renderBladeDraft();
+    else if(typeof showBladeDraft==="function") showBladeDraft();
+    mountDevButton();
+}
+
+function startBladePick(){
+    showTierPick();
 }
 
 function showHelp(){
@@ -2375,9 +2415,9 @@ function showHelp(){
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>Pick one Bey to start. Your bit and ratchet are random. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
+            <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>Blade cards show luck only in Rogue: Bronze A, Silver B, Gold C. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is a hard start you can leave, then a kinder shop and kinder nights as you snowball. Gold opens gentler and squeezes later. Silver sits in the middle.</p>
+            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is a hard start you can leave, then a kinder shop and kinder nights as you snowball. Gold opens gentler and squeezes later. Silver sits in the middle.</p>
             <p>Bronze cannot evolve. After match 5 it can Enhance once — honeycomb, +5 on your best 3, +3 on the rest. Silver can evolve after a few wins, then Enhance. Gold can climb Bronze → Silver → Gold. Form cards wait for those windows. BACK keeps your current form.</p>
             <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Some opponents are easy. Some are ahead. Bronze stays a fight early and eases off later; Gold is the reverse. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
         </section>
@@ -2402,15 +2442,15 @@ function showIntro(){
     showLanding();
 }
 
-function beginRun(blade){
-    createRun(blade);
+function beginRun(blade,ratchet,bit){
+    createRun(blade,ratchet,bit);
     generateCpu();
     showComboCard();
     persist();
 }
 
-function onStarterPicked(blade){
-    beginRun(blade);
+function onStarterPicked(blade,ratchet,bit){
+    beginRun(blade, ratchet||Game.player?.ratchet, bit||Game.player?.bit);
 }
 
 function decorateVs(root){
@@ -3383,7 +3423,7 @@ function flavorCallLine(){
 
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
-    showIntro,showLanding,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
+    showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
