@@ -519,6 +519,32 @@ if(rNow>0.08 && !(s.xrailExitRampActive) && (s.railExitRefractory||0)<=0){
 }
 
 /*
+  X-Exit Attack overshoot: the top V sends them through center at
+  rail speed. Bleed far-side outward so a healthy exit does not
+  punch Over/Xtreme. A smash after they left the ring still flies.
+*/
+if(
+    attackLike &&
+    !s.railEngaged &&
+    !s.xrailExitRampActive &&
+    s.lastXRailExitReason==="x-exit"
+){
+    const smashIn=
+        (Number(s.lastImpactForce)||0)>=0.020 &&
+        (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40 &&
+        impactHold>0.22;
+    if(!smashIn && rNow>0.18 && (Number(s.y)||0)>0.10){
+        const outward=s.vx*radialX+s.vy*radialY;
+        if(outward>0.0015){
+            const cut=rpm<0.32?0.36:0.78;
+            const frameCut=frameBlend(cut,dt);
+            s.vx-=radialX*outward*frameCut;
+            s.vy-=radialY*outward*frameCut;
+        }
+    }
+}
+
+/*
   LOW RPM
   -------
   No hard "stop orbiting" switch. As RPM falls, target speed and
@@ -851,7 +877,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.4.3",
+    version:"1.4.4",
     step,
     homeOrbitRadius,
     orbitOmega,

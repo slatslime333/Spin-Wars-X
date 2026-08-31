@@ -251,6 +251,7 @@ function nearestSolid(x,y){return nearestOn(buildSolidGeometry(),x,y);}
 function tangentAt(point,direction=1){
  if(!point)return null;const sign=direction<0?-1:1;return{x:point.tx*sign,y:point.ty*sign};
 }
+function isAttackBit(s){return String(s?.bit?.type||"").toLowerCase()==="attack";}
 function beyRadius(s){const r=Number(s?.radius);return Number.isFinite(r)&&r>0?r:DEFAULT_BEY_RADIUS;}
 function contactRadius(s){return beyRadius(s)+RAIL_HALF_WIDTH+CONTACT_EPSILON;}
 function setContactDebug(s,p,distance,kind){
@@ -553,7 +554,9 @@ function exitRampStep(s,dt){
   s.vx=heading.x*targetSpeed;s.vy=heading.y*targetSpeed;
   s.railExitForce=targetSpeed;s.railExitVector={x:heading.x,y:heading.y};s.railExitBias=0;s.railExitRampCompleted=true;
   s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,0.46);
-  s.xExitCenterLock=0.12;
+  /* Attack bits punch through center into Over/Xtreme if the lock
+     holds a straight inbound line too long. Cut it shorter. */
+  s.xExitCenterLock=isAttackBit(s)?0.08:0.12;
   s.xrailExitForceCenter=false;
   return false;
  }
@@ -622,6 +625,23 @@ function stepCenterLock(s,dt){
  }
  s.vx=hx*speed;
  s.vy=hy*speed;
+ /*
+   Past the equator the inbound X-Exit line points at Over/Xtreme.
+   Attack bits keep that rail speed; fold leftover through-shot into
+   CCW so a healthy exit sits in the bowl. Tired dumps still carry.
+ */
+ if(isAttackBit(s) && s.y>0.08){
+  const r=Math.hypot(s.x,s.y)||1;
+  const nx=s.x/r,ny=s.y/r;
+  const tx=-ny,ty=nx;
+  const along=s.vx*tx+s.vy*ty;
+  const out=s.vx*nx+s.vy*ny;
+  const keepOut=(Number(s.rpm)||1)<0.32?out*0.55:Math.min(0,out)*0.40;
+  const tan=Math.max(Math.abs(along),speed*0.52)*(along>=0?1:-1);
+  s.vx=tx*tan+nx*keepOut;
+  s.vy=ty*tan+ny*keepOut;
+  s.xExitCenterLock=Math.min(Number(s.xExitCenterLock)||0,0.02);
+ }
  s.x+=s.vx*dt*60;
  s.y+=s.vy*dt*60;
  s.lastXRailResult="x-exit-center";
@@ -688,5 +708,5 @@ function inspect(s){
  if(!s)return null;const p=nearest(s.x,s.y);if(!p)return null;const c=getContact(s,p),swept=sweptRailContact(s),solid=sweptSolidContact(s);
  return{distance:c?.distance??null,contactRadius:contactRadius(s),speed:c?.speed??null,normal:c?.normal??null,inward:c?.inward??null,tangential:c?.tangential??null,approachRatio:c?.approachRatio??null,tangentRatio:c?.tangentRatio??null,tilt:c?.tilt??null,previousDistance:s._xrailPrevDistance??null,sweptImpact:!!swept?.impact,sweptEntering:!!swept?.entering,sweptDistance:swept?.distance??null,solidDistance:solid?.distance??null,solidCloser:!!solid?.closer,progress:p.distance,total:buildGeometry().total,engaged:!!s.railEngaged,contacting:!!s.railContacting,result:s.lastXRailResult||null,exitQuality:s.railExitQuality??null,exitEnergyFactor:s.railExitEnergyFactor??null,exitKnockbackMultiplier:s.railExitKnockbackMultiplier??null};
 }
-global.SpinWarsXRailEngine={version:"6.9-finish-mouth",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture};
+global.SpinWarsXRailEngine={version:"6.10-xexit-attack-fold",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture,isAttackBit};
 })(typeof window!=="undefined"?window:globalThis);

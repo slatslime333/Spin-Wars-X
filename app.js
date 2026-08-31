@@ -1265,7 +1265,7 @@ function renderHowTo(){
             <h2>X-Rail and X-Exit</h2>
             <p>The gold ring on the upper stadium is the X-Rail. You hook it from the inner face with remaining counter-clockwise bite and speed, not with peak RPM on a card. Near-misses can still ride. You cannot capture from the back of the rail or while you are already in a painted hole. Failed hooks bounce softer and keep a little CCW, so a high-RPM Attack can wind on instead of skating straight off. Tired wide laps bounce more often — low remaining RPM raises the bar so they do not ride out a dead match.</p>
             <p>Ride speed is the speed you arrived with, plus a light RPM drive. Exit speed is that carried rail speed. A rail-break ejector shoves toward stadium middle, not out through a pocket.</p>
-            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
+            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Attack bits dump leftover through-speed after they pass the middle so a healthy exit does not punch Over or Xtreme; a tired dump or a smash after they left the ring can still pocket. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
             <p>Swinging off that exit into a clash is a real hit. You get a slight knock boost. The swinging Bey dumps leftover follow-through so they bounce instead of riding through into a pocket. Non-Attack bits on that swing hit with Attack-bit weight for that contact. Riding the rail is not that swing.</p>
         </section>
 
@@ -4569,12 +4569,30 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
     const smash=newBattleClamp(force/FINISH_TUNING.knockCap,0,1.15);
     const heading=newBattleClamp(Number(align)||0,-1,1);
     const into=newBattleClamp((heading-0.05)/0.75,0,1);
-    const kind=source||"smash";
+    let kind=source||"smash";
+    if(
+        isAttackTypeBit(s) &&
+        recentXExitSwing(s) &&
+        kind==="smash"
+    ){
+        const hitAfterExit=
+            (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40;
+        if(!hitAfterExit) kind="rail";
+    }
     /*
       Smash + straight line + real force beats high RPM.
       Rail miss can still self-KO, but climbs more than a smash.
       Limp dumps climb when healthy.
     */
+    if(kind==="dump"){
+        if(isAttackTypeBit(s) && recentXExitSwing(s)){
+            const hitAfterExit=
+                (Number(s.lastImpactAt)||0)>(Number(s.railExitAt)||0)+40;
+            if(!(hitAfterExit && force>=FINISH_TUNING.smashForce)){
+                kind="rail";
+            }
+        }
+    }
     if(kind==="dump"){
         const knocked=force>=FINISH_TUNING.mouthForce;
         if(!knocked){
@@ -4592,8 +4610,15 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
             rpm*0.28-
             into*0.14-
             tilt*0.04;
+        if(isAttackTypeBit(s) && recentXExitSwing(s)){
+            chance=
+                0.72+
+                rpm*0.20-
+                into*0.08-
+                tilt*0.03;
+        }
         if(rpm<0.28) chance*=0.48;
-        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, 0.88);
+        return newBattleClamp(chance, rpm<0.22 ? 0.10 : 0.18, isAttackTypeBit(s)&&recentXExitSwing(s)?0.92:0.88);
     }
     const glance=Math.pow(1-into,1.35);
     /*
@@ -4694,6 +4719,21 @@ function finishEntrySource(impactQualified,railQualified,s,force,align){
         : 0;
     const fromRail=railQualified||recentRailContext(s,now);
     const smashLine=fromRail?FINISH_TUNING.railSmashAlign:FINISH_TUNING.smashAlign;
+    /*
+      Attack X-Exit through-shots must not inherit smash credit from a
+      clash that happened on the rail. A hit after they left the ring
+      is still a smash. Healthy rail dumps climb; they can still KO.
+    */
+    const hitAfterExit=
+        (Number(s?.lastImpactAt)||0)>(Number(s?.railExitAt)||0)+40;
+    if(
+        isAttackTypeBit(s) &&
+        recentXExitSwing(s) &&
+        fromRail &&
+        !(hitAfterExit && force>=FINISH_TUNING.smashForce && !parked)
+    ){
+        return "rail";
+    }
     if(
         impactQualified &&
         force>=FINISH_TUNING.smashForce &&
