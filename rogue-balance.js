@@ -277,8 +277,8 @@ function patch(){
     }
     const originalStarter=global.SpinWarsRogue.onStarterPicked;
     if(typeof originalStarter==="function"){
-        global.SpinWarsRogue.onStarterPicked=function(blade){
-            const out=originalStarter.call(this,blade);
+        global.SpinWarsRogue.onStarterPicked=function(){
+            const out=originalStarter.apply(this,arguments);
             sync();
             return out;
         };

@@ -524,6 +524,15 @@ footer{
 .home-league.silver{border-color:#6d757e;background:#14181c}
 .home-league.gold{border-color:#8a6a22;background:#18140c}
 .home-league.custom{border-color:#2d6a44;background:#101612}
+.rogue-tier-pick .home-league{
+  min-height:88px;
+  align-items:flex-start;
+}
+.rogue-tier-pick .home-league-copy small{
+  white-space:normal;
+  line-height:1.35;
+  max-width:36em;
+}
 .home-league.locked{
   opacity:.55;
   cursor:default;
