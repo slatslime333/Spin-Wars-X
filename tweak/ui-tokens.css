@@ -1,0 +1,181 @@
+/* =========================================================
+   SPIN WARS X — UI TOKENS (kit / overlay HUD)
+   ---------------------------------------------------------
+   Frozen look for the UI pass. Not linked from index.html yet.
+   Open tweak/ui-kit.html to review. When a screen family
+   migrates, copy these into style.css :root (or @import).
+
+   Steal from Platinum: overlay HUD, chunky outlined windows,
+   HP-style bars, dense packing, stadium as the hero.
+
+   Do not steal: Pokéballs, Lv, HP label, gender, Run,
+   turn-command menus, 3D cameras, illustrated stadiums.
+
+   Stadium SVG in app.js stays. Chrome overlays #newStadium.
+   ========================================================= */
+
+:root{
+  --swx-ink:#1a1410;
+  --swx-ink2:#2a2218;
+  --swx-cream:#f4ead4;
+  --swx-cream-deep:#e8d9b8;
+  --swx-window:#f7efdc;
+  --swx-outline:#2a2218;
+  --swx-outline-w:3px;
+  --swx-shadow:4px 4px 0 #2a2218;
+  --swx-green:#1ad15a;
+  --swx-green-dim:#0c6b32;
+  --swx-red:#e31c3d;
+  --swx-gold:#f0b429;
+  --swx-gold-deep:#8a5a10;
+  --swx-muted:#6b5c48;
+  --swx-bar-track:#2a2218;
+  --swx-bar-fill:#3ecf5a;
+  --swx-bar-loss:#c9a227;
+  --swx-bar-gain:#6ee7ff;
+  --swx-stamp:#14c24e;
+  --swx-radius:2px;
+  --swx-font:Kanit,Impact,"Arial Black",sans-serif;
+  --swx-display:Staatliches,Impact,sans-serif;
+}
+
+.swx-window{
+  background:var(--swx-window);
+  color:var(--swx-ink);
+  border:var(--swx-outline-w) solid var(--swx-outline);
+  box-shadow:var(--swx-shadow);
+  border-radius:var(--swx-radius);
+}
+
+.swx-stamp{
+  font-family:var(--swx-display);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:#04140a;
+  background:var(--swx-stamp);
+  border:var(--swx-outline-w) solid var(--swx-outline);
+  box-shadow:var(--swx-shadow);
+  border-radius:var(--swx-radius);
+  padding:.55em .9em .4em;
+  cursor:pointer;
+}
+
+.swx-stamp:active{
+  transform:translate(2px,2px);
+  box-shadow:2px 2px 0 var(--swx-outline);
+}
+
+.swx-stamp.ghost{
+  background:var(--swx-cream);
+  color:var(--swx-ink);
+}
+
+.swx-stamp.danger{
+  background:var(--swx-red);
+  color:#fff8f0;
+}
+
+.swx-bar{
+  height:10px;
+  background:var(--swx-bar-track);
+  border:2px solid var(--swx-outline);
+  border-radius:1px;
+  position:relative;
+  overflow:hidden;
+}
+
+.swx-bar > i{
+  display:block;
+  height:100%;
+  background:var(--swx-bar-fill);
+}
+
+.swx-bar.you > i{background:#3ecf5a}
+.swx-bar.them > i{background:#e31c3d}
+
+.swx-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.swx-row{
+  display:grid;
+  grid-template-columns:72px 1fr auto;
+  gap:10px;
+  align-items:center;
+  background:var(--swx-window);
+  color:var(--swx-ink);
+  border:var(--swx-outline-w) solid var(--swx-outline);
+  box-shadow:var(--swx-shadow);
+  padding:8px 10px;
+  min-height:88px;
+}
+
+.swx-row img,
+.swx-row .swx-art{
+  width:72px;
+  height:72px;
+  object-fit:contain;
+  background:#efe4c8;
+  border:2px solid var(--swx-ink2);
+}
+
+.swx-dialogue{
+  background:var(--swx-window);
+  color:var(--swx-ink);
+  border:var(--swx-outline-w) solid var(--swx-outline);
+  box-shadow:var(--swx-shadow);
+  padding:10px 12px 12px;
+  font-size:15px;
+  line-height:1.35;
+}
+
+.swx-dialogue small{
+  display:block;
+  font-family:var(--swx-display);
+  letter-spacing:.14em;
+  font-size:11px;
+  color:var(--swx-green-dim);
+  margin-bottom:4px;
+}
+
+.swx-nameplate{
+  background:var(--swx-window);
+  color:var(--swx-ink);
+  border:var(--swx-outline-w) solid var(--swx-outline);
+  box-shadow:var(--swx-shadow);
+  min-width:168px;
+  padding:6px 8px 8px;
+}
+
+.swx-nameplate strong{
+  font-family:var(--swx-display);
+  font-size:18px;
+  letter-spacing:.04em;
+  display:block;
+  line-height:1;
+}
+
+.swx-nameplate em{
+  font-style:normal;
+  font-size:11px;
+  color:var(--swx-muted);
+  font-weight:700;
+}
+
+.swx-pips{
+  display:flex;
+  gap:5px;
+  align-items:center;
+}
+
+.swx-pips i{
+  width:10px;
+  height:10px;
+  background:#cbb892;
+  border:2px solid var(--swx-outline);
+}
+
+.swx-pips i.on{background:var(--swx-green)}
+.swx-pips.them i.on{background:var(--swx-red)}
