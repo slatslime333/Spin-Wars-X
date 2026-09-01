@@ -1161,6 +1161,46 @@ function openSheet(title,body,actions){
     return root;
 }
 
+function bgHTML(kind){
+    return `<div class="background is-${kind}" aria-hidden="true"></div><div class="fx-grain" aria-hidden="true"></div><div class="fx-scratch" aria-hidden="true"></div>`;
+}
+const HOME_ART_CANDIDATES=[
+    "assets/homeart.png","assets/homeart.jpg","assets/homeart.jpeg","assets/homeart.webp",
+    "assets/homeart.PNG","assets/HomeArt.png","assets/home-art.png","assets/home_art.png",
+    "assets/ui/homeart.png","assets/blades/homeart.png"
+];
+function bindHomeArt(){
+    const img=document.getElementById("homeArtImg");
+    const wrap=document.querySelector(".lobby-art");
+    const lobby=document.querySelector(".lobby");
+    if(!img||!wrap) return;
+    let i=0;
+    const trySrc=()=>{
+        if(!document.getElementById("homeArtImg")) return;
+        const src=HOME_ART_CANDIDATES[i];
+        if(!src) return;
+        i+=1;
+        img.src=src+"?v=9.61";
+    };
+    img.onload=()=>{
+        wrap.classList.add("has-art");
+        lobby?.classList.add("has-art");
+    };
+    img.onerror=()=>{
+        if(i<HOME_ART_CANDIDATES.length) trySrc();
+    };
+    trySrc();
+    let ticks=0;
+    const poll=setInterval(()=>{
+        if(!document.getElementById("homeArtImg")||wrap.classList.contains("has-art")||++ticks>24){
+            clearInterval(poll);
+            return;
+        }
+        i=0;
+        trySrc();
+    },2000);
+}
+
 function renderMainMenu(){
     Game.screen="menu";
     Game.quickMatch=false;
@@ -1174,15 +1214,21 @@ function renderMainMenu(){
     if(!app) return;
 
     app.innerHTML=`
-    <div class="background stadium"></div>
+    ${bgHTML("lobby")}
     <main class="lobby">
         <section class="lobby-arena">
+            <div class="lobby-art" aria-hidden="true"><img id="homeArtImg" alt=""></div>
             ${homeBowlHTML()}
             <p class="lobby-ver">ALPHA</p>
-            <div class="lobby-brand">
-                <p class="lobby-kicker">BEYBLADE X STADIUM</p>
-                <h1>SPIN WARS<span>X</span></h1>
-                <p class="lobby-tag">Two Beys. X-Rail. First to 7.</p>
+            <div class="swx-mark">
+                <p class="swx-kicker">BEYBLADE X STADIUM</p>
+                <h1 class="swx-logo" aria-label="Spin Wars X">
+                    <span class="swx-word">SPIN</span>
+                    <span class="swx-word wars">WARS</span>
+                    <span class="swx-x">X</span>
+                </h1>
+                <p class="swx-jp" lang="ja">スピンウォーズ<span>Ｘ</span></p>
+                <p class="swx-tag">Two Beys. X-Rail. First to 7.</p>
             </div>
         </section>
         <nav class="lobby-gates" aria-label="Choose a mode">
@@ -1215,6 +1261,7 @@ function renderMainMenu(){
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
     document.querySelector("[data-home='help']")?.addEventListener("click",()=>renderHowTo());
+    bindHomeArt();
 }
 
 function howToKitLine(id){
@@ -1228,7 +1275,7 @@ function renderHowTo(){
     const app=document.getElementById("app");
     if(!app) return;
     app.innerHTML=`
-    <div class="background stadium"></div>
+    ${bgHTML("manual")}
     <main class="room manual">
         ${roomBarHTML({backId:"howtoBack",kicker:"MANUAL",title:"HOW THIS WORKS"})}
         <nav class="manual-chapters" aria-label="Chapters">
@@ -1388,7 +1435,7 @@ function renderLeagueSelect(){
     };
 
     app.innerHTML=`
-    <div class="background stadium"></div>
+    ${bgHTML("board")}
     <main class="room board">
         ${roomBarHTML({backId:"leagueBack",kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
         <p class="board-lead">Featured roll, or draft a league. First to 7.</p>
@@ -1510,10 +1557,12 @@ function startDraft(){
 
     const app=document.getElementById("app");
 
-    app.innerHTML=`
-    <div class="background"></div>
+    app.innerHTML=`${bgHTML("bay")}
     <main class="home home-load">
-        ${homeMarkHTML({compact:true})}
+        <div class="swx-mark">
+            <h1 class="swx-logo" aria-label="Spin Wars X"><span class="swx-word">SPIN</span><span class="swx-word wars">WARS</span><span class="swx-x">X</span></h1>
+            <p class="swx-jp" lang="ja">スピンウォーズ<span>Ｘ</span></p>
+        </div>
         <div class="loading"><div class="loading-fill" id="loadingFill"></div></div>
     </main>`;
 
@@ -1760,7 +1809,7 @@ function renderGarage(active){
     if(active==="blade" && focusPreview.blade && !sel.focusBlade) sel.focusBlade=focusPreview.blade;
     if(active==="ratchet" && focusPreview.ratchet && !sel.focusRatchet) sel.focusRatchet=focusPreview.ratchet;
     if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${bgHTML("bay")}
     <main class="room bay draft-screen">
         ${roomBarHTML({backId:"garageBack",kicker:garageLeagueLine(),title:titles[active]})}
         <nav class="bay-steps draft-steps" aria-label="Combo steps">
@@ -1776,7 +1825,7 @@ function renderGarage(active){
                 <section class="draft-roster" id="garagePicks"></section>
             </div>
         </div>
-        <button type="button" class="room-go" id="draftLock">${locks[active]}</button>
+        <button type="button" class="room-go is-lock" id="draftLock">${locks[active]}</button>
     </main>`;
     const box=document.getElementById("garagePicks");
     if(active==="blade") shown.forEach(item=>box.appendChild(createBladeCard(item)));
@@ -2710,7 +2759,7 @@ function showComboCard(){
     const vsTitle=Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.scoreboardLabel
         ? SpinWarsRogue.scoreboardLabel()
         : "FIRST TO 7";
-    app.innerHTML=`<div class="background"></div><main class="room weigh-in vs-screen">
+    app.innerHTML=`${bgHTML("weigh")}<main class="room weigh-in vs-screen">
       ${roomBarHTML({backId:"vsBack",kicker:Game.mode==="rogue"?"ROGUE WEIGH-IN":"WEIGH-IN",title:vsTitle})}
       ${vsCall}
       <section class="vs-board">
@@ -2718,7 +2767,7 @@ function showComboCard(){
         <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
-      <button class="room-go" id="battleButton" type="button">${playLabel}</button>
+      <button class="room-go is-rip" id="battleButton" type="button">${playLabel}</button>
     </main>`;
     const battleButton=document.getElementById("battleButton");
     if(battleButton) battleButton.onclick=(event)=>{
