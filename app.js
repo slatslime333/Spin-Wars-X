@@ -1129,6 +1129,83 @@ function homeBowlHTML(){
     </div>`;
 }
 
+function roomBarHTML(opts){
+    opts=opts||{};
+    const back=opts.backId
+        ? `<button type="button" class="room-back" id="${opts.backId}">BACK</button>`
+        : `<span></span>`;
+    return `<header class="room-bar">
+        ${back}
+        <div class="room-id"><span>${opts.kicker||""}</span><b>${opts.title||""}</b></div>
+        ${opts.extra||"<span></span>"}
+    </header>`;
+}
+function closeSheet(){
+    document.getElementById("swxSheet")?.remove();
+}
+function openSheet(title,body,actions){
+    closeSheet();
+    const host=document.getElementById("app")||document.body;
+    const root=document.createElement("div");
+    root.id="swxSheet";
+    root.className="sheet-root";
+    root.innerHTML=`<div class="sheet-scrim" id="sheetScrim"></div>
+        <aside class="sheet" role="dialog" aria-label="${title}">
+            <header><b>${title}</b><button type="button" class="sheet-close" id="sheetClose">CLOSE</button></header>
+            <div class="sheet-body">${body}</div>
+            ${actions||""}
+        </aside>`;
+    host.appendChild(root);
+    document.getElementById("sheetScrim")?.addEventListener("click",closeSheet);
+    document.getElementById("sheetClose")?.addEventListener("click",closeSheet);
+    return root;
+}
+
+function bgHTML(kind){
+    const grain=kind==="lobby"?"":`<div class="fx-grain" aria-hidden="true"></div>`;
+    return `<div class="background is-${kind}" aria-hidden="true"></div>${grain}`;
+}
+const HOME_ART_CANDIDATES=[
+    "assets/HomeARt.png","assets/homeart.png","assets/home art.png","assets/home-art.png",
+    "assets/homeart.jpg","assets/homeart.webp","assets/HomeArt.png"
+];
+function bindHomeArt(){
+    const img=document.getElementById("homeArtImg");
+    const wrap=document.querySelector(".lobby-art");
+    const lobby=document.querySelector(".lobby");
+    if(!img||!wrap) return;
+    let i=0;
+    const trySrc=()=>{
+        if(!document.getElementById("homeArtImg")) return;
+        const src=HOME_ART_CANDIDATES[i];
+        if(!src) return;
+        i+=1;
+        img.src=src+"?v=9.64";
+    };
+    img.onload=()=>{
+        wrap.classList.add("has-art");
+        lobby?.classList.add("has-art");
+    };
+    img.onerror=()=>{
+        if(i<HOME_ART_CANDIDATES.length) trySrc();
+    };
+    if(img.complete && img.naturalWidth){
+        wrap.classList.add("has-art");
+        lobby?.classList.add("has-art");
+    }else{
+        trySrc();
+    }
+    let ticks=0;
+    const poll=setInterval(()=>{
+        if(!document.getElementById("homeArtImg")||wrap.classList.contains("has-art")||++ticks>24){
+            clearInterval(poll);
+            return;
+        }
+        i=0;
+        trySrc();
+    },2000);
+}
+
 function renderMainMenu(){
     Game.screen="menu";
     Game.quickMatch=false;
@@ -1142,33 +1219,54 @@ function renderMainMenu(){
     if(!app) return;
 
     app.innerHTML=`
-    <div class="background stadium"></div>
-    <main class="home attract">
-        <div class="attract-ring" aria-hidden="true"></div>
-        <p class="attract-kicker">BEYBLADE X · STADIUM SIM</p>
-        <h1 class="attract-title">SPIN WARS<span>X</span></h1>
-        <p class="attract-tag">Two Beys. X-Rail. First to 7.</p>
-        <p class="home-ver">ALPHA</p>
-        <nav class="mode-rail" aria-label="Choose a mode">
-            <button class="mode-tile is-rogue" data-home="rogue" type="button">
-                <span class="mode-no">01</span>
-                <span class="mode-copy"><small>RUN</small><b>ROGUE</b><em>18 matches · build the Bey · first to 7</em></span>
+    ${bgHTML("lobby")}
+    <main class="lobby has-art">
+        <section class="lobby-arena">
+            <div class="lobby-art" aria-hidden="true"><img id="homeArtImg" src="assets/HomeARt.png" alt=""></div>
+            ${homeBowlHTML()}
+            <p class="lobby-ver">ALPHA</p>
+            <div class="swx-mark">
+                <p class="swx-kicker">BEYBLADE X STADIUM</p>
+                <h1 class="swx-logo" aria-label="Spin Wars X">
+                    <span class="swx-word">SPIN</span>
+                    <span class="swx-word wars">WARS</span>
+                    <span class="swx-x">X</span>
+                </h1>
+                <p class="swx-jp" lang="ja">スピンウォーズ<span>Ｘ</span></p>
+                <p class="swx-tag">Two Beys. X-Rail. First to 7.</p>
+            </div>
+        </section>
+        <nav class="lobby-gates" aria-label="Choose a mode">
+            <button class="lobby-gate is-rogue" data-home="rogue" type="button">
+                <span class="gate-kicker">FEATURED RUN</span>
+                <span class="gate-name">ROGUE</span>
+                <span class="gate-copy">Eighteen matches. Build the Bey. First to 7.</span>
+                <span class="gate-go">ENTER</span>
             </button>
-            <button class="mode-tile is-locked" type="button" aria-disabled="true">
-                <span class="mode-no">02</span>
-                <span class="mode-copy"><small>STORY</small><b>CAMPAIGN</b><em>Coming soon</em></span>
-                <span class="mode-lock">LOCKED</span>
+            <button class="lobby-gate is-play" data-home="quick" type="button">
+                <span class="gate-kicker">QUICK PLAY</span>
+                <span class="gate-name">LET IT RIP</span>
+                <span class="gate-copy">Leagues, random fights, first to 7.</span>
+                <span class="gate-go">PLAY</span>
             </button>
-            <button class="mode-tile is-play" data-home="quick" type="button">
-                <span class="mode-no">03</span>
-                <span class="mode-copy"><small>QUICK PLAY</small><b>LET IT RIP</b><em>Leagues · random fights · first to 7</em></span>
+            <button class="lobby-gate is-locked" type="button" disabled aria-disabled="true">
+                <span class="gate-kicker">STORY</span>
+                <span class="gate-name">CAMPAIGN</span>
+                <span class="gate-copy">Coming soon. This door is a promise.</span>
+                <span class="gate-go">LOCKED</span>
             </button>
-            <button class="mode-help" data-home="help" type="button">HOW TO PLAY</button>
+            <button class="lobby-gate is-help" data-home="help" type="button">
+                <span class="gate-kicker">MANUAL</span>
+                <span class="gate-name">HOW TO PLAY</span>
+                <span class="gate-copy">The whole game, one chapter at a time.</span>
+                <span class="gate-go">READ</span>
+            </button>
         </nav>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
     document.querySelector("[data-home='help']")?.addEventListener("click",()=>renderHowTo());
+    bindHomeArt();
 }
 
 function howToKitLine(id){
@@ -1182,27 +1280,24 @@ function renderHowTo(){
     const app=document.getElementById("app");
     if(!app) return;
     app.innerHTML=`
-    <div class="background stadium"></div>
-    <main class="menu howto">
-        <header class="howto-head">
-            <p class="home-kicker">SPIN WARS X</p>
-            <h1>HOW THIS WORKS</h1>
-            <p class="howto-lead">Two Beys. One stadium. First to 7. This is the whole game, in the same voice I would use if you asked me at the door.</p>
-        </header>
-        <nav class="howto-toc" aria-label="Jump">
-            <a href="#ht-start">Start</a>
-            <a href="#ht-modes">Modes</a>
-            <a href="#ht-combo">Combo</a>
-            <a href="#ht-stats">Stats</a>
-            <a href="#ht-launch">Launch</a>
-            <a href="#ht-battle">Battle</a>
-            <a href="#ht-rail">X-Rail</a>
-            <a href="#ht-finish">Finishes</a>
-            <a href="#ht-combat">Dash &amp; kits</a>
-            <a href="#ht-score">Score</a>
+    ${bgHTML("manual")}
+    <main class="room manual">
+        ${roomBarHTML({backId:"howtoBack",kicker:"MANUAL",title:"HOW THIS WORKS"})}
+        <nav class="manual-chapters" aria-label="Chapters">
+            <button type="button" data-ht="0" class="on">The game</button>
+            <button type="button" data-ht="1">Modes</button>
+            <button type="button" data-ht="2">Combo</button>
+            <button type="button" data-ht="3">Stats</button>
+            <button type="button" data-ht="4">Launch</button>
+            <button type="button" data-ht="5">Battle</button>
+            <button type="button" data-ht="6">X-Rail</button>
+            <button type="button" data-ht="7">Finishes</button>
+            <button type="button" data-ht="8">Dash &amp; kits</button>
+            <button type="button" data-ht="9">Score</button>
         </nav>
+        <div class="manual-page" id="howtoPage">
 
-        <section class="menu-card howto-card" id="ht-start">
+        <section class="howto-card is-on" id="ht-start">
             <h2>What you are playing</h2>
             <p>You and the CPU each have one Beyblade. You launch. They spin in the bowl. They clash, they ride the X-Rail, they fall in holes, or they run out of spin. First player to 7 points wins the match.</p>
             <p>Points come from finishes, not from a health bar you click. Spin Finish is +1 when the other Bey hits 0 RPM. Over is +2 — left or right pocket. Xtreme is +3 — the center pocket. That is the whole scoring of a round. The rest is how you get there.</p>
@@ -1213,7 +1308,7 @@ function renderHowTo(){
             <h2>The three doors</h2>
             <p><strong>Rogue</strong> is the main mode. One Bey. Eighteen matches, each first to 7, then the night keeps going if you beat the hidden final. New Game: pick Bronze / Silver / Gold, then three blades, three ratchets, three bits — same as Quick Play. Win a match, pick an upgrade in the shop. Lose, and the run is over. Matches 6 and 12 are minis. Continue remembers the run — even a mid-battle close comes back at the saved score. Rogue has its own short help on the landing if you want the shop and luck stuff in one place.</p>
             <p><strong>Campaign</strong> is locked. Story is not in yet. That door is a promise, not a bug.</p>
-            <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
+            <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is all parts. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-combo">
@@ -1222,7 +1317,7 @@ function renderHowTo(){
             <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, OVR, and the HIT / HOLD / MOVE boxes.</p>
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. Compatibility matters — an Attack blade is happier on Rush or Flat than on Ball. A Defense blade wants Needle, Hexa, Ball, that family. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
             <p><strong>Ratchet.</strong> Height is exposure. 60 sits in. 70 is a step out. 80 is the tall, pokey one — more attack and knock on the card, less hold. Sides change the shape of those numbers; 1-something is wild and asymmetric, 9-something is compact and stubborn. You will feel 80 more than you will feel a 2-point stat bump.</p>
-            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not in the garage.</p>
+            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not selectable.</p>
             <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is two or three sentences about what the Beys are trying to do, not a stat lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
         </section>
 
@@ -1297,12 +1392,38 @@ function renderHowTo(){
             <p>Rogue run totals and boss bonuses live on a separate run summary when the run ends. The landing has Continue when a run is saved, and a Run Scoreboard of finished nights.</p>
             <p>If you only remember four things: bit is the path, launch is the first decision that matters, Attack melts spin and Knockback shoves, first to 7. The rest is why a clean smash into Xtreme feels like the whole game in one second.</p>
         </section>
+        </div>
+        <footer class="manual-foot">
+            <button type="button" id="howtoPrev">PREV</button>
+            <span id="howtoPos">1 / 10</span>
+            <button type="button" id="howtoNext">NEXT</button>
+        </footer>
     </main>`;
-    const main=document.querySelector(".menu");
-    if(main){
-        main.insertBefore(createBackButton(()=>renderMainMenu()), main.firstChild);
-        main.appendChild(createBackButton(()=>renderMainMenu()));
-    }
+    document.getElementById("howtoBack")?.addEventListener("click",()=>renderMainMenu());
+    bindHowToPager(document.querySelector(".manual"));
+}
+function bindHowToPager(root){
+    if(!root) return;
+    const cards=[...root.querySelectorAll(".howto-card")];
+    const chips=[...root.querySelectorAll("[data-ht]")];
+    let i=0;
+    const show=n=>{
+        i=Math.max(0,Math.min(cards.length-1,n));
+        cards.forEach((c,idx)=>c.classList.toggle("is-on",idx===i));
+        chips.forEach((c,idx)=>c.classList.toggle("on",idx===i));
+        const page=document.getElementById("howtoPage");
+        if(page) page.scrollTop=0;
+        const prev=document.getElementById("howtoPrev");
+        const next=document.getElementById("howtoNext");
+        if(prev) prev.disabled=i===0;
+        if(next) next.disabled=i===cards.length-1;
+        const pos=document.getElementById("howtoPos");
+        if(pos) pos.textContent=`${i+1} / ${cards.length}`;
+    };
+    chips.forEach((c,idx)=>c.addEventListener("click",()=>show(idx)));
+    document.getElementById("howtoPrev")?.addEventListener("click",()=>show(i-1));
+    document.getElementById("howtoNext")?.addEventListener("click",()=>show(i+1));
+    show(0);
 }
 
 function renderLeagueSelect(){
@@ -1310,35 +1431,59 @@ function renderLeagueSelect(){
     Game.quickMatch=false;
     const app=document.getElementById("app");
     if(!app) return;
+    const info={
+        quick:{title:"QUICK MATCH",body:"<p>Random combos for you and the CPU. Reroll either side on the weigh-in, then PLAY. First to 7. A new match always starts with 2 ability charges.</p>"},
+        bronze:{title:"BRONZE LEAGUE",body:"<p>Draft from the Bronze pool. Three blades, three ratchets, three bits. First to 7.</p>"},
+        silver:{title:"SILVER LEAGUE",body:"<p>Draft from the Silver pool. Same three-and-three pick as Bronze. Mid-tier blades.</p>"},
+        gold:{title:"GOLD LEAGUE",body:"<p>Draft from the Gold pool. Top-tier blades, same draft. First to 7.</p>"},
+        custom:{title:"CUSTOM",body:"<p>All selectable parts. Scroll the catalog and filter by type or height. First to 7.</p>"}
+    };
 
     app.innerHTML=`
-    <div class="background stadium"></div>
-    <main class="home attract league-board">
-        <p class="attract-kicker">QUICK PLAY</p>
-        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
-        <p class="attract-tag">Pick a fight. First to 7.</p>
-        <nav class="mode-rail league-rail" aria-label="Choose a league">
-            <button class="mode-tile is-play featured" data-quick-match="1" type="button">
-                <span class="mode-no">RIP</span>
-                <span class="mode-copy"><small>FEATURED</small><b>QUICK MATCH</b><em>Random combos · reroll both sides</em></span>
+    ${bgHTML("board")}
+    <main class="room board">
+        ${roomBarHTML({backId:"leagueBack",kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
+        <p class="board-lead">Featured roll, or draft a league. First to 7.</p>
+        <nav class="board-grid" aria-label="Choose a league">
+            <button class="board-cell featured" data-quick-match="1" type="button">
+                <span class="gate-kicker">FEATURED</span>
+                <span class="gate-name">QUICK MATCH</span>
+                <span class="gate-copy">Random combos. Reroll both sides.</span>
+                <span class="gate-go">ROLL</span>
+                <span class="board-info" data-info="quick" role="button" aria-label="About Quick Match">i</span>
             </button>
-            <div class="league-quad">
-                <button class="mode-tile is-bronze" data-mode="bronze" type="button">
-                    <span class="mode-copy"><small>LEAGUE</small><b>BRONZE</b><em>Starter pool</em></span>
-                </button>
-                <button class="mode-tile is-silver" data-mode="silver" type="button">
-                    <span class="mode-copy"><small>LEAGUE</small><b>SILVER</b><em>Mid-tier pool</em></span>
-                </button>
-                <button class="mode-tile is-gold" data-mode="gold" type="button">
-                    <span class="mode-copy"><small>LEAGUE</small><b>GOLD</b><em>Top-tier pool</em></span>
-                </button>
-                <button class="mode-tile is-custom" data-mode="custom" type="button">
-                    <span class="mode-copy"><small>LEAGUE</small><b>CUSTOM</b><em>All parts</em></span>
-                </button>
-            </div>
+            <button class="board-cell is-bronze" data-mode="bronze" type="button">
+                <span class="gate-kicker">LEAGUE</span>
+                <span class="gate-name">BRONZE</span>
+                <span class="gate-copy">Starter pool</span>
+                <span class="gate-go">DRAFT</span>
+                <span class="board-info" data-info="bronze" role="button" aria-label="About Bronze">i</span>
+            </button>
+            <button class="board-cell is-silver" data-mode="silver" type="button">
+                <span class="gate-kicker">LEAGUE</span>
+                <span class="gate-name">SILVER</span>
+                <span class="gate-copy">Mid-tier pool</span>
+                <span class="gate-go">DRAFT</span>
+                <span class="board-info" data-info="silver" role="button" aria-label="About Silver">i</span>
+            </button>
+            <button class="board-cell is-gold" data-mode="gold" type="button">
+                <span class="gate-kicker">LEAGUE</span>
+                <span class="gate-name">GOLD</span>
+                <span class="gate-copy">Top-tier pool</span>
+                <span class="gate-go">DRAFT</span>
+                <span class="board-info" data-info="gold" role="button" aria-label="About Gold">i</span>
+            </button>
+            <button class="board-cell is-custom" data-mode="custom" type="button">
+                <span class="gate-kicker">LEAGUE</span>
+                <span class="gate-name">CUSTOM</span>
+                <span class="gate-copy">All parts</span>
+                <span class="gate-go">CATALOG</span>
+                <span class="board-info" data-info="custom" role="button" aria-label="About Custom">i</span>
+            </button>
         </nav>
     </main>`;
-    document.querySelectorAll(".mode-tile[data-mode], .home-league[data-mode]").forEach(button=>{
+    document.getElementById("leagueBack")?.addEventListener("click",()=>renderMainMenu());
+    document.querySelectorAll(".board-cell[data-mode]").forEach(button=>{
         button.onclick=()=>{
             Game.quickMatch=false;
             Game.mode=button.dataset.mode;
@@ -1348,7 +1493,14 @@ function renderLeagueSelect(){
         };
     });
     document.querySelector("[data-quick-match]")?.addEventListener("click",startQuickMatch);
-    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
+    document.querySelectorAll("[data-info]").forEach(btn=>{
+        btn.addEventListener("click",event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            const pack=info[btn.getAttribute("data-info")];
+            if(pack) openSheet(pack.title,pack.body);
+        });
+    });
 }
 
 function playableBlades(){
@@ -1410,10 +1562,12 @@ function startDraft(){
 
     const app=document.getElementById("app");
 
-    app.innerHTML=`
-    <div class="background"></div>
+    app.innerHTML=`${bgHTML("bay")}
     <main class="home home-load">
-        ${homeMarkHTML({compact:true})}
+        <div class="swx-mark">
+            <h1 class="swx-logo" aria-label="Spin Wars X"><span class="swx-word">SPIN</span><span class="swx-word wars">WARS</span><span class="swx-x">X</span></h1>
+            <p class="swx-jp" lang="ja">スピンウォーズ<span>Ｘ</span></p>
+        </div>
         <div class="loading"><div class="loading-fill" id="loadingFill"></div></div>
     </main>`;
 
@@ -1538,11 +1692,17 @@ function garageLiveHTML(preview){
         ovr=blade.card.ovr;
     }
     const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
+    const ratchetArt=ratchet?ratchetSpritePath(ratchet):"";
+    const bitArt=bit?bitSpritePath(bit):"";
     return `<section class="draft-feature" id="garageLive">
-        <div class="draft-disc">${sprite?`<img src="${sprite}" alt="">`:""}</div>
+        <div class="bay-discs">
+            <div class="draft-disc">${sprite?`<img src="${sprite}" alt="">`:""}</div>
+            ${ratchetArt?`<div class="draft-disc is-part"><img src="${ratchetArt}" alt=""></div>`:""}
+            ${bitArt?`<div class="draft-disc is-part"><img src="${bitArt}" alt=""></div>`:""}
+        </div>
         <div class="draft-feature-copy">
             <strong>${blade.name}</strong>
-            <small>${parts}</small>
+            <small>${blade.type||""} · ${blade.weight||""}g · ${parts}</small>
             <span class="draft-ratings"><b>OVR ${ovr}</b><b class="meta">META ${meta}</b></span>
             ${kit}
             ${garageStatLine(stats,delta)}
@@ -1564,7 +1724,7 @@ function garageBindPreview(root){
         if(tile._previewBit) return {blade:Game.player?.blade,ratchet:Game.player?.ratchet,bit:tile._previewBit};
         return null;
     };
-    root.querySelectorAll(".pick-tile, .blade-tile").forEach(tile=>{
+    root.querySelectorAll(".roster-row, .pick-tile, .blade-tile").forEach(tile=>{
         tile.addEventListener("pointerenter",()=>garagePaintLive(read(tile)));
         tile.addEventListener("pointerleave",()=>{
             const sel=Game.selection||{};
@@ -1599,6 +1759,35 @@ function garageBack(active){
 function pickGridClass(count){
     return count<=6?"pick-grid trio":"pick-grid catalog";
 }
+function bayFilterHTML(active){
+    if(Game.mode!=="custom") return "";
+    const sel=Game.selection||{};
+    if(active==="blade"){
+        const cur=sel.bladeFilter||"all";
+        return `<div class="bay-filters">${["all","Attack","Defense","Stamina","Balance"].map(t=>`<button type="button" class="bay-filter${cur===t?" on":""}" data-filter="${t}">${t==="all"?"ALL":t.toUpperCase()}</button>`).join("")}</div>`;
+    }
+    if(active==="ratchet"){
+        const cur=String(sel.ratchetFilter||"all");
+        return `<div class="bay-filters">${["all","60","70","80"].map(t=>`<button type="button" class="bay-filter${cur===t?" on":""}" data-filter="${t}">${t==="all"?"ALL":t}</button>`).join("")}</div>`;
+    }
+    const cur=sel.bitFilter||"all";
+    return `<div class="bay-filters">${["all","Attack","Defense","Stamina","Balance"].map(t=>`<button type="button" class="bay-filter${cur===t?" on":""}" data-filter="${t}">${t==="all"?"ALL":t.toUpperCase()}</button>`).join("")}</div>`;
+}
+function filterDraftPool(active,pool){
+    const sel=Game.selection||{};
+    const list=Array.isArray(pool)?pool:[];
+    if(Game.mode!=="custom") return list;
+    if(active==="blade" && sel.bladeFilter && sel.bladeFilter!=="all"){
+        return list.filter(b=>String(b.type)===sel.bladeFilter);
+    }
+    if(active==="ratchet" && sel.ratchetFilter && sel.ratchetFilter!=="all"){
+        return list.filter(r=>String(r.height)===String(sel.ratchetFilter));
+    }
+    if(active==="bit" && sel.bitFilter && sel.bitFilter!=="all"){
+        return list.filter(b=>String(b.type)===sel.bitFilter);
+    }
+    return list;
+}
 function renderGarage(active){
     active=active==="ratchet"||active==="bit"?active:"blade";
     Game.screen=active==="blade"?"bladeDraft":active==="ratchet"?"ratchetDraft":"bitDraft";
@@ -1609,24 +1798,11 @@ function renderGarage(active){
     if(active==="ratchet" && !blade) active="blade";
     if(active==="bit" && !ratchet) active=blade?"ratchet":"blade";
 
-    let pool,pageKey,size;
-    if(active==="blade"){
-        pool=sel.bladePool||[];
-        pageKey="bladePage";
-        size=Game.mode==="custom"?6:Math.max(pool.length,3);
-    }else if(active==="ratchet"){
-        pool=sel.ratchetPool||[];
-        pageKey="ratchetPage";
-        size=Game.mode==="custom"?8:Math.max(pool.length,3);
-    }else{
-        pool=sel.bitPool||[];
-        pageKey="bitPage";
-        size=Game.mode==="custom"?8:Math.max(pool.length,3);
-    }
-    const total=Math.max(1,Math.ceil((pool.length||1)/size));
-    const safe=Math.min(Math.max(sel[pageKey]||0,0),total-1);
-    sel[pageKey]=safe;
-    const shown=pool.slice(safe*size,(safe+1)*size);
+    let pool;
+    if(active==="blade") pool=sel.bladePool||[];
+    else if(active==="ratchet") pool=sel.ratchetPool||[];
+    else pool=sel.bitPool||[];
+    const shown=filterDraftPool(active,pool);
     const app=document.getElementById("app");
     const titles={blade:"CHOOSE BLADE",ratchet:"CHOOSE RATCHET",bit:"CHOOSE BIT"};
     const locks={blade:"LOCK BLADE",ratchet:"LOCK RATCHET",bit:"LOCK BIT"};
@@ -1638,44 +1814,43 @@ function renderGarage(active){
     if(active==="blade" && focusPreview.blade && !sel.focusBlade) sel.focusBlade=focusPreview.blade;
     if(active==="ratchet" && focusPreview.ratchet && !sel.focusRatchet) sel.focusRatchet=focusPreview.ratchet;
     if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
-    app.innerHTML=`<div class="background"></div>
-    <main class="draft-screen">
-        <header class="draft-chrome">
-            <button type="button" class="hud-back" id="garageBack">BACK</button>
-            <div class="draft-chrome-copy">
-                <span>${garageLeagueLine()}</span>
-                <b>${titles[active]}</b>
-            </div>
-        </header>
-        <nav class="draft-steps" aria-label="Combo steps">
+    app.innerHTML=`${bgHTML("bay")}
+    <main class="room bay draft-screen">
+        ${roomBarHTML({backId:"garageBack",kicker:garageLeagueLine(),title:titles[active]})}
+        <nav class="bay-steps draft-steps" aria-label="Combo steps">
             <button type="button" class="draft-step${active==="blade"?" on":""}${blade?" filled":""}" data-step="blade">1 BLADE</button>
             <button type="button" class="draft-step${active==="ratchet"?" on":""}${ratchet?" filled":""}" data-step="ratchet" ${blade?"":"disabled"}>2 RATCHET</button>
             <button type="button" class="draft-step${active==="bit"?" on":""}${bit?" filled":""}" data-step="bit" ${ratchet?"":"disabled"}>3 BIT</button>
         </nav>
-        ${garageLiveHTML(focusPreview)}
-        <p class="draft-roster-label">ROSTER · TAP TO COMPARE</p>
-        <section class="draft-roster ${shown.length<=3?"is-trio":"is-catalog"}" id="garagePicks"></section>
-        <button type="button" class="lock-btn" id="draftLock">${locks[active]}</button>
+        <div class="bay-stage">
+            ${garageLiveHTML(focusPreview)}
+            <div class="bay-list">
+                ${bayFilterHTML(active)}
+                <p class="draft-roster-label">TAP TO INSPECT · LOCK TO TAKE IT</p>
+                <section class="draft-roster" id="garagePicks"></section>
+            </div>
+        </div>
+        <button type="button" class="room-go is-lock" id="draftLock">${locks[active]}</button>
     </main>`;
     const box=document.getElementById("garagePicks");
     if(active==="blade") shown.forEach(item=>box.appendChild(createBladeCard(item)));
     else if(active==="ratchet") shown.forEach(item=>box.appendChild(ratchetCard(item)));
     else shown.forEach(item=>box.appendChild(bitCard(item)));
-    if(total>1){
-        const nav=document.createElement("div");
-        nav.className="selection-nav";
-        nav.innerHTML=`<button class="menu-btn silver" id="garagePrev" ${safe===0?"disabled":""}>‹</button><span>${safe+1} / ${total}</span><button class="menu-btn silver" id="garageNext" ${safe===total-1?"disabled":""}>›</button>`;
-        box.appendChild(nav);
-        document.getElementById("garagePrev").onclick=()=>{sel[pageKey]--;renderGarage(active);};
-        document.getElementById("garageNext").onclick=()=>{sel[pageKey]++;renderGarage(active);};
-    }
     document.getElementById("garageBack").onclick=()=>garageBack(active);
     document.querySelectorAll(".draft-step[data-step]").forEach(btn=>{
         btn.onclick=()=>renderGarage(btn.dataset.step);
     });
+    document.querySelectorAll(".bay-filter[data-filter]").forEach(btn=>{
+        btn.onclick=()=>{
+            if(active==="blade") sel.bladeFilter=btn.dataset.filter;
+            else if(active==="ratchet") sel.ratchetFilter=btn.dataset.filter;
+            else sel.bitFilter=btn.dataset.filter;
+            renderGarage(active);
+        };
+    });
     document.getElementById("draftLock").onclick=()=>lockDraftPart(active);
     const focusedName=active==="blade"?sel.focusBlade?.name:active==="ratchet"?sel.focusRatchet?.name:sel.focusBit?.name;
-    box.querySelectorAll(".pick-tile, .blade-tile").forEach(tile=>{
+    box.querySelectorAll(".roster-row, .pick-tile, .blade-tile").forEach(tile=>{
         const name=tile._previewBlade?.name||tile._previewRatchet?.name||tile._previewBit?.name;
         if(name && name===focusedName) tile.classList.add("is-focus");
     });
@@ -1758,19 +1933,27 @@ function statMini(label,value){
     const n=Number.isFinite(numeric)?Math.max(0,Math.min(99,numeric)):(map[value]||0);
     return `<div class="hud-stat"><span>${label}</span><b>${value}</b><em aria-hidden="true" style="width:${n}%"></em></div>`;
 }
+function rosterTicks(stats){
+    const map={"VERY HIGH":92,HIGH:78,MEDIUM:55,LOW:28,NICHE:42,RISKY:30,UNIVERSAL:72,VERSATILE:60,LIGHT:40,HEAVY:80};
+    return `<span class="roster-ticks" aria-hidden="true">${(stats||[]).map(pair=>{
+        const numeric=Number(pair[1]);
+        const n=Number.isFinite(numeric)?Math.max(8,Math.min(100,numeric)):(map[pair[1]]||36);
+        return `<i title="${pair[0]}" style="height:${n}%"></i>`;
+    }).join("")}</span>`;
+}
 function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description="",sprite=""}){
     const card=document.createElement("button");
     card.type="button";
     const art=sprite?encodeURI(sprite):"";
-    card.className=`pick-tile part-tile part-select-card ${accentClass||""}${art?" has-sprite":""}`;
+    card.className=`roster-row part-tile ${accentClass||""}${art?" has-sprite":""}`;
     card.innerHTML=`
-        <div class="pick-art">${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}${extra||""}</div>
-        <div class="pick-copy">
-            <strong>${title}</strong>
+        <div class="roster-disc">${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}${extra||""}</div>
+        <div class="roster-id">
             <small class="pick-meta">${subtitle||""}</small>
-            ${description?`<p class="part-description">${description}</p>`:""}
-            <div class="stat-grid${stats.length>4?"":" mini"}">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>
-        </div>`;
+            <strong>${title}</strong>
+        </div>
+        ${rosterTicks(stats)}
+        <span></span>`;
     card.onclick=onClick;
     return card;
 }
@@ -1828,29 +2011,22 @@ function createBladeCard(blade){
     const sprite=bladeSpritePath(blade);
     const luck=Game.mode==="rogue" && !Game.selection?.rogueTier?rogueLuckGrade(blade.tier):"";
     const spin=blade.spin==="R"||blade.spin==="Right"||!blade.spin?"RIGHT":String(blade.spin).toUpperCase();
-    card.className=`pick-tile blade-tile blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}${Game.player?.blade?.name===blade.name?" is-equipped":""}`;
+    card.className=`roster-row blade-tile ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}${Game.player?.blade?.name===blade.name?" is-equipped":""}`;
     card.setAttribute("role","button");
     card.tabIndex=0;
     card._previewBlade=blade;
+    const ticks=rosterTicks([
+        ["ATK",blade.card.attack],["KNO",blade.card.knockback],["DEF",blade.card.defense],
+        ["BAL",blade.card.balance],["MOB",blade.card.mobility],["STA",blade.card.stamina]
+    ]);
     card.innerHTML=`
-        <div class="pick-art blade-card-art">
-            ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
-            <div class="pick-badges blade-card-badges">
-                <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
-                ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
-            </div>
+        <div class="roster-disc">${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}</div>
+        <div class="roster-id">
+            <small>${String(blade.tier||"Custom").toUpperCase()} · ${blade.type} · ${spin}</small>
+            <strong>${blade.name}</strong>
         </div>
-        <div class="pick-copy blade-card-head">
-            <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
-            <h2>${blade.name}</h2>
-            <p class="pick-meta blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${spin}</span></p>
-            ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):""}
-            <div class="stat-grid blade-stat-grid">
-                ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-                ${statMini("DEF",blade.card.defense)}${statMini("BAL",blade.card.balance)}
-                ${statMini("MOB",blade.card.mobility)}${statMini("STA",blade.card.stamina)}
-            </div>
-        </div>`;
+        ${ticks}
+        <div class="roster-ovr"><small>OVR</small><b>${blade.card.ovr}</b>${luck?`<span class="luck-grade luck-${luck.toLowerCase()}">${luck}</span>`:""}</div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
@@ -1882,8 +2058,11 @@ function chooseBlade(blade,card){
     Game.player.blade=blade;
     Game.player.ratchet=null;
     Game.player.bit=null;
-    card.classList.add("is-picked");
-    setTimeout(()=>renderGarage("ratchet"),120);
+    Game.selection=Game.selection||{};
+    Game.selection.focusRatchet=null;
+    Game.selection.focusBit=null;
+    card?.classList.add("is-picked");
+    setTimeout(()=>renderGarage("ratchet"),80);
 }
 
 
@@ -2582,14 +2761,18 @@ function showComboCard(){
         ?SpinWarsVsCall.renderHTML(Game.player,Game.cpu,playerCombo,cpuCombo,playerPlate,cpuPlate)
         :"";
     if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.resetMatch) SpinWarsVsCall.resetMatch();
-    app.innerHTML=`<div class="background"></div><main class="vs-screen">
+    const vsTitle=Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.scoreboardLabel
+        ? SpinWarsRogue.scoreboardLabel()
+        : "FIRST TO 7";
+    app.innerHTML=`${bgHTML("weigh")}<main class="room weigh-in vs-screen">
+      ${roomBarHTML({backId:"vsBack",kicker:Game.mode==="rogue"?"ROGUE WEIGH-IN":"WEIGH-IN",title:vsTitle})}
       ${vsCall}
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
-      <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
+      <button class="room-go is-rip" id="battleButton" type="button">${playLabel}</button>
     </main>`;
     const battleButton=document.getElementById("battleButton");
     if(battleButton) battleButton.onclick=(event)=>{
@@ -2617,11 +2800,12 @@ function showComboCard(){
         };
     }
 
+    document.getElementById("vsBack")?.addEventListener("click",()=>{
+        if(Game.mode==="rogue") return SpinWarsRogue.showLanding();
+        if(Game.quickMatch) return renderLeagueSelect();
+        showBitDraft();
+    });
     const menu=document.querySelector(".vs-screen");
-    if(menu) menu.appendChild(createBackButton(()=>
-        Game.mode==="rogue"?SpinWarsRogue.showLanding():
-        Game.quickMatch?renderLeagueSelect():showBitDraft()
-    ));
     if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue.persist==="function") SpinWarsRogue.persist();
 }

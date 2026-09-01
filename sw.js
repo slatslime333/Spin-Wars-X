@@ -1,11 +1,13 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.52';
+const CACHE='spin-wars-x-9.64';
 const PRECACHE=[
   './','./index.html','./manifest.webmanifest',
-  './style.css?v=9.52','./presentation.css?v=9.52','./movement-engine.js?v=9.35','./xrail-engine.js?v=9.25',
-  './vs-commentary.js?v=9.52','./abilities.js?v=9.34','./scoreboard.js?v=9.27','./app.js?v=9.52',
-  './rogue-mode.js?v=9.52','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.4','./rogue-shop-balance.js?v=1.3',
+  './style.css?v=9.64','./presentation.css?v=9.64','./fx.css?v=9.64','./movement-engine.js?v=9.35','./xrail-engine.js?v=9.25',
+  './vs-commentary.js?v=9.52','./abilities.js?v=9.34','./scoreboard.js?v=9.27','./app.js?v=9.64',
+  './rogue-mode.js?v=9.64','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.4','./rogue-shop-balance.js?v=1.3',
   './rogue-balance-final.js?v=1.2','./omen-transition-repair.js?v=1.1','./attack-movement-tuning-v1.js?v=1.1','./sw.js',
+  './assets/HomeARt.png',
+  './assets/ui/grain.svg','./assets/ui/scratch.svg',
   './assets/blades/Aeropegasus.png','./assets/blades/Dransword%20%281%29.png','./assets/blades/KnightMail.png',
   './assets/blades/Leoncrest.png','./assets/blades/Leonfang.png','./assets/blades/Sharkedge.png',
   './assets/blades/Silverwolf.png','./assets/blades/Unicornsting.png','./assets/blades/Vipertail.png',

@@ -2135,15 +2135,17 @@ function showRunHistory(){
         ? past.map(runHistoryRowHTML).join("")
         : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing rogue-run-board">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"RUN SCOREBOARD"})}
-        <section class="rogue-run-history" aria-label="Finished runs">
+    const bar=typeof roomBarHTML==="function"
+        ? roomBarHTML({backId:"rogueHistBack",kicker:"ROGUE RUN",title:"RUN SCOREBOARD"})
+        : "";
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
+    <main class="room locker">
+        ${bar}
+        <section class="room-body rogue-run-history" aria-label="Finished runs">
             ${body}
         </section>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
+    document.getElementById("rogueHistBack")?.addEventListener("click",()=>showLanding());
     bindRunHistoryRows();
     mountDevButton();
 }
@@ -2294,30 +2296,37 @@ function showLanding(){
         ? `${past.length} finished run${past.length===1?"":"s"}`
         : "No finished runs yet";
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home attract rogue-landing">
-        <p class="attract-kicker">ROGUE RUN</p>
-        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
-        <p class="attract-tag">One Bey. Eighteen matches. Then the dark.</p>
-        <nav class="mode-rail" aria-label="Rogue">
-            <button class="mode-tile is-rogue" id="rogueNewGame" type="button">
-                <span class="mode-no">NEW</span>
-                <span class="mode-copy"><small>NEW RUN</small><b>NEW GAME</b><em>Pick a tier. Build a combo.</em></span>
+    const bar=typeof roomBarHTML==="function"
+        ? roomBarHTML({backId:"rogueBack",kicker:"ROGUE RUN",title:"ONE BEY"})
+        : "";
+    const hero=canContinue
+        ? `<div class="locker-save"><div><h2>CONTINUE</h2><p>${continueNote}</p></div></div>`
+        : `<h2>THE NIGHT</h2><p>One Bey. Eighteen matches. Then the dark.</p>`;
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
+    <main class="room locker">
+        ${bar}
+        <section class="locker-hero">${hero}</section>
+        <nav class="locker-dock" aria-label="Rogue">
+            <button class="${canContinue?"":"is-go"}" id="rogueNewGame" type="button">
+                <span><b>NEW GAME</b><em>Pick a tier. Build a combo.</em></span>
+                <span class="gate-go">START</span>
             </button>
-            <button class="mode-tile ${canContinue?"is-play":"is-locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span class="mode-no">SAVE</span>
-                <span class="mode-copy"><small>SAVE</small><b>CONTINUE</b><em>${continueNote}</em></span>
-                ${canContinue?"":"<span class=\"mode-lock\">LOCKED</span>"}
+            <button class="${canContinue?"is-gold":"is-locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+                <span><b>CONTINUE</b><em>${continueNote}</em></span>
+                <span class="gate-go">${canContinue?"RESUME":"LOCKED"}</span>
             </button>
-            <button class="mode-tile" id="rogueScoreboard" type="button">
-                <span class="mode-no">LOG</span>
-                <span class="mode-copy"><small>HISTORY</small><b>RUN SCOREBOARD</b><em>${boardNote}</em></span>
+            <button class="is-log" id="rogueScoreboard" type="button">
+                <span><b>RUN SCOREBOARD</b><em>${boardNote}</em></span>
+                <span class="gate-go">LOG</span>
             </button>
-            <button class="mode-help" id="rogueHelp" type="button">How a run works</button>
+            <button class="is-help" id="rogueHelp" type="button">
+                <span><b>HOW A RUN WORKS</b><em>Shop, luck, eighteen nights.</em></span>
+                <span class="gate-go">READ</span>
+            </button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
+    document.getElementById("rogueBack")?.addEventListener("click",()=>renderMainMenu());
     document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
     document.getElementById("rogueContinue").onclick=()=>{
         if(!canContinue) return;
@@ -2352,24 +2361,28 @@ function showTierPick(){
     Game.mode="rogue";
     Game.screen="rogueTier";
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home attract rogue-landing">
-        <p class="attract-kicker">NEW RUN</p>
-        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
-        <p class="attract-tag">Pick a tier. Then three blades, three ratchets, three bits.</p>
-        <nav class="mode-rail" aria-label="Starting tier">
-            <button class="mode-tile is-bronze" type="button" data-tier="Bronze">
-                <span class="mode-copy"><small>TIER</small><b>BRONZE</b><em>Hard early, easier late. Enhance after 5. No evolve.</em></span>
+    const bar=typeof roomBarHTML==="function"
+        ? roomBarHTML({backId:"rogueTierBack",kicker:"NEW RUN",title:"PICK A TIER"})
+        : "";
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
+    <main class="room locker">
+        ${bar}
+        <nav class="tier-col" aria-label="Starting tier">
+            <button class="is-bronze" type="button" data-tier="Bronze">
+                <b>BRONZE</b>
+                <em>Hard early, easier late. Enhance after 5. No evolve.</em>
             </button>
-            <button class="mode-tile is-silver" type="button" data-tier="Silver">
-                <span class="mode-copy"><small>TIER</small><b>SILVER</b><em>Middle path. Evolve, then Enhance.</em></span>
+            <button class="is-silver" type="button" data-tier="Silver">
+                <b>SILVER</b>
+                <em>Middle path. Evolve, then Enhance.</em>
             </button>
-            <button class="mode-tile is-gold" type="button" data-tier="Gold">
-                <span class="mode-copy"><small>TIER</small><b>GOLD</b><em>Easy start, hard late. Climb Bronze → Silver → Gold.</em></span>
+            <button class="is-gold" type="button" data-tier="Gold">
+                <b>GOLD</b>
+                <em>Easy start, hard late. Climb Bronze → Silver → Gold.</em>
             </button>
         </nav>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
+    document.getElementById("rogueTierBack")?.addEventListener("click",()=>showLanding());
     document.querySelectorAll("[data-tier]").forEach(btn=>{
         btn.onclick=()=>startRogueDraft(btn.dataset.tier);
     });
@@ -2403,16 +2416,13 @@ function startBladePick(){
 function showHelp(){
     Game.screen="rogueHelp";
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
-    <main class="menu rogue-help">
-        <div class="selection-header">
-            <div class="selection-icon">X</div>
-            <div>
-                <span class="eyebrow">ROGUE</span>
-                <h1>HOW A RUN WORKS</h1>
-                <p>Same stadium. One Bey. Eighteen matches, then endless.</p>
-            </div>
-        </div>
+    const bar=typeof roomBarHTML==="function"
+        ? roomBarHTML({backId:"rogueHelpBack",kicker:"ROGUE",title:"HOW A RUN WORKS"})
+        : "";
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    <main class="room locker">
+        ${bar}
+        <div class="room-body" style="padding:16px">
         <section class="menu-card rogue-help-card">
             <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
@@ -2432,8 +2442,9 @@ function showHelp(){
             <p class="eyebrow">MODIFIERS</p>
             <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
+    </div>
     </main>`;
-    document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
+    document.getElementById("rogueHelpBack")?.addEventListener("click",()=>showLanding());
     mountDevButton();
 }
 
@@ -2454,9 +2465,11 @@ function onStarterPicked(blade,ratchet,bit){
 
 function decorateVs(root){
     if(!isActive()||!root) return;
-    const banner=el(bannerHTML());
-    root.insertBefore(banner,root.firstChild);
-    const back=root.querySelector(".back-btn");
+    if(!root.querySelector(".room-bar")){
+        const banner=el(bannerHTML());
+        root.insertBefore(banner,root.firstChild);
+    }
+    const back=root.querySelector("#vsBack, .back-btn");
     if(back) back.onclick=()=>{persist();showLanding();};
     const btn=document.getElementById("battleButton");
     if(btn) btn.textContent="LET IT RIP";
@@ -2880,7 +2893,7 @@ function showScenario(id){
             ${scenarioOddsHTML(c)}
           </div>`).join("")
         : `<button class="rip-btn" type="button" data-scene-choice="ok">CONTINUE</button>`;
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="home rogue-scenario">
         ${homeMarkHTML({tag:pack.kicker||"SIDELINE"})}
         <p class="win-name">${pack.title}</p>
@@ -2925,7 +2938,7 @@ function showResults(){
         <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
         <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
         : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>`;
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(r.matchIndex===18?"FINAL BOSS DOWN":(r.matchIndex===6||r.matchIndex===12?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(r.matchIndex===18?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
@@ -2967,7 +2980,7 @@ function showRunWin(){
         return;
     }
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="home home-win">
         ${homeMarkHTML({compact:true,tag:"ROGUE COMPLETE"})}
         <p class="win-name">${r.blade.name}</p>
@@ -2996,15 +3009,12 @@ function showHub(){
     const sprite=bladeSpritePath(r.blade);
     const mod=r.activeModifier?modifierById(r.activeModifier.id):null;
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
-    <main class="garage rogue-hub">
-        <header class="garage-head">
-            <div class="garage-title">
-                <span class="eyebrow">ROGUE RUN</span>
-                <h1>${r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex}`:`MATCH ${r.matchIndex} / ${FINAL_MATCH}`}</h1>
-                <p>Win. Pick one upgrade. Keep building.</p>
-            </div>
-        </header>
+    const bar=typeof roomBarHTML==="function"
+        ? roomBarHTML({backId:null,kicker:"ROGUE RUN",title:r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex}`:`MATCH ${r.matchIndex} / ${FINAL_MATCH}`})
+        : "";
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("hub"):`<div class="background"></div>`}
+    <main class="room hub">
+        ${bar}
         <section class="rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
             <div class="rogue-build-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
             <div class="rogue-build-copy">
@@ -3018,7 +3028,6 @@ function showHub(){
                 ${upgradeStackHTML(upgradeStack("player"))}
             </div>
         </section>
-        <p class="home-leagues-label">CHOOSE ONE</p>
         <div class="rogue-offers" id="rogueOffers"></div>
     </main>`;
     const box=document.getElementById("rogueOffers");
@@ -3066,7 +3075,7 @@ function openReforge(card,fromDev){
         ? shuffle(selectableBits().filter(b=>b.name!==r.bit.name)).slice(0,3)
         : shuffle(RATCHETS.filter(x=>x.name!==r.ratchet.name)).slice(0,3);
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="menu selection-screen">
         <div class="selection-header"><div class="selection-icon">⚙</div>
         <div><span class="eyebrow">RARE REFORGE</span><h1>PICK ${isBit?"BIT":"RATCHET"}</h1>
@@ -3105,7 +3114,7 @@ function openAbilitySwap(card,fromDev){
     const meta=(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META)||{};
     const choices=(card.choices||[]).filter(id=>meta[id]).slice(0,2);
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="menu selection-screen">
         <div class="selection-header"><div class="selection-icon">✦</div>
         <div><span class="eyebrow">RARE SWAP</span><h1>PICK AN ABILITY</h1>
@@ -3185,7 +3194,7 @@ function showUpgradeResult(){
         body=`<p class="rogue-mod-line">${card.title}</p><p>${card.body||""}</p>`+body;
     }
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div>
+    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="home rogue-results">
         ${homeMarkHTML({tag:"UPGRADE LOCKED"})}
         <p class="win-name">${card.title||"UPGRADE"}</p>
