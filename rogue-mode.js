@@ -2295,27 +2295,25 @@ function showLanding(){
         : "No finished runs yet";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Eighteen matches. Then the dark."})}
-        <nav class="home-doors rogue-doors" aria-label="Rogue">
-            <button class="home-door rip" id="rogueNewGame" type="button">
-                <span class="home-door-kicker">NEW RUN</span>
-                <b>NEW GAME</b>
-                <small>Pick a tier. Build a combo.</small>
+    <main class="home attract rogue-landing">
+        <p class="attract-kicker">ROGUE RUN</p>
+        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
+        <p class="attract-tag">One Bey. Eighteen matches. Then the dark.</p>
+        <nav class="mode-rail" aria-label="Rogue">
+            <button class="mode-tile is-rogue" id="rogueNewGame" type="button">
+                <span class="mode-no">NEW</span>
+                <span class="mode-copy"><small>NEW RUN</small><b>NEW GAME</b><em>Pick a tier. Build a combo.</em></span>
             </button>
-            <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span class="home-door-kicker">SAVE</span>
-                <b>CONTINUE</b>
-                <small>${continueNote}</small>
-                ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
+            <button class="mode-tile ${canContinue?"is-play":"is-locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+                <span class="mode-no">SAVE</span>
+                <span class="mode-copy"><small>SAVE</small><b>CONTINUE</b><em>${continueNote}</em></span>
+                ${canContinue?"":"<span class=\"mode-lock\">LOCKED</span>"}
             </button>
-            <button class="home-door rogue" id="rogueScoreboard" type="button">
-                <span class="home-door-kicker">HISTORY</span>
-                <b>RUN SCOREBOARD</b>
-                <small>${boardNote}</small>
+            <button class="mode-tile" id="rogueScoreboard" type="button">
+                <span class="mode-no">LOG</span>
+                <span class="mode-copy"><small>HISTORY</small><b>RUN SCOREBOARD</b><em>${boardNote}</em></span>
             </button>
-            <button class="home-help" id="rogueHelp" type="button">How a run works</button>
+            <button class="mode-help" id="rogueHelp" type="button">How a run works</button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
@@ -2355,18 +2353,19 @@ function showTierPick(){
     Game.screen="rogueTier";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:"Pick a tier. Then three blades, three ratchets, three bits."}):""}
-        <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
-            <button class="home-league bronze" type="button" data-tier="Bronze">
-                <span class="home-league-copy"><b>BRONZE</b><small>Hard early, easier late. Enhance after 5. No evolve.</small></span>
+    <main class="home attract rogue-landing">
+        <p class="attract-kicker">NEW RUN</p>
+        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
+        <p class="attract-tag">Pick a tier. Then three blades, three ratchets, three bits.</p>
+        <nav class="mode-rail" aria-label="Starting tier">
+            <button class="mode-tile is-bronze" type="button" data-tier="Bronze">
+                <span class="mode-copy"><small>TIER</small><b>BRONZE</b><em>Hard early, easier late. Enhance after 5. No evolve.</em></span>
             </button>
-            <button class="home-league silver" type="button" data-tier="Silver">
-                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance.</small></span>
+            <button class="mode-tile is-silver" type="button" data-tier="Silver">
+                <span class="mode-copy"><small>TIER</small><b>SILVER</b><em>Middle path. Evolve, then Enhance.</em></span>
             </button>
-            <button class="home-league gold" type="button" data-tier="Gold">
-                <span class="home-league-copy"><b>GOLD</b><small>Easy start, hard late. Climb Bronze → Silver → Gold.</small></span>
+            <button class="mode-tile is-gold" type="button" data-tier="Gold">
+                <span class="mode-copy"><small>TIER</small><b>GOLD</b><em>Easy start, hard late. Climb Bronze → Silver → Gold.</em></span>
             </button>
         </nav>
     </main>`;

@@ -1143,28 +1143,27 @@ function renderMainMenu(){
 
     app.innerHTML=`
     <div class="background stadium"></div>
-    <main class="home lobby">
-        ${homeBowlHTML()}
-        ${homeMarkHTML()}
+    <main class="home attract">
+        <div class="attract-ring" aria-hidden="true"></div>
+        <p class="attract-kicker">BEYBLADE X · STADIUM SIM</p>
+        <h1 class="attract-title">SPIN WARS<span>X</span></h1>
+        <p class="attract-tag">Two Beys. X-Rail. First to 7.</p>
         <p class="home-ver">ALPHA</p>
-        <nav class="home-doors" aria-label="Choose a mode">
-            <button class="home-door rip" data-home="rogue" type="button">
-                <span class="home-door-kicker">RUN</span>
-                <b>ROGUE</b>
-                <small>18 matches · build the Bey · first to 7</small>
+        <nav class="mode-rail" aria-label="Choose a mode">
+            <button class="mode-tile is-rogue" data-home="rogue" type="button">
+                <span class="mode-no">01</span>
+                <span class="mode-copy"><small>RUN</small><b>ROGUE</b><em>18 matches · build the Bey · first to 7</em></span>
             </button>
-            <button class="home-door locked" type="button" aria-disabled="true">
-                <span class="home-door-kicker">STORY</span>
-                <b>CAMPAIGN</b>
-                <small>Coming soon</small>
-                <span class="home-door-lock">LOCKED</span>
+            <button class="mode-tile is-locked" type="button" aria-disabled="true">
+                <span class="mode-no">02</span>
+                <span class="mode-copy"><small>STORY</small><b>CAMPAIGN</b><em>Coming soon</em></span>
+                <span class="mode-lock">LOCKED</span>
             </button>
-            <button class="home-door play" data-home="quick" type="button">
-                <span class="home-door-kicker">QUICK PLAY</span>
-                <b>LET IT RIP</b>
-                <small>Leagues · random fights · first to 7</small>
+            <button class="mode-tile is-play" data-home="quick" type="button">
+                <span class="mode-no">03</span>
+                <span class="mode-copy"><small>QUICK PLAY</small><b>LET IT RIP</b><em>Leagues · random fights · first to 7</em></span>
             </button>
-            <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
+            <button class="mode-help" data-home="help" type="button">HOW TO PLAY</button>
         </nav>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
@@ -1314,31 +1313,32 @@ function renderLeagueSelect(){
 
     app.innerHTML=`
     <div class="background stadium"></div>
-    <main class="home league-board">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:"Pick a fight. First to 7."})}
-        <nav class="home-leagues board" aria-label="Choose a league">
-            <button class="home-league featured" data-quick-match="1" type="button">
-                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random combos · reroll both sides</small></span>
-                <span class="home-league-go">RIP</span>
+    <main class="home attract league-board">
+        <p class="attract-kicker">QUICK PLAY</p>
+        <h1 class="attract-title compact">SPIN WARS<span>X</span></h1>
+        <p class="attract-tag">Pick a fight. First to 7.</p>
+        <nav class="mode-rail league-rail" aria-label="Choose a league">
+            <button class="mode-tile is-play featured" data-quick-match="1" type="button">
+                <span class="mode-no">RIP</span>
+                <span class="mode-copy"><small>FEATURED</small><b>QUICK MATCH</b><em>Random combos · reroll both sides</em></span>
             </button>
-            <div class="home-league-grid">
-                <button class="home-league bronze" data-mode="bronze" type="button">
-                    <span class="home-league-copy"><b>BRONZE</b><small>Starter pool</small></span>
+            <div class="league-quad">
+                <button class="mode-tile is-bronze" data-mode="bronze" type="button">
+                    <span class="mode-copy"><small>LEAGUE</small><b>BRONZE</b><em>Starter pool</em></span>
                 </button>
-                <button class="home-league silver" data-mode="silver" type="button">
-                    <span class="home-league-copy"><b>SILVER</b><small>Mid-tier pool</small></span>
+                <button class="mode-tile is-silver" data-mode="silver" type="button">
+                    <span class="mode-copy"><small>LEAGUE</small><b>SILVER</b><em>Mid-tier pool</em></span>
                 </button>
-                <button class="home-league gold" data-mode="gold" type="button">
-                    <span class="home-league-copy"><b>GOLD</b><small>Top-tier pool</small></span>
+                <button class="mode-tile is-gold" data-mode="gold" type="button">
+                    <span class="mode-copy"><small>LEAGUE</small><b>GOLD</b><em>Top-tier pool</em></span>
                 </button>
-                <button class="home-league custom" data-mode="custom" type="button">
-                    <span class="home-league-copy"><b>CUSTOM</b><small>Full garage</small></span>
+                <button class="mode-tile is-custom" data-mode="custom" type="button">
+                    <span class="mode-copy"><small>LEAGUE</small><b>CUSTOM</b><em>All parts</em></span>
                 </button>
             </div>
         </nav>
     </main>`;
-    document.querySelectorAll(".home-league[data-mode]").forEach(button=>{
+    document.querySelectorAll(".mode-tile[data-mode], .home-league[data-mode]").forEach(button=>{
         button.onclick=()=>{
             Game.quickMatch=false;
             Game.mode=button.dataset.mode;
@@ -1468,7 +1468,7 @@ function createBackButton(onClick){
 
 function garageLeagueLine(){
     if(Game.mode==="rogue") return `ROGUE · ${String(Game.selection?.rogueTier||"").toUpperCase()}`;
-    if(Game.mode==="custom") return "CUSTOM · FULL GARAGE";
+    if(Game.mode==="custom") return "CUSTOM · ALL PARTS";
     return String(Game.mode||"QUICK").toUpperCase()+" · DRAFT";
 }
 function garageEnsurePools(){
@@ -1494,9 +1494,9 @@ function garageStatLine(stats,delta){
         const v=stats[key];
         const d=delta?Number(delta[key])||0:0;
         const mark=d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:"";
-        return `<span class="mini-stat"><span>${label}</span><b>${v}${mark}</b></span>`;
+        return `<div class="hud-stat"><span>${label}</span><b>${v}${mark}</b><em aria-hidden="true" style="width:${Math.max(0,Math.min(99,Number(v)||0))}%"></em></div>`;
     };
-    return `<div class="stat-grid">
+    return `<div class="stat-grid hud-stats">
         ${cell("ATK","attack")}${cell("KNO","knockback")}${cell("DEF","defense")}
         ${cell("BAL","balance")}${cell("MOB","mobility")}${cell("STA","stamina")}
     </div>`;
@@ -1507,7 +1507,7 @@ function garageLiveHTML(preview){
     const ratchet=preview?.ratchet||p.ratchet;
     const bit=preview?.bit||p.bit;
     if(!blade){
-        return `<section class="g-live is-empty" id="garageLive"><p>Compare the blades on screen. Tap one to lock it.</p></section>`;
+        return `<section class="draft-feature is-empty" id="garageLive"><p>Tap a Bey in the roster. Stats stay on screen so you can compare. Lock when you are sure.</p></section>`;
     }
     const sprite=bladeSpritePath(blade);
     const spin=blade.spin==="L"||blade.spin==="Left"?"LEFT":"RIGHT";
@@ -1538,12 +1538,12 @@ function garageLiveHTML(preview){
         ovr=blade.card.ovr;
     }
     const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
-    return `<section class="g-live" id="garageLive">
-        <div class="g-live-art">${sprite?`<img src="${sprite}" alt="">`:""}</div>
-        <div class="g-live-copy">
+    return `<section class="draft-feature" id="garageLive">
+        <div class="draft-disc">${sprite?`<img src="${sprite}" alt="">`:""}</div>
+        <div class="draft-feature-copy">
             <strong>${blade.name}</strong>
             <small>${parts}</small>
-            <span class="g-live-ratings"><b>OVR ${ovr}</b><b class="meta">META ${meta}</b></span>
+            <span class="draft-ratings"><b>OVR ${ovr}</b><b class="meta">META ${meta}</b></span>
             ${kit}
             ${garageStatLine(stats,delta)}
         </div>
@@ -1566,9 +1566,23 @@ function garageBindPreview(root){
     };
     root.querySelectorAll(".pick-tile, .blade-tile").forEach(tile=>{
         tile.addEventListener("pointerenter",()=>garagePaintLive(read(tile)));
-        tile.addEventListener("pointerleave",()=>garagePaintLive(null));
+        tile.addEventListener("pointerleave",()=>{
+            const sel=Game.selection||{};
+            garagePaintLive({
+                blade:sel.focusBlade||Game.player?.blade,
+                ratchet:sel.focusRatchet||Game.player?.ratchet,
+                bit:sel.focusBit||Game.player?.bit
+            });
+        });
         tile.addEventListener("focus",()=>garagePaintLive(read(tile)));
-        tile.addEventListener("blur",()=>garagePaintLive(null));
+        tile.addEventListener("blur",()=>{
+            const sel=Game.selection||{};
+            garagePaintLive({
+                blade:sel.focusBlade||Game.player?.blade,
+                ratchet:sel.focusRatchet||Game.player?.ratchet,
+                bit:sel.focusBit||Game.player?.bit
+            });
+        });
     });
 }
 function garageBack(active){
@@ -1614,24 +1628,34 @@ function renderGarage(active){
     sel[pageKey]=safe;
     const shown=pool.slice(safe*size,(safe+1)*size);
     const app=document.getElementById("app");
-    const titles={blade:"BLADE",ratchet:"RATCHET",bit:"BIT"};
+    const titles={blade:"CHOOSE BLADE",ratchet:"CHOOSE RATCHET",bit:"CHOOSE BIT"};
+    const locks={blade:"LOCK BLADE",ratchet:"LOCK RATCHET",bit:"LOCK BIT"};
+    const focusPreview=active==="blade"
+        ? {blade:sel.focusBlade||shown[0]||blade}
+        : active==="ratchet"
+            ? {blade,ratchet:sel.focusRatchet||shown[0]||ratchet}
+            : {blade,ratchet,bit:sel.focusBit||shown[0]||bit};
+    if(active==="blade" && focusPreview.blade && !sel.focusBlade) sel.focusBlade=focusPreview.blade;
+    if(active==="ratchet" && focusPreview.ratchet && !sel.focusRatchet) sel.focusRatchet=focusPreview.ratchet;
+    if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
     app.innerHTML=`<div class="background"></div>
-    <main class="garage selection-screen">
-        <header class="g-chrome">
-            <button type="button" class="g-back" id="garageBack">‹</button>
-            <div class="g-chrome-copy">
-                <span class="eyebrow">BUILD</span>
+    <main class="draft-screen">
+        <header class="draft-chrome">
+            <button type="button" class="hud-back" id="garageBack">BACK</button>
+            <div class="draft-chrome-copy">
+                <span>${garageLeagueLine()}</span>
                 <b>${titles[active]}</b>
-                <small>${garageLeagueLine()}</small>
             </div>
         </header>
-        <nav class="g-tabs" aria-label="Combo parts">
-            <button type="button" class="g-tab${active==="blade"?" on":""}${blade?" filled":""}" data-step="blade">BLADE</button>
-            <button type="button" class="g-tab${active==="ratchet"?" on":""}${ratchet?" filled":""}" data-step="ratchet" ${blade?"":"disabled"}>RATCHET</button>
-            <button type="button" class="g-tab${active==="bit"?" on":""}${bit?" filled":""}" data-step="bit" ${ratchet?"":"disabled"}>BIT</button>
+        <nav class="draft-steps" aria-label="Combo steps">
+            <button type="button" class="draft-step${active==="blade"?" on":""}${blade?" filled":""}" data-step="blade">1 BLADE</button>
+            <button type="button" class="draft-step${active==="ratchet"?" on":""}${ratchet?" filled":""}" data-step="ratchet" ${blade?"":"disabled"}>2 RATCHET</button>
+            <button type="button" class="draft-step${active==="bit"?" on":""}${bit?" filled":""}" data-step="bit" ${ratchet?"":"disabled"}>3 BIT</button>
         </nav>
-        ${garageLiveHTML()}
-        <section class="${pickGridClass(shown.length)}${active==="blade"?" blade-pick-grid":""}" id="garagePicks"></section>
+        ${garageLiveHTML(focusPreview)}
+        <p class="draft-roster-label">ROSTER · TAP TO COMPARE</p>
+        <section class="draft-roster ${shown.length<=3?"is-trio":"is-catalog"}" id="garagePicks"></section>
+        <button type="button" class="lock-btn" id="draftLock">${locks[active]}</button>
     </main>`;
     const box=document.getElementById("garagePicks");
     if(active==="blade") shown.forEach(item=>box.appendChild(createBladeCard(item)));
@@ -1646,11 +1670,43 @@ function renderGarage(active){
         document.getElementById("garageNext").onclick=()=>{sel[pageKey]++;renderGarage(active);};
     }
     document.getElementById("garageBack").onclick=()=>garageBack(active);
-    document.querySelectorAll(".g-tab[data-step]").forEach(btn=>{
+    document.querySelectorAll(".draft-step[data-step]").forEach(btn=>{
         btn.onclick=()=>renderGarage(btn.dataset.step);
+    });
+    document.getElementById("draftLock").onclick=()=>lockDraftPart(active);
+    const focusedName=active==="blade"?sel.focusBlade?.name:active==="ratchet"?sel.focusRatchet?.name:sel.focusBit?.name;
+    box.querySelectorAll(".pick-tile, .blade-tile").forEach(tile=>{
+        const name=tile._previewBlade?.name||tile._previewRatchet?.name||tile._previewBit?.name;
+        if(name && name===focusedName) tile.classList.add("is-focus");
     });
     garageBindPreview(box);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
+}
+function lockDraftPart(active){
+    const sel=Game.selection||{};
+    if(active==="blade"){
+        const blade=sel.focusBlade;
+        if(!blade) return;
+        chooseBlade(blade);
+        return;
+    }
+    if(active==="ratchet"){
+        const r=sel.focusRatchet;
+        if(!r) return;
+        Game.player.ratchet=r;
+        Game.player.bit=null;
+        sel.focusBit=null;
+        renderGarage("bit");
+        return;
+    }
+    const bit=sel.focusBit;
+    if(!bit) return;
+    Game.player.bit=bit;
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        SpinWarsRogue.onStarterPicked(Game.player.blade,Game.player.ratchet,bit);
+        return;
+    }
+    showComboCard();
 }
 function renderBladeDraft(){ renderGarage("blade"); }
 function bindGarageSteps(){
@@ -1697,7 +1753,10 @@ function tierClass(tier){
     return v==="gold"?"tier-gold":v==="silver"?"tier-silver":v==="bronze"?"tier-bronze":"tier-custom";
 }
 function statMini(label,value){
-    return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
+    const map={"VERY HIGH":92,HIGH:78,MEDIUM:55,LOW:28,NICHE:42,RISKY:30,UNIVERSAL:72,VERSATILE:60,LIGHT:40,HEAVY:80};
+    const numeric=Number(value);
+    const n=Number.isFinite(numeric)?Math.max(0,Math.min(99,numeric)):(map[value]||0);
+    return `<div class="hud-stat"><span>${label}</span><b>${value}</b><em aria-hidden="true" style="width:${n}%"></em></div>`;
 }
 function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description="",sprite=""}){
     const card=document.createElement("button");
@@ -1796,7 +1855,15 @@ function createBladeCard(blade){
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
     });
-    const pick=()=>chooseBlade(blade,card);
+    const pick=()=>{
+        Game.selection=Game.selection||{};
+        if(Game.selection.focusBlade?.name===blade.name){
+            chooseBlade(blade,card);
+            return;
+        }
+        Game.selection.focusBlade=blade;
+        renderGarage("blade");
+    };
     card.addEventListener("click",pick);
     card.addEventListener("keydown",event=>{
         if(event.key==="Enter"||event.key===" "){
@@ -1851,7 +1918,15 @@ function ratchetCard(r){
         extra:`<span class="part-index">${r.number}</span>`,
         description:"",
         sprite:ratchetSpriteFile(r),
-        onClick:()=>{Game.player.ratchet=r;Game.player.bit=null;renderGarage("bit");}});
+        onClick:()=>{
+            Game.selection=Game.selection||{};
+            if(Game.selection.focusRatchet?.name===r.name){
+                Game.player.ratchet=r;Game.player.bit=null;Game.selection.focusBit=null;renderGarage("bit");
+                return;
+            }
+            Game.selection.focusRatchet=r;
+            renderGarage("ratchet");
+        }});
     card._previewRatchet=r;
     return card;
 }
@@ -1901,12 +1976,18 @@ function bitCard(bit){
         description:"",
         sprite:bitSpriteFile(bit),
         onClick:()=>{
-            Game.player.bit=bit;
-            if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
-                SpinWarsRogue.onStarterPicked(Game.player.blade,Game.player.ratchet,bit);
+            Game.selection=Game.selection||{};
+            if(Game.selection.focusBit?.name===bit.name){
+                Game.player.bit=bit;
+                if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+                    SpinWarsRogue.onStarterPicked(Game.player.blade,Game.player.ratchet,bit);
+                    return;
+                }
+                showComboCard();
                 return;
             }
-            showComboCard();
+            Game.selection.focusBit=bit;
+            renderGarage("bit");
         }});
     card._previewBit=bit;
     return card;
@@ -2450,7 +2531,7 @@ function createComboSummaryCard(side,combo){
         const d=Number(combo.statDelta?.[key])||0;
         const tint=d>0?" up":d<0?" down":"";
         const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
-        return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
+        return `<span class="vs-stat hud-stat${tint}"><small>${label}</small><b>${value}${mark}</b><em aria-hidden="true" style="width:${Math.max(0,Math.min(99,Number(value)||0))}%"></em></span>`;
     };
     const spin=combo.blade?.spin==="L"||combo.blade?.spin==="Left"?"LEFT":"RIGHT";
     const mod=combo.rogueMod;
