@@ -523,23 +523,23 @@ button.lobby-gate:disabled{
 
 @media(min-width:900px){
   .lobby.has-art{
-    grid-template-columns:minmax(0,1.15fr) minmax(280px,340px);
+    grid-template-columns:minmax(0,1.7fr) minmax(270px,340px);
     grid-template-rows:auto 1fr;
   }
   .lobby.has-art .lobby-arena{min-height:0}
-  .lobby.has-art .lobby-art img{object-fit:contain;object-position:center}
+  .lobby.has-art .lobby-art img{object-fit:contain;object-position:center left}
   .lobby.has-art .lobby-art:after{
-    background:linear-gradient(180deg,transparent 78%,rgba(5,5,8,.28) 100%);
+    background:linear-gradient(90deg,transparent 42%,rgba(5,5,8,.55) 78%,rgba(5,5,8,.92) 100%);
   }
   .lobby.has-art .lobby-gates{
     grid-template-columns:1fr;
     grid-template-rows:repeat(4,auto);
-    background:transparent;
-    padding:0;
+    background:linear-gradient(90deg,transparent 0%,rgba(5,5,8,.55) 28%,rgba(5,5,8,.92) 100%);
+    padding:8px 8px 4px 28px;
     gap:8px;
   }
-  .swx-word{font-size:64px}
-  .swx-x{font-size:72px;left:calc(100% - .08em);right:auto;top:-6%}
+  .swx-word{font-size:68px}
+  .swx-x{font-size:76px;left:calc(100% - .08em);right:auto;top:-6%}
 }
 @media(max-width:899px){
   .lobby.has-art .lobby-art img{object-fit:contain;object-position:center}

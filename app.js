@@ -1204,7 +1204,7 @@ function bindHomeArt(){
         const src=HOME_ART_CANDIDATES[i];
         if(!src) return;
         i+=1;
-        img.src=src+"?v=9.70";
+        img.src=src+"?v=9.80";
     };
     img.onload=()=>{
         wrap.classList.add("has-art");
@@ -4639,6 +4639,16 @@ function renderNewBattle(){
                           stroke-linecap="round" stroke-linejoin="round"
                           stroke-opacity="0.38" points=""/>
               </g>
+              <defs>
+                <filter id="spinBlurPlayer" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="0.22"/>
+                </filter>
+                <filter id="spinBlurCpu" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="0.22"/>
+                </filter>
+              </defs>
+              <g id="playerSpinGhosts" class="spin-ghosts" pointer-events="none"></g>
+              <g id="cpuSpinGhosts" class="spin-ghosts" pointer-events="none"></g>
 
               <!-- Beys -->
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
@@ -4703,6 +4713,7 @@ function renderNewBattle(){
                         fill="#ffffff"/>
                 <circle id="impactBurst2" cx="50" cy="46" r="1.5"
                         fill="#ffd43b"/>
+                <g id="impactDebris" pointer-events="none"></g>
                 <text id="impactText" x="50" y="40"
                       text-anchor="middle" font-size="5.2"
                       font-weight="900" fill="#ffffff"></text>
@@ -5652,6 +5663,147 @@ function updateBeyMotionTrail(state, groupId, now){
     }
 }
 
+function visualSpinFromRpm(rpm){
+    rpm=newBattleClamp(Number(rpm)||0,0,1);
+    if(rpm<=0.0008) return 0;
+    // Real Beys stay a disc blur until the last wobble. 5 RPM must not
+    // freeze the sticker in a readable pose.
+    const cruise=0.58+0.42*Math.pow(rpm,0.38);
+    if(rpm>=0.04) return cruise;
+    const die=Math.pow(rpm/0.04,0.62);
+    return cruise*(0.62+0.38*die);
+}
+function paintSpinGhosts(state,groupId,sprite,cx,cy,artR){
+    const g=document.getElementById(groupId);
+    if(!g) return;
+    const rpm=newBattleClamp(Number(state?.rpm)||0,0,1);
+    if(!state||!sprite||rpm<=0.0008||state.abilityHidden){
+        if(g.childElementCount) g.innerHTML="";
+        return;
+    }
+    const copies=rpm>0.45?6:rpm>0.18?5:rpm>0.06?4:3;
+    if(g.childElementCount!==copies){
+        let html="";
+        for(let i=0;i<copies;i++){
+            html+=`<image data-g="${i}" href="${sprite}" preserveAspectRatio="xMidYMid meet"/>`;
+        }
+        g.innerHTML=html;
+    }
+    const step=8+rpm*11;
+    const dir=state.spinDirection||1;
+    const kids=g.children;
+    for(let i=0;i<kids.length;i++){
+        const el=kids[i];
+        const a=(state.spriteAngle||0)-dir*step*(i+1);
+        const op=(0.32-i*0.04)*(0.5+rpm*0.55);
+        if(el.getAttribute("href")!==sprite) el.setAttribute("href",sprite);
+        el.setAttribute("x",String(cx-artR));
+        el.setAttribute("y",String(cy-artR));
+        el.setAttribute("width",String(artR*2));
+        el.setAttribute("height",String(artR*2));
+        el.setAttribute("transform",`rotate(${a} ${cx} ${cy})`);
+        el.setAttribute("opacity",op.toFixed(3));
+    }
+}
+function impactKindFromContact(impactClass,directness,onRail,fromAbility){
+    if(fromAbility) return "ability";
+    if(onRail) return "rail";
+    if(directness<0.38) return "graze";
+    if(impactClass==="heavy") return "smash";
+    return "clash";
+}
+const IMPACT_PAL={
+    graze:["#f4f7fb","#c5d0dc","#9aa8b8"],
+    clash:["#fff8e0","#ffd43b","#ffe07a","#ffffff"],
+    smash:["#ffffff","#ff6a2a","#ffc42e","#ff3b1a","#ffe07a"],
+    rail:["#e8fff4","#00e56a","#7dffb0","#ffffff"],
+    ability:["#7ef0ff","#ffe566","#ffffff","#b8e8ff"]
+};
+function spawnImpactDebris(imp){
+    const x=50+imp.x*39;
+    const y=46+imp.y*39;
+    const kind=imp.kind||"clash";
+    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
+    const n=kind==="smash"?28:kind==="clash"?18:kind==="rail"?20:kind==="ability"?16:10;
+    const nx=Number(imp.nx)||0;
+    const ny=Number(imp.ny)||-1;
+    const bits=[];
+    for(let i=0;i<n;i++){
+        const spray=Math.random()*Math.PI*2;
+        const along=i%3===0;
+        const ang=along?Math.atan2(ny,nx)+(Math.random()-0.5)*0.9:spray;
+        const spd=(kind==="graze"?8:kind==="smash"?22:14)*(0.45+Math.random());
+        bits.push({
+            type:Math.random()<0.38?"shard":"spark",
+            x,y,
+            vx:Math.cos(ang)*spd,
+            vy:Math.sin(ang)*spd,
+            ang:ang*180/Math.PI,
+            len:kind==="smash"?2.4+Math.random()*4.2:1.1+Math.random()*2.6,
+            w:kind==="smash"?0.7:0.42,
+            color:pal[i%pal.length],
+            life:kind==="smash"?0.42:kind==="graze"?0.22:0.32,
+            born:performance.now()
+        });
+    }
+    if(kind==="smash"||kind==="rail"){
+        for(let i=0;i<6;i++){
+            const a=i/6*Math.PI*2;
+            bits.push({
+                type:"ember",
+                x,y,
+                vx:Math.cos(a)*6,
+                vy:Math.sin(a)*6,
+                r:1.1+Math.random()*1.4,
+                color:kind==="rail"?"#7dffb0":"#ff6a2a",
+                life:0.38,
+                born:performance.now()
+            });
+        }
+    }
+    NEW_BATTLE.impactDebris=bits;
+    NEW_BATTLE.impactDebrisAt=imp.time;
+    const cam=document.querySelector(".stadium-cam");
+    if(cam){
+        cam.classList.remove("is-graze","is-clash","is-smash","is-rail","is-ability");
+        cam.classList.add("is-"+kind);
+        clearTimeout(NEW_BATTLE.hitFlashTimer);
+        NEW_BATTLE.hitFlashTimer=setTimeout(()=>cam.classList.remove("is-"+kind),220);
+    }
+}
+function paintImpactDebris(now){
+    const g=document.getElementById("impactDebris");
+    if(!g) return;
+    const bits=NEW_BATTLE.impactDebris;
+    if(!bits||!bits.length){
+        if(g.childElementCount) g.innerHTML="";
+        return;
+    }
+    let html="";
+    const live=[];
+    for(const b of bits){
+        const age=Math.max(0,(now-b.born)/1000);
+        if(age>=b.life) continue;
+        const u=age/b.life;
+        const x=b.x+b.vx*age;
+        const y=b.y+b.vy*age+11*age*age;
+        const op=Math.max(0,1-u*1.05);
+        if(b.type==="spark"){
+            const x2=x+Math.cos(b.ang*Math.PI/180)*b.len*(1-u*0.35);
+            const y2=y+Math.sin(b.ang*Math.PI/180)*b.len*(1-u*0.35);
+            html+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${b.color}" stroke-width="${b.w||0.45}" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
+        }else if(b.type==="ember"){
+            html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${((b.r||1)*(1-u*0.4)).toFixed(2)}" fill="${b.color}" opacity="${(op*0.85).toFixed(2)}"/>`;
+        }else{
+            const s=1.1*(1-u*0.5);
+            const a=b.ang+u*80;
+            html+=`<rect x="${(x-s).toFixed(1)}" y="${(y-s*0.35).toFixed(1)}" width="${(s*2).toFixed(1)}" height="${(s*0.7).toFixed(1)}" fill="${b.color}" opacity="${(op*0.9).toFixed(2)}" transform="rotate(${a.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+        }
+        live.push(b);
+    }
+    NEW_BATTLE.impactDebris=live;
+    g.innerHTML=html;
+}
 function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const circle=document.getElementById(circleId);
     const spriteEl=document.getElementById(spriteId);
@@ -5672,14 +5824,22 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
     if(state.abilityHidden){
         if(circle) circle.style.display="none";
         if(spriteEl) spriteEl.style.display="none";
+        paintSpinGhosts(state, circleId==="newPlayerBey"?"playerSpinGhosts":"cpuSpinGhosts", "", cx, cy, artR);
         return;
     }
     // SVG positive rotation is clockwise. Right-spin sprites use that.
+    // 3000 deg/s at full visualSpin (~8.3 rps). Ghost copies keep the disc
+    // unreadable down through low RPM, like a real Bey.
     const rpm=newBattleClamp(Number(state.rpm)||0,0,1);
-    const visualSpin=rpm<=0.0005?0:Math.max(0.16, Math.pow(rpm,0.55));
+    const visualSpin=visualSpinFromRpm(rpm);
     state.spriteAngle=(state.spriteAngle||0)+
-        (state.spinDirection||1)*visualSpin*dt*2160;
+        (state.spinDirection||1)*visualSpin*dt*3000;
     const sprite=bladeSpritePath(state.blade);
+    const ghostId=circleId==="newPlayerBey"?"playerSpinGhosts":"cpuSpinGhosts";
+    const blurId=circleId==="newPlayerBey"?"spinBlurPlayer":"spinBlurCpu";
+    const blurAmt=rpm<=0.008?0:rpm>0.04?0.18+rpm*0.28:0.08+rpm*1.6;
+    const blurEl=document.querySelector(`#${blurId} feGaussianBlur`);
+    if(blurEl) blurEl.setAttribute("stdDeviation", blurAmt.toFixed(2));
     if(sprite && spriteEl){
         if(circle) circle.style.display="none";
         spriteEl.style.display="";
@@ -5691,14 +5851,17 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.setAttribute("width",String(artR*2));
         spriteEl.setAttribute("height",String(artR*2));
         spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
+        spriteEl.setAttribute("filter", rpm>0.008?`url(#${blurId})`:"");
         spriteEl.style.filter=state.metallic
             ?"grayscale(1) saturate(0) brightness(2.15) contrast(1.55)"
             :"";
         if(state.dashBurst && (state.dashBurst.until||0)>performance.now()){
-            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 3px #e8fff4)";
+            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 3.4px #e8fff4)";
         }
+        paintSpinGhosts(state,ghostId,sprite,cx,cy,artR);
     }else{
         if(spriteEl) spriteEl.style.display="none";
+        paintSpinGhosts(state,ghostId,"",cx,cy,artR);
         if(circle){
             circle.style.display="";
             circle.setAttribute("cx",String(cx));
@@ -5811,10 +5974,16 @@ function newBattleFrame(now){
         const impactGroup=document.getElementById("impactEffect");
         if(impactGroup && NEW_BATTLE.lastImpact){
             const imp=NEW_BATTLE.lastImpact;
+            if(imp.time && imp.time!==NEW_BATTLE.impactDebrisAt) spawnImpactDebris(imp);
             const age=Math.max(0,(performance.now()-imp.time)/1000);
+            const kind=imp.kind||(imp.fromAbility?"ability":imp.impactClass==="heavy"?"smash":"clash");
+            const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
+            const ink=pal[0], gold=pal[1]||pal[0];
             const life=
+                kind==="smash" ? 1.18 :
+                kind==="rail" ? 1.02 :
                 imp.impactClass==="heavy" ? 1.05 :
-                imp.impactClass==="medium" ? 0.86 : 0.68;
+                imp.impactClass==="medium" ? 0.86 : 0.62;
             if(age<life){
                 const u=age/life;
                 const x=50+imp.x*39;
@@ -5847,32 +6016,38 @@ function newBattleFrame(now){
                 if(flash){
                     flash.setAttribute("cx",x);
                     flash.setAttribute("cy",y);
+                    flash.setAttribute("stroke",ink);
                     const flashPhase=Math.min(1,u*7);
-                    flash.setAttribute("r",String(4.5+u*7.5*strength*impactMultiplier));
-                    flash.setAttribute("stroke-width",String(5.0-u*2.2));
+                    flash.setAttribute("r",String(4.5+u*(kind==="smash"?11:7.5)*strength*impactMultiplier));
+                    flash.setAttribute("stroke-width",String((kind==="graze"?3.2:5.4)-u*2.2));
                     flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
                 }
                 if(ring){
                     ring.setAttribute("cx",x);
                     ring.setAttribute("cy",y);
+                    ring.setAttribute("stroke",gold);
                     ring.setAttribute("r",String(2.5+u*9.0*strength*impactMultiplier));
                 }
                 if(ring2){
                     ring2.setAttribute("cx",x);
                     ring2.setAttribute("cy",y);
+                    ring2.setAttribute("stroke",ink);
                     ring2.setAttribute("r",String(2.0+u*7.0*strength));
                 }
                 if(ring3){
                     ring3.setAttribute("cx",x);
                     ring3.setAttribute("cy",y);
+                    ring3.setAttribute("stroke",gold);
                     ring3.setAttribute("r",String(1.2+u*5.0*strength));
                 }
                 if(explosion){
                     explosion.setAttribute("cx",x);
                     explosion.setAttribute("cy",y);
-                    explosion.setAttribute("r",String(3.0+u*7.0*strength*impactMultiplier));
+                    explosion.setAttribute("fill",kind==="graze"?"#ffffff":gold);
+                    explosion.setAttribute("stroke",ink);
+                    explosion.setAttribute("r",String((kind==="graze"?1.6:3.0)+u*(kind==="smash"?10:7.0)*strength*impactMultiplier));
                     explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
-                    explosion.setAttribute("opacity",String(Math.max(0,1.0-u*1.12)));
+                    explosion.setAttribute("opacity",String(Math.max(0,(kind==="graze"?0.55:1.0)-u*1.12)));
                 }
                 if(core){
                     core.setAttribute("cx",x);
@@ -5960,6 +6135,8 @@ function newBattleFrame(now){
                 el.setAttribute("opacity","0");
             }
         }
+
+        paintImpactDebris(nowRecovery);
 
         p.hitFlash=Math.max(0,(p.hitFlash||0)-frameDt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-frameDt);
@@ -8151,6 +8328,12 @@ function newPhysicsCollision(dt){
     const impactClass=
         visualStrength>=1.22 ? "heavy" :
         visualStrength>=0.96 ? "medium" : "light";
+    const impactKind=impactKindFromContact(
+        impactClass,
+        directness,
+        pWasOnRail||cWasOnRail,
+        false
+    );
 
     p.hitFlash=0.36*visualStrength;
     c.hitFlash=0.36*visualStrength;
@@ -8161,8 +8344,10 @@ function newPhysicsCollision(dt){
     NEW_BATTLE.lastImpact={
         x:(p.x+c.x)*0.5,
         y:(p.y+c.y)*0.5,
+        nx,ny,
         strength:visualStrength,
         impactClass,
+        kind:impactKind,
         heavy:impactClass==="heavy",
         playerRpmLoss:__pRpmLoss+__pExtraRpmLoss,
         cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
