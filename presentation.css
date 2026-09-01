@@ -239,9 +239,8 @@ html:has(.room), body:has(.room), #app:has(.room){
   background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);
 }
 .lobby-gate.is-locked{
-  opacity:.48;
   cursor:not-allowed;
-  background:rgba(8,6,12,.35);
+  background:linear-gradient(165deg,#4a2a18,#140e0c);
 }
 .lobby-gate:not(:disabled):hover{filter:brightness(1.08)}
 .lobby-gate:not(:disabled):active{transform:translateY(1px)}
@@ -423,7 +422,9 @@ html:has(.room), body:has(.room), #app:has(.room){
 .locker-dock button em{color:var(--muted);font-style:normal;font-size:12px}
 .locker-dock .is-go{background:linear-gradient(90deg,rgba(0,229,106,.18),transparent 55%)}
 .locker-dock .is-gold{background:linear-gradient(90deg,rgba(255,196,46,.14),transparent 55%)}
-.locker-dock button:disabled{opacity:.4}
+.locker-dock button:disabled{
+  cursor:not-allowed;
+}
 .tier-col{
   display:grid;
   grid-template-rows:1fr 1fr 1fr;

@@ -2311,15 +2311,15 @@ function showLanding(){
                 <span><b>NEW GAME</b><em>Pick a tier. Build a combo.</em></span>
                 <span class="gate-go">START</span>
             </button>
-            <button class="${canContinue?"is-gold":""}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+            <button class="${canContinue?"is-gold":"is-locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
                 <span><b>CONTINUE</b><em>${continueNote}</em></span>
                 <span class="gate-go">${canContinue?"RESUME":"LOCKED"}</span>
             </button>
-            <button id="rogueScoreboard" type="button">
+            <button class="is-log" id="rogueScoreboard" type="button">
                 <span><b>RUN SCOREBOARD</b><em>${boardNote}</em></span>
                 <span class="gate-go">LOG</span>
             </button>
-            <button id="rogueHelp" type="button">
+            <button class="is-help" id="rogueHelp" type="button">
                 <span><b>HOW A RUN WORKS</b><em>Shop, luck, eighteen nights.</em></span>
                 <span class="gate-go">READ</span>
             </button>

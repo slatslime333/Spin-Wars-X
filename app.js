@@ -1162,12 +1162,12 @@ function openSheet(title,body,actions){
 }
 
 function bgHTML(kind){
-    return `<div class="background is-${kind}" aria-hidden="true"></div><div class="fx-grain" aria-hidden="true"></div><div class="fx-scratch" aria-hidden="true"></div>`;
+    const grain=kind==="lobby"?"":`<div class="fx-grain" aria-hidden="true"></div>`;
+    return `<div class="background is-${kind}" aria-hidden="true"></div>${grain}`;
 }
 const HOME_ART_CANDIDATES=[
-    "assets/homeart.png","assets/homeart.jpg","assets/homeart.jpeg","assets/homeart.webp",
-    "assets/homeart.PNG","assets/HomeArt.png","assets/home-art.png","assets/home_art.png",
-    "assets/ui/homeart.png","assets/blades/homeart.png"
+    "assets/HomeARt.png","assets/homeart.png","assets/home art.png","assets/home-art.png",
+    "assets/homeart.jpg","assets/homeart.webp","assets/HomeArt.png"
 ];
 function bindHomeArt(){
     const img=document.getElementById("homeArtImg");
@@ -1180,7 +1180,7 @@ function bindHomeArt(){
         const src=HOME_ART_CANDIDATES[i];
         if(!src) return;
         i+=1;
-        img.src=src+"?v=9.61";
+        img.src=src+"?v=9.63";
     };
     img.onload=()=>{
         wrap.classList.add("has-art");
@@ -1189,7 +1189,12 @@ function bindHomeArt(){
     img.onerror=()=>{
         if(i<HOME_ART_CANDIDATES.length) trySrc();
     };
-    trySrc();
+    if(img.complete && img.naturalWidth){
+        wrap.classList.add("has-art");
+        lobby?.classList.add("has-art");
+    }else{
+        trySrc();
+    }
     let ticks=0;
     const poll=setInterval(()=>{
         if(!document.getElementById("homeArtImg")||wrap.classList.contains("has-art")||++ticks>24){
@@ -1215,9 +1220,9 @@ function renderMainMenu(){
 
     app.innerHTML=`
     ${bgHTML("lobby")}
-    <main class="lobby">
+    <main class="lobby has-art">
         <section class="lobby-arena">
-            <div class="lobby-art" aria-hidden="true"><img id="homeArtImg" alt=""></div>
+            <div class="lobby-art" aria-hidden="true"><img id="homeArtImg" src="assets/HomeARt.png" alt=""></div>
             ${homeBowlHTML()}
             <p class="lobby-ver">ALPHA</p>
             <div class="swx-mark">
