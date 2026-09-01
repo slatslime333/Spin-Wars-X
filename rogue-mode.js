@@ -2998,29 +2998,28 @@ function showHub(){
     const mod=r.activeModifier?modifierById(r.activeModifier.id):null;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
-    <main class="menu rogue-hub">
-        <div class="selection-header">
-            <div class="selection-icon">X</div>
-            <div>
+    <main class="garage rogue-hub">
+        <header class="garage-head">
+            <div class="garage-title">
                 <span class="eyebrow">ROGUE RUN</span>
-                <h1>${r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex} CLEAR`:`MATCH ${r.matchIndex} / ${FINAL_MATCH} CLEAR`}</h1>
-                <p>${r.blade.name} · ${r.ratchet.name} · ${r.bit.name}</p>
+                <h1>${r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex}`:`MATCH ${r.matchIndex} / ${FINAL_MATCH}`}</h1>
+                <p>Win. Pick one upgrade. Keep building.</p>
             </div>
-        </div>
-        <section class="menu-card rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
+        </header>
+        <section class="rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
             <div class="rogue-build-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
-            <div>
+            <div class="rogue-build-copy">
                 <b>${r.blade.name}</b>
-                <small>${String(r.currentRogueTier||"Bronze").toUpperCase()} FORM${r.enhanced?" · ENHANCED":""}</small>
-                <div class="rogue-statline">${STATS.map(k=>{
+                <small>${r.ratchet.name} · ${r.bit.name} · ${String(r.currentRogueTier||"Bronze").toUpperCase()}${r.enhanced?" · ENHANCED":""}</small>
+                <div class="stat-grid rogue-stat-grid">${STATS.map(k=>{
                     const d=stats[k]-base[k];
-                    return `<span>${LABEL[k]} <b>${stats[k]}</b>${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</span>`;
+                    return `<span class="mini-stat"><span>${LABEL[k]}</span><b>${stats[k]}${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</b></span>`;
                 }).join("")}</div>
-                ${mod?`<p class="rogue-mod-line">${mod.name} · ${mod.blurb}</p>`:"<p class=\"rogue-mod-line\">No Rogue Modifier</p>"}
+                ${mod?`<details class="vs-full rogue-mod-drop"><summary>${mod.name}</summary><p class="rogue-mod-line">${mod.blurb}</p></details>`:"<p class=\"rogue-mod-line\">No modifier</p>"}
                 ${upgradeStackHTML(upgradeStack("player"))}
             </div>
         </section>
-        <p class="home-leagues-label">CHOOSE ONE UPGRADE</p>
+        <p class="home-leagues-label">CHOOSE ONE</p>
         <div class="rogue-offers" id="rogueOffers"></div>
     </main>`;
     const box=document.getElementById("rogueOffers");

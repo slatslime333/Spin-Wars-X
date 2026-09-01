@@ -174,8 +174,11 @@
         if(!meta){
             return `<div class="ability-chip empty"><span>No ability</span></div>`;
         }
-        const open=opts.open?" open":"";
         const tag=meta.active?"ACTIVE":"PASSIVE";
+        if(opts.compact){
+            return `<span class="ability-pill ${meta.active?"is-active":"is-passive"}">${emblemSVG(id,14)}<b>${meta.name}</b><small>${tag}</small></span>`;
+        }
+        const open=opts.open?" open":"";
         return `<details class="swx-drop ability-drop"${open}>
             <summary><span class="swx-drop-mark">${emblemSVG(id,22)}</span><span class="swx-drop-title">${meta.name}</span><span class="swx-drop-tag">${tag}</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
             <p class="swx-drop-body">${meta.blurb}</p>

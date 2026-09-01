@@ -1466,6 +1466,199 @@ function createBackButton(onClick){
 
 }
 
+function garageLeagueLine(){
+    if(Game.mode==="rogue") return `ROGUE · ${String(Game.selection?.rogueTier||"").toUpperCase()}`;
+    if(Game.mode==="custom") return "CUSTOM · FULL GARAGE";
+    return String(Game.mode||"QUICK").toUpperCase()+" · DRAFT";
+}
+function garageEnsurePools(){
+    const sel=Game.selection=Game.selection||{};
+    if(!sel.ratchetPool || !sel.ratchetPool.length){
+        sel.ratchetPool=Game.mode==="custom"
+            ? [...RATCHETS]
+            : [...RATCHETS].sort(()=>Math.random()-0.5).slice(0,3);
+        sel.ratchetPage=0;
+    }
+    if(!sel.bitPool || !sel.bitPool.length){
+        const bits=selectableBits();
+        sel.bitPool=Game.mode==="custom"
+            ? bits
+            : bits.sort(()=>Math.random()-0.5).slice(0,3);
+        sel.bitPage=0;
+    }
+    return sel;
+}
+function garageStatLine(stats,delta){
+    if(!stats) return "";
+    const cell=(label,key)=>{
+        const v=stats[key];
+        const d=delta?Number(delta[key])||0:0;
+        const mark=d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:"";
+        return `<span class="mini-stat"><span>${label}</span><b>${v}${mark}</b></span>`;
+    };
+    return `<div class="stat-grid">
+        ${cell("ATK","attack")}${cell("KNO","knockback")}${cell("DEF","defense")}
+        ${cell("BAL","balance")}${cell("MOB","mobility")}${cell("STA","stamina")}
+    </div>`;
+}
+function garageLiveHTML(preview){
+    const p=Game.player||{};
+    const blade=preview?.blade||p.blade;
+    const ratchet=preview?.ratchet||p.ratchet;
+    const bit=preview?.bit||p.bit;
+    if(!blade){
+        return `<section class="g-live is-empty" id="garageLive"><p>Compare the blades on screen. Tap one to lock it.</p></section>`;
+    }
+    const sprite=bladeSpritePath(blade);
+    const spin=blade.spin==="L"||blade.spin==="Left"?"LEFT":"RIGHT";
+    const parts=`${ratchet?.name||"—"} · ${bit?.name||"—"} · ${spin}`;
+    let stats=null,ovr="—",meta="—",delta=null;
+    if(blade && ratchet && bit){
+        const combo=calculateComboStats(blade,ratchet,bit);
+        if(combo){
+            stats=combo.stats;
+            ovr=combo.ovr;
+            meta=combo.meta;
+            if(p.blade && p.ratchet && p.bit && preview){
+                const cur=calculateComboStats(p.blade,p.ratchet,p.bit);
+                if(cur?.stats){
+                    delta={};
+                    for(const k of ["attack","knockback","defense","balance","mobility","stamina"]){
+                        const d=(stats[k]|0)-(cur.stats[k]|0);
+                        if(d) delta[k]=d;
+                    }
+                }
+            }
+        }
+    }else if(blade?.card){
+        stats={
+            attack:blade.card.attack,knockback:blade.card.knockback,defense:blade.card.defense,
+            balance:blade.card.balance,mobility:blade.card.mobility,stamina:blade.card.stamina
+        };
+        ovr=blade.card.ovr;
+    }
+    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
+    return `<section class="g-live" id="garageLive">
+        <div class="g-live-art">${sprite?`<img src="${sprite}" alt="">`:""}</div>
+        <div class="g-live-copy">
+            <strong>${blade.name}</strong>
+            <small>${parts}</small>
+            <span class="g-live-ratings"><b>OVR ${ovr}</b><b class="meta">META ${meta}</b></span>
+            ${kit}
+            ${garageStatLine(stats,delta)}
+        </div>
+    </section>`;
+}
+function garagePaintLive(preview){
+    const el=document.getElementById("garageLive");
+    if(!el) return;
+    const wrap=document.createElement("div");
+    wrap.innerHTML=garageLiveHTML(preview);
+    el.replaceWith(wrap.firstElementChild);
+}
+function garageBindPreview(root){
+    if(!root) return;
+    const read=tile=>{
+        if(tile._previewBlade) return {blade:tile._previewBlade};
+        if(tile._previewRatchet) return {blade:Game.player?.blade,ratchet:tile._previewRatchet};
+        if(tile._previewBit) return {blade:Game.player?.blade,ratchet:Game.player?.ratchet,bit:tile._previewBit};
+        return null;
+    };
+    root.querySelectorAll(".pick-tile, .blade-tile").forEach(tile=>{
+        tile.addEventListener("pointerenter",()=>garagePaintLive(read(tile)));
+        tile.addEventListener("pointerleave",()=>garagePaintLive(null));
+        tile.addEventListener("focus",()=>garagePaintLive(read(tile)));
+        tile.addEventListener("blur",()=>garagePaintLive(null));
+    });
+}
+function garageBack(active){
+    if(active==="blade"){
+        if(Game.mode==="rogue"){
+            if(typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.showTierPick) return SpinWarsRogue.showTierPick();
+            return SpinWarsRogue.showLanding();
+        }
+        return renderLeagueSelect();
+    }
+    if(active==="ratchet") return renderGarage("blade");
+    return renderGarage("ratchet");
+}
+function pickGridClass(count){
+    return count<=6?"pick-grid trio":"pick-grid catalog";
+}
+function renderGarage(active){
+    active=active==="ratchet"||active==="bit"?active:"blade";
+    Game.screen=active==="blade"?"bladeDraft":active==="ratchet"?"ratchetDraft":"bitDraft";
+    const sel=garageEnsurePools();
+    const blade=Game.player?.blade;
+    const ratchet=Game.player?.ratchet;
+    const bit=Game.player?.bit;
+    if(active==="ratchet" && !blade) active="blade";
+    if(active==="bit" && !ratchet) active=blade?"ratchet":"blade";
+
+    let pool,pageKey,size;
+    if(active==="blade"){
+        pool=sel.bladePool||[];
+        pageKey="bladePage";
+        size=Game.mode==="custom"?6:Math.max(pool.length,3);
+    }else if(active==="ratchet"){
+        pool=sel.ratchetPool||[];
+        pageKey="ratchetPage";
+        size=Game.mode==="custom"?8:Math.max(pool.length,3);
+    }else{
+        pool=sel.bitPool||[];
+        pageKey="bitPage";
+        size=Game.mode==="custom"?8:Math.max(pool.length,3);
+    }
+    const total=Math.max(1,Math.ceil((pool.length||1)/size));
+    const safe=Math.min(Math.max(sel[pageKey]||0,0),total-1);
+    sel[pageKey]=safe;
+    const shown=pool.slice(safe*size,(safe+1)*size);
+    const app=document.getElementById("app");
+    const titles={blade:"BLADE",ratchet:"RATCHET",bit:"BIT"};
+    app.innerHTML=`<div class="background"></div>
+    <main class="garage selection-screen">
+        <header class="g-chrome">
+            <button type="button" class="g-back" id="garageBack">‹</button>
+            <div class="g-chrome-copy">
+                <span class="eyebrow">BUILD</span>
+                <b>${titles[active]}</b>
+                <small>${garageLeagueLine()}</small>
+            </div>
+        </header>
+        <nav class="g-tabs" aria-label="Combo parts">
+            <button type="button" class="g-tab${active==="blade"?" on":""}${blade?" filled":""}" data-step="blade">BLADE</button>
+            <button type="button" class="g-tab${active==="ratchet"?" on":""}${ratchet?" filled":""}" data-step="ratchet" ${blade?"":"disabled"}>RATCHET</button>
+            <button type="button" class="g-tab${active==="bit"?" on":""}${bit?" filled":""}" data-step="bit" ${ratchet?"":"disabled"}>BIT</button>
+        </nav>
+        ${garageLiveHTML()}
+        <section class="${pickGridClass(shown.length)}${active==="blade"?" blade-pick-grid":""}" id="garagePicks"></section>
+    </main>`;
+    const box=document.getElementById("garagePicks");
+    if(active==="blade") shown.forEach(item=>box.appendChild(createBladeCard(item)));
+    else if(active==="ratchet") shown.forEach(item=>box.appendChild(ratchetCard(item)));
+    else shown.forEach(item=>box.appendChild(bitCard(item)));
+    if(total>1){
+        const nav=document.createElement("div");
+        nav.className="selection-nav";
+        nav.innerHTML=`<button class="menu-btn silver" id="garagePrev" ${safe===0?"disabled":""}>‹</button><span>${safe+1} / ${total}</span><button class="menu-btn silver" id="garageNext" ${safe===total-1?"disabled":""}>›</button>`;
+        box.appendChild(nav);
+        document.getElementById("garagePrev").onclick=()=>{sel[pageKey]--;renderGarage(active);};
+        document.getElementById("garageNext").onclick=()=>{sel[pageKey]++;renderGarage(active);};
+    }
+    document.getElementById("garageBack").onclick=()=>garageBack(active);
+    document.querySelectorAll(".g-tab[data-step]").forEach(btn=>{
+        btn.onclick=()=>renderGarage(btn.dataset.step);
+    });
+    garageBindPreview(box);
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
+}
+function renderBladeDraft(){ renderGarage("blade"); }
+function bindGarageSteps(){
+    document.querySelectorAll("[data-step]").forEach(btn=>{
+        btn.onclick=()=>renderGarage(btn.dataset.step);
+    });
+}
+
 //=========================
 // SHOW BLADE DRAFT
 //=========================
@@ -1482,26 +1675,16 @@ function showBladeDraft(){
         if(Game.mode==="gold") return blade.tier==="Gold";
         return true;
     }).sort(()=>Math.random()-0.5);
-    Game.selection=Game.selection||{}; Game.selection.bladePool=pool; Game.selection.bladePage=0; renderBladeDraft();
-}
-function renderBladeDraft(){
-    const pool=Game.selection?.bladePool||[], page=Game.selection?.bladePage||0, size=3;
-    const total=Math.max(1,Math.ceil(pool.length/size)), safe=Math.min(Math.max(page,0),total-1); Game.selection.bladePage=safe;
-    const league=Game.mode==="rogue"
-        ? `ROGUE · ${String(Game.selection?.rogueTier||"").toUpperCase()}`
-        : (Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL");
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${league}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
-    const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
-    if(total>1){
-        const nav=document.createElement("div"); nav.className="selection-nav";;
-        nav.innerHTML=`<button class="menu-btn silver" id="bladePrev" ${safe===0?"disabled":""}>←</button><span style="font-size:11px;opacity:.7;">${safe+1} / ${total}</span><button class="menu-btn silver" id="bladeNext" ${safe===total-1?"disabled":""}>→</button>`; container.appendChild(nav);
-        document.getElementById("bladePrev").onclick=()=>{Game.selection.bladePage--;renderBladeDraft();}; document.getElementById("bladeNext").onclick=()=>{Game.selection.bladePage++;renderBladeDraft();};
+    Game.selection=Game.selection||{};
+    Game.selection.bladePool=pool;
+    Game.selection.bladePage=0;
+    if(Game.mode!=="rogue"){
+        Game.selection.ratchetPool=null;
+        Game.selection.bitPool=null;
+        Game.selection.ratchetPage=0;
+        Game.selection.bitPage=0;
     }
-    container.appendChild(createBackButton(()=>Game.mode==="rogue"
-        ?(typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.showTierPick?SpinWarsRogue.showTierPick():SpinWarsRogue.showLanding())
-        :renderLeagueSelect()));
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
+    renderGarage("blade");
 }
 
 //=========================
@@ -1520,10 +1703,15 @@ function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",descr
     const card=document.createElement("button");
     card.type="button";
     const art=sprite?encodeURI(sprite):"";
-    card.className=`part-select-card ${accentClass||""}${art?" has-sprite":""}`;
-    card.innerHTML=`${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
-    ${description?`<p class="part-description">${description}</p>`:""}
-    <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
+    card.className=`pick-tile part-tile part-select-card ${accentClass||""}${art?" has-sprite":""}`;
+    card.innerHTML=`
+        <div class="pick-art">${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}${extra||""}</div>
+        <div class="pick-copy">
+            <strong>${title}</strong>
+            <small class="pick-meta">${subtitle||""}</small>
+            ${description?`<p class="part-description">${description}</p>`:""}
+            <div class="stat-grid${stats.length>4?"":" mini"}">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>
+        </div>`;
     card.onclick=onClick;
     return card;
 }
@@ -1580,32 +1768,30 @@ function createBladeCard(blade){
     const card=document.createElement("article");
     const sprite=bladeSpritePath(blade);
     const luck=Game.mode==="rogue" && !Game.selection?.rogueTier?rogueLuckGrade(blade.tier):"";
-    card.className=`blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}`;
+    const spin=blade.spin==="R"||blade.spin==="Right"||!blade.spin?"RIGHT":String(blade.spin).toUpperCase();
+    card.className=`pick-tile blade-tile blade-card game-blade-card ${tierClass(blade.tier)}${sprite?" has-sprite":""}${luck?" has-luck":""}${Game.player?.blade?.name===blade.name?" is-equipped":""}`;
     card.setAttribute("role","button");
     card.tabIndex=0;
+    card._previewBlade=blade;
     card.innerHTML=`
-        <div class="blade-card-art">
+        <div class="pick-art blade-card-art">
             ${sprite?`<img class="blade-card-sprite" src="${sprite}" alt="${blade.name}">`:""}
-            <div class="blade-card-badges">
+            <div class="pick-badges blade-card-badges">
                 <div class="ovr-badge"><small>OVR</small><b>${blade.card.ovr}</b></div>
                 ${luck?`<span class="luck-grade luck-${luck.toLowerCase()}"><small>LUCK</small><b>${luck}</b></span>`:""}
             </div>
         </div>
-        <div class="blade-card-head">
-            <div class="blade-card-title">
-                <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
-                <h2>${blade.name}</h2>
-                <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
-            </div>
-            ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
-            <div class="blade-stat-grid">
+        <div class="pick-copy blade-card-head">
+            <span class="tier-ribbon">${String(blade.tier||"Custom").toUpperCase()}</span>
+            <h2>${blade.name}</h2>
+            <p class="pick-meta blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${spin}</span></p>
+            ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):""}
+            <div class="stat-grid blade-stat-grid">
                 ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-                ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
-                ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
-                ${statMini("BST",blade.card.burst)}
+                ${statMini("DEF",blade.card.defense)}${statMini("BAL",blade.card.balance)}
+                ${statMini("MOB",blade.card.mobility)}${statMini("STA",blade.card.stamina)}
             </div>
-        </div>
-        <div class="select-hint">SELECT BLADE <span>›</span></div>`;
+        </div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
@@ -1626,16 +1812,11 @@ function createBladeCard(blade){
 //=========================
 
 function chooseBlade(blade,card){
-
     Game.player.blade=blade;
-
-    card.style.transform="scale(1.08)";
-    card.style.boxShadow="0 0 30px gold";
-
-    setTimeout(()=>{
-        showRatchetPlaceholder();
-    },350);
-
+    Game.player.ratchet=null;
+    Game.player.bit=null;
+    card.classList.add("is-picked");
+    setTimeout(()=>renderGarage("ratchet"),120);
 }
 
 
@@ -1661,41 +1842,18 @@ function ratchetCard(r){
         7:"Universal heavy round workhorse: adds mass, stability and useful low-height performance to many archetypes.",
         9:"Universal compact workhorse: low exposure and good balance make it useful across attack, balance and stamina."
     }[r.number]||"Physical Ratchet geometry changes height, contact and Burst behavior.";
-    return createPartCard({title:r.name,subtitle:`${shape} · ${heightNote}`,
-        accentClass:`ratchet-card ratchet-${r.number}`,
+    const card=createPartCard({title:r.name,subtitle:`${r.number}-SIDED · ${heightNote}`,
+        accentClass:`ratchet-card ratchet-${r.number}${Game.player?.ratchet?.name===r.name?" is-equipped":""}`,
         stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",
             r.number===5?"NICHE":
             r.number===4?"RISKY":
             (r.number===1||r.number===7||r.number===9)?"UNIVERSAL":"VERSATILE"]],
         extra:`<span class="part-index">${r.number}</span>`,
-        description:desc,
+        description:"",
         sprite:ratchetSpriteFile(r),
-        onClick:()=>{Game.player.ratchet=r;showBitDraft();}});
-}
-
-function showRatchetPlaceholder(){
-    Game.screen="ratchetDraft"; const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">⚙</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE RATCHET</h1><p>${Game.mode==="custom"?"CUSTOM · ALL RATCHETS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="ratchetContainer"></section></main>`;
-    const container=document.getElementById("ratchetContainer");
-    if(Game.mode==="custom"){
-        Game.selection=Game.selection||{}; Game.selection.ratchetPool=[...RATCHETS]; Game.selection.ratchetPage=Game.selection.ratchetPage||0; renderRatchetPage(); return;
-    }
-    const pool=Game.mode==="rogue" && Game.selection?.ratchetPool?.length
-        ? Game.selection.ratchetPool
-        : [...RATCHETS].sort(()=>Math.random()-0.5).slice(0,3);
-    pool.forEach(r=>container.appendChild(ratchetCard(r)));
-    const backToBlades=()=>Game.mode==="rogue" && Game.selection?.bladePool?.length
-        ? renderBladeDraft()
-        : showBladeDraft();
-    container.appendChild(createBackButton(backToBlades));
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
-}
-function renderRatchetPage(){
-    const pool=Game.selection.ratchetPool,page=Game.selection.ratchetPage,size=6,total=Math.max(1,Math.ceil(pool.length/size)),safe=Math.min(Math.max(page,0),total-1); Game.selection.ratchetPage=safe;
-    const c=document.getElementById("ratchetContainer"); c.innerHTML="";
-    pool.slice(safe*size,(safe+1)*size).forEach(r=>c.appendChild(ratchetCard(r)));
-    const nav=document.createElement("div");nav.className="selection-nav";nav.innerHTML=`<button class="menu-btn silver" id="ratchetPrev" ${safe===0?"disabled":""}>←</button><span>${safe+1} / ${total}</span><button class="menu-btn silver" id="ratchetNext" ${safe===total-1?"disabled":""}>→</button>`;c.appendChild(nav);
-    document.getElementById("ratchetPrev").onclick=()=>{Game.selection.ratchetPage--;renderRatchetPage();};document.getElementById("ratchetNext").onclick=()=>{Game.selection.ratchetPage++;renderRatchetPage();};c.appendChild(createBackButton(()=>showBladeDraft()));
+        onClick:()=>{Game.player.ratchet=r;Game.player.bit=null;renderGarage("bit");}});
+    card._previewRatchet=r;
+    return card;
 }
 
 //=========================
@@ -1723,12 +1881,24 @@ function bitCard(bit){
         "Orb":"High-stamina Bit with slightly more movement and less pure stability than Ball.",
         "Quake":"Jumping attack Bit: high impact and knockback, but poor stamina and balance."
     };
-    return createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT`,
-        accentClass:`bit-card bit-${typeClass}`,
-        stats:[["MOVE",mob],["STA",sta],["STABLE",stability],
+    let comboStats=null;
+    let comboNote="";
+    if(Game.player?.blade && Game.player?.ratchet){
+        const combo=calculateComboStats(Game.player.blade,Game.player.ratchet,bit);
+        if(combo){
+            comboNote=` · OVR ${combo.ovr}`;
+            comboStats=[
+                ["ATK",combo.stats.attack],["KNO",combo.stats.knockback],["DEF",combo.stats.defense],
+                ["BAL",combo.stats.balance],["MOB",combo.stats.mobility],["STA",combo.stats.stamina]
+            ];
+        }
+    }
+    const card=createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT${comboNote}`,
+        accentClass:`bit-card bit-${typeClass}${Game.player?.bit?.name===bit.name?" is-equipped":""}`,
+        stats:comboStats||[["MOVE",mob],["STA",sta],["STABLE",stability],
             ["CONTROL",bp.control>.85?"HIGH":bp.control>.65?"MEDIUM":"LOW"]],
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
-        description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
+        description:"",
         sprite:bitSpriteFile(bit),
         onClick:()=>{
             Game.player.bit=bit;
@@ -1738,26 +1908,20 @@ function bitCard(bit){
             }
             showComboCard();
         }});
+    card._previewBit=bit;
+    return card;
 }
 
+function showRatchetPlaceholder(){
+    garageEnsurePools();
+    renderGarage("ratchet");
+}
+function renderRatchetPage(){ renderGarage("ratchet"); }
 function showBitDraft(){
-    Game.screen="bitDraft"; const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">◉</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BIT</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BITS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="bitContainer"></section></main>`;
-    if(Game.mode==="custom"){Game.selection=Game.selection||{};Game.selection.bitPool=selectableBits();Game.selection.bitPage=Game.selection.bitPage||0;renderBitPage();return;}
-    const c=document.getElementById("bitContainer");
-    const pool=Game.mode==="rogue" && Game.selection?.bitPool?.length
-        ? Game.selection.bitPool
-        : selectableBits().sort(()=>Math.random()-0.5).slice(0,3);
-    pool.forEach(bit=>c.appendChild(bitCard(bit)));
-    c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
+    garageEnsurePools();
+    renderGarage("bit");
 }
-function renderBitPage(){
-    const pool=Game.selection.bitPool,page=Game.selection.bitPage,size=6,total=Math.max(1,Math.ceil(pool.length/size)),safe=Math.min(Math.max(page,0),total-1);Game.selection.bitPage=safe;
-    const c=document.getElementById("bitContainer");c.innerHTML="";pool.slice(safe*size,(safe+1)*size).forEach(bit=>c.appendChild(bitCard(bit)));
-    const nav=document.createElement("div");nav.className="selection-nav";nav.innerHTML=`<button class="menu-btn silver" id="bitPrev" ${safe===0?"disabled":""}>←</button><span>${safe+1} / ${total}</span><button class="menu-btn silver" id="bitNext" ${safe===total-1?"disabled":""}>→</button>`;c.appendChild(nav);
-    document.getElementById("bitPrev").onclick=()=>{Game.selection.bitPage--;renderBitPage();};document.getElementById("bitNext").onclick=()=>{Game.selection.bitPage++;renderBitPage();};c.appendChild(createBackButton(()=>showRatchetPlaceholder()));
-}
+function renderBitPage(){ renderGarage("bit"); }
 
 
 
@@ -2288,40 +2452,30 @@ function createComboSummaryCard(side,combo){
         const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
         return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
     };
+    const spin=combo.blade?.spin==="L"||combo.blade?.spin==="Left"?"LEFT":"RIGHT";
     const mod=combo.rogueMod;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
-        <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
-        ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
-        <h2>${combo.blade.name}</h2>
-        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
+        <div class="vs-id">
+          <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
+          ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
+          <h2>${combo.blade.name}</h2>
+          <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name} · ${spin}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
+        </div>
         <div class="vs-ratings">
           <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
           <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
         </div>
-        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
-        <div class="vs-stat-groups">
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HIT</span>
-            <div class="vs-stats pair">
-              ${statBox("ATK","attack")}${statBox("KB","knockback")}
-            </div>
-          </div>
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HOLD</span>
-            <div class="vs-stats">
-              ${statBox("DEF","defense")}${statBox("BAL","balance")}${statBox("BST","burst")}
-            </div>
-          </div>
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">MOVE</span>
-            <div class="vs-stats pair">
-              ${statBox("MOB","mobility")}${statBox("STA","stamina")}
-            </div>
-          </div>
+        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade,{compact:true}):""}
+        <div class="stat-grid vs-stat-grid">
+          ${statBox("ATK","attack")}${statBox("KNO","knockback")}${statBox("DEF","defense")}
+          ${statBox("BAL","balance")}${statBox("MOB","mobility")}${statBox("STA","stamina")}
         </div>
+        <details class="vs-full"><summary>FULL STATS</summary>
+          <div class="stat-grid vs-stat-grid">${statBox("BST","burst")}</div>
+        </details>
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
         ${combo.rogueStack||""}
       </div>
@@ -4157,10 +4311,12 @@ function renderNewBattle(){
           <div class="battle-dock">
             <div class="battle-fighters">
               <div class="battle-hud-card battle-hud-player">
-                <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
+                <div class="battle-hud-top"><span>YOU</span><strong>${p.blade.name}</strong></div>
                 ${battleHudPartsLine(p)}
-                <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
-                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
+                <div class="hud-vitals">
+                  <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
+                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
+                </div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
                     <div id="newPlayerRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
@@ -4185,10 +4341,12 @@ function renderNewBattle(){
                 <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
               </div>
               <div class="battle-hud-card battle-hud-cpu">
-                <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
+                <div class="battle-hud-top"><span>CPU</span><strong>${c.blade.name}</strong></div>
                 ${battleHudPartsLine(c)}
-                <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
-                <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
+                <div class="hud-vitals">
+                  <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
+                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
+                </div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
                     <div id="newCpuRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
@@ -4324,8 +4482,18 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }
     const scoreP=document.getElementById("battleScorePlayer");
     const scoreC=document.getElementById("battleScoreCpu");
-    if(scoreP) scoreP.textContent=String(Game.battle.score.player);
-    if(scoreC) scoreC.textContent=String(Game.battle.score.cpu);
+    if(scoreP){
+        scoreP.textContent=String(Game.battle.score.player);
+        scoreP.classList.remove("score-pop");
+        void scoreP.offsetWidth;
+        scoreP.classList.add("score-pop");
+    }
+    if(scoreC){
+        scoreC.textContent=String(Game.battle.score.cpu);
+        scoreC.classList.remove("score-pop");
+        void scoreC.offsetWidth;
+        scoreC.classList.add("score-pop");
+    }
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         Game.screen="battle";
         SpinWarsRogue.persist();
