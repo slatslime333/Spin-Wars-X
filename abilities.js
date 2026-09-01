@@ -1398,6 +1398,32 @@
         const abn=document.getElementById("abilityBtn");
         if(db) db.classList.toggle("ready", dashFill("player")>=1);
         if(abn && meta?.active) abn.classList.toggle("ready", (state.charges.player||0)>0 && !channelBusy());
+        if(typeof global.paintBattleInspect==="function") global.paintBattleInspect();
+    }
+
+    function inspectStatus(side){
+        const s=bey(side);
+        const t=nowMs();
+        const lines=[];
+        const push=(label,until)=>{
+            const left=(Number(until)||0)-t;
+            if(left>50) lines.push({label,left:left/1000});
+        };
+        if(state.channel && state.channel.side===side) push(META[state.channel.kind]?.name||state.channel.kind, state.channel.until);
+        if(s){
+            push("Iron Skin", s.ironSkinUntil);
+            push("Hurricane", s.hurricaneUntil);
+            push("Flame Trail", s.flameUntil);
+            push("Sword lock", s.swordFreezeUntil);
+        }
+        const peg=state.pegasus;
+        if(peg && peg.side===side){
+            if(t<(peg.liftUntil||0)) push("Pegasus lift", peg.liftUntil);
+            else push("Pegasus aim", peg.aimUntil||state.channel?.until);
+        }
+        const dashUntil=state.dashAt[side]||0;
+        if(dashUntil>t) push("Dash CD", dashUntil);
+        return lines;
     }
 
     function fxMarkup(){
@@ -1411,7 +1437,7 @@
         tryDash, tryAbility, forceFieldStorm, popup, grantCharge, abilityMax,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
-        cpuShouldDash, cpuShouldAbility, readFight,
+        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus,
         SWORD_R, STORM_R, QUAKE_R, IRON_MS, FREE_SPIN_CHANCE, KITS, META
     };
     if(typeof window!=="undefined"){

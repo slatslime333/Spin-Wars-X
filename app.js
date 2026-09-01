@@ -1131,14 +1131,38 @@ function homeBowlHTML(){
 
 function roomBarHTML(opts){
     opts=opts||{};
-    const back=opts.backId
-        ? `<button type="button" class="room-back" id="${opts.backId}">BACK</button>`
-        : `<span></span>`;
     return `<header class="room-bar">
-        ${back}
         <div class="room-id"><span>${opts.kicker||""}</span><b>${opts.title||""}</b></div>
-        ${opts.extra||"<span></span>"}
+        ${opts.extra||""}
     </header>`;
+}
+function roomDockHTML(opts){
+    opts=opts||{};
+    const back=opts.backId
+        ? `<button type="button" class="room-back" id="${opts.backId}">◀ BACK</button>`
+        : `<span class="room-back-spacer" aria-hidden="true"></span>`;
+    const go=opts.goId
+        ? `<button type="button" class="room-go ${opts.goClass||""}" id="${opts.goId}">${opts.goLabel||"GO"}</button>`
+        : "";
+    return `<footer class="room-dock">${back}${go}</footer>`;
+}
+function displayOvr(stats){
+    const keys=["attack","knockback","defense","balance","mobility","stamina"];
+    if(!stats) return 60;
+    const avg=keys.reduce((a,k)=>a+(Number(stats[k])||0),0)/keys.length;
+    return typeof normalizePhysicalStat==="function"
+        ? normalizePhysicalStat(avg)
+        : Math.max(60,Math.min(99,Math.round(avg)));
+}
+function showMetaRating(){
+    return Game.mode!=="rogue";
+}
+function ratingsHTML(ovr,meta){
+    const o=ovr==null||ovr==="—"?"—":ovr;
+    if(!showMetaRating() || meta==null || meta==="—"){
+        return `<span class="draft-ratings"><b>OVR ${o}</b></span>`;
+    }
+    return `<span class="draft-ratings"><b>OVR ${o}</b><b class="meta">META ${meta}</b></span>`;
 }
 function closeSheet(){
     document.getElementById("swxSheet")?.remove();
@@ -1180,7 +1204,7 @@ function bindHomeArt(){
         const src=HOME_ART_CANDIDATES[i];
         if(!src) return;
         i+=1;
-        img.src=src+"?v=9.64";
+        img.src=src+"?v=9.70";
     };
     img.onload=()=>{
         wrap.classList.add("has-art");
@@ -1221,8 +1245,10 @@ function renderMainMenu(){
     app.innerHTML=`
     ${bgHTML("lobby")}
     <main class="lobby has-art">
+        <div class="lobby-poster" aria-hidden="true">
+            <div class="lobby-art"><img id="homeArtImg" src="assets/HomeARt.png" alt=""></div>
+        </div>
         <section class="lobby-arena">
-            <div class="lobby-art" aria-hidden="true"><img id="homeArtImg" src="assets/HomeARt.png" alt=""></div>
             ${homeBowlHTML()}
             <p class="lobby-ver">ALPHA</p>
             <div class="swx-mark">
@@ -1282,7 +1308,7 @@ function renderHowTo(){
     app.innerHTML=`
     ${bgHTML("manual")}
     <main class="room manual">
-        ${roomBarHTML({backId:"howtoBack",kicker:"MANUAL",title:"HOW THIS WORKS"})}
+        ${roomBarHTML({kicker:"MANUAL",title:"HOW THIS WORKS"})}
         <nav class="manual-chapters" aria-label="Chapters">
             <button type="button" data-ht="0" class="on">The game</button>
             <button type="button" data-ht="1">Modes</button>
@@ -1394,6 +1420,7 @@ function renderHowTo(){
         </section>
         </div>
         <footer class="manual-foot">
+            <button type="button" class="room-back" id="howtoBack">◀ BACK</button>
             <button type="button" id="howtoPrev">PREV</button>
             <span id="howtoPos">1 / 10</span>
             <button type="button" id="howtoNext">NEXT</button>
@@ -1442,7 +1469,7 @@ function renderLeagueSelect(){
     app.innerHTML=`
     ${bgHTML("board")}
     <main class="room board">
-        ${roomBarHTML({backId:"leagueBack",kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
+        ${roomBarHTML({kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
         <p class="board-lead">Featured roll, or draft a league. First to 7.</p>
         <nav class="board-grid" aria-label="Choose a league">
             <button class="board-cell featured" data-quick-match="1" type="button">
@@ -1481,6 +1508,7 @@ function renderLeagueSelect(){
                 <span class="board-info" data-info="custom" role="button" aria-label="About Custom">i</span>
             </button>
         </nav>
+        ${roomDockHTML({backId:"leagueBack"})}
     </main>`;
     document.getElementById("leagueBack")?.addEventListener("click",()=>renderMainMenu());
     document.querySelectorAll(".board-cell[data-mode]").forEach(button=>{
@@ -1648,7 +1676,8 @@ function garageStatLine(stats,delta){
         const v=stats[key];
         const d=delta?Number(delta[key])||0:0;
         const mark=d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:"";
-        return `<div class="hud-stat"><span>${label}</span><b>${v}${mark}</b><em aria-hidden="true" style="width:${Math.max(0,Math.min(99,Number(v)||0))}%"></em></div>`;
+        const pct=Math.max(0,Math.min(99,Number(v)||0));
+        return `<div class="hud-stat"><span>${label}</span><b>${v}${mark}</b><span class="hud-track" aria-hidden="true"><i style="width:${pct}%"></i></span></div>`;
     };
     return `<div class="stat-grid hud-stats">
         ${cell("ATK","attack")}${cell("KNO","knockback")}${cell("DEF","defense")}
@@ -1671,8 +1700,8 @@ function garageLiveHTML(preview){
         const combo=calculateComboStats(blade,ratchet,bit);
         if(combo){
             stats=combo.stats;
-            ovr=combo.ovr;
-            meta=combo.meta;
+            ovr=displayOvr(combo.stats);
+            meta=showMetaRating()?combo.meta:"—";
             if(p.blade && p.ratchet && p.bit && preview){
                 const cur=calculateComboStats(p.blade,p.ratchet,p.bit);
                 if(cur?.stats){
@@ -1689,7 +1718,7 @@ function garageLiveHTML(preview){
             attack:blade.card.attack,knockback:blade.card.knockback,defense:blade.card.defense,
             balance:blade.card.balance,mobility:blade.card.mobility,stamina:blade.card.stamina
         };
-        ovr=blade.card.ovr;
+        ovr=displayOvr(stats);
     }
     const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
     const ratchetArt=ratchet?ratchetSpritePath(ratchet):"";
@@ -1703,7 +1732,7 @@ function garageLiveHTML(preview){
         <div class="draft-feature-copy">
             <strong>${blade.name}</strong>
             <small>${blade.type||""} · ${blade.weight||""}g · ${parts}</small>
-            <span class="draft-ratings"><b>OVR ${ovr}</b><b class="meta">META ${meta}</b></span>
+            ${ratingsHTML(ovr,meta)}
             ${kit}
             ${garageStatLine(stats,delta)}
         </div>
@@ -1816,7 +1845,7 @@ function renderGarage(active){
     if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
     app.innerHTML=`${bgHTML("bay")}
     <main class="room bay draft-screen">
-        ${roomBarHTML({backId:"garageBack",kicker:garageLeagueLine(),title:titles[active]})}
+        ${roomBarHTML({kicker:garageLeagueLine(),title:titles[active]})}
         <nav class="bay-steps draft-steps" aria-label="Combo steps">
             <button type="button" class="draft-step${active==="blade"?" on":""}${blade?" filled":""}" data-step="blade">1 BLADE</button>
             <button type="button" class="draft-step${active==="ratchet"?" on":""}${ratchet?" filled":""}" data-step="ratchet" ${blade?"":"disabled"}>2 RATCHET</button>
@@ -1830,7 +1859,7 @@ function renderGarage(active){
                 <section class="draft-roster" id="garagePicks"></section>
             </div>
         </div>
-        <button type="button" class="room-go is-lock" id="draftLock">${locks[active]}</button>
+        ${roomDockHTML({backId:"garageBack",goId:"draftLock",goClass:"is-lock",goLabel:locks[active]})}
     </main>`;
     const box=document.getElementById("garagePicks");
     if(active==="blade") shown.forEach(item=>box.appendChild(createBladeCard(item)));
@@ -1931,7 +1960,7 @@ function statMini(label,value){
     const map={"VERY HIGH":92,HIGH:78,MEDIUM:55,LOW:28,NICHE:42,RISKY:30,UNIVERSAL:72,VERSATILE:60,LIGHT:40,HEAVY:80};
     const numeric=Number(value);
     const n=Number.isFinite(numeric)?Math.max(0,Math.min(99,numeric)):(map[value]||0);
-    return `<div class="hud-stat"><span>${label}</span><b>${value}</b><em aria-hidden="true" style="width:${n}%"></em></div>`;
+    return `<div class="hud-stat"><span>${label}</span><b>${value}</b><span class="hud-track" aria-hidden="true"><i style="width:${n}%"></i></span></div>`;
 }
 function rosterTicks(stats){
     const map={"VERY HIGH":92,HIGH:78,MEDIUM:55,LOW:28,NICHE:42,RISKY:30,UNIVERSAL:72,VERSATILE:60,LIGHT:40,HEAVY:80};
@@ -2000,6 +2029,69 @@ function battleHudPartsLine(s){
     const parts=[ratchet,bit].filter(Boolean).join(" · ");
     return `<p class="battle-hud-parts">${parts||"—"}</p>`;
 }
+function battleInspectBody(side){
+    const live=typeof NEW_BATTLE!=="undefined"?NEW_BATTLE?.[side]:null;
+    const stored=Game[side];
+    const blade=live?.blade||stored?.blade;
+    const stats=live?.stats||stored?.stats;
+    if(!blade) return `<p>No Bey loaded.</p>`;
+    const ovr=displayOvr(stats);
+    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
+    const timers=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.inspectStatus
+        ? SpinWarsAbilities.inspectStatus(side)
+        : [];
+    let modHTML="";
+    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+        const plate=SpinWarsRogue.plateDecor?.(side);
+        if(plate?.mod){
+            modHTML=`<div class="hud-mod"><small>MODIFIER</small><b>${plate.mod.name}</b><p>${plate.mod.blurb||""}</p></div>`;
+        }
+        const r=Game.rogue;
+        if(side==="player" && r?.consumables){
+            const toys=Object.entries(r.consumables).filter(([,n])=>Number(n)>0);
+            if(toys.length){
+                modHTML+=`<div class="hud-mod"><small>SITUATION</small>${toys.map(([id,n])=>{
+                    const name=id.replace(/([A-Z])/g," $1").toUpperCase();
+                    return `<p>${name.trim()} · ${n} game${n===1?"":"s"}</p>`;
+                }).join("")}</div>`;
+            }
+        }
+    }
+    const timerHTML=timers.length
+        ? `<div class="hud-mod"><small>TIMERS</small>${timers.map(t=>`<p>${t.label} · ${t.left.toFixed(1)}s</p>`).join("")}</div>`
+        : `<p class="hud-idle">No live timer</p>`;
+    return `<div class="hud-drop-head"><strong>${blade.name}</strong><b>OVR ${ovr}</b></div>
+        ${kit}
+        ${garageStatLine(stats)}
+        ${modHTML}
+        ${timerHTML}`;
+}
+function bindBattleInspect(){
+    document.querySelectorAll(".battle-hud-card[data-side]").forEach(card=>{
+        card.addEventListener("click",event=>{
+            event.preventDefault();
+            const open=!card.classList.contains("is-open");
+            document.querySelectorAll(".battle-hud-card.is-open").forEach(other=>other.classList.remove("is-open"));
+            if(open){
+                card.classList.add("is-open");
+                const drop=card.querySelector(".hud-drop");
+                if(drop) drop.innerHTML=battleInspectBody(card.dataset.side);
+            }
+        });
+    });
+}
+function paintBattleInspect(){
+    document.querySelectorAll(".battle-hud-card.is-open[data-side]").forEach(card=>{
+        const drop=card.querySelector(".hud-drop");
+        if(drop) drop.innerHTML=battleInspectBody(card.dataset.side);
+    });
+}
+function battleHudRating(s,side){
+    if(showMetaRating()){
+        return `<div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(s,side)}</b></div>`;
+    }
+    return `<div class="battle-hud-meta"><small>OVR</small><b>${displayOvr(s?.stats||Game[side]?.stats)}</b></div>`;
+}
 function battleHudMetaValue(s,side){
     const live=Number(s?.comboMeta);
     const stored=Number(Game[side]?.comboMeta);
@@ -2026,17 +2118,13 @@ function createBladeCard(blade){
             <strong>${blade.name}</strong>
         </div>
         ${ticks}
-        <div class="roster-ovr"><small>OVR</small><b>${blade.card.ovr}</b>${luck?`<span class="luck-grade luck-${luck.toLowerCase()}">${luck}</span>`:""}</div>`;
+        <div class="roster-ovr"><small>OVR</small><b>${displayOvr(blade.card)}</b>${luck?`<span class="luck-grade luck-${luck.toLowerCase()}">${luck}</span>`:""}</div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
     });
     const pick=()=>{
         Game.selection=Game.selection||{};
-        if(Game.selection.focusBlade?.name===blade.name){
-            chooseBlade(blade,card);
-            return;
-        }
         Game.selection.focusBlade=blade;
         renderGarage("blade");
     };
@@ -2099,10 +2187,6 @@ function ratchetCard(r){
         sprite:ratchetSpriteFile(r),
         onClick:()=>{
             Game.selection=Game.selection||{};
-            if(Game.selection.focusRatchet?.name===r.name){
-                Game.player.ratchet=r;Game.player.bit=null;Game.selection.focusBit=null;renderGarage("bit");
-                return;
-            }
             Game.selection.focusRatchet=r;
             renderGarage("ratchet");
         }});
@@ -2156,15 +2240,6 @@ function bitCard(bit){
         sprite:bitSpriteFile(bit),
         onClick:()=>{
             Game.selection=Game.selection||{};
-            if(Game.selection.focusBit?.name===bit.name){
-                Game.player.bit=bit;
-                if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
-                    SpinWarsRogue.onStarterPicked(Game.player.blade,Game.player.ratchet,bit);
-                    return;
-                }
-                showComboCard();
-                return;
-            }
             Game.selection.focusBit=bit;
             renderGarage("bit");
         }});
@@ -2645,7 +2720,7 @@ function calculateComboStats(blade,ratchet,bit){
     }
 
     for(const key of Object.keys(stats))stats[key]=normalizePhysicalStat(stats[key]);
-    const ovr=normalizePhysicalStat(Object.values(stats).reduce((a,b)=>a+b,0)/7);
+    const ovr=displayOvr(stats);
     const meta=calculateMetaScoreV57(bladeData,ratchet,bit,stats,ratchetFit*heightFit);
     return {stats,compatibility:Math.round((explicitBitFit*.55+heightFit*.25+ratchetFit*.20)*100),ovr,meta,
         physical:{ratchetFit,heightFit,bitFit:explicitBitFit,bladeWeight:bladePhys.weight,
@@ -2667,8 +2742,8 @@ function calculateComboStats(blade,ratchet,bit){
    but below Ball in pure stamina/KO resistance.
  - Ratchet side count is Blade-dependent; 3/4/5/6 are niche/alignment-sensitive.
  - Height 80 is exposure/stability tradeoff, never a free stamina upgrade.
- - OVR remains the average of seven visible combo stats.
- - Meta is secondary to physical combo stats.
+ - OVR is the average of the six battle stats (ATK/KNO/DEF/BAL/MOB/STA). Burst is on the card and does not count.
+ - Meta is Quick Play bragging rights only. Rogue hides META and uses that six-stat OVR.
 */
 /*
  V56 SYNERGY ENGINE LOCK
@@ -2700,8 +2775,9 @@ function createComboSummaryCard(side,combo){
     for(const key of ["attack","knockback","defense","mobility","balance","stamina","burst"]){
         if(!Number.isFinite(Number(stats[key]))) stats[key]=60;
     }
-    const ovr=Number.isFinite(Number(combo.ovr))?combo.ovr:60;
+    const ovr=displayOvr(stats);
     const meta=Number.isFinite(Number(combo.meta))?combo.meta:60;
+    const hideMeta=!showMetaRating();
     const tier=tierClass(combo.plateTier||combo.blade?.tier);
     const bossMark=combo.bossMark||"";
     const enhanced=!!combo.enhanced;
@@ -2710,7 +2786,8 @@ function createComboSummaryCard(side,combo){
         const d=Number(combo.statDelta?.[key])||0;
         const tint=d>0?" up":d<0?" down":"";
         const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
-        return `<span class="vs-stat hud-stat${tint}"><small>${label}</small><b>${value}${mark}</b><em aria-hidden="true" style="width:${Math.max(0,Math.min(99,Number(value)||0))}%"></em></span>`;
+        const pct=Math.max(0,Math.min(99,Number(value)||0));
+        return `<span class="vs-stat hud-stat${tint}"><small>${label}</small><b>${value}${mark}</b><span class="hud-track" aria-hidden="true"><i style="width:${pct}%"></i></span></span>`;
     };
     const spin=combo.blade?.spin==="L"||combo.blade?.spin==="Left"?"LEFT":"RIGHT";
     const mod=combo.rogueMod;
@@ -2726,7 +2803,7 @@ function createComboSummaryCard(side,combo){
         </div>
         <div class="vs-ratings">
           <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
-          <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
+          ${hideMeta?"":`<div class="vs-rating meta"><small>META</small><b>${meta}</b></div>`}
         </div>
         ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade,{compact:true}):""}
         <div class="stat-grid vs-stat-grid">
@@ -2765,14 +2842,14 @@ function showComboCard(){
         ? SpinWarsRogue.scoreboardLabel()
         : "FIRST TO 7";
     app.innerHTML=`${bgHTML("weigh")}<main class="room weigh-in vs-screen">
-      ${roomBarHTML({backId:"vsBack",kicker:Game.mode==="rogue"?"ROGUE WEIGH-IN":"WEIGH-IN",title:vsTitle})}
+      ${roomBarHTML({kicker:Game.mode==="rogue"?"ROGUE WEIGH-IN":"WEIGH-IN",title:vsTitle})}
       ${vsCall}
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,ovr:playerCombo.ovr,meta:playerCombo.meta,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,ovr:cpuCombo.ovr,meta:cpuCombo.meta,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
-      <button class="room-go is-rip" id="battleButton" type="button">${playLabel}</button>
+      ${roomDockHTML({backId:"vsBack",goId:"battleButton",goClass:"is-rip",goLabel:playLabel})}
     </main>`;
     const battleButton=document.getElementById("battleButton");
     if(battleButton) battleButton.onclick=(event)=>{
@@ -4575,12 +4652,12 @@ function renderNewBattle(){
 
           <div class="battle-dock">
             <div class="battle-fighters">
-              <div class="battle-hud-card battle-hud-player">
+              <div class="battle-hud-card battle-hud-player" data-side="player" role="button" tabindex="0">
                 <div class="battle-hud-top"><span>YOU</span><strong>${p.blade.name}</strong></div>
                 ${battleHudPartsLine(p)}
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
-                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
+                  ${battleHudRating(p,"player")}
                 </div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
@@ -4595,6 +4672,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
+                <div class="hud-drop"></div>
               </div>
               <div class="battle-score">
                 <div class="battle-score-line">
@@ -4605,12 +4683,12 @@ function renderNewBattle(){
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
                 <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
               </div>
-              <div class="battle-hud-card battle-hud-cpu">
+              <div class="battle-hud-card battle-hud-cpu" data-side="cpu" role="button" tabindex="0">
                 <div class="battle-hud-top"><span>CPU</span><strong>${c.blade.name}</strong></div>
                 ${battleHudPartsLine(c)}
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
-                  <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
+                  ${battleHudRating(c,"cpu")}
                 </div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
@@ -4625,6 +4703,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
+                <div class="hud-drop"></div>
               </div>
             </div>
             <div id="launchDock"></div>
@@ -4635,6 +4714,7 @@ function renderNewBattle(){
     updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
     document.getElementById("forfeitMatchBtn")?.addEventListener("click",forfeitLiveMatch);
+    bindBattleInspect();
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
         Game.screen="battle";
