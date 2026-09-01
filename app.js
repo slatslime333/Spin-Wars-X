@@ -2029,63 +2029,140 @@ function battleHudPartsLine(s){
     const parts=[ratchet,bit].filter(Boolean).join(" · ");
     return `<p class="battle-hud-parts">${parts||"—"}</p>`;
 }
-function battleInspectBody(side){
+function battleInspectModel(side){
     const live=typeof NEW_BATTLE!=="undefined"?NEW_BATTLE?.[side]:null;
     const stored=Game[side];
     const blade=live?.blade||stored?.blade;
     const stats=live?.stats||stored?.stats;
+    const hud=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.inspectHud
+        ? SpinWarsAbilities.inspectHud(side)
+        : {timers:SpinWarsAbilities?.inspectStatus?.(side)||[],charges:null};
+    const rogue=Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"
+        ? SpinWarsRogue.inspectBattle?.(side)
+        : null;
+    return {side,blade,stats,hud,rogue};
+}
+function battleInspectStamp(model){
+    if(!model?.blade) return "empty";
+    const timers=(model.hud?.timers||[]).map(t=>t.id||t.label).join(",");
+    const clocks=(model.rogue?.clocks||[]).map(c=>c.id+c.state).join(",");
+    const toys=(model.rogue?.toys||[]).map(t=>t.id+t.games).join(",");
+    const charges=model.hud?.charges?`${model.hud.charges.left}/${model.hud.charges.max}`:"";
+    return [model.blade.name,displayOvr(model.stats),model.rogue?.mod?.id||"",timers,clocks,toys,charges].join("|");
+}
+function battleInspectLiveInner(label,state,left,note){
+    const bits=[`<strong>${label}</strong>`];
+    if(state) bits.push(`<em>${state}</em>`);
+    if(left>0.05) bits.push(`<b data-live="1">${Number(left).toFixed(1)}s</b>`);
+    if(note) bits.push(`<span>${note}</span>`);
+    return bits.join(" · ");
+}
+function battleInspectBody(side){
+    const model=battleInspectModel(side);
+    const {blade,stats,hud,rogue}=model;
     if(!blade) return `<p>No Bey loaded.</p>`;
     const ovr=displayOvr(stats);
     const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
-    const timers=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.inspectStatus
-        ? SpinWarsAbilities.inspectStatus(side)
-        : [];
-    let modHTML="";
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
-        const plate=SpinWarsRogue.plateDecor?.(side);
-        if(plate?.mod){
-            modHTML=`<div class="hud-mod"><small>MODIFIER</small><b>${plate.mod.name}</b><p>${plate.mod.blurb||""}</p></div>`;
+    const chargeHTML=hud?.charges
+        ? `<p class="hud-charge">${hud.charges.name} · ${hud.charges.left}/${hud.charges.max}</p>`
+        : "";
+    let rogueHTML="";
+    if(rogue){
+        if(rogue.mod){
+            rogueHTML+=`<div class="hud-mod"><small>MODIFIER</small><b>${rogue.mod.name}</b><p>${rogue.mod.blurb||""}</p></div>`;
         }
-        const r=Game.rogue;
-        if(side==="player" && r?.consumables){
-            const toys=Object.entries(r.consumables).filter(([,n])=>Number(n)>0);
-            if(toys.length){
-                modHTML+=`<div class="hud-mod"><small>SITUATION</small>${toys.map(([id,n])=>{
-                    const name=id.replace(/([A-Z])/g," $1").toUpperCase();
-                    return `<p>${name.trim()} · ${n} game${n===1?"":"s"}</p>`;
-                }).join("")}</div>`;
-            }
+        if(rogue.clocks?.length){
+            rogueHTML+=`<div class="hud-mod hud-clocks"><small>SITUATION</small>${rogue.clocks.map(c=>
+                `<p data-clock="${c.id}">${battleInspectLiveInner(c.label,c.state,c.left,c.note)}</p>`
+            ).join("")}</div>`;
         }
+        if(rogue.toys?.length){
+            rogueHTML+=`<div class="hud-mod"><small>TOYS</small>${rogue.toys.map(t=>
+                `<p><strong>${t.name}</strong> · ${t.note||((t.games||0)+" left")}</p>`
+            ).join("")}</div>`;
+        }
+        if(rogue.stackHTML) rogueHTML+=`<div class="hud-mod hud-stacks"><small>STACKS</small>${rogue.stackHTML}</div>`;
     }
+    const timers=hud?.timers||[];
     const timerHTML=timers.length
-        ? `<div class="hud-mod"><small>TIMERS</small>${timers.map(t=>`<p>${t.label} · ${t.left.toFixed(1)}s</p>`).join("")}</div>`
-        : `<p class="hud-idle">No live timer</p>`;
+        ? `<div class="hud-mod hud-timers"><small>TIMERS</small>${timers.map(t=>
+            `<p data-timer="${t.id||t.label}"><strong>${t.label}</strong> · <b data-live="1">${t.left.toFixed(1)}s</b></p>`
+        ).join("")}</div>`
+        : "";
     return `<div class="hud-drop-head"><strong>${blade.name}</strong><b>OVR ${ovr}</b></div>
-        ${kit}
+        ${kit}${chargeHTML}
         ${garageStatLine(stats)}
-        ${modHTML}
+        ${rogueHTML}
         ${timerHTML}`;
 }
-function bindBattleInspect(){
-    document.querySelectorAll(".battle-hud-card[data-side]").forEach(card=>{
-        card.addEventListener("click",event=>{
-            event.preventDefault();
-            const open=!card.classList.contains("is-open");
-            document.querySelectorAll(".battle-hud-card.is-open").forEach(other=>other.classList.remove("is-open"));
-            if(open){
-                card.classList.add("is-open");
-                const drop=card.querySelector(".hud-drop");
-                if(drop) drop.innerHTML=battleInspectBody(card.dataset.side);
-            }
-        });
+function closeBattleInspect(except){
+    document.querySelectorAll(".battle-hud-card.is-open").forEach(card=>{
+        if(card===except) return;
+        card.classList.remove("is-open");
+        card.setAttribute("aria-expanded","false");
     });
+}
+function openBattleInspect(card){
+    const drop=card.querySelector(".hud-drop");
+    if(!drop) return;
+    card.classList.add("is-open");
+    card.setAttribute("aria-expanded","true");
+    drop.innerHTML=battleInspectBody(card.dataset.side);
+    drop.dataset.stamp=battleInspectStamp(battleInspectModel(card.dataset.side));
+}
+let battleInspectAbort=null;
+function bindBattleInspect(){
+    battleInspectAbort?.abort();
+    battleInspectAbort=typeof AbortController==="function"?new AbortController():null;
+    const signal=battleInspectAbort?.signal;
+    document.querySelectorAll(".battle-hud-card[data-side]").forEach(card=>{
+        card.setAttribute("aria-expanded","false");
+        card.querySelector(".hud-drop")?.addEventListener("click",event=>event.stopPropagation(),{signal});
+        const toggle=event=>{
+            if(event.target.closest(".hud-drop")) return;
+            event.preventDefault();
+            const willOpen=!card.classList.contains("is-open");
+            closeBattleInspect();
+            if(willOpen) openBattleInspect(card);
+        };
+        card.addEventListener("click",toggle,{signal});
+        card.addEventListener("keydown",event=>{
+            if(event.key!=="Enter" && event.key!==" ") return;
+            event.preventDefault();
+            toggle(event);
+        },{signal});
+    });
+    document.addEventListener("pointerdown",event=>{
+        if(event.target.closest(".battle-hud-card")) return;
+        closeBattleInspect();
+    },{signal});
+    document.addEventListener("keydown",event=>{
+        if(event.key==="Escape") closeBattleInspect();
+    },{signal});
 }
 function paintBattleInspect(){
     document.querySelectorAll(".battle-hud-card.is-open[data-side]").forEach(card=>{
         const drop=card.querySelector(".hud-drop");
-        if(drop) drop.innerHTML=battleInspectBody(card.dataset.side);
+        if(!drop) return;
+        const model=battleInspectModel(card.dataset.side);
+        const stamp=battleInspectStamp(model);
+        if(drop.dataset.stamp!==stamp){
+            drop.innerHTML=battleInspectBody(card.dataset.side);
+            drop.dataset.stamp=stamp;
+            return;
+        }
+        (model.hud?.timers||[]).forEach(t=>{
+            const el=drop.querySelector(`[data-timer="${t.id||t.label}"] [data-live]`);
+            if(el) el.textContent=`${t.left.toFixed(1)}s`;
+        });
+        (model.rogue?.clocks||[]).forEach(c=>{
+            const row=drop.querySelector(`[data-clock="${c.id}"]`);
+            if(!row) return;
+            row.innerHTML=battleInspectLiveInner(c.label,c.state,c.left,c.note);
+        });
     });
 }
+if(typeof window!=="undefined") window.paintBattleInspect=paintBattleInspect;
 function battleHudRating(s,side){
     if(showMetaRating()){
         return `<div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(s,side)}</b></div>`;
@@ -4652,9 +4729,10 @@ function renderNewBattle(){
 
           <div class="battle-dock">
             <div class="battle-fighters">
-              <div class="battle-hud-card battle-hud-player" data-side="player" role="button" tabindex="0">
+              <div class="battle-hud-card battle-hud-player" data-side="player" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
                 <div class="battle-hud-top"><span>YOU</span><strong>${p.blade.name}</strong></div>
                 ${battleHudPartsLine(p)}
+                <small class="hud-tap">TAP FOR STATS</small>
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                   ${battleHudRating(p,"player")}
@@ -4683,9 +4761,10 @@ function renderNewBattle(){
                 <small class="battle-score-ft">${Game.mode==="rogue"?SpinWarsRogue.scoreboardLabel():"first to 7"}</small>
                 <button type="button" class="forfeit-btn" id="forfeitMatchBtn">FORFEIT</button>
               </div>
-              <div class="battle-hud-card battle-hud-cpu" data-side="cpu" role="button" tabindex="0">
+              <div class="battle-hud-card battle-hud-cpu" data-side="cpu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
                 <div class="battle-hud-top"><span>CPU</span><strong>${c.blade.name}</strong></div>
                 ${battleHudPartsLine(c)}
+                <small class="hud-tap">TAP FOR STATS</small>
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                   ${battleHudRating(c,"cpu")}

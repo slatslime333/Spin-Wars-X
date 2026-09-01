@@ -1405,25 +1405,38 @@
         const s=bey(side);
         const t=nowMs();
         const lines=[];
-        const push=(label,until)=>{
+        const push=(id,label,until)=>{
             const left=(Number(until)||0)-t;
-            if(left>50) lines.push({label,left:left/1000});
+            if(left>50) lines.push({id,label,left:left/1000});
         };
-        if(state.channel && state.channel.side===side) push(META[state.channel.kind]?.name||state.channel.kind, state.channel.until);
+        if(state.channel && state.channel.side===side){
+            const kind=state.channel.kind;
+            push("ch-"+kind, META[kind]?.name||kind, state.channel.until);
+        }
         if(s){
-            push("Iron Skin", s.ironSkinUntil);
-            push("Hurricane", s.hurricaneUntil);
-            push("Flame Trail", s.flameUntil);
-            push("Sword lock", s.swordFreezeUntil);
+            push("iron","Iron Skin", s.ironSkinUntil);
+            push("storm","Hurricane", s.hurricaneUntil);
+            push("flame","Flame Trail", s.flameUntil);
+            push("sword","Sword lock", s.swordFreezeUntil);
         }
         const peg=state.pegasus;
         if(peg && peg.side===side){
-            if(t<(peg.liftUntil||0)) push("Pegasus lift", peg.liftUntil);
-            else push("Pegasus aim", peg.aimUntil||state.channel?.until);
+            if(t<(peg.liftUntil||0)) push("peg-lift","Pegasus lift", peg.liftUntil);
+            else push("peg-aim","Pegasus aim", peg.aimUntil||state.channel?.until);
         }
         const dashUntil=state.dashAt[side]||0;
-        if(dashUntil>t) push("Dash CD", dashUntil);
+        if(dashUntil>t) push("dash","Dash CD", dashUntil);
         return lines;
+    }
+    function inspectHud(side){
+        const id=kitId(bey(side)?.blade);
+        const meta=kitMeta(id);
+        return {
+            timers:inspectStatus(side),
+            charges:meta?.active
+                ? {left:state.charges[side]||0, max:abilityMax(side), name:meta.name||"Ability"}
+                : null
+        };
     }
 
     function fxMarkup(){
@@ -1437,7 +1450,7 @@
         tryDash, tryAbility, forceFieldStorm, popup, grantCharge, abilityMax,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
-        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus,
+        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus, inspectHud,
         SWORD_R, STORM_R, QUAKE_R, IRON_MS, FREE_SPIN_CHANCE, KITS, META
     };
     if(typeof window!=="undefined"){

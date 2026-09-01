@@ -894,15 +894,24 @@ html:has(.room), body:has(.room), #app:has(.room){
   border-top:2px solid var(--green);
   padding:6px 8px;
   cursor:pointer;
+  overflow:visible;
+  z-index:2;
 }
 .battle-hud-cpu{border-top-color:var(--red)}
+.hud-tap{
+  display:block;
+  margin-top:2px;
+  color:var(--gold);
+  font-size:8px;
+  letter-spacing:.16em;
+  font-weight:800;
+}
+.battle-hud-card.is-open .hud-tap{visibility:hidden}
 .hud-drop{
   display:none;
   position:absolute;
-  left:0;
-  right:0;
   bottom:calc(100% + 6px);
-  z-index:40;
+  z-index:50;
   padding:10px;
   background:#120e10;
   border:1px solid var(--gold);
@@ -911,6 +920,17 @@ html:has(.room), body:has(.room), #app:has(.room){
   overflow:auto;
   text-align:left;
   cursor:default;
+  -webkit-overflow-scrolling:touch;
+}
+.battle-hud-player .hud-drop{
+  left:0;
+  right:auto;
+  width:min(340px,92vw);
+}
+.battle-hud-cpu .hud-drop{
+  right:0;
+  left:auto;
+  width:min(340px,92vw);
 }
 .battle-hud-card.is-open .hud-drop{display:block}
 .hud-drop-head{
@@ -922,11 +942,24 @@ html:has(.room), body:has(.room), #app:has(.room){
 }
 .hud-drop-head strong{font-family:Staatliches,Impact,sans-serif;font-size:20px;font-weight:400}
 .hud-drop-head b{color:var(--gold)}
+.hud-charge{margin:4px 0 0;color:#d8d0c4;font-size:12px}
 .hud-mod{margin-top:8px}
 .hud-mod small{display:block;color:var(--gold);font-size:9px;letter-spacing:.16em;font-weight:800}
-.hud-mod b{display:block;font-size:14px}
+.hud-mod > b{display:block;font-size:14px}
 .hud-mod p,.hud-idle{color:#d8d0c4;font-size:12px;line-height:1.35;margin:4px 0 0}
-.battle-hud-card.is-open{z-index:41}
+.hud-mod p strong{color:#fff}
+.hud-mod em{
+  font-style:normal;
+  color:var(--green);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+.hud-drop .hud-stats{margin-top:6px}
+.hud-drop .vs-upgrade-stack{margin-top:6px;gap:4px}
+.hud-drop .vs-upgrade-box{flex:1 1 72px;min-width:70px;padding:4px 6px}
+.hud-drop .vs-upgrade-box b{font-size:14px}
+.battle-hud-card.is-open{z-index:50}
 .battle-score{
   background:rgba(4,3,8,.9);
   border:0;
