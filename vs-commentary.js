@@ -213,8 +213,8 @@
             ? SpinWarsRogue.flavorCallLine()
             : "";
         const shown=flavor?`${flavor} ${copy}`:copy;
-        return `<aside class="vs-call" aria-live="polite">
-            <div class="vs-call-kicker"><span>LIVE</span> COMMENTARY</div>
+        return `<aside class="vs-call live-booth" aria-live="polite">
+            <div class="vs-call-kicker"><span class="live-dot">LIVE</span> COMMENTARY</div>
             <p class="vs-call-copy">${escapeHtml(shown)}</p>
         </aside>`;
     }
@@ -272,7 +272,11 @@
     }
     function paint(){
         const copy=typeof document!=="undefined"?document.getElementById("newCommentaryCopy"):null;
-        if(copy&&copy.textContent!==booth.line) copy.textContent=booth.line;
+        if(!copy||copy.textContent===booth.line) return;
+        copy.textContent=booth.line;
+        copy.classList.remove("is-fresh");
+        void copy.offsetWidth;
+        copy.classList.add("is-fresh");
     }
 
     function techName(t){
@@ -573,8 +577,8 @@
         adoptCtx(info);
         if(!liveCtx.active) ensureSetupLine();
         else if(!booth.live||!booth.line) beginLive(liveCtx.player,liveCtx.cpu);
-        return `<aside class="battle-callout" id="newCommentary" aria-live="polite">
-            <div class="vs-call-kicker"><span>LIVE</span> COMMENTARY</div>
+        return `<aside class="battle-callout live-booth" id="newCommentary" aria-live="polite">
+            <div class="vs-call-kicker"><span class="live-dot">LIVE</span></div>
             <p class="battle-callout-copy" id="newCommentaryCopy">${escapeHtml(booth.line||"")}</p>
         </aside>`;
     }
