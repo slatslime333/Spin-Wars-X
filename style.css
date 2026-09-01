@@ -1718,9 +1718,10 @@ footer{
   flex-wrap:wrap;
 }
 .vs-bit-sprite{
-  width:42px;
-  height:42px;
+  width:28px;
+  height:28px;
   object-fit:contain;
+  border-radius:50%;
 }
 .vs-ratings{
   display:grid;
@@ -2161,6 +2162,8 @@ footer{
   display:flex;
   align-items:center;
   justify-content:center;
+  position:relative;
+  z-index:1;
 }
 
 .battle-callout{
@@ -2235,12 +2238,23 @@ footer{
   box-shadow:none;
 }
 
-.battle-dock{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.battle-dock{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex-shrink:0;
+  position:relative;
+  z-index:8;
+  overflow:visible;
+}
 .battle-fighters{
   display:grid;
   grid-template-columns:1fr auto 1fr;
   gap:8px;
   align-items:stretch;
+  overflow:visible;
+  position:relative;
+  z-index:8;
 }
 .battle-score{
   min-width:96px;
@@ -2355,9 +2369,10 @@ footer{
   flex:1;
   min-width:0;
   width:100%;
-  height:6px;
+  height:7px;
   overflow:hidden;
   background:#1b1510;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 0 10px rgba(0,229,106,.12);
 }
 .rpm-bar-ghost{
   position:absolute;
@@ -3566,7 +3581,10 @@ button:focus-visible{
   align-items:flex-end;
   justify-content:center;
   gap:12px;
-  padding:8px 8px calc(10px + env(safe-area-inset-bottom,0px));
+  padding:10px 8px calc(10px + env(safe-area-inset-bottom,0px));
+  background:
+    repeating-linear-gradient(-32deg,transparent 0 12px,rgba(255,196,46,.05) 12px 13px),
+    linear-gradient(180deg,transparent,rgba(0,0,0,.35));
 }
 .combat-btn{
   position:relative;
@@ -3681,13 +3699,14 @@ button:focus-visible{
   pointer-events:none;
 }
 
-.fx-sword-radius{stroke:#f0d070;opacity:.42}
-.fx-storm{stroke:#9ee7ff;opacity:.5}
-.fx-quake{stroke:#c4a06a;opacity:.7}
+.fx-sword-radius{stroke:#f0d070;opacity:.55}
+.fx-storm{stroke:#9ee7ff;opacity:.7}
+.fx-quake{stroke:#c4a06a;opacity:.8}
 .fx-crack{stroke:#8a6230}
-.fx-iron{stroke:#e8eef4;opacity:.8}
-.fx-flame{stroke:#ff4a24;opacity:.72}
-.fx-ufo{fill:#7ec8ff;stroke:#7ec8ff}
+.fx-iron{stroke:#e8eef4;opacity:.95}
+.fx-flame{stroke:#ff4a24;opacity:.85}
+.fx-pegasus{opacity:1}
+.fx-ufo{display:none}
 .fx-cross{stroke:#7ef0ff}
 
 #abilityCallout{paint-order:stroke}

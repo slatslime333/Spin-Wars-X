@@ -77,7 +77,6 @@
 /* Title screen: painting only here */
 .lobby.has-art{
   display:grid;
-  grid-template-rows:minmax(0,1fr) auto;
 }
 .lobby.has-art .lobby-arena{
   position:relative;
@@ -94,17 +93,15 @@
 .lobby-art img{
   width:100%;
   height:100%;
-  object-fit:cover;
-  object-position:54% 46%;
+  object-fit:contain;
+  object-position:center;
   filter:contrast(1.06) saturate(1.12);
 }
 .lobby-art:after{
   content:"";
   position:absolute;
   inset:0;
-  background:
-    linear-gradient(180deg,transparent 58%,rgba(5,5,8,.28) 100%),
-    linear-gradient(90deg,rgba(5,5,8,.22),transparent 38%);
+  background:linear-gradient(180deg,transparent 70%,rgba(5,5,8,.35) 100%);
 }
 .lobby.has-art .home-bowl{display:none}
 
@@ -136,7 +133,7 @@
 .swx-word{
   display:block;
   font-family:Staatliches,Impact,"Arial Black",sans-serif;
-  font-size:clamp(58px,16vw,96px);
+  font-size:clamp(36px,10vw,64px);
   font-weight:400;
   letter-spacing:.02em;
   color:#fff;
@@ -213,9 +210,9 @@
 .lobby.has-art .lobby-gates{
   position:relative;
   z-index:3;
-  background:linear-gradient(180deg,transparent,rgba(5,5,8,.82) 28%);
+  background:transparent;
   border-top:0;
-  padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));
+  padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));
   gap:8px;
 }
 .lobby-gates{
@@ -526,27 +523,26 @@ button.lobby-gate:disabled{
 
 @media(min-width:900px){
   .lobby.has-art{
-    grid-template-columns:minmax(0,1fr) minmax(300px,38%);
-    grid-template-rows:1fr;
+    grid-template-columns:minmax(0,1.7fr) minmax(270px,340px);
+    grid-template-rows:auto 1fr;
   }
   .lobby.has-art .lobby-arena{min-height:0}
-  .lobby.has-art .lobby-art img{object-position:46% 42%}
+  .lobby.has-art .lobby-art img{object-fit:contain;object-position:center left}
   .lobby.has-art .lobby-art:after{
-    background:
-      linear-gradient(90deg,rgba(5,5,8,.22),transparent 36%,transparent 72%,rgba(5,5,8,.38) 100%);
+    background:linear-gradient(90deg,transparent 42%,rgba(5,5,8,.55) 78%,rgba(5,5,8,.92) 100%);
   }
   .lobby.has-art .lobby-gates{
     grid-template-columns:1fr;
-    grid-template-rows:repeat(4,1fr);
-    background:rgba(5,5,8,.55);
-    padding:14px;
-    gap:10px;
+    grid-template-rows:repeat(4,auto);
+    background:linear-gradient(90deg,transparent 0%,rgba(5,5,8,.55) 28%,rgba(5,5,8,.92) 100%);
+    padding:8px 8px 4px 28px;
+    gap:8px;
   }
-  .swx-word{font-size:96px}
-  .swx-x{font-size:108px;left:calc(100% - .08em);right:auto;top:-6%}
+  .swx-word{font-size:68px}
+  .swx-x{font-size:76px;left:calc(100% - .08em);right:auto;top:-6%}
 }
 @media(max-width:899px){
-  .lobby.has-art .lobby-art img{object-position:58% 48%}
+  .lobby.has-art .lobby-art img{object-fit:contain;object-position:center}
 }
 
 @media (prefers-reduced-motion:reduce){

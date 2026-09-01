@@ -887,8 +887,8 @@ function bossExtraStacks(){
 
 function battleCombo(side){
     const stats=side==="cpu"?cpuEffective():playerEffective();
-    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/7);
-    return {stats,ovr,meta:rogueDisplayMeta(side),compatibility:80,physical:{}};
+    const ovr=round(STATS.reduce((a,k)=>a+(Number(stats[k])||0),0)/STATS.length);
+    return {stats,ovr,meta:ovr,compatibility:80,physical:{}};
 }
 
 function applyLiveToBattle(){
@@ -1465,14 +1465,14 @@ function plateDecor(side){
         stats[k]=shown;
         delta[k]=shown-(Number(tintBase[k])||70);
     });
-    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
+    const ovr=round(STATS.reduce((a,k)=>a+(Number(stats[k])||0),0)/STATS.length);
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
     const mod=packed?modifierById(packed.id):null;
     const stack=upgradeStack(side);
     const mark=side==="cpu"?(r.finalBoss||r.matchIndex===18?"final":(r.matchIndex===6||r.matchIndex===12?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
     return {
-        stats,ovr,meta:rogueDisplayMeta(side),delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
         bossMark:mark||"",
@@ -2136,14 +2136,16 @@ function showRunHistory(){
         : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
     const app=document.getElementById("app");
     const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({backId:"rogueHistBack",kicker:"ROGUE RUN",title:"RUN SCOREBOARD"})
+        ? roomBarHTML({kicker:"ROGUE RUN",title:"RUN SCOREBOARD"})
         : "";
+    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueHistBack"}):"";
     app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
     <main class="room locker">
         ${bar}
         <section class="room-body rogue-run-history" aria-label="Finished runs">
             ${body}
         </section>
+        ${dock}
     </main>`;
     document.getElementById("rogueHistBack")?.addEventListener("click",()=>showLanding());
     bindRunHistoryRows();
@@ -2297,8 +2299,9 @@ function showLanding(){
         : "No finished runs yet";
     const app=document.getElementById("app");
     const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({backId:"rogueBack",kicker:"ROGUE RUN",title:"ONE BEY"})
+        ? roomBarHTML({kicker:"ROGUE RUN",title:"ONE BEY"})
         : "";
+    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueBack"}):"";
     const hero=canContinue
         ? `<div class="locker-save"><div><h2>CONTINUE</h2><p>${continueNote}</p></div></div>`
         : `<h2>THE NIGHT</h2><p>One Bey. Eighteen matches. Then the dark.</p>`;
@@ -2325,6 +2328,7 @@ function showLanding(){
             </button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
+        ${dock}
     </main>`;
     document.getElementById("rogueBack")?.addEventListener("click",()=>renderMainMenu());
     document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
@@ -2362,8 +2366,9 @@ function showTierPick(){
     Game.screen="rogueTier";
     const app=document.getElementById("app");
     const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({backId:"rogueTierBack",kicker:"NEW RUN",title:"PICK A TIER"})
+        ? roomBarHTML({kicker:"NEW RUN",title:"PICK A TIER"})
         : "";
+    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueTierBack"}):"";
     app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
     <main class="room locker">
         ${bar}
@@ -2381,6 +2386,7 @@ function showTierPick(){
                 <em>Easy start, hard late. Climb Bronze → Silver → Gold.</em>
             </button>
         </nav>
+        ${dock}
     </main>`;
     document.getElementById("rogueTierBack")?.addEventListener("click",()=>showLanding());
     document.querySelectorAll("[data-tier]").forEach(btn=>{
@@ -2417,8 +2423,9 @@ function showHelp(){
     Game.screen="rogueHelp";
     const app=document.getElementById("app");
     const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({backId:"rogueHelpBack",kicker:"ROGUE",title:"HOW A RUN WORKS"})
+        ? roomBarHTML({kicker:"ROGUE",title:"HOW A RUN WORKS"})
         : "";
+    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueHelpBack"}):"";
     app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
     <main class="room locker">
         ${bar}
@@ -2443,6 +2450,7 @@ function showHelp(){
             <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
     </div>
+        ${dock}
     </main>`;
     document.getElementById("rogueHelpBack")?.addEventListener("click",()=>showLanding());
     mountDevButton();
@@ -3428,10 +3436,101 @@ function flavorCallLine(){
     return (isActive() && run()?.flavorCall) || "";
 }
 
+function inspectBattle(side){
+    const r=run();
+    if(!isActive()||!r) return null;
+    const plate=plateDecor(side);
+    const s=typeof NEW_BATTLE!=="undefined"?NEW_BATTLE?.[side]:null;
+    const elapsed=Number(NEW_BATTLE?.elapsed)||0;
+    const rpm=Number(s?.rpm);
+    const clocks=[];
+    const pushClock=(id,label,opts)=>{
+        clocks.push(Object.assign({id,label,state:"",left:0,note:""},opts||{}));
+    };
+    const mod=plate?.mod||null;
+    if(mod){
+        if(mod.id==="first_blood"){
+            if(elapsed<=5) pushClock("fb","First Blood",{state:"LIVE",left:5-elapsed});
+            else pushClock("fb","First Blood",{state:"SPENT"});
+        }else if(mod.id==="endurance"){
+            if(elapsed<8) pushClock("en","Endurance",{state:"WAIT",left:8-elapsed,note:"long fight"});
+            else pushClock("en","Endurance",{state:"LIVE",note:"long fight"});
+        }else if(mod.id==="late_bloom"){
+            if(elapsed<7.5) pushClock("lb","Late Bloom",{state:"WAIT",left:7.5-elapsed});
+            else pushClock("lb","Late Bloom",{state:"LIVE"});
+        }else if(mod.id==="psyshock"){
+            const hits=Number(s?.roguePsyshockHits)||0;
+            const next=hits%2===0?"60% next hit":"160% next hit";
+            if(elapsed<=5) pushClock("ps","Psyshock",{state:"LIVE",left:5-elapsed,note:next});
+            else pushClock("ps","Psyshock",{state:"OPEN",note:next});
+        }else if(mod.id==="last_stand"){
+            pushClock("ls","Last Stand",{state:rpm<0.40?"LIVE":"WAIT",note:Number.isFinite(rpm)?Math.round(rpm*100)+"% RPM":""});
+        }else if(mod.id==="berserker"){
+            pushClock("bz","Berserker",{state:rpm>=0.70?"HIGH":rpm<0.35?"TIRED":"MID"});
+        }else if(mod.id==="final_spin"){
+            pushClock("fs","Final Spin",{state:rpm<0.28?"LIVE":rpm>0.62?"EARLY":"WAIT"});
+        }else if(mod.id==="heavy_contact"){
+            pushClock("hc","Heavy Contact",{state:s?.rogueHeavyArmed?"ARMED":"WAIT"});
+        }else if(mod.id==="counterweight"){
+            pushClock("cw","Counterweight",{state:s?.rogueCounterArmed?"ARMED":"WAIT"});
+        }else if(mod.id==="rail_rush"){
+            const on=!!(s?.railEngaged||s?.xrailExitRampActive||(s?.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0));
+            pushClock("rr","Rail Rush",{state:on?"LIVE":"WAIT"});
+        }else if(mod.id==="x_exit_swing"){
+            const age=s&&s.lastXRailExitReason==="x-exit"?performance.now()-(Number(s.railExitAt)||0):9999;
+            const swing=!!(s&&!s.railEngaged&&s.lastXRailExitReason==="x-exit"&&age<=1000);
+            pushClock("xe","X-Exit Swing",{state:swing?"LIVE":"WAIT",left:swing?Math.max(0,1-age/1000):0});
+        }else if(mod.id==="pin_lock"){
+            const rad=Math.hypot(Number(s?.x)||0,Number(s?.y)||0);
+            pushClock("pl","Pin Lock",{state:rad<0.42?"INNER":rad>0.72?"WIDE":"MID"});
+        }
+    }
+    const toys=[];
+    if(side==="player"){
+        CONSUMABLE_KEYS.forEach(id=>{
+            const n=Number(r.consumables?.[id])||0;
+            if(n>0){
+                toys.push({
+                    id,
+                    name:CONSUMABLE_META[id].name,
+                    games:n,
+                    note:n===1?"1 game":n+" games",
+                    body:CONSUMABLE_META[id].body||""
+                });
+            }
+        });
+        if((Number(r.hellsChainPct)||0)>0){
+            pushClock("hcp","Hells Chain",{state:"LIVE",note:Math.round(r.hellsChainPct*100)+"% KB"});
+        }
+        if((Number(r.matchBuffs?.burst2)||0)>0 && r.matchBuffs.burst2Stat){
+            toys.push({
+                id:"burst2",
+                name:`${LABEL[r.matchBuffs.burst2Stat]} +2`,
+                games:Number(r.matchBuffs.burst2)||0,
+                note:`${r.matchBuffs.burst2} game${r.matchBuffs.burst2===1?"":"s"} left`
+            });
+        }
+        if(r.matchBuffs?.dashHaste){
+            toys.push({id:"dash",name:"15% DASH CD",games:1,note:"this game"});
+        }
+        if(s?.rogueForceFieldUsed){
+            pushClock("ff","Force Field",{state:"USED",note:"this round"});
+        }
+    }
+    return {
+        mod,
+        clocks,
+        toys,
+        stacks:plate?.stack||[],
+        stackHTML:plate?.stackHTML||"",
+        pressure:plate?.pressure||""
+    };
+}
+
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
-    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
+    mountDevButton,endRun,persist,hasSave,plateDecor,inspectBattle,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
