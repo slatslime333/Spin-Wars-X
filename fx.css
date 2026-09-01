@@ -111,8 +111,8 @@
 .swx-mark{
   position:relative;
   z-index:2;
-  max-width:22em;
-  padding-right:18%;
+  max-width:min(24em,94%);
+  padding-right:1.2em;
 }
 .swx-kicker{
   margin:0 0 8px;
@@ -130,6 +130,7 @@
   flex-direction:column;
   align-items:flex-start;
   line-height:.72;
+  padding-right:.7em;
   animation:logoSlam .55s cubic-bezier(.15,1.4,.25,1) both;
 }
 .swx-word{
@@ -148,10 +149,11 @@
 .swx-word.wars{color:#fff;margin-left:10px}
 .swx-x{
   position:absolute;
-  right:-6%;
-  top:6%;
+  left:calc(100% - .12em);
+  right:auto;
+  top:-4%;
   font-family:Staatliches,Impact,sans-serif;
-  font-size:clamp(72px,22vw,128px);
+  font-size:clamp(64px,18vw,108px);
   line-height:.7;
   color:var(--green);
   -webkit-text-stroke:3px #000;
@@ -166,7 +168,8 @@
   font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","YuGothic","Meiryo",sans-serif;
   font-size:clamp(13px,3.4vw,18px);
   font-weight:800;
-  letter-spacing:.38em;
+  letter-spacing:.28em;
+  white-space:nowrap;
   color:var(--gold-hot);
   text-shadow:0 2px 0 #000, 0 0 12px rgba(255,196,46,.45);
   animation:jpIn .5s .18s var(--ease) both;
@@ -194,8 +197,8 @@
   to{opacity:1;transform:none}
 }
 @keyframes jpIn{
-  from{opacity:0;letter-spacing:.7em}
-  to{opacity:1;letter-spacing:.38em}
+  from{opacity:0;letter-spacing:.55em}
+  to{opacity:1;letter-spacing:.28em}
 }
 @keyframes shine{
   0%{transform:translateX(-120%) skewX(-18deg)}
@@ -439,6 +442,10 @@ button.lobby-gate:disabled{
   background:linear-gradient(90deg,#ffe07a,#c48810)!important;
   color:#1a0e04!important;
 }
+.locker-dock button.is-help{
+  background:linear-gradient(90deg,#00e56a,#0a7a38)!important;
+  color:#04140a!important;
+}
 .locker-dock button.is-gold em,
 .locker-dock button.is-log em{color:#4a2808}
 .locker-dock button.is-help em{color:#063018}
@@ -536,7 +543,7 @@ button.lobby-gate:disabled{
     gap:10px;
   }
   .swx-word{font-size:96px}
-  .swx-x{font-size:132px;right:-4%}
+  .swx-x{font-size:108px;left:calc(100% - .08em);right:auto;top:-6%}
 }
 @media(max-width:899px){
   .lobby.has-art .lobby-art img{object-position:58% 48%}

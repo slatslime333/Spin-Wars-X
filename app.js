@@ -1180,7 +1180,7 @@ function bindHomeArt(){
         const src=HOME_ART_CANDIDATES[i];
         if(!src) return;
         i+=1;
-        img.src=src+"?v=9.63";
+        img.src=src+"?v=9.64";
     };
     img.onload=()=>{
         wrap.classList.add("has-art");
