@@ -5724,7 +5724,7 @@ function spawnImpactDebris(imp){
     const y=46+imp.y*39;
     const kind=imp.kind||"clash";
     const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
-    const n=kind==="smash"?28:kind==="clash"?18:kind==="rail"?20:kind==="ability"?16:10;
+    const n=kind==="smash"?36:kind==="clash"?26:kind==="rail"?24:kind==="ability"?20:14;
     const nx=Number(imp.nx)||0;
     const ny=Number(imp.ny)||-1;
     const bits=[];
@@ -5732,17 +5732,17 @@ function spawnImpactDebris(imp){
         const spray=Math.random()*Math.PI*2;
         const along=i%3===0;
         const ang=along?Math.atan2(ny,nx)+(Math.random()-0.5)*0.9:spray;
-        const spd=(kind==="graze"?8:kind==="smash"?22:14)*(0.45+Math.random());
+        const spd=(kind==="graze"?10:kind==="smash"?28:18)*(0.5+Math.random());
         bits.push({
             type:Math.random()<0.38?"shard":"spark",
             x,y,
             vx:Math.cos(ang)*spd,
             vy:Math.sin(ang)*spd,
             ang:ang*180/Math.PI,
-            len:kind==="smash"?2.4+Math.random()*4.2:1.1+Math.random()*2.6,
-            w:kind==="smash"?0.7:0.42,
+            len:kind==="smash"?3.6+Math.random()*5.5:2.2+Math.random()*3.8,
+            w:kind==="smash"?0.95:0.62,
             color:pal[i%pal.length],
-            life:kind==="smash"?0.42:kind==="graze"?0.22:0.32,
+            life:kind==="smash"?0.48:kind==="graze"?0.26:0.36,
             born:performance.now()
         });
     }

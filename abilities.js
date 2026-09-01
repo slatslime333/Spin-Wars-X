@@ -1338,12 +1338,12 @@
                 const coreY=pt.y-rise;
                 const beamTop=Math.max(2,coreY-22);
                 html+=`<g class="fx-pegasus">
-                    <rect x="${pt.x-4.2}" y="${beamTop}" width="8.4" height="${(pt.y+6-beamTop).toFixed(1)}" fill="url(#fxBeam)" opacity="${(0.55+liftU*0.4).toFixed(2)}"/>
-                    <rect x="${pt.x-1.35}" y="${beamTop}" width="2.7" height="${(pt.y+6-beamTop).toFixed(1)}" fill="#ffffff" fill-opacity="${(0.35+liftU*0.4).toFixed(2)}"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y+1}" rx="7.4" ry="2.2" fill="#7ef0ff" fill-opacity="0.28"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="${4.6+liftU*1.6}" fill="url(#fxGlowCyan)"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="2.15" fill="#ffffff" fill-opacity="0.9"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="6.2" fill="none" stroke="#e8ffff" stroke-width="0.7" opacity="0.7"/>
+                    <rect x="${pt.x-6.2}" y="${beamTop}" width="12.4" height="${(pt.y+6-beamTop).toFixed(1)}" fill="url(#fxBeam)" opacity="${(0.62+liftU*0.38).toFixed(2)}"/>
+                    <rect x="${pt.x-1.7}" y="${beamTop}" width="3.4" height="${(pt.y+6-beamTop).toFixed(1)}" fill="#ffffff" fill-opacity="${(0.42+liftU*0.4).toFixed(2)}"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y+1}" rx="9.2" ry="2.6" fill="#7ef0ff" fill-opacity="0.34"/>
+                    <circle cx="${pt.x}" cy="${coreY}" r="${5.4+liftU*2.1}" fill="url(#fxGlowCyan)"/>
+                    <circle cx="${pt.x}" cy="${coreY}" r="2.4" fill="#ffffff" fill-opacity="0.95"/>
+                    <circle cx="${pt.x}" cy="${coreY}" r="7.4" fill="none" stroke="#e8ffff" stroke-width="0.85" opacity="0.8"/>
                 </g>`;
                 html+=motes(pt.x,coreY,12,t,8+liftU*6,"#b8f4ff",70);
             }
