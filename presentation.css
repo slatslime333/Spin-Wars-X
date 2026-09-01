@@ -938,7 +938,12 @@ html:has(.room), body:has(.room), #app:has(.room){
   justify-content:space-between;
   align-items:baseline;
   gap:8px;
-  margin-bottom:6px;
+  margin:0 0 6px;
+  padding-bottom:6px;
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#120e10;
 }
 .hud-drop-head strong{font-family:Staatliches,Impact,sans-serif;font-size:20px;font-weight:400}
 .hud-drop-head b{color:var(--gold)}
