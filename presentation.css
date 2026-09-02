@@ -613,7 +613,7 @@ html:has(.room), body:has(.room), #app:has(.room){
   flex:0 0 auto;
 }
 .draft-disc.is-part{width:44px;height:44px;box-shadow:0 0 0 1px rgba(255,196,46,.35)}
-.draft-disc img{width:72%;height:72%;object-fit:contain;object-position:center}
+.draft-disc img{width:100%;height:100%;object-fit:contain;object-position:center;padding:4%;box-sizing:border-box}
 .draft-feature-copy strong{
   display:block;
   font-family:Staatliches,Impact,sans-serif;
@@ -714,12 +714,14 @@ html:has(.room), body:has(.room), #app:has(.room){
 .roster-disc img,
 .draft-roster .blade-card-sprite,
 .draft-roster .part-card-sprite{
-  width:70%;
-  height:70%;
-  max-width:70%;
-  max-height:70%;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
   object-fit:contain;
   object-position:center;
+  padding:4%;
+  box-sizing:border-box;
 }
 .roster-id{min-width:0}
 .roster-id small,
@@ -796,7 +798,7 @@ html:has(.room), body:has(.room), #app:has(.room){
     padding:20px;
   }
   .draft-disc{width:140px;height:140px;overflow:hidden}
-  .draft-disc img{width:70%;height:70%}
+  .draft-disc img{width:100%;height:100%;object-fit:contain}
   .draft-feature-copy{width:100%}
   .hud-stats{text-align:left}
 }
@@ -856,7 +858,7 @@ html:has(.room), body:has(.room), #app:has(.room){
   border:0!important;
   background:radial-gradient(circle at 50% 42%,rgba(0,229,106,.18),transparent 62%),#07060c;
 }
-.vs-art img{width:72%;height:72%;object-fit:contain;object-position:center}
+.vs-art img{width:100%;height:100%;object-fit:contain;object-position:center;padding:4%;box-sizing:border-box}
 .vs-copy h2{
   font-family:Staatliches,Impact,sans-serif;
   font-size:26px;

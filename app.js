@@ -1157,6 +1157,35 @@ function displayOvr(stats){
 function showMetaRating(){
     return true;
 }
+function isPhoneShell(){
+    const coarse=window.matchMedia("(pointer:coarse)").matches;
+    const narrow=window.matchMedia("(max-width:760px)").matches;
+    const short=Math.min(window.innerWidth||0,window.innerHeight||0)<740;
+    return narrow || (coarse && short);
+}
+function syncDeviceShell(){
+    const shell=isPhoneShell()?"phone":"pc";
+    const root=document.documentElement;
+    if(root.dataset.shell!==shell){
+        root.dataset.shell=shell;
+        if(document.body) document.body.dataset.shell=shell;
+    }else if(document.body && document.body.dataset.shell!==shell){
+        document.body.dataset.shell=shell;
+    }
+    return shell;
+}
+function watchDeviceShell(){
+    if(window.__swxShellWatch) return;
+    window.__swxShellWatch=true;
+    syncDeviceShell();
+    let t=0;
+    const bump=()=>{
+        clearTimeout(t);
+        t=setTimeout(syncDeviceShell,80);
+    };
+    window.addEventListener("resize",bump,{passive:true});
+    window.addEventListener("orientationchange",bump,{passive:true});
+}
 function ratingsHTML(ovr,meta){
     const o=ovr==null||ovr==="—"?"—":ovr;
     if(!showMetaRating() || meta==null || meta==="—"){
@@ -1186,48 +1215,25 @@ function openSheet(title,body,actions){
 }
 
 function bgHTML(kind){
-    const grain=kind==="lobby"?"":`<div class="fx-grain" aria-hidden="true"></div>`;
+    const skipGrain=kind==="lobby" || kind==="battle" || (typeof isPhoneShell==="function" && isPhoneShell());
+    const grain=skipGrain?"":`<div class="fx-grain" aria-hidden="true"></div>`;
     return `<div class="background is-${kind}" aria-hidden="true"></div>${grain}`;
 }
-const HOME_ART_CANDIDATES=[
-    "assets/HomeARt.png","assets/homeart.png","assets/home art.png","assets/home-art.png",
-    "assets/homeart.jpg","assets/homeart.webp","assets/HomeArt.png"
-];
+function bindPosterArt(imgId,src){
+    const img=document.getElementById(imgId);
+    if(!img) return;
+    const wrap=img.closest(".lobby-art")||img.parentElement;
+    const host=img.closest(".lobby, .room");
+    const mark=()=>{
+        wrap?.classList.add("has-art");
+        host?.classList.add("has-art");
+    };
+    img.onload=mark;
+    if(src && img.getAttribute("src")!==src) img.src=src;
+    else if(img.complete && img.naturalWidth) mark();
+}
 function bindHomeArt(){
-    const img=document.getElementById("homeArtImg");
-    const wrap=document.querySelector(".lobby-art");
-    const lobby=document.querySelector(".lobby");
-    if(!img||!wrap) return;
-    let i=0;
-    const trySrc=()=>{
-        if(!document.getElementById("homeArtImg")) return;
-        const src=HOME_ART_CANDIDATES[i];
-        if(!src) return;
-        i+=1;
-        img.src=src+"?v=9.80";
-    };
-    img.onload=()=>{
-        wrap.classList.add("has-art");
-        lobby?.classList.add("has-art");
-    };
-    img.onerror=()=>{
-        if(i<HOME_ART_CANDIDATES.length) trySrc();
-    };
-    if(img.complete && img.naturalWidth){
-        wrap.classList.add("has-art");
-        lobby?.classList.add("has-art");
-    }else{
-        trySrc();
-    }
-    let ticks=0;
-    const poll=setInterval(()=>{
-        if(!document.getElementById("homeArtImg")||wrap.classList.contains("has-art")||++ticks>24){
-            clearInterval(poll);
-            return;
-        }
-        i=0;
-        trySrc();
-    },2000);
+    bindPosterArt("homeArtImg","assets/HomeARt.png?v=9.83");
 }
 
 function renderMainMenu(){
@@ -1246,7 +1252,7 @@ function renderMainMenu(){
     ${bgHTML("lobby")}
     <main class="lobby has-art">
         <div class="lobby-poster" aria-hidden="true">
-            <div class="lobby-art"><img id="homeArtImg" src="assets/HomeARt.png" alt=""></div>
+            <div class="lobby-art"><img id="homeArtImg" src="assets/HomeARt.png?v=9.83" alt=""></div>
         </div>
         <section class="lobby-arena">
             ${homeBowlHTML()}
@@ -1468,7 +1474,10 @@ function renderLeagueSelect(){
 
     app.innerHTML=`
     ${bgHTML("board")}
-    <main class="room board">
+    <main class="room board has-art">
+        <div class="room-poster" aria-hidden="true">
+            <div class="lobby-art"><img id="boardArtImg" src="assets/HomeARt.png?v=9.83" alt=""></div>
+        </div>
         ${roomBarHTML({kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
         <p class="board-lead">Featured roll, or draft a league. First to 7.</p>
         <nav class="board-grid" aria-label="Choose a league">
@@ -1529,6 +1538,7 @@ function renderLeagueSelect(){
             if(pack) openSheet(pack.title,pack.body);
         });
     });
+    bindPosterArt("boardArtImg","assets/HomeARt.png?v=9.83");
 }
 
 function playableBlades(){
@@ -1576,6 +1586,7 @@ function startQuickMatch(){
 }
 
 function hookMenuButtons(){
+    watchDeviceShell();
     renderMainMenu();
 }
 
@@ -4549,6 +4560,17 @@ function startNewBattle(){
         return false;
     }
 }
+function cacheBattleDom(){
+    NEW_BATTLE._impactNodes=null;
+    NEW_BATTLE._dom={
+        playerRpm:document.getElementById("newPlayerRPM"),
+        cpuRpm:document.getElementById("newCpuRPM"),
+        playerSta:document.getElementById("newPlayerStability"),
+        cpuSta:document.getElementById("newCpuStability"),
+        playerRec:document.getElementById("playerRecoveredText"),
+        cpuRec:document.getElementById("cpuRecoveredText")
+    };
+}
 function renderNewBattle(){
     const app=document.getElementById("app");
     if(!app) return;
@@ -4688,14 +4710,7 @@ function renderNewBattle(){
                           stroke-linecap="round" stroke-linejoin="round"
                           stroke-opacity="0.38" points=""/>
               </g>
-              <defs>
-                <filter id="spinBlurPlayer" x="-40%" y="-40%" width="180%" height="180%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="0.22"/>
-                </filter>
-                <filter id="spinBlurCpu" x="-40%" y="-40%" width="180%" height="180%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="0.22"/>
-                </filter>
-              </defs>
+              <defs></defs>
               <g id="playerSpinGhosts" class="spin-ghosts" pointer-events="none"></g>
               <g id="cpuSpinGhosts" class="spin-ghosts" pointer-events="none"></g>
 
@@ -4716,62 +4731,11 @@ function renderNewBattle(){
               <!-- Actual battle impact renderer. These IDs are the targets
                    updated by newBattleFrame() on every collision. -->
               <g id="impactEffect" opacity="0" pointer-events="none">
-                <circle id="impactFlash" cx="50" cy="46" r="10"
-                        fill="none" stroke="#ffffff" stroke-width="2.6"/>
-                <circle id="impactRing" cx="50" cy="46" r="6"
-                        fill="none" stroke="#ffd43b" stroke-width="1.8"/>
-                <circle id="impactRing2" cx="50" cy="46" r="4"
-                        fill="none" stroke="#ffffff" stroke-width="1.5"/>
-                <circle id="impactRing3" cx="50" cy="46" r="2"
-                        fill="none" stroke="#ffd43b" stroke-width="1.2"/>
-                <circle id="impactExplosion" cx="50" cy="46" r="4"
-                        fill="#ffffff" stroke="#ffffff" stroke-width="2.4"/>
-                <circle id="impactCore" cx="50" cy="46" r="3"
-                        fill="#ffd43b"/>
-                <g id="impactShock" opacity="0">
-                  <circle id="impactShockOuter" cx="50" cy="46" r="6"
-                          fill="none" stroke="#ffffff" stroke-width="1.8"/>
-                  <line x1="50" y1="46" x2="50" y2="40"
-                        stroke="#ffffff" stroke-width="1.8"/>
-                  <line x1="50" y1="46" x2="56" y2="46"
-                        stroke="#ffffff" stroke-width="1.8"/>
-                  <line x1="50" y1="46" x2="50" y2="52"
-                        stroke="#ffd43b" stroke-width="1.8"/>
-                  <line x1="50" y1="46" x2="44" y2="46"
-                        stroke="#ffd43b" stroke-width="1.8"/>
-                  <line x1="50" y1="46" x2="54.5" y2="41.5"
-                        stroke="#ffffff" stroke-width="1.5"/>
-                  <line x1="50" y1="46" x2="45.5" y2="50.5"
-                        stroke="#ffffff" stroke-width="1.5"/>
-                </g>
-                <g id="impactSpokes" opacity="0">
-                  <line x1="50" y1="46" x2="50" y2="42"
-                        stroke="#ffffff" stroke-width="1.5"/>
-                  <line x1="50" y1="46" x2="54" y2="46"
-                        stroke="#ffffff" stroke-width="1.5"/>
-                  <line x1="50" y1="46" x2="50" y2="50"
-                        stroke="#ffd43b" stroke-width="1.5"/>
-                  <line x1="50" y1="46" x2="46" y2="46"
-                        stroke="#ffd43b" stroke-width="1.5"/>
-                  <line x1="50" y1="46" x2="53" y2="43"
-                        stroke="#ffffff" stroke-width="1.3"/>
-                  <line x1="50" y1="46" x2="47" y2="49"
-                        stroke="#ffffff" stroke-width="1.3"/>
-                </g>
-                <circle id="impactBurst1" cx="50" cy="46" r="1.5"
-                        fill="#ffffff"/>
-                <circle id="impactBurst2" cx="50" cy="46" r="1.5"
-                        fill="#ffd43b"/>
-                <g id="impactDebris" pointer-events="none"></g>
-                <text id="impactText" x="50" y="40"
-                      text-anchor="middle" font-size="5.2"
-                      font-weight="900" fill="#ffffff"></text>
-                <text id="playerDamageText" x="50" y="46"
-                      text-anchor="middle" font-size="3.5"
-                      font-weight="900" fill="#35d26b" opacity="0"></text>
-                <text id="cpuDamageText" x="50" y="46"
-                      text-anchor="middle" font-size="3.5"
-                      font-weight="900" fill="#ff4b4b" opacity="0"></text>
+                <circle id="impactCore" cx="50" cy="46" r="2.2" fill="#fff8e8"/>
+                <circle id="impactRing" cx="50" cy="46" r="3"
+                        fill="none" stroke="#ffd43b" stroke-width="1.1"/>
+                <line id="impactSlash" x1="50" y1="46" x2="50" y2="46"
+                      stroke="#ffffff" stroke-width="1.15" stroke-linecap="round"/>
               </g>
               <text id="playerRecoveredText" x="50" y="46"
                     text-anchor="middle" font-size="8.6" font-weight="1000"
@@ -4792,7 +4756,7 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-player" data-side="player" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
                 <div class="battle-hud-top"><span>YOU</span><strong>${p.blade.name}</strong></div>
                 ${battleHudPartsLine(p)}
-                <small class="hud-tap">TAP FOR STATS</small>
+                <small class="hud-tap"></small>
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                   ${battleHudRating(p,"player")}
@@ -4824,7 +4788,7 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-cpu" data-side="cpu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
                 <div class="battle-hud-top"><span>CPU</span><strong>${c.blade.name}</strong></div>
                 ${battleHudPartsLine(c)}
-                <small class="hud-tap">TAP FOR STATS</small>
+                <small class="hud-tap"></small>
                 <div class="hud-vitals">
                   <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                   ${battleHudRating(c,"cpu")}
@@ -4854,6 +4818,7 @@ function renderNewBattle(){
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
     document.getElementById("forfeitMatchBtn")?.addEventListener("click",forfeitLiveMatch);
     bindBattleInspect();
+    cacheBattleDom();
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
         Game.screen="battle";
@@ -5684,32 +5649,19 @@ function updateBeyMotionTrail(state, groupId, now){
     const last=trail[trail.length-1];
     const moved=!last || Math.hypot(cx-last.x,cy-last.y)>=0.40;
     if(moved) trail.push({x:cx,y:cy,t:now});
-    const keepMs=220;
+    const keepMs=document.documentElement.dataset.shell==="phone"?140:200;
+    const cap=document.documentElement.dataset.shell==="phone"?6:8;
     while(trail.length>1 && now-trail[0].t>keepMs) trail.shift();
-    if(trail.length>12) trail.splice(0,trail.length-12);
+    if(trail.length>cap) trail.splice(0,trail.length-cap);
 
     if(line){
         line.setAttribute(
             "points",
             trail.map(pt=>pt.x.toFixed(2)+","+pt.y.toFixed(2)).join(" ")
         );
+        line.setAttribute("stroke-opacity", document.documentElement.dataset.shell==="phone"?"0.28":"0.38");
     }
-
-    const dots=Math.max(0, trail.length-1);
-    while(group.children.length<dots+1){
-        group.appendChild(document.createElementNS("http://www.w3.org/2000/svg","circle"));
-    }
-    while(group.children.length>dots+1) group.removeChild(group.lastElementChild);
-    for(let i=0;i<dots;i++){
-        const dot=group.children[i+1];
-        const life=1-((now-trail[i].t)/keepMs);
-        const fade=Math.max(0, life)*((i+1)/Math.max(1,dots));
-        dot.setAttribute("cx", trail[i].x.toFixed(2));
-        dot.setAttribute("cy", trail[i].y.toFixed(2));
-        dot.setAttribute("r", (0.45+0.95*fade).toFixed(2));
-        dot.setAttribute("fill", group.classList.contains("cpu")?"#4e5964":"#c79212");
-        dot.setAttribute("fill-opacity", (0.08+0.28*fade).toFixed(3));
-    }
+    while(group.children.length>1) group.removeChild(group.lastElementChild);
 }
 
 function visualSpinFromRpm(rpm){
@@ -5722,37 +5674,9 @@ function visualSpinFromRpm(rpm){
     const die=Math.pow(rpm/0.04,0.62);
     return cruise*(0.62+0.38*die);
 }
-function paintSpinGhosts(state,groupId,sprite,cx,cy,artR){
+function paintSpinGhosts(state,groupId){
     const g=document.getElementById(groupId);
-    if(!g) return;
-    const rpm=newBattleClamp(Number(state?.rpm)||0,0,1);
-    if(!state||!sprite||rpm<=0.0008||state.abilityHidden){
-        if(g.childElementCount) g.innerHTML="";
-        return;
-    }
-    const copies=rpm>0.45?6:rpm>0.18?5:rpm>0.06?4:3;
-    if(g.childElementCount!==copies){
-        let html="";
-        for(let i=0;i<copies;i++){
-            html+=`<image data-g="${i}" href="${sprite}" preserveAspectRatio="xMidYMid meet"/>`;
-        }
-        g.innerHTML=html;
-    }
-    const step=8+rpm*11;
-    const dir=state.spinDirection||1;
-    const kids=g.children;
-    for(let i=0;i<kids.length;i++){
-        const el=kids[i];
-        const a=(state.spriteAngle||0)-dir*step*(i+1);
-        const op=(0.32-i*0.04)*(0.5+rpm*0.55);
-        if(el.getAttribute("href")!==sprite) el.setAttribute("href",sprite);
-        el.setAttribute("x",String(cx-artR));
-        el.setAttribute("y",String(cy-artR));
-        el.setAttribute("width",String(artR*2));
-        el.setAttribute("height",String(artR*2));
-        el.setAttribute("transform",`rotate(${a} ${cx} ${cy})`);
-        el.setAttribute("opacity",op.toFixed(3));
-    }
+    if(g && g.childElementCount) g.innerHTML="";
 }
 function impactKindFromContact(impactClass,directness,onRail,fromAbility){
     if(fromAbility) return "ability";
@@ -5768,90 +5692,79 @@ const IMPACT_PAL={
     rail:["#e8fff4","#00e56a","#7dffb0","#ffffff"],
     ability:["#7ef0ff","#ffe566","#ffffff","#b8e8ff"]
 };
-function spawnImpactDebris(imp){
-    const x=50+imp.x*39;
-    const y=46+imp.y*39;
-    const kind=imp.kind||"clash";
-    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
-    const n=kind==="smash"?36:kind==="clash"?26:kind==="rail"?24:kind==="ability"?20:14;
-    const nx=Number(imp.nx)||0;
-    const ny=Number(imp.ny)||-1;
-    const bits=[];
-    for(let i=0;i<n;i++){
-        const spray=Math.random()*Math.PI*2;
-        const along=i%3===0;
-        const ang=along?Math.atan2(ny,nx)+(Math.random()-0.5)*0.9:spray;
-        const spd=(kind==="graze"?10:kind==="smash"?28:18)*(0.5+Math.random());
-        bits.push({
-            type:Math.random()<0.38?"shard":"spark",
-            x,y,
-            vx:Math.cos(ang)*spd,
-            vy:Math.sin(ang)*spd,
-            ang:ang*180/Math.PI,
-            len:kind==="smash"?3.6+Math.random()*5.5:2.2+Math.random()*3.8,
-            w:kind==="smash"?0.95:0.62,
-            color:pal[i%pal.length],
-            life:kind==="smash"?0.48:kind==="graze"?0.26:0.36,
-            born:performance.now()
-        });
-    }
-    if(kind==="smash"||kind==="rail"){
-        for(let i=0;i<6;i++){
-            const a=i/6*Math.PI*2;
-            bits.push({
-                type:"ember",
-                x,y,
-                vx:Math.cos(a)*6,
-                vy:Math.sin(a)*6,
-                r:1.1+Math.random()*1.4,
-                color:kind==="rail"?"#7dffb0":"#ff6a2a",
-                life:0.38,
-                born:performance.now()
-            });
-        }
-    }
-    NEW_BATTLE.impactDebris=bits;
-    NEW_BATTLE.impactDebrisAt=imp.time;
-    const cam=document.querySelector(".stadium-cam");
-    if(cam){
-        cam.classList.remove("is-graze","is-clash","is-smash","is-rail","is-ability");
-        cam.classList.add("is-"+kind);
-        clearTimeout(NEW_BATTLE.hitFlashTimer);
-        NEW_BATTLE.hitFlashTimer=setTimeout(()=>cam.classList.remove("is-"+kind),220);
-    }
+function spawnImpactDebris(){ return; }
+function paintImpactDebris(){ return; }
+function impactNodeCache(){
+    if(NEW_BATTLE._impactNodes) return NEW_BATTLE._impactNodes;
+    NEW_BATTLE._impactNodes={
+        g:document.getElementById("impactEffect"),
+        core:document.getElementById("impactCore"),
+        ring:document.getElementById("impactRing"),
+        slash:document.getElementById("impactSlash"),
+        cam:document.querySelector(".stadium-cam")
+    };
+    return NEW_BATTLE._impactNodes;
 }
-function paintImpactDebris(now){
-    const g=document.getElementById("impactDebris");
+function paintImpactFx(now){
+    const nodes=impactNodeCache();
+    const g=nodes.g;
     if(!g) return;
-    const bits=NEW_BATTLE.impactDebris;
-    if(!bits||!bits.length){
-        if(g.childElementCount) g.innerHTML="";
+    const imp=NEW_BATTLE.lastImpact;
+    if(!imp||!imp.time){
+        if(g.getAttribute("opacity")!=="0") g.setAttribute("opacity","0");
         return;
     }
-    let html="";
-    const live=[];
-    for(const b of bits){
-        const age=Math.max(0,(now-b.born)/1000);
-        if(age>=b.life) continue;
-        const u=age/b.life;
-        const x=b.x+b.vx*age;
-        const y=b.y+b.vy*age+11*age*age;
-        const op=Math.max(0,1-u*1.05);
-        if(b.type==="spark"){
-            const x2=x+Math.cos(b.ang*Math.PI/180)*b.len*(1-u*0.35);
-            const y2=y+Math.sin(b.ang*Math.PI/180)*b.len*(1-u*0.35);
-            html+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${b.color}" stroke-width="${b.w||0.45}" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
-        }else if(b.type==="ember"){
-            html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${((b.r||1)*(1-u*0.4)).toFixed(2)}" fill="${b.color}" opacity="${(op*0.85).toFixed(2)}"/>`;
-        }else{
-            const s=1.1*(1-u*0.5);
-            const a=b.ang+u*80;
-            html+=`<rect x="${(x-s).toFixed(1)}" y="${(y-s*0.35).toFixed(1)}" width="${(s*2).toFixed(1)}" height="${(s*0.7).toFixed(1)}" fill="${b.color}" opacity="${(op*0.9).toFixed(2)}" transform="rotate(${a.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
-        }
-        live.push(b);
+    const kind=imp.kind||"clash";
+    const life=kind==="smash"?0.28:kind==="rail"?0.22:kind==="graze"?0.10:0.18;
+    const age=Math.max(0,(now-imp.time)/1000);
+    if(age>=life){
+        g.setAttribute("opacity","0");
+        NEW_BATTLE.lastImpact=null;
+        return;
     }
-    NEW_BATTLE.impactDebris=live;
-    g.innerHTML=html;
+    if(imp.time!==NEW_BATTLE.impactFlashAt){
+        NEW_BATTLE.impactFlashAt=imp.time;
+        const cam=nodes.cam;
+        if(cam && kind!=="graze"){
+            cam.classList.remove("is-graze","is-clash","is-smash","is-rail","is-ability");
+            cam.classList.add("is-"+kind);
+            clearTimeout(NEW_BATTLE.hitFlashTimer);
+            NEW_BATTLE.hitFlashTimer=setTimeout(()=>cam.classList.remove("is-"+kind),80);
+        }
+    }
+    const u=age/life;
+    const x=50+imp.x*39;
+    const y=46+imp.y*39;
+    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
+    const strength=Math.min(1.2, Number(imp.strength)||1);
+    g.setAttribute("opacity", String(Math.max(0, 0.88-u*0.95)));
+    if(nodes.core){
+        nodes.core.setAttribute("cx", x);
+        nodes.core.setAttribute("cy", y);
+        nodes.core.setAttribute("r", String(Math.max(0.35, (kind==="smash"?2.05:1.45)*(1-u*0.78))));
+        nodes.core.setAttribute("fill", pal[0]);
+        nodes.core.setAttribute("opacity", String(Math.max(0, 1-u*1.2)));
+    }
+    if(nodes.ring){
+        nodes.ring.setAttribute("cx", x);
+        nodes.ring.setAttribute("cy", y);
+        nodes.ring.setAttribute("r", String(1.35 + u*(kind==="smash"?5.2:3.6)*strength));
+        nodes.ring.setAttribute("stroke", pal[1]||pal[0]);
+        nodes.ring.setAttribute("stroke-width", String(Math.max(0.28, 0.95-u*0.7)));
+        nodes.ring.setAttribute("opacity", String(Math.max(0, 0.9-u)));
+    }
+    if(nodes.slash){
+        const nx=Number(imp.nx)||0;
+        const ny=Number(imp.ny)||-1;
+        const len=(kind==="graze"?2.6:kind==="smash"?6.2:4.4)*(1-u*0.4);
+        nodes.slash.setAttribute("x1", String(x-nx*len));
+        nodes.slash.setAttribute("y1", String(y-ny*len));
+        nodes.slash.setAttribute("x2", String(x+nx*len));
+        nodes.slash.setAttribute("y2", String(y+ny*len));
+        nodes.slash.setAttribute("stroke", pal[0]);
+        nodes.slash.setAttribute("stroke-width", String(kind==="graze"?0.55:0.95));
+        nodes.slash.setAttribute("opacity", String(Math.max(0, 1-u*1.45)));
+    }
 }
 function updateBeyBattleVisual(state, circleId, spriteId, dt){
     const circle=document.getElementById(circleId);
@@ -5873,7 +5786,7 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
     if(state.abilityHidden){
         if(circle) circle.style.display="none";
         if(spriteEl) spriteEl.style.display="none";
-        paintSpinGhosts(state, circleId==="newPlayerBey"?"playerSpinGhosts":"cpuSpinGhosts", "", cx, cy, artR);
+        paintSpinGhosts(state, circleId==="newPlayerBey"?"playerSpinGhosts":"cpuSpinGhosts");
         return;
     }
     // SVG positive rotation is clockwise. Right-spin sprites use that.
@@ -5885,10 +5798,6 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         (state.spinDirection||1)*visualSpin*dt*3000;
     const sprite=bladeSpritePath(state.blade);
     const ghostId=circleId==="newPlayerBey"?"playerSpinGhosts":"cpuSpinGhosts";
-    const blurId=circleId==="newPlayerBey"?"spinBlurPlayer":"spinBlurCpu";
-    const blurAmt=rpm<=0.008?0:rpm>0.04?0.18+rpm*0.28:0.08+rpm*1.6;
-    const blurEl=document.querySelector(`#${blurId} feGaussianBlur`);
-    if(blurEl) blurEl.setAttribute("stdDeviation", blurAmt.toFixed(2));
     if(sprite && spriteEl){
         if(circle) circle.style.display="none";
         spriteEl.style.display="";
@@ -5900,17 +5809,17 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.setAttribute("width",String(artR*2));
         spriteEl.setAttribute("height",String(artR*2));
         spriteEl.setAttribute("transform",`rotate(${state.spriteAngle} ${cx} ${cy})`);
-        spriteEl.setAttribute("filter", rpm>0.008?`url(#${blurId})`:"");
+        spriteEl.removeAttribute("filter");
         spriteEl.style.filter=state.metallic
             ?"grayscale(1) saturate(0) brightness(2.15) contrast(1.55)"
             :"";
         if(state.dashBurst && (state.dashBurst.until||0)>performance.now()){
-            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 3.4px #e8fff4)";
+            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 1.1px #e8fff4)";
         }
-        paintSpinGhosts(state,ghostId,sprite,cx,cy,artR);
+        paintSpinGhosts(state,ghostId);
     }else{
         if(spriteEl) spriteEl.style.display="none";
-        paintSpinGhosts(state,ghostId,"",cx,cy,artR);
+        paintSpinGhosts(state,ghostId);
         if(circle){
             circle.style.display="";
             circle.setAttribute("cx",String(cx));
@@ -6020,157 +5929,13 @@ function newBattleFrame(now){
         updateBeyMotionTrail(p,"playerMotionTrail",now);
         updateBeyMotionTrail(c,"cpuMotionTrail",now);
 
-        const impactGroup=document.getElementById("impactEffect");
-        if(impactGroup && NEW_BATTLE.lastImpact){
-            const imp=NEW_BATTLE.lastImpact;
-            if(imp.time && imp.time!==NEW_BATTLE.impactDebrisAt) spawnImpactDebris(imp);
-            const age=Math.max(0,(performance.now()-imp.time)/1000);
-            const kind=imp.kind||(imp.fromAbility?"ability":imp.impactClass==="heavy"?"smash":"clash");
-            const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
-            const ink=pal[0], gold=pal[1]||pal[0];
-            const life=
-                kind==="smash" ? 1.18 :
-                kind==="rail" ? 1.02 :
-                imp.impactClass==="heavy" ? 1.05 :
-                imp.impactClass==="medium" ? 0.86 : 0.62;
-            if(age<life){
-                const u=age/life;
-                const x=50+imp.x*39;
-                const y=46+imp.y*39;
-                const strength=imp.strength||1;
-                const impactMultiplier=
-                    imp.impactClass==="heavy" ? 1.22 :
-                    imp.impactClass==="medium" ? 1.0 : 0.78;
+        paintImpactFx(now);
 
-                impactGroup.setAttribute("opacity",
-                    String(Math.max(0,0.90-u*0.90)));
-
-                const flash=document.getElementById("impactFlash");
-                const ring=document.getElementById("impactRing");
-                const ring2=document.getElementById("impactRing2");
-                const ring3=document.getElementById("impactRing3");
-                const explosion=document.getElementById("impactExplosion");
-                const core=document.getElementById("impactCore");
-                const spokes=document.getElementById("impactSpokes");
-                const shock=document.getElementById("impactShock");
-                const shockOuter=document.getElementById("impactShockOuter");
-                const burst1=document.getElementById("impactBurst1");
-                const burst2=document.getElementById("impactBurst2");
-                const txt=document.getElementById("impactText");
-                const playerDamageText=document.getElementById("playerDamageText");
-                const cpuDamageText=document.getElementById("cpuDamageText");
-                const playerRecoveredText=document.getElementById("playerRecoveredText");
-                const cpuRecoveredText=document.getElementById("cpuRecoveredText");
-
-                if(flash){
-                    flash.setAttribute("cx",x);
-                    flash.setAttribute("cy",y);
-                    flash.setAttribute("stroke",ink);
-                    const flashPhase=Math.min(1,u*7);
-                    flash.setAttribute("r",String(4.5+u*(kind==="smash"?11:7.5)*strength*impactMultiplier));
-                    flash.setAttribute("stroke-width",String((kind==="graze"?3.2:5.4)-u*2.2));
-                    flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
-                }
-                if(ring){
-                    ring.setAttribute("cx",x);
-                    ring.setAttribute("cy",y);
-                    ring.setAttribute("stroke",gold);
-                    ring.setAttribute("r",String(2.5+u*9.0*strength*impactMultiplier));
-                }
-                if(ring2){
-                    ring2.setAttribute("cx",x);
-                    ring2.setAttribute("cy",y);
-                    ring2.setAttribute("stroke",ink);
-                    ring2.setAttribute("r",String(2.0+u*7.0*strength));
-                }
-                if(ring3){
-                    ring3.setAttribute("cx",x);
-                    ring3.setAttribute("cy",y);
-                    ring3.setAttribute("stroke",gold);
-                    ring3.setAttribute("r",String(1.2+u*5.0*strength));
-                }
-                if(explosion){
-                    explosion.setAttribute("cx",x);
-                    explosion.setAttribute("cy",y);
-                    explosion.setAttribute("fill",kind==="graze"?"#ffffff":gold);
-                    explosion.setAttribute("stroke",ink);
-                    explosion.setAttribute("r",String((kind==="graze"?1.6:3.0)+u*(kind==="smash"?10:7.0)*strength*impactMultiplier));
-                    explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
-                    explosion.setAttribute("opacity",String(Math.max(0,(kind==="graze"?0.55:1.0)-u*1.12)));
-                }
-                if(core){
-                    core.setAttribute("cx",x);
-                    core.setAttribute("cy",y);
-                    core.setAttribute("r",String(Math.max(0.9,4.2-u*3.0)));
-                    core.setAttribute("opacity",String(Math.max(0,1.0-u*1.30)));
-                }
-                if(spokes){
-                    const spokeScale=1+u*(2.8+strength*0.9);
-                    spokes.setAttribute("opacity",String(Math.max(0,0.95-u*1.15)));
-                    spokes.setAttribute("transform",`translate(${x-500} ${y-420}) scale(${spokeScale}) translate(${500-x} ${420-y}) rotate(${u*18} ${x} ${y})`);
-                }
-                if(shock){
-                    const shockPhase=Math.min(1,u*4.8);
-                    const shockScale=1+shockPhase*(2.5+strength*0.9);
-                    shock.setAttribute("opacity",String(Math.max(0,0.95-shockPhase*1.05)));
-                    shock.setAttribute("transform",
-                        `translate(${x-500} ${y-420}) scale(${shockScale}) translate(${500-x} ${420-y}) rotate(${u*22} ${x} ${y})`);
-                }
-                if(shockOuter){
-                    shockOuter.setAttribute("cx",x);
-                    shockOuter.setAttribute("cy",y);
-                    shockOuter.setAttribute("r",String(8+u*30*strength));
-                    shockOuter.setAttribute("opacity",String(Math.max(0,0.95-u*1.25)));
-                }
-                if(burst1){
-                    burst1.setAttribute("cx",String(x-u*25*strength));
-                    burst1.setAttribute("cy",String(y-u*12*strength));
-                    burst1.setAttribute("r",String(Math.max(0.8,3.2-u*2.2)));
-                    burst1.setAttribute("opacity",String(Math.max(0,1-u*1.4)));
-                }
-                if(burst2){
-                    burst2.setAttribute("cx",String(x+u*27*strength));
-                    burst2.setAttribute("cy",String(y+u*10*strength));
-                    burst2.setAttribute("r",String(Math.max(0.8,2.8-u*1.8)));
-                    burst2.setAttribute("opacity",String(Math.max(0,0.95-u*1.3)));
-                }
-                if(txt){
-                    txt.setAttribute("x",x);
-                    txt.setAttribute("y",String(y-22-u*12));
-                    txt.setAttribute("font-size",String(19+Math.min(6,strength*2.2)));
-                    txt.textContent="";
-                }
-                const pLoss=imp.playerRpmLoss||0;
-                const cLoss=imp.cpuRpmLoss||0;
-                if(playerDamageText){
-                    playerDamageText.setAttribute("x",String(x));
-                    playerDamageText.setAttribute("y",String(y-8-u*8));
-                    playerDamageText.textContent=pLoss>0.0005?`-${Math.round(pLoss*100)} RPM`:"";
-                    playerDamageText.setAttribute("opacity",String(pLoss>0.0005?Math.max(0,1-u*1.08):0));
-                }
-                if(cpuDamageText){
-                    cpuDamageText.setAttribute("x",String(x));
-                    cpuDamageText.setAttribute("y",String(y+2-u*8));
-                    cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
-                    cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.08):0));
-                }
-             }else{
-                impactGroup.setAttribute("opacity","0");
-                const pd=document.getElementById("playerDamageText");
-                const cd=document.getElementById("cpuDamageText");
-                if(pd) pd.setAttribute("opacity","0");
-                if(cd) cd.setAttribute("opacity","0");
-                const pr=document.getElementById("playerRecoveredText");
-                const cr=document.getElementById("cpuRecoveredText");
-                if(pr && p.recoveredFlashUntil<=performance.now()) pr.setAttribute("opacity","0");
-                if(cr && c.recoveredFlashUntil<=performance.now()) cr.setAttribute("opacity","0");
-                NEW_BATTLE.lastImpact=null;
-            }
-        }
-        const nowRecovery=performance.now();
+        const nowRecovery=now;
+        const recDom=NEW_BATTLE._dom||{};
         for(const [el,s] of [
-            [document.getElementById("playerRecoveredText"),p],
-            [document.getElementById("cpuRecoveredText"),c]
+            [recDom.playerRec||document.getElementById("playerRecoveredText"),p],
+            [recDom.cpuRec||document.getElementById("cpuRecoveredText"),c]
         ]){
             if(el && s.recoveredFlashUntil>nowRecovery){
                 el.setAttribute("x",String(50+battleDrawPos(s).x*39));
@@ -6185,22 +5950,19 @@ function newBattleFrame(now){
             }
         }
 
-        paintImpactDebris(nowRecovery);
-
         p.hitFlash=Math.max(0,(p.hitFlash||0)-frameDt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-frameDt);
-        p.impactScale=Math.max(1,(p.impactScale||1)-frameDt*1.8);
-        c.impactScale=Math.max(1,(c.impactScale||1)-frameDt*1.8);
+        p.impactScale=Math.max(1,(p.impactScale||1)-frameDt*2.6);
+        c.impactScale=Math.max(1,(c.impactScale||1)-frameDt*2.6);
 
-        for(const [id,v] of [
-            ["newPlayerRPM",p.rpm],
-            ["newCpuRPM",c.rpm],
-            ["newPlayerStability",p.stability],
-            ["newCpuStability",c.stability]
-        ]){
-            const el=document.getElementById(id);
-            if(el) el.textContent=Math.round(v*100);
-        }
+        const rpmP=recDom.playerRpm||document.getElementById("newPlayerRPM");
+        const rpmC=recDom.cpuRpm||document.getElementById("newCpuRPM");
+        const staP=recDom.playerSta||document.getElementById("newPlayerStability");
+        const staC=recDom.cpuSta||document.getElementById("newCpuStability");
+        if(rpmP) rpmP.textContent=Math.round(p.rpm*100);
+        if(rpmC) rpmC.textContent=Math.round(c.rpm*100);
+        if(staP) staP.textContent=Math.round(p.stability*100);
+        if(staC) staC.textContent=Math.round(c.stability*100);
         paintRpmGhostBars(p,c,frameDt);
         paintMomentumBars(p,c);
 
@@ -8385,10 +8147,10 @@ function newPhysicsCollision(dt){
         false
     );
 
-    p.hitFlash=0.36*visualStrength;
-    c.hitFlash=0.36*visualStrength;
-    p.impactScale=1.18+0.46*visualStrength;
-    c.impactScale=1.18+0.46*visualStrength;
+    p.hitFlash=0.14*visualStrength;
+    c.hitFlash=0.14*visualStrength;
+    p.impactScale=1.04+0.08*visualStrength;
+    c.impactScale=1.04+0.08*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={

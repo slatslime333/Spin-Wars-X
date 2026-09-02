@@ -1,12 +1,12 @@
 /* Spin Wars X — offline cache for Safari home-screen / PWA */
-const CACHE='spin-wars-x-9.82';
+const CACHE='spin-wars-x-9.83';
 const PRECACHE=[
   './','./index.html','./manifest.webmanifest',
-  './style.css?v=9.80','./presentation.css?v=9.80','./fx.css?v=9.80','./movement-engine.js?v=9.35','./xrail-engine.js?v=9.25',
-  './vs-commentary.js?v=9.52','./abilities.js?v=9.80','./scoreboard.js?v=9.27','./app.js?v=9.82',
-  './rogue-mode.js?v=9.72','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.5','./rogue-shop-balance.js?v=1.3',
+  './style.css?v=9.83','./presentation.css?v=9.83','./fx.css?v=9.83','./shell.css?v=9.83','./movement-engine.js?v=9.35','./xrail-engine.js?v=9.25',
+  './vs-commentary.js?v=9.52','./abilities.js?v=9.80','./scoreboard.js?v=9.27','./app.js?v=9.83',
+  './rogue-mode.js?v=9.73','./rogue-balance-bridge.js?v=1.0','./rogue-balance.js?v=1.5','./rogue-shop-balance.js?v=1.3',
   './rogue-balance-final.js?v=1.2','./omen-transition-repair.js?v=1.1','./attack-movement-tuning-v1.js?v=1.1','./sw.js',
-  './assets/HomeARt.png',
+  './assets/HomeARt.png','./assets/rogue.png',
   './assets/ui/grain.svg','./assets/ui/scratch.svg',
   './assets/blades/Aeropegasus.png','./assets/blades/Dransword%20%281%29.png','./assets/blades/KnightMail.png',
   './assets/blades/Leoncrest.png','./assets/blades/Leonfang.png','./assets/blades/Sharkedge.png',
