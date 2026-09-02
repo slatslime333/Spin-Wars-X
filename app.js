@@ -4774,6 +4774,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
+                <div class="hud-pc-pane">${garageStatLine(p.stats)}</div>
                 <div class="hud-drop"></div>
               </div>
               <div class="battle-score">
@@ -4806,6 +4807,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
+                <div class="hud-pc-pane">${garageStatLine(c.stats)}</div>
                 <div class="hud-drop"></div>
               </div>
             </div>

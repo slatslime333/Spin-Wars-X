@@ -24,14 +24,25 @@ html[data-shell="phone"] #app{
   padding:4%;
   box-sizing:border-box;
 }
+.draft-disc.is-part img,
+.draft-roster .part-card-sprite,
 .vs-bit-sprite{
-  width:36px;
-  height:36px;
-  padding:2px;
+  width:100%!important;
+  height:100%!important;
+  padding:0!important;
+  object-fit:contain;
+  transform:scale(1.38);
+  transform-origin:center;
+}
+.vs-bit-sprite{
+  width:36px!important;
+  height:36px!important;
+  display:inline-block;
+  border-radius:50%;
+  overflow:hidden;
   background:#07060c;
   box-shadow:0 0 0 1px rgba(255,196,46,.35);
-  object-fit:contain;
-  box-sizing:border-box;
+  vertical-align:middle;
 }
 .vs-art img{
   width:100%!important;
@@ -46,7 +57,16 @@ html[data-shell="phone"] #app{
 .draft-disc{animation:none!important}
 .spin-ghosts{display:none!important}
 
-.hud-tap:empty{display:none}
+.hud-pc-pane{display:none}
+html[data-shell="pc"] .hud-pc-pane{
+  display:block;
+  margin-top:auto;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+html[data-shell="pc"] .hud-pc-pane .hud-stats{
+  margin-top:8px;
+}
 html[data-shell="pc"] .hud-tap:empty{
   display:block;
   height:12px;
@@ -191,12 +211,16 @@ html[data-shell="phone"] .board-cell{min-height:72px}
 
 html[data-shell="phone"] .draft-feature,
 html[data-shell="phone"] .bay-inspect{
-  grid-template-columns:72px minmax(0,1fr);
+  grid-template-columns:1fr;
   gap:8px;
   padding:8px 10px;
 }
+html[data-shell="phone"] .bay-discs{
+  justify-content:flex-start;
+  gap:8px;
+}
 html[data-shell="phone"] .draft-disc{width:72px;height:72px}
-html[data-shell="phone"] .draft-disc.is-part{width:48px;height:48px}
+html[data-shell="phone"] .draft-disc.is-part{width:52px;height:52px}
 html[data-shell="phone"] .draft-feature-copy strong{font-size:22px}
 html[data-shell="phone"] .draft-ratings b{font-size:18px}
 html[data-shell="phone"] .roster-row,
@@ -425,11 +449,15 @@ html[data-shell="pc"] .battle-hud-player{
   grid-column:1;
   grid-row:2;
   align-self:stretch;
+  display:flex;
+  flex-direction:column;
 }
 html[data-shell="pc"] .battle-hud-cpu{
   grid-column:3;
   grid-row:2;
   align-self:stretch;
+  display:flex;
+  flex-direction:column;
 }
 html[data-shell="pc"] .battle-score{
   grid-column:2;
