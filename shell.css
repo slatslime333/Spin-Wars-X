@@ -480,9 +480,9 @@ html[data-shell="phone"] .battle-hud-parts{
 html[data-shell="phone"] .battle-hud-card{padding:5px 6px;overflow:hidden}
 html[data-shell="phone"] .hud-drop{display:none!important}
 html[data-shell="phone"] .battle-inspect{
-  position:absolute;
+  position:fixed;
   inset:0;
-  z-index:90;
+  z-index:200;
 }
 html[data-shell="phone"] .battle-inspect-sheet{
   top:0;

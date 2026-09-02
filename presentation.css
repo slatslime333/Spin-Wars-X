@@ -969,15 +969,16 @@ html:has(.room), body:has(.room), #app:has(.room){
 .battle-hud-card.is-open .hud-drop{display:none}
 .battle-inspect{
   display:none;
-  position:absolute;
+  position:fixed;
   inset:0;
-  z-index:90;
+  z-index:200;
+  pointer-events:auto;
 }
 .battle-shell.is-inspect .battle-inspect{display:block}
 .battle-inspect-scrim{
   position:absolute;
   inset:0;
-  background:rgba(4,3,8,.72);
+  background:rgba(4,3,8,.82);
 }
 .battle-inspect-sheet{
   position:absolute;
