@@ -971,10 +971,16 @@ html:has(.room), body:has(.room), #app:has(.room){
   display:none;
   position:fixed;
   inset:0;
-  z-index:200;
+  z-index:400;
   pointer-events:auto;
 }
 .battle-shell.is-inspect .battle-inspect{display:block}
+.battle-shell.is-inspect .battle-dock,
+.battle-shell.is-inspect .battle-fighters,
+.battle-shell.is-inspect .battle-callout,
+.battle-shell.is-inspect .stadium-slot{
+  pointer-events:none;
+}
 .battle-inspect-scrim{
   position:absolute;
   inset:0;
@@ -985,6 +991,7 @@ html:has(.room), body:has(.room), #app:has(.room){
   top:0;
   left:0;
   right:0;
+  z-index:1;
   max-height:min(74dvh,640px);
   overflow:auto;
   -webkit-overflow-scrolling:touch;

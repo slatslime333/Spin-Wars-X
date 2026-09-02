@@ -482,7 +482,7 @@ html[data-shell="phone"] .hud-drop{display:none!important}
 html[data-shell="phone"] .battle-inspect{
   position:fixed;
   inset:0;
-  z-index:200;
+  z-index:400;
 }
 html[data-shell="phone"] .battle-inspect-sheet{
   top:0;
