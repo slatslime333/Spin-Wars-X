@@ -170,6 +170,32 @@ html:has(.room), body:has(.room), #app:has(.room){
   height:100%;
   background:linear-gradient(90deg,var(--gold),var(--green));
 }
+.hud-stat .hud-track{
+  position:relative;
+  overflow:hidden;
+}
+.hud-stat .hud-track i.ghost{
+  position:absolute;
+  top:0;
+  left:0;
+  height:100%;
+  pointer-events:none;
+}
+.hud-stat .hud-track i.ghost.up{
+  background:#7ef0ff;
+  opacity:.9;
+  z-index:2;
+}
+.hud-stat .hud-track i.ghost.down{
+  background:rgba(255,176,64,.55);
+  z-index:0;
+}
+.hud-stat .hud-track i.live{
+  position:relative;
+  z-index:1;
+}
+.hud-stat b i.up{color:var(--green);font-size:10px;margin-left:3px;font-style:normal}
+.hud-stat b i.down{color:#ff8aa0;font-size:10px;margin-left:3px;font-style:normal}
 .hud-stat em{
   background:
     linear-gradient(90deg,var(--gold),var(--green)) 0 0 / var(--pct,0%) 100% no-repeat,
@@ -864,6 +890,7 @@ html:has(.room), body:has(.room), #app:has(.room){
   font-size:26px;
   font-weight:400;
   line-height:.9;
+  color:#fff;
 }
 .vs-ratings{background:none;gap:14px;margin:4px 0;display:flex!important;grid-template-columns:none}
 .vs-rating{border:0;background:none;padding:0}
@@ -883,7 +910,13 @@ html:has(.room), body:has(.room), #app:has(.room){
 }
 
 @media(max-width:760px){
-  .weigh-in .vs-board{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr}
+  .weigh-in .vs-board{
+    display:flex;
+    flex-direction:column;
+    grid-template-columns:1fr;
+    grid-template-rows:none;
+    gap:12px;
+  }
   .weigh-in .vs-stamp{display:none}
 }
 
