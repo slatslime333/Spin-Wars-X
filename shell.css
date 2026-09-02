@@ -478,17 +478,26 @@ html[data-shell="phone"] .battle-hud-parts{
   white-space:nowrap;
 }
 html[data-shell="phone"] .battle-hud-card{padding:5px 6px;overflow:hidden}
-html[data-shell="phone"] .hud-drop{
-  position:fixed!important;
-  left:8px!important;
-  right:8px!important;
-  top:auto!important;
-  bottom:calc(8px + env(safe-area-inset-bottom,0px))!important;
-  width:auto!important;
-  max-width:none;
-  max-height:46vh;
-  z-index:80;
+html[data-shell="phone"] .hud-drop{display:none!important}
+html[data-shell="phone"] .battle-inspect{
+  position:absolute;
+  inset:0;
+  z-index:90;
 }
+html[data-shell="phone"] .battle-inspect-sheet{
+  top:0;
+  max-height:min(78dvh,720px);
+  padding:8px 8px 12px;
+}
+html[data-shell="phone"] .battle-inspect-grid{
+  grid-template-columns:1fr;
+  gap:8px;
+}
+html[data-shell="phone"] .battle-inspect-pane{
+  padding:8px;
+}
+html[data-shell="phone"] .battle-inspect-pane .hud-drop-head strong{font-size:18px}
+html[data-shell="phone"] .battle-inspect-pane .hud-stat{padding:3px 0}
 html[data-shell="phone"] .hud-vitals{
   flex-direction:column;
   align-items:stretch;
@@ -720,9 +729,8 @@ html[data-shell="pc"] .battle-hud-top strong{font-size:22px}
 html[data-shell="pc"] .rpm-readout b{font-size:30px}
 html[data-shell="pc"] .stability-readout{display:block;margin-top:6px}
 html[data-shell="pc"] .dash-btn{min-width:160px;min-height:72px}
-html[data-shell="pc"] .hud-drop{
-  max-height:min(56vh,420px);
-}
+html[data-shell="pc"] .hud-drop{display:none!important}
+html[data-shell="pc"] .battle-inspect-sheet{max-height:min(70vh,560px)}
 html[data-shell="pc"] .room-go{font-size:26px;height:48px}
 
 html[data-shell="pc"] .room.locker #rogueNewConfirm{
