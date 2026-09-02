@@ -129,8 +129,8 @@ for(const h of ["3-60", "3-70", "3-80"]){
 print("Wizard Rod hold triangle (Needle > Ball > Hexa STA; Hexa > Ball > Needle DEF/BAL)", holdRows);
 
 const attackBits = ["Rush", "Low Rush", "Kick", "Quake", "Flat"];
-print("Dran Sword 1-60 attack family", attackBits.map(b => row(dran, "1-60", b)));
-print("Aero Pegasus 9-60 attack family", attackBits.map(b => row(pegasus, "9-60", b)));
+print("Dran Sword 1-60 attack family", attackBits.concat(["Low Flat"]).map(b => row(dran, "1-60", b)));
+print("Aero Pegasus 9-60 attack family", attackBits.concat(["Low Flat"]).map(b => row(pegasus, "9-60", b)));
 
 print("Burst: 4-80 vs 9-60 (same blade + Needle)", [
   row(rod, "4-80", "Needle"),
@@ -164,17 +164,37 @@ expect(b60.bal > n60.bal, `Ball BAL ${b60.bal} should beat Needle ${n60.bal}`);
 
 const rush = row(dran, "1-60", "Rush");
 const low = row(dran, "1-60", "Low Rush");
+const lowFlat = row(dran, "1-60", "Low Flat");
 const kick = row(dran, "1-60", "Kick");
 const quake = row(dran, "1-60", "Quake");
 expect(low.atk > rush.atk, `Low Rush ATK ${low.atk} > Rush ${rush.atk}`);
 expect(low.kno > rush.kno, `Low Rush KNO ${low.kno} > Rush ${rush.kno}`);
-expect(low.sta < rush.sta, `Low Rush STA ${low.sta} < Rush ${rush.sta}`);
+expect(low.sta <= 60, `Low Rush STA ${low.sta} should dump (≤60)`);
+expect(low.sta < rush.sta - 8, `Low Rush STA ${low.sta} should sit well under Rush ${rush.sta}`);
 expect(low.bal < rush.bal, `Low Rush BAL ${low.bal} < Rush ${rush.bal}`);
+expect(lowFlat.sta < low.sta, `Low Flat STA ${lowFlat.sta} < Low Rush ${low.sta}`);
 expect(kick.bal > rush.bal, `Kick BAL ${kick.bal} > Rush ${rush.bal}`);
 expect(kick.atk < low.atk, `Kick ATK ${kick.atk} < Low Rush ${low.atk}`);
-expect(quake.sta <= 62, `Quake STA ${quake.sta} should dump (≤62)`);
-expect(quake.sta < rush.sta - 4, `Quake STA ${quake.sta} should sit under Rush ${rush.sta}`);
+expect(quake.sta <= 42, `Quake STA ${quake.sta} should dump (≤42)`);
+expect(quake.sta < lowFlat.sta, `Quake STA ${quake.sta} < Low Flat ${lowFlat.sta}`);
 expect(quake.kno > rush.kno, `Quake KNO ${quake.kno} > Rush ${rush.kno}`);
+
+const pegRush = row(pegasus, "9-60", "Rush");
+const pegLow = row(pegasus, "9-60", "Low Rush");
+const pegLowFlat = row(pegasus, "9-60", "Low Flat");
+const pegQuake = row(pegasus, "9-60", "Quake");
+expect(pegLow.sta <= 60, `Pegasus Low Rush STA ${pegLow.sta} still dumps`);
+expect(pegLowFlat.sta < pegLow.sta, `Pegasus Low Flat ${pegLowFlat.sta} < Low Rush ${pegLow.sta}`);
+expect(pegQuake.sta < pegLowFlat.sta, `Pegasus Quake ${pegQuake.sta} < Low Flat ${pegLowFlat.sta}`);
+expect(pegQuake.sta <= 48, `Pegasus Quake STA ${pegQuake.sta} is the floor dump`);
+
+const allBits = Object.values(bits).filter(b => b && b.name !== "Taper" && b.name !== "High Needle" && b.name !== "Elevate");
+const pegAll = allBits.map(b => row(pegasus, "9-60", b.name));
+const worst = pegAll.reduce((a, r) => r.sta < a.sta ? r : a);
+expect(worst.kit.endsWith("Quake"), `worst Pegasus STA should be Quake, got ${worst.kit} ${worst.sta}`);
+const dranAll = allBits.map(b => row(dran, "1-60", b.name));
+const worstDran = dranAll.reduce((a, r) => r.sta < a.sta ? r : a);
+expect(worstDran.kit.endsWith("Quake"), `worst Dran STA should be Quake, got ${worstDran.kit} ${worstDran.sta}`);
 
 const n80 = row(rod, "3-80", "Needle");
 const n60b = row(rod, "3-60", "Needle");
@@ -192,6 +212,9 @@ const qPhys = sandbox.BIT_PHYSICS.Quake;
 expect(lrPhys.attackBias > rPhys.attackBias, "Low Rush attackBias > Rush");
 expect(lrPhys.stability < rPhys.stability, "Low Rush stability < Rush");
 expect(lrPhys.spinDrain > rPhys.spinDrain, "Low Rush drain > Rush");
+const lfPhys = sandbox.BIT_PHYSICS["Low Flat"];
+expect(lfPhys.spinDrain > lrPhys.spinDrain, `Low Flat drain ${lfPhys.spinDrain} > Low Rush ${lrPhys.spinDrain}`);
+expect(qPhys.spinDrain > lfPhys.spinDrain, `Quake drain ${qPhys.spinDrain} > Low Flat ${lfPhys.spinDrain}`);
 expect(qPhys.spinDrain > lrPhys.spinDrain + 1.2, `Quake drain ${qPhys.spinDrain} should dwarf Low Rush ${lrPhys.spinDrain}`);
 expect(kPhys.stability > rPhys.stability, "Kick stability > Rush (hybrid hold)");
 expect(sandbox.BIT_ENGINE.kick.type === "Balance", "Kick type is Balance");

@@ -947,9 +947,9 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:94,knockback:88,defense:44,mobility:99,balance:50,stamina:42,burst:76},
+        card:{attack:94,knockback:88,defense:44,mobility:99,balance:50,stamina:28,burst:76},
 
-        behavior:{speed:100,aggression:98,control:52,staminaRetention:42}
+        behavior:{speed:100,aggression:98,control:52,staminaRetention:24}
 
     },
 
@@ -971,9 +971,9 @@ const BIT_ENGINE = {
 
     type:"Attack",
 
-    card:{attack:88,knockback:82,defense:50,mobility:92,balance:62,stamina:54,burst:78},
+    card:{attack:88,knockback:82,defense:50,mobility:92,balance:62,stamina:36,burst:78},
 
-    behavior:{speed:97,aggression:94,control:66,staminaRetention:50}
+    behavior:{speed:97,aggression:94,control:66,staminaRetention:34}
 
 },
 
@@ -1056,7 +1056,7 @@ orb:{
 },
 
     point:{name:"Point",type:"Balance",card:{attack:74,knockback:64,defense:62,mobility:74,balance:80,stamina:76,burst:80},behavior:{speed:64,aggression:60,control:82,staminaRetention:74}},
-    quake:{name:"Quake",type:"Attack",card:{attack:90,knockback:88,defense:40,mobility:90,balance:36,stamina:28,burst:74},behavior:{speed:92,aggression:96,control:36,staminaRetention:22}}
+    quake:{name:"Quake",type:"Attack",card:{attack:90,knockback:88,defense:40,mobility:90,balance:36,stamina:16,burst:74},behavior:{speed:92,aggression:96,control:36,staminaRetention:10}}
 
 };
 
@@ -1068,10 +1068,10 @@ orb:{
 // the Bey uses that movement, while launch angle modifies the bit's natural
 // behavior rather than replacing it.
 const BIT_PHYSICS = {
-    Flat:{movement:96,control:48,spinDrain:1.55,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
-    "Low Flat":{movement:100,control:43,spinDrain:1.70,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
+    Flat:{movement:96,control:48,spinDrain:1.85,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
+    "Low Flat":{movement:100,control:43,spinDrain:2.20,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
     Rush:{movement:90,control:76,spinDrain:1.00,xRailAffinity:88,centerAffinity:44,recovery:64,attackBias:5,acceleration:84,friction:50,precession:54,stability:58},
-    "Low Rush":{movement:96,control:64,spinDrain:1.28,xRailAffinity:94,centerAffinity:32,recovery:46,attackBias:11,acceleration:95,friction:40,precession:70,stability:40},
+    "Low Rush":{movement:96,control:64,spinDrain:1.62,xRailAffinity:94,centerAffinity:32,recovery:46,attackBias:11,acceleration:95,friction:40,precession:70,stability:40},
     Taper:{movement:68,control:84,spinDrain:.82,xRailAffinity:58,centerAffinity:60,recovery:72,attackBias:1,acceleration:64,friction:66,precession:44,stability:68},
     Level:{movement:66,control:88,spinDrain:.76,xRailAffinity:58,centerAffinity:72,recovery:82,attackBias:2,acceleration:62,friction:76,precession:32,stability:82},
     Kick:{movement:72,control:82,spinDrain:.88,xRailAffinity:62,centerAffinity:58,recovery:80,attackBias:4,acceleration:70,friction:62,precession:40,stability:74},
@@ -1082,7 +1082,7 @@ const BIT_PHYSICS = {
     Ball:{movement:28,control:96,spinDrain:.33,xRailAffinity:16,centerAffinity:96,recovery:94,attackBias:-7,acceleration:30,friction:93,precession:16,stability:94},
     Orb:{movement:24,control:92,spinDrain:.38,xRailAffinity:14,centerAffinity:96,recovery:86,attackBias:-6,acceleration:28,friction:94,precession:18,stability:86},
     Point:{movement:58,control:86,spinDrain:.78,xRailAffinity:52,centerAffinity:74,recovery:76,attackBias:1,acceleration:58,friction:77,precession:34,stability:72},
-    Quake:{movement:90,control:34,spinDrain:2.92,xRailAffinity:76,centerAffinity:16,recovery:18,attackBias:12,acceleration:94,friction:40,precession:80,stability:22}
+    Quake:{movement:90,control:34,spinDrain:3.35,xRailAffinity:76,centerAffinity:16,recovery:18,attackBias:12,acceleration:94,friction:40,precession:80,stability:22}
 };
 
 function selectableBits(){
@@ -2276,7 +2276,7 @@ function ratchetCard(r){
 //=========================
 function bitCard(bit){
     const typeClass=String(bit.type||"Balance").toLowerCase(),bp=getBitPhysicalProfileV56(bit);
-    const sta=bp.stamina>.90?"VERY HIGH":bp.stamina>.75?"HIGH":bp.stamina>.55?"MEDIUM":"LOW";
+    const sta=bp.stamina>.90?"VERY HIGH":bp.stamina>.75?"HIGH":bp.stamina>.55?"MEDIUM":bp.stamina>.18?"LOW":"DUMP";
     const mob=bp.mobility>.82?"HIGH":bp.mobility>.62?"MEDIUM":"LOW";
     const stability=bp.stability>.80?"HIGH":bp.stability>.55?"MEDIUM":"LOW";
     const descriptions={
@@ -2284,9 +2284,9 @@ function bitCard(bit){
         "Level":"Stable and centered at high RPM; as RPM falls, natural tilt and wobble make it progressively more mobile.",
         "Hexa":"Defense first. Rights itself, soaks hits. Stamina behind Ball and Needle.",
         "Rush":"Controlled attack: less raw smash than Flat, better stamina and a cleaner rail line.",
-        "Low Rush":"Meaner Rush: more knock and attack, less stamina, balance, and stability.",
+        "Low Rush":"Meaner Rush with no hold. More knock and attack; spin dumps.",
         "Flat":"High-friction attack Bit built for aggressive movement and powerful Xtreme Dashes.",
-        "Low Flat":"Lower, wider Flat: maximum aggression and X-Line speed at a stamina cost.",
+        "Low Flat":"Hungrier than Low Rush. Maximum aggression and X-Line speed, almost no stamina.",
         "Kick":"Hybrid: Rush-like commit with a stamina/balance floor. Sits more than Flat, hits more than Hexa.",
         "Taper":"Controlled balance Bit that trades some attack for mobility and stamina.",
         "Wedge":"Semi-mobile Defense Bit with strong stamina, then a more stationary late battle.",
@@ -2294,7 +2294,7 @@ function bitCard(bit){
         "High Needle":"More mobile than Needle, with strong stamina but even more exposure to destabilization.",
         "Ball":"Excellent stamina with consistency. Less raw spin than Needle, much harder to knock over.",
         "Orb":"Ball family with a little more walk and a little less hold.",
-        "Quake":"Jumping smash bit. Huge knock, dumps stamina fast. Not a long fight.",
+        "Quake":"Worst stamina of any bit. Jump smash, then the spin is gone.",
     };
     let comboStats=null;
     let comboNote="";
@@ -2489,10 +2489,10 @@ function getBitPhysicalProfileV56(bit){
       replacing the Blade's identity.
     */
     const roles={
-        "Flat":       {attack:.88,knockback:.80,defense:.10,balance:.16,stamina:.12,mobility:.96,burst:.70},
-        "Low Flat":   {attack:.94,knockback:.86,defense:.06,balance:.10,stamina:.06,mobility:1.00,burst:.66},
+        "Flat":       {attack:.88,knockback:.80,defense:.10,balance:.16,stamina:.14,mobility:.96,burst:.70},
+        "Low Flat":   {attack:.94,knockback:.86,defense:.06,balance:.10,stamina:.04,mobility:1.00,burst:.66},
         "Rush":       {attack:.64,knockback:.52,defense:.22,balance:.48,stamina:.56,mobility:.84,burst:.74},
-        "Low Rush":   {attack:.82,knockback:.80,defense:.12,balance:.22,stamina:.20,mobility:.94,burst:.70},
+        "Low Rush":   {attack:.82,knockback:.80,defense:.12,balance:.22,stamina:.10,mobility:.94,burst:.70},
         "Taper":      {attack:.42,knockback:.32,defense:.26,balance:.58,stamina:.70,mobility:.70,burst:.80},
         "Kick":       {attack:.56,knockback:.48,defense:.46,balance:.86,stamina:.58,mobility:.68,burst:.78},
         "Quake":      {attack:.90,knockback:.84,defense:.04,balance:.04,stamina:.00,mobility:.88,burst:.62},
@@ -2741,7 +2741,10 @@ function shapeHasRoundOrTriShape(blade){
         s.includes("sword")||s.includes("claw")||s.includes("hybrid");
 }
 
-function normalizePhysicalStat(v){return Math.max(60,Math.min(99,Math.round(v)));}
+function normalizePhysicalStat(v,key){
+    const floor=key==="stamina"?36:60;
+    return Math.max(floor,Math.min(99,Math.round(v)));
+}
 function getBitRatedProperty(role){return 60+role*40;}
 function getRatchetRatedProperty(role){return 60+role*40;}
 
@@ -2777,10 +2780,13 @@ function calculateComboStats(blade,ratchet,bit){
     stats.balance-=destabilizationRisk;
     stats.defense-=destabilizationRisk*.55;
 
-    const dumpBit=bp.stamina<0.15;
-    stats.stamina-=Math.max(0,bp.speed-.50)*(dumpBit?14:4);
-    stats.stamina-=(1-Math.min(1,bp.stamina))*(dumpBit?20:8);
-    if(dumpBit) stats.stamina-=10;
+    const bitName=bit.name||"";
+    stats.stamina-=Math.max(0,bp.speed-.48)*6;
+    stats.stamina-=(1-Math.min(1,bp.stamina))*14;
+    if(bitName==="Low Rush") stats.stamina-=6;
+    if(bitName==="Low Flat") stats.stamina-=9;
+    if(bitName==="Quake") stats.stamina-=22;
+    if(bitName==="Flat") stats.stamina-=6;
 
     const fitDelta=ratchetFit-.50;
     if(bladeData.type==="Attack"){
@@ -2826,7 +2832,10 @@ function calculateComboStats(blade,ratchet,bit){
         stats.balance-=(0.45-explicitBitFit)*8;
     }
 
-    for(const key of Object.keys(stats))stats[key]=normalizePhysicalStat(stats[key]);
+    const staCap={Quake:46,"Low Flat":54,"Low Rush":56,Flat:66};
+    if(staCap[bitName]!=null) stats.stamina=Math.min(stats.stamina,staCap[bitName]);
+
+    for(const key of Object.keys(stats))stats[key]=normalizePhysicalStat(stats[key],key);
     const ovr=displayOvr(stats);
     const meta=calculateMetaScoreV57(bladeData,ratchet,bit,stats,ratchetFit*heightFit);
     return {stats,compatibility:Math.round((explicitBitFit*.55+heightFit*.25+ratchetFit*.20)*100),ovr,meta,
@@ -2844,9 +2853,10 @@ function calculateComboStats(blade,ratchet,bit){
  - Point: Physical behavior stable/aggressive behavior.
  - Level: aggressive early behavior can transition conservative.
  - Rush: controlled attack. Less smash than Flat, cleaner stamina.
- - Low Rush: more knock/attack than Rush, less stamina/balance/stability.
+ - Low Rush: more knock/attack than Rush. No hold. STA below Rush, above Low Flat.
+ - Low Flat: less stamina than Low Rush.
  - Kick: hybrid attack/sit. High balance, not a Flat clone.
- - Quake: jumping smash. Stamina dumps hard.
+ - Quake: worst stamina of any bit. Jump smash, then gone.
  - Hexa: defensive stability first. Stamina behind Ball and Needle.
  - Needle: highest raw stamina, lowest hold. Glass if it wobbles.
  - Ball: high stamina with consistency. Under Needle for raw STA, over Needle for hold.
@@ -6627,10 +6637,11 @@ function getBattleStatPoints(s,key,fallback=70){
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
         return Math.max(1,Math.min(220,total));
     }
+    const floor=key==="stamina"?36:50;
     if(!Number.isFinite(value)){
-        return Math.max(50,Math.min(99,fallback));
+        return Math.max(floor,Math.min(99,fallback));
     }
-    return Math.max(50,Math.min(99,value));
+    return Math.max(floor,Math.min(99,value));
 }
 
 function battleFoe(s){
