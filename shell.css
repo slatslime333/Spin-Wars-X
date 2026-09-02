@@ -63,7 +63,6 @@ html[data-shell="pc"] .hud-pc-pane{
   margin-top:12px;
   padding-top:10px;
   border-top:1px solid rgba(255,255,255,.08);
-  flex:1 1 auto;
 }
 html[data-shell="pc"] .hud-pc-pane .hud-stats{
   margin-top:8px;
@@ -449,14 +448,14 @@ html[data-shell="pc"] .battle-fighters{display:contents}
 html[data-shell="pc"] .battle-hud-player{
   grid-column:1;
   grid-row:2;
-  align-self:stretch;
+  align-self:start;
   display:flex;
   flex-direction:column;
 }
 html[data-shell="pc"] .battle-hud-cpu{
   grid-column:3;
   grid-row:2;
-  align-self:stretch;
+  align-self:start;
   display:flex;
   flex-direction:column;
 }
