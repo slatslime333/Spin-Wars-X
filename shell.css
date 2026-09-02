@@ -336,17 +336,39 @@ html[data-shell="phone"] .draft-feature-copy strong{font-size:20px}
 html[data-shell="phone"] .draft-ratings b{font-size:16px}
 html[data-shell="phone"] .draft-roster-label{padding:4px 10px 0;font-size:9px;letter-spacing:.12em;color:var(--muted)}
 html[data-shell="phone"] .draft-roster-label.is-pc{display:none}
-html[data-shell="phone"] .draft-feature .hud-stats{display:none}
+html[data-shell="phone"] .bay-stage{
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+html[data-shell="phone"] .draft-feature .hud-stats{
+  display:grid;
+  margin-top:4px;
+  gap:0 10px;
+}
+html[data-shell="phone"] .draft-feature .hud-stat{
+  padding:2px 0;
+}
+html[data-shell="phone"] .draft-feature .hud-stat .hud-track,
+html[data-shell="phone"] .draft-feature .hud-stat em{
+  height:6px;
+}
+html[data-shell="phone"] .draft-feature .ability-drop{
+  margin-top:4px;
+}
+html[data-shell="phone"] .draft-feature .ability-drop summary{
+  min-height:30px;
+  padding:4px 8px;
+}
 html[data-shell="phone"] .draft-carousel{
   display:grid;
-  grid-template-columns:36px minmax(0,1fr) 36px;
+  grid-template-columns:32px minmax(0,1fr) 32px;
   align-items:center;
-  gap:4px;
-  padding:0 6px 8px;
-  min-height:176px;
+  gap:2px;
+  padding:0 4px 8px;
+  min-height:168px;
 }
 html[data-shell="phone"] .carousel-arrow{
-  width:36px;
+  width:32px;
   height:44px;
   border:0;
   background:rgba(255,196,46,.12);
@@ -358,14 +380,14 @@ html[data-shell="phone"] .carousel-arrow{
 html[data-shell="phone"] .draft-carousel .draft-roster{
   position:relative;
   overflow:hidden;
-  height:176px;
+  height:168px;
   display:block;
 }
 html[data-shell="phone"] .draft-carousel .roster-row,
 html[data-shell="phone"] .draft-carousel .pick-tile,
 html[data-shell="phone"] .draft-carousel .blade-tile{
   position:absolute;
-  inset:8px 14%;
+  inset:8px 26%;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -379,20 +401,32 @@ html[data-shell="phone"] .draft-carousel .blade-tile{
   transition:transform .18s ease,opacity .18s ease;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-current{
-  z-index:3;
+  z-index:4;
   transform:none;
   opacity:1;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-prev{
-  z-index:2;
-  transform:translateX(-64%) scale(.55);
-  opacity:.42;
+  z-index:3;
+  transform:translateX(-48%) scale(.62);
+  opacity:.5;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-next{
-  z-index:2;
-  transform:translateX(64%) scale(.55);
-  opacity:.42;
+  z-index:3;
+  transform:translateX(48%) scale(.62);
+  opacity:.5;
+  pointer-events:none;
+}
+html[data-shell="phone"] .draft-carousel .roster-row.is-peek-prev-2{
+  z-index:1;
+  transform:translateX(-86%) scale(.42);
+  opacity:.28;
+  pointer-events:none;
+}
+html[data-shell="phone"] .draft-carousel .roster-row.is-peek-next-2{
+  z-index:1;
+  transform:translateX(86%) scale(.42);
+  opacity:.28;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-off{display:none}
@@ -407,37 +441,82 @@ html[data-shell="phone"] .draft-carousel .roster-id{
 }
 html[data-shell="phone"] .draft-carousel .roster-ovr{text-align:center}
 
-html[data-shell="phone"] .weigh-in .vs-board{
-  grid-template-columns:1fr!important;
-  grid-template-rows:auto auto;
+html[data-shell="phone"] .weigh-in{
+  grid-template-rows:40px auto minmax(0,1fr) auto;
+}
+html[data-shell="phone"] .weigh-in .vs-call{
+  max-height:22vh;
   overflow:auto;
 }
-html[data-shell="phone"] .weigh-in .vs-stamp{display:none}
+html[data-shell="phone"] .weigh-in .vs-board{
+  display:flex!important;
+  flex-direction:column;
+  flex-wrap:nowrap;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  gap:10px;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  min-height:0;
+  align-items:stretch;
+  align-content:start;
+  padding:8px 8px 12px;
+}
+html[data-shell="phone"] .weigh-in .vs-stamp{display:none!important}
 html[data-shell="phone"] .vs-plate{
-  padding:8px;
-  overflow:visible!important;
-  display:grid!important;
-  grid-template-columns:auto minmax(0,1fr)!important;
-  gap:8px 10px;
-  align-items:center;
+  position:relative;
+  isolation:isolate;
+  flex:0 0 auto;
+  width:100%;
+  min-height:0;
+  max-height:none;
+  padding:10px 10px 12px;
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  gap:8px;
+  background:rgba(8,6,12,.92)!important;
+  align-items:stretch;
 }
 html[data-shell="phone"] .vs-kit{
-  grid-row:1 / span 2;
-  align-self:center;
+  grid-row:auto;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:8px;
+  flex:0 0 auto;
+  align-self:flex-start;
 }
-html[data-shell="phone"] .vs-copy{min-width:0}
+html[data-shell="phone"] .vs-copy{
+  min-width:0;
+  overflow:hidden;
+  position:relative;
+  z-index:1;
+}
+html[data-shell="phone"] .vs-id h2,
+html[data-shell="phone"] .vs-copy h2{
+  font-size:20px;
+  line-height:1;
+  color:#fff;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
 html[data-shell="phone"] .vs-art{
-  width:84px!important;
-  height:84px!important;
-  min-width:84px;
-  min-height:84px;
+  width:72px!important;
+  height:72px!important;
+  min-width:72px;
+  min-height:72px;
   margin:0!important;
 }
-html[data-shell="phone"] .vs-part-disc{width:36px;height:36px;min-width:36px;min-height:36px}
-html[data-shell="phone"] .vs-copy h2{font-size:18px}
-html[data-shell="phone"] .vs-rating b{font-size:18px}
+html[data-shell="phone"] .vs-part-disc{width:32px;height:32px;min-width:32px;min-height:32px}
+html[data-shell="phone"] .vs-rating b{font-size:20px}
 html[data-shell="phone"] .vs-full{display:none}
-html[data-shell="phone"] .vs-stat-grid{gap:4px}
+html[data-shell="phone"] .vs-stat-grid{gap:2px 10px}
+html[data-shell="phone"] .vs-plate .ability-drop{margin-top:4px}
+html[data-shell="phone"] .vs-plate .ability-drop summary{min-height:28px;padding:4px 8px}
 
 html[data-shell="phone"] .battle-shell{
   padding:4px 6px max(4px, env(safe-area-inset-bottom,0px));
@@ -640,6 +719,8 @@ html[data-shell="pc"] .draft-carousel .roster-row,
 html[data-shell="pc"] .draft-carousel .roster-row.is-off,
 html[data-shell="pc"] .draft-carousel .roster-row.is-peek-prev,
 html[data-shell="pc"] .draft-carousel .roster-row.is-peek-next,
+html[data-shell="pc"] .draft-carousel .roster-row.is-peek-prev-2,
+html[data-shell="pc"] .draft-carousel .roster-row.is-peek-next-2,
 html[data-shell="pc"] .draft-carousel .roster-row.is-current{
   position:relative;
   inset:auto;

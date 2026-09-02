@@ -935,9 +935,9 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:90,knockback:84,defense:48,mobility:96,balance:58,stamina:48,burst:78},
+        card:{attack:88,knockback:80,defense:52,mobility:95,balance:62,stamina:56,burst:80},
 
-        behavior:{speed:96,aggression:94,control:56,staminaRetention:50}
+        behavior:{speed:96,aggression:92,control:60,staminaRetention:58}
 
     },
 
@@ -947,9 +947,9 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:94,knockback:88,defense:44,mobility:99,balance:50,stamina:28,burst:76},
+        card:{attack:92,knockback:84,defense:48,mobility:98,balance:55,stamina:51,burst:80},
 
-        behavior:{speed:100,aggression:98,control:52,staminaRetention:24}
+        behavior:{speed:99,aggression:96,control:70,staminaRetention:50}
 
     },
 
@@ -959,9 +959,9 @@ const BIT_ENGINE = {
 
         type:"Attack",
 
-        card:{attack:80,knockback:72,defense:58,mobility:86,balance:74,stamina:68,burst:80},
+        card:{attack:82,knockback:70,defense:57,mobility:88,balance:76,stamina:65,burst:80},
 
-        behavior:{speed:90,aggression:82,control:80,staminaRetention:70}
+        behavior:{speed:98,aggression:88,control:78,staminaRetention:68}
 
     },
  
@@ -971,9 +971,9 @@ const BIT_ENGINE = {
 
     type:"Attack",
 
-    card:{attack:88,knockback:82,defense:50,mobility:92,balance:62,stamina:36,burst:78},
+    card:{attack:84,knockback:71,defense:55,mobility:91,balance:77,stamina:62,burst:80},
 
-    behavior:{speed:97,aggression:94,control:66,staminaRetention:34}
+    behavior:{speed:100,aggression:98,control:64,staminaRetention:52}
 
 },
 
@@ -993,11 +993,11 @@ kick:{
 
     name:"Kick",
 
-    type:"Balance",
+    type:"Attack",
 
-    card:{attack:74,knockback:68,defense:70,mobility:72,balance:90,stamina:76,burst:82},
+    card:{attack:76,knockback:65,defense:68,mobility:79,balance:76,stamina:73,burst:80},
 
-    behavior:{speed:74,aggression:70,control:88,staminaRetention:78}
+    behavior:{speed:84,aggression:94,control:74,staminaRetention:62}
 
 },
 
@@ -1007,9 +1007,9 @@ wedge:{
 
     type:"Defense",
 
-    card:{attack:56,knockback:60,defense:76,mobility:58,balance:72,stamina:84,burst:74},
+    card:{attack:58,knockback:62,defense:74,mobility:54,balance:78,stamina:82,burst:80},
 
-    behavior:{speed:52,aggression:32,control:90,staminaRetention:82}
+    behavior:{speed:48,aggression:30,control:98,staminaRetention:84}
 
 },
 
@@ -1019,9 +1019,9 @@ hexa:{
 
     type:"Defense",
 
-    card:{attack:58,knockback:62,defense:94,mobility:48,balance:93,stamina:78,burst:88},
+    card:{attack:65,knockback:70,defense:80,mobility:52,balance:88,stamina:85,burst:80},
 
-    behavior:{speed:48,aggression:22,control:100,staminaRetention:80}
+    behavior:{speed:52,aggression:26,control:100,staminaRetention:88}
 
 },
 
@@ -1029,19 +1029,19 @@ needle:{
 
     name:"Needle",
 
-    type:"Stamina",
+    type:"Defense",
 
-    card:{attack:50,knockback:48,defense:46,mobility:32,balance:44,stamina:99,burst:70},
+    card:{attack:58,knockback:55,defense:58,mobility:36,balance:58,stamina:91,burst:72},
 
-    behavior:{speed:28,aggression:16,control:88,staminaRetention:99}
+    behavior:{speed:38,aggression:20,control:94,staminaRetention:86}
 
 },
 
 ball:{
     name:"Ball",
     type:"Stamina",
-    card:{attack:54,knockback:52,defense:78,mobility:40,balance:90,stamina:92,burst:76},
-    behavior:{speed:42,aggression:16,control:96,staminaRetention:94}
+    card:{attack:57,knockback:53,defense:72,mobility:42,balance:88,stamina:98,burst:72},
+    behavior:{speed:46,aggression:18,control:96,staminaRetention:99}
 },
 orb:{
 
@@ -1049,14 +1049,14 @@ orb:{
 
     type:"Stamina",
 
-    card:{attack:56,knockback:54,defense:74,mobility:50,balance:86,stamina:88,burst:74},
+    card:{attack:60,knockback:57,defense:75,mobility:49,balance:86,stamina:95,burst:72},
 
-    behavior:{speed:50,aggression:22,control:92,staminaRetention:90},
+    behavior:{speed:54,aggression:24,control:94,staminaRetention:95},
 
 },
 
-    point:{name:"Point",type:"Balance",card:{attack:74,knockback:64,defense:62,mobility:74,balance:80,stamina:76,burst:80},behavior:{speed:64,aggression:60,control:82,staminaRetention:74}},
-    quake:{name:"Quake",type:"Attack",card:{attack:90,knockback:88,defense:40,mobility:90,balance:36,stamina:16,burst:74},behavior:{speed:92,aggression:96,control:36,staminaRetention:10}}
+    point:{name:"Point",type:"Balance",card:{attack:74,knockback:62,defense:60,mobility:73,balance:78,stamina:78,burst:80},behavior:{speed:62,aggression:58,control:82,staminaRetention:76}},
+    quake:{name:"Quake",type:"Attack",card:{attack:87,knockback:83,defense:45,mobility:89,balance:42,stamina:38,burst:80},behavior:{speed:88,aggression:92,control:42,staminaRetention:35}}
 
 };
 
@@ -1068,21 +1068,21 @@ orb:{
 // the Bey uses that movement, while launch angle modifies the bit's natural
 // behavior rather than replacing it.
 const BIT_PHYSICS = {
-    Flat:{movement:96,control:48,spinDrain:1.85,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
-    "Low Flat":{movement:100,control:43,spinDrain:2.20,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
-    Rush:{movement:90,control:76,spinDrain:1.00,xRailAffinity:88,centerAffinity:44,recovery:64,attackBias:5,acceleration:84,friction:50,precession:54,stability:58},
-    "Low Rush":{movement:96,control:64,spinDrain:1.62,xRailAffinity:94,centerAffinity:32,recovery:46,attackBias:11,acceleration:95,friction:40,precession:70,stability:40},
+    Flat:{movement:96,control:48,spinDrain:1.55,xRailAffinity:94,centerAffinity:30,recovery:42,attackBias:10,acceleration:94,friction:42,precession:72,stability:38},
+    "Low Flat":{movement:100,control:43,spinDrain:1.70,xRailAffinity:97,centerAffinity:24,recovery:35,attackBias:13,acceleration:100,friction:38,precession:78,stability:32},
+    Rush:{movement:91,control:72,spinDrain:1.05,xRailAffinity:88,centerAffinity:42,recovery:60,attackBias:5,acceleration:86,friction:48,precession:58,stability:54},
+    "Low Rush":{movement:94,control:70,spinDrain:1.10,xRailAffinity:93,centerAffinity:35,recovery:58,attackBias:8,acceleration:93,friction:43,precession:66,stability:50},
     Taper:{movement:68,control:84,spinDrain:.82,xRailAffinity:58,centerAffinity:60,recovery:72,attackBias:1,acceleration:64,friction:66,precession:44,stability:68},
     Level:{movement:66,control:88,spinDrain:.76,xRailAffinity:58,centerAffinity:72,recovery:82,attackBias:2,acceleration:62,friction:76,precession:32,stability:82},
-    Kick:{movement:72,control:82,spinDrain:.88,xRailAffinity:62,centerAffinity:58,recovery:80,attackBias:4,acceleration:70,friction:62,precession:40,stability:74},
+    Kick:{movement:82,control:62,spinDrain:1.16,xRailAffinity:78,centerAffinity:36,recovery:52,attackBias:7,acceleration:82,friction:52,precession:58,stability:48},
     Wedge:{movement:48,control:78,spinDrain:.60,xRailAffinity:34,centerAffinity:86,recovery:72,attackBias:-3,acceleration:48,friction:88,precession:30,stability:55},
-    Hexa:{movement:38,control:96,spinDrain:.52,xRailAffinity:30,centerAffinity:94,recovery:90,attackBias:-4,acceleration:40,friction:84,precession:20,stability:92},
-    Needle:{movement:16,control:84,spinDrain:.24,xRailAffinity:12,centerAffinity:100,recovery:70,attackBias:-8,acceleration:16,friction:96,precession:28,stability:26},
+    Hexa:{movement:40,control:96,spinDrain:.68,xRailAffinity:34,centerAffinity:94,recovery:88,attackBias:-4,acceleration:42,friction:86,precession:24,stability:88},
+    Needle:{movement:18,control:86,spinDrain:.40,xRailAffinity:14,centerAffinity:100,recovery:82,attackBias:-8,acceleration:20,friction:95,precession:24,stability:34},
     "High Needle":{movement:27,control:80,spinDrain:.37,xRailAffinity:20,centerAffinity:96,recovery:84,attackBias:-7,acceleration:29,friction:94,precession:30,stability:30},
-    Ball:{movement:28,control:96,spinDrain:.33,xRailAffinity:16,centerAffinity:96,recovery:94,attackBias:-7,acceleration:30,friction:93,precession:16,stability:94},
-    Orb:{movement:24,control:92,spinDrain:.38,xRailAffinity:14,centerAffinity:96,recovery:86,attackBias:-6,acceleration:28,friction:94,precession:18,stability:86},
+    Ball:{movement:30,control:96,spinDrain:.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:32,friction:94,precession:18,stability:94},
+    Orb:{movement:22,control:94,spinDrain:.39,xRailAffinity:14,centerAffinity:98,recovery:88,attackBias:-6,acceleration:28,friction:95,precession:18,stability:90},
     Point:{movement:58,control:86,spinDrain:.78,xRailAffinity:52,centerAffinity:74,recovery:76,attackBias:1,acceleration:58,friction:77,precession:34,stability:72},
-    Quake:{movement:90,control:34,spinDrain:3.35,xRailAffinity:76,centerAffinity:16,recovery:18,attackBias:12,acceleration:94,friction:40,precession:80,stability:22}
+    Quake:{movement:89,control:40,spinDrain:1.88,xRailAffinity:75,centerAffinity:20,recovery:24,attackBias:11,acceleration:92,friction:43,precession:74,stability:30}
 };
 
 function selectableBits(){
@@ -1188,10 +1188,11 @@ function watchDeviceShell(){
 }
 function ratingsHTML(ovr,meta){
     const o=ovr==null||ovr==="—"?"—":ovr;
-    if(!showMetaRating() || meta==null || meta==="—"){
-        return `<span class="draft-ratings"><b>OVR ${o}</b></span>`;
+    const m=meta==null||meta==="—"?null:meta;
+    if(m==null){
+        return `<span class="draft-ratings"><b class="meta">META ${o}</b></span>`;
     }
-    return `<span class="draft-ratings"><b class="meta">META ${meta}</b><b>OVR ${o}</b></span>`;
+    return `<span class="draft-ratings"><b class="meta">META ${m}</b><b>OVR ${o}</b></span>`;
 }
 function closeSheet(){
     document.getElementById("swxSheet")?.remove();
@@ -1681,57 +1682,63 @@ function garageEnsurePools(){
     }
     return sel;
 }
-function garageStatLine(stats,delta){
+function bindAbilityDrops(root){
+    (root||document).querySelectorAll(".swx-drop").forEach(drop=>{
+        if(drop._swxBound) return;
+        drop._swxBound=true;
+        drop.addEventListener("click",event=>event.stopPropagation());
+        drop.addEventListener("pointerdown",event=>event.stopPropagation());
+    });
+}
+function garageStatLine(stats,baseline){
     if(!stats) return "";
     const cell=(label,key)=>{
-        const v=stats[key];
-        const d=delta?Number(delta[key])||0:0;
+        const v=Number(stats[key])||0;
+        const old=baseline?Number(baseline[key])||0:v;
+        const d=baseline?Math.round(v)-Math.round(old):0;
         const mark=d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:"";
-        const pct=Math.max(0,Math.min(99,Number(v)||0));
-        return `<div class="hud-stat"><span>${label}</span><b>${v}${mark}</b><span class="hud-track" aria-hidden="true"><i style="width:${pct}%"></i></span></div>`;
+        const pct=Math.max(0,Math.min(99,v));
+        const oldPct=Math.max(0,Math.min(99,old));
+        let ghost="";
+        if(baseline && d<0){
+            ghost=`<i class="ghost down" style="width:${oldPct}%"></i>`;
+        }else if(baseline && d>0){
+            ghost=`<i class="ghost up" style="left:${oldPct}%;width:${Math.max(0,pct-oldPct)}%"></i>`;
+        }
+        return `<div class="hud-stat${d>0?" up":d<0?" down":""}"><span>${label}</span><b>${Math.round(v)}${mark}</b><span class="hud-track" aria-hidden="true">${ghost}<i class="live" style="width:${pct}%"></i></span></div>`;
     };
     return `<div class="stat-grid hud-stats">
         ${cell("ATK","attack")}${cell("KNO","knockback")}${cell("DEF","defense")}
         ${cell("BAL","balance")}${cell("MOB","mobility")}${cell("STA","stamina")}
     </div>`;
 }
-function garageLiveHTML(preview){
+function garageLiveHTML(preview,stage){
     const p=Game.player||{};
-    const blade=preview?.blade||p.blade;
-    const ratchet=preview?.ratchet||p.ratchet;
-    const bit=preview?.bit||p.bit;
+    stage=stage||Game.selection?.garageStage||"blade";
+    const blade=preview?.blade||(stage==="blade"?null:p.blade);
+    const ratchet=stage==="blade"?null:(preview?.ratchet||(stage==="bit"?p.ratchet:null));
+    const bit=stage==="bit"?(preview?.bit||null):null;
     if(!blade){
         return `<section class="draft-feature is-empty" id="garageLive"><p>Tap a Bey in the roster. Stats stay on screen so you can compare. Lock when you are sure.</p></section>`;
     }
     const sprite=bladeSpritePath(blade);
     const spin=blade.spin==="L"||blade.spin==="Left"?"LEFT":"RIGHT";
-    const parts=`${ratchet?.name||"—"} · ${bit?.name||"—"} · ${spin}`;
-    let stats=null,ovr="—",meta="—",delta=null;
-    if(blade && ratchet && bit){
-        const combo=calculateComboStats(blade,ratchet,bit);
-        if(combo){
-            stats=combo.stats;
-            ovr=displayOvr(combo.stats);
-            meta=showMetaRating()?combo.meta:"—";
-            if(p.blade && p.ratchet && p.bit && preview){
-                const cur=calculateComboStats(p.blade,p.ratchet,p.bit);
-                if(cur?.stats){
-                    delta={};
-                    for(const k of ["attack","knockback","defense","balance","mobility","stamina"]){
-                        const d=(stats[k]|0)-(cur.stats[k]|0);
-                        if(d) delta[k]=d;
-                    }
-                }
-            }
-        }
-    }else if(blade?.card){
-        stats={
-            attack:blade.card.attack,knockback:blade.card.knockback,defense:blade.card.defense,
-            balance:blade.card.balance,mobility:blade.card.mobility,stamina:blade.card.stamina
-        };
-        ovr=displayOvr(stats);
+    const parts=stage==="blade"
+        ? spin
+        : stage==="ratchet"
+            ? `${ratchet?.name||"—"} · ${spin}`
+            : `${ratchet?.name||"—"} · ${bit?.name||"—"} · ${spin}`;
+    const combo=calculateComboStats(blade,ratchet,bit);
+    const stats=combo?.stats||cardStatsFromBlade(blade);
+    const ovr=combo?combo.ovr:displayOvr(stats);
+    const meta=combo?combo.meta:(bladeMetaValue(blade)||ovr);
+    let baseline=null;
+    if(stage==="ratchet" && ratchet){
+        baseline=calculateComboStats(blade)?.stats||null;
+    }else if(stage==="bit" && (ratchet||p.ratchet)){
+        baseline=calculateComboStats(blade,ratchet||p.ratchet)?.stats||null;
     }
-    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
+    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):"";
     const ratchetArt=ratchet?ratchetSpritePath(ratchet):"";
     const bitArt=bit?bitSpritePath(bit):"";
     return `<section class="draft-feature" id="garageLive">
@@ -1745,16 +1752,19 @@ function garageLiveHTML(preview){
             <small>${blade.type||""} · ${blade.weight||""}g · ${parts}</small>
             ${ratingsHTML(ovr,meta)}
             ${kit}
-            ${garageStatLine(stats,delta)}
+            ${garageStatLine(stats,baseline)}
         </div>
     </section>`;
 }
 function garagePaintLive(preview){
     const el=document.getElementById("garageLive");
     if(!el) return;
+    const stage=Game.selection?.garageStage||"blade";
     const wrap=document.createElement("div");
-    wrap.innerHTML=garageLiveHTML(preview);
-    el.replaceWith(wrap.firstElementChild);
+    wrap.innerHTML=garageLiveHTML(preview,stage);
+    const node=wrap.firstElementChild;
+    el.replaceWith(node);
+    bindAbilityDrops(node);
 }
 function garageBindPreview(root){
     if(!root) return;
@@ -1864,11 +1874,13 @@ function syncDraftCarousel(box,active,shown){
     const n=(shown||[]).length;
     const i=draftFocusIndex(active,shown);
     [...box.children].forEach((tile,idx)=>{
-        tile.classList.remove("is-peek-prev","is-peek-next","is-current","is-off","is-focus");
+        tile.classList.remove("is-peek-prev","is-peek-next","is-peek-prev-2","is-peek-next-2","is-current","is-off","is-focus");
         if(!n) return;
         if(idx===i) tile.classList.add("is-current","is-focus");
         else if(n>1 && idx===(i-1+n)%n) tile.classList.add("is-peek-prev");
         else if(n>1 && idx===(i+1)%n) tile.classList.add("is-peek-next");
+        else if(n>3 && idx===(i-2+n)%n) tile.classList.add("is-peek-prev-2");
+        else if(n>3 && idx===(i+2)%n) tile.classList.add("is-peek-next-2");
         else tile.classList.add("is-off");
     });
 }
@@ -1931,6 +1943,7 @@ function renderGarage(active){
     if(active==="ratchet" && focusPreview.ratchet && !sel.focusRatchet) sel.focusRatchet=focusPreview.ratchet;
     if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
     Game.selection.draftShown=shown;
+    Game.selection.garageStage=active;
     app.innerHTML=`${bgHTML("bay")}
     <main class="room bay draft-screen">
         ${roomBarHTML({kicker:garageLeagueLine(),title:titles[active]})}
@@ -1940,7 +1953,7 @@ function renderGarage(active){
             <button type="button" class="draft-step${active==="bit"?" on":""}${bit?" filled":""}" data-step="bit" ${ratchet?"":"disabled"}>3 BIT</button>
         </nav>
         <div class="bay-stage">
-            ${garageLiveHTML(focusPreview)}
+            ${garageLiveHTML(focusPreview,active)}
             <div class="bay-list">
                 ${bayFilterHTML(active)}
                 <p class="draft-roster-label is-phone">SWIPE OR TAP ARROWS · LOCK TO TAKE IT</p>
@@ -1978,6 +1991,7 @@ function renderGarage(active){
     });
     garageBindPreview(box);
     bindDraftCarousel(active);
+    bindAbilityDrops(document.getElementById("garageLive"));
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 function lockDraftPart(active){
@@ -2161,7 +2175,7 @@ function battleInspectBody(side){
     if(!blade) return `<p>No Bey loaded.</p>`;
     const ovr=displayOvr(stats);
     const meta=showMetaRating()?battleHudMetaValue(model,side):null;
-    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
+    const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):"";
     const chargeHTML=hud?.charges
         ? `<p class="hud-charge">${hud.charges.name} · ${hud.charges.left}/${hud.charges.max}</p>`
         : "";
@@ -2295,7 +2309,7 @@ function createBladeCard(blade){
             <strong>${blade.name}</strong>
         </div>
         ${ticks}
-        <div class="roster-ovr"><small>OVR</small><b>${displayOvr(blade.card)}</b>${luck?`<span class="luck-grade luck-${luck.toLowerCase()}">${luck}</span>`:""}</div>`;
+        <div class="roster-ovr"><small>META</small><b>${bladeMetaValue(blade)||displayOvr(blade.card)}</b>${luck?`<span class="luck-grade luck-${luck.toLowerCase()}">${luck}</span>`:""}</div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
@@ -2374,19 +2388,19 @@ function bitCard(bit){
     const descriptions={
         "Point":"Stays controlled while upright; meaningful in-game tilt makes it move outward and attack.",
         "Level":"Stable and centered at high RPM; as RPM falls, natural tilt and wobble make it progressively more mobile.",
-        "Hexa":"Defense first. Rights itself, soaks hits. Stamina behind Ball and Needle.",
-        "Rush":"Controlled attack: less raw smash than Flat, better stamina and a cleaner rail line.",
-        "Low Rush":"Meaner Rush with no hold. More knock and attack; spin dumps.",
+        "Hexa":"Hexagonal tip helps the Bey right itself and increases defensive stability.",
+        "Rush":"Controlled attack: less raw power than Flat, but better stamina and X-Line consistency.",
+        "Low Rush":"Lower, smoother Rush: more stamina than Rush with slightly less impact.",
         "Flat":"High-friction attack Bit built for aggressive movement and powerful Xtreme Dashes.",
-        "Low Flat":"Hungrier than Low Rush. Maximum aggression and X-Line speed, almost no stamina.",
-        "Kick":"Hybrid: Rush-like commit with a stamina/balance floor. Sits more than Flat, hits more than Hexa.",
+        "Low Flat":"Lower, wider Flat: maximum aggression and X-Line speed at a stamina cost.",
+        "Kick":"Balance/counter Bit with better stamina, stability and control than pure attack Bits.",
         "Taper":"Controlled balance Bit that trades some attack for mobility and stamina.",
         "Wedge":"Semi-mobile Defense Bit with strong stamina, then a more stationary late battle.",
-        "Needle":"Highest raw stamina if it stays up. Tiny tip: low defense, low balance, easy to bully once it wobbles.",
+        "Needle":"Very stationary and stamina-efficient, but its tiny tip can wobble and destabilize.",
         "High Needle":"More mobile than Needle, with strong stamina but even more exposure to destabilization.",
-        "Ball":"Excellent stamina with consistency. Less raw spin than Needle, much harder to knock over.",
-        "Orb":"Ball family with a little more walk and a little less hold.",
-        "Quake":"Worst stamina of any bit. Jump smash, then the spin is gone.",
+        "Ball":"High-stamina center Bit with excellent stability and low movement.",
+        "Orb":"High-stamina Bit with slightly more movement and less pure stability than Ball.",
+        "Quake":"Jumping attack Bit: high impact and knockback, but poor stamina and balance.",
     };
     let comboStats=null;
     let comboNote="";
@@ -2465,15 +2479,10 @@ function getBitCompatibility(bladeData,bit){
         Balance:{Attack:72,Balance:92,Stamina:82,Defense:80}
     };
     let score=matrix[bladeData.type]?.[bit.type]??50;
-    if(bit.name==="Low Rush"&&bladeData.type==="Attack") score+=6;
+    if(bit.name==="Low Rush"&&bladeData.type==="Attack") score+=5;
     if(bit.name==="Rush"&&(bladeData.type==="Attack"||bladeData.type==="Balance")) score+=4;
-    if(bit.name==="Kick"&&(bladeData.type==="Balance"||bladeData.type==="Attack")) score+=5;
     if(bit.name==="Ball"&&(bladeData.type==="Stamina"||bladeData.type==="Defense")) score+=5;
-    if(bit.name==="Needle"&&bladeData.type==="Stamina") score+=6;
-    if(bit.name==="Needle"&&bladeData.type==="Attack") score-=8;
-    if(bit.name==="Hexa"&&(bladeData.type==="Defense"||bladeData.type==="Stamina")) score+=5;
-    if(bit.name==="Hexa"&&bladeData.type==="Attack") score-=4;
-    if(bit.name==="Quake"&&bladeData.type!=="Attack") score-=10;
+    if(bit.name==="Hexa"&&(bladeData.type==="Attack"||bladeData.type==="Balance")) score+=3;
     if(bit.name==="Wedge"&&bladeData.type==="Defense") score+=4;
     return Math.max(0,Math.min(100,score));
 }
@@ -2577,21 +2586,21 @@ function getBitPhysicalProfileV56(bit){
       replacing the Blade's identity.
     */
     const roles={
-        "Flat":       {attack:.88,knockback:.80,defense:.10,balance:.16,stamina:.14,mobility:.96,burst:.70},
-        "Low Flat":   {attack:.94,knockback:.86,defense:.06,balance:.10,stamina:.04,mobility:1.00,burst:.66},
-        "Rush":       {attack:.64,knockback:.52,defense:.22,balance:.48,stamina:.56,mobility:.84,burst:.74},
-        "Low Rush":   {attack:.82,knockback:.80,defense:.12,balance:.22,stamina:.10,mobility:.94,burst:.70},
+        "Flat":       {attack:.86,knockback:.74,defense:.12,balance:.18,stamina:.10,mobility:.96,burst:.80},
+        "Low Flat":   {attack:.92,knockback:.80,defense:.08,balance:.14,stamina:.06,mobility:1.00,burst:.80},
+        "Rush":       {attack:.68,knockback:.54,defense:.18,balance:.40,stamina:.40,mobility:.88,burst:.80},
+        "Low Rush":   {attack:.70,knockback:.56,defense:.16,balance:.36,stamina:.46,mobility:.92,burst:.80},
         "Taper":      {attack:.42,knockback:.32,defense:.26,balance:.58,stamina:.70,mobility:.70,burst:.80},
-        "Kick":       {attack:.56,knockback:.48,defense:.46,balance:.86,stamina:.58,mobility:.68,burst:.78},
-        "Quake":      {attack:.90,knockback:.84,defense:.04,balance:.04,stamina:.00,mobility:.88,burst:.62},
-        "Ball":       {attack:.12,knockback:.10,defense:.46,balance:.78,stamina:.88,mobility:.26,burst:.42},
-        "Orb":        {attack:.16,knockback:.14,defense:.40,balance:.70,stamina:.80,mobility:.32,burst:.38},
-        "Needle":     {attack:.04,knockback:.04,defense:.06,balance:.06,stamina:1.05,mobility:.14,burst:.28},
+        "Kick":       {attack:.54,knockback:.46,defense:.42,balance:.62,stamina:.54,mobility:.76,burst:.80},
+        "Quake":      {attack:.82,knockback:.72,defense:.08,balance:.10,stamina:.04,mobility:.86,burst:.80},
+        "Ball":       {attack:.14,knockback:.10,defense:.24,balance:.56,stamina:1.00,mobility:.30,burst:.30},
+        "Orb":        {attack:.18,knockback:.14,defense:.24,balance:.50,stamina:.92,mobility:.22,burst:.30},
+        "Needle":     {attack:.06,knockback:.05,defense:.08,balance:.10,stamina:.90,mobility:.20,burst:.30},
         "High Needle":{attack:.06,knockback:.05,defense:.06,balance:.08,stamina:.94,mobility:.28,burst:.30},
-        "Wedge":      {attack:.12,knockback:.16,defense:.32,balance:.36,stamina:.76,mobility:.52,burst:.40},
-        "Hexa":       {attack:.16,knockback:.14,defense:.82,balance:.84,stamina:.58,mobility:.34,burst:.86},
-        "Point":      {attack:.46,knockback:.34,defense:.22,balance:.54,stamina:.56,mobility:.62,burst:.76},
-        "Level":      {attack:.48,knockback:.38,defense:.20,balance:.50,stamina:.54,mobility:.70,burst:.74}
+        "Wedge":      {attack:.10,knockback:.14,defense:.18,balance:.28,stamina:.84,mobility:.58,burst:.30},
+        "Hexa":       {attack:.20,knockback:.12,defense:.34,balance:.72,stamina:.72,mobility:.40,burst:.80},
+        "Point":      {attack:.46,knockback:.34,defense:.18,balance:.52,stamina:.60,mobility:.62,burst:.80},
+        "Level":      {attack:.50,knockback:.40,defense:.16,balance:.46,stamina:.58,mobility:.72,burst:.80}
     };
     const role=roles[name]||roles.Point;
     return {...role,
@@ -2751,19 +2760,17 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     const ratchetFit=Math.max(.18,Math.min(.88,fit/Math.max(.30,getHeightFitV56(blade,height))));
 
     let roleFit=70;
-    if(bitName==="Low Rush") roleFit=bladeType==="Attack"?96:(bladeType==="Balance"?84:58);
-    else if(bitName==="Rush") roleFit=(bladeType==="Attack"||bladeType==="Balance")?90:70;
+    if(bitName==="Rush"||bitName==="Low Rush") roleFit=(bladeType==="Attack"||bladeType==="Balance")?94:72;
     else if(bitName==="Flat"||bitName==="Low Flat") roleFit=bladeType==="Attack"?91:(bladeType==="Balance"?70:56);
-    else if(bitName==="Kick") roleFit=bladeType==="Balance"?94:(bladeType==="Attack"?82:(bladeType==="Defense"?80:76));
-    else if(bitName==="Wedge") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?88:68;
-    else if(bitName==="Hexa") roleFit=bladeType==="Defense"?96:(bladeType==="Stamina"?86:(bladeType==="Balance"?84:62));
-    else if(bitName==="Ball") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?93:(bladeType==="Balance"?80:54);
-    else if(bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?90:(bladeType==="Balance"?78:52);
+    else if(bitName==="Kick") roleFit=(bladeType==="Defense"||bladeType==="Balance")?92:(bladeType==="Attack"?76:72);
+    else if(bitName==="Wedge") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?91:70;
+    else if(bitName==="Hexa") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?92:(bladeType==="Balance"?84:68);
+    else if(bitName==="Ball"||bitName==="Orb") roleFit=(bladeType==="Stamina"||bladeType==="Defense")?95:(bladeType==="Balance"?82:58);
 
     if(blade.rogueBoss && bitName==="Ball") roleFit=96;
-    else if(bitName==="Needle"||bitName==="High Needle") roleFit=bladeType==="Stamina"?92:(bladeType==="Defense"?70:(bladeType==="Balance"?68:46));
+    else if(bitName==="Needle"||bitName==="High Needle") roleFit=(bladeType==="Defense"||bladeType==="Stamina")?78:(bladeType==="Balance"?70:62);
     else if(bitName==="Point"||bitName==="Level") roleFit=(bladeType==="Balance"||bladeType==="Attack")?88:(bladeType==="Defense"?82:78);
-    else if(bitName==="Quake") roleFit=bladeType==="Attack"?86:46;
+    else if(bitName==="Quake") roleFit=bladeType==="Attack"?84:58;
     else if(bitName==="Taper") roleFit=(bladeType==="Balance"||bladeType==="Attack"||bladeType==="Defense")?86:78;
 
     let signature=0;
@@ -2802,21 +2809,17 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     }
 
     if(height===80){
-        signature-=3.4;
-        if(bitName==="Needle") signature-=2.2;
+        signature-=1.15;
         if(bitName==="Point"||bitName==="Level"||bitName==="Kick") signature+=.25;
     }
-    if(height===70) signature-=1.2;
     if(height>=70&&stats.burst<72) signature-=.85;
-    if(bitName==="Quake" && bladeType!=="Attack") signature-=1.6;
-    if(bitName==="Needle" && height===60 && (bladeType==="Stamina"||bladeType==="Defense")) signature+=.55;
-    if(bitName==="Hexa" && height===60 && bladeType==="Defense") signature+=.70;
 
-    const qualityDelta=(roleQuality-bladeOvr)*.12;
-    const bitDelta=(bitFit-75)*.018;
-    const ratchetDelta=(ratchetFit-.50)*3.4;
-    const heightDelta=height===60?1.15:height===70?-2.6:-7.4;
-    const roleDelta=(roleFit-75)*.022;
+    // Small, bounded modifiers. Blade quality remains the dominant anchor.
+    const qualityDelta=(roleQuality-bladeOvr)*.05;
+    const bitDelta=(bitFit-75)*.010;
+    const ratchetDelta=(ratchetFit-.50)*3.0;
+    const heightDelta=height===60?.65:height===70?0:-1.05;
+    const roleDelta=(roleFit-75)*.015;
 
     return Math.max(60,Math.min(99,Math.round(
         bladeOvr-2.0+qualityDelta+bitDelta+ratchetDelta+heightDelta+roleDelta+signature
@@ -2836,45 +2839,54 @@ function normalizePhysicalStat(v,key){
 function getBitRatedProperty(role){return 60+role*40;}
 function getRatchetRatedProperty(role){return 60+role*40;}
 
+function bladeMetaValue(blade){
+    const n=Number(blade?.card?.ovr);
+    return Number.isFinite(n)?Math.round(n):null;
+}
+function cardStatsFromBlade(bladeData){
+    const c=bladeData?.card||{};
+    return {
+        attack:Number(c.attack)||70,knockback:Number(c.knockback)||70,
+        defense:Number(c.defense)||70,mobility:Number(c.mobility)||70,
+        balance:Number(c.balance)||70,stamina:Number(c.stamina)||70,
+        burst:Number(c.burst)||70
+    };
+}
 function calculateComboStats(blade,ratchet,bit){
     const bladeData=getBladeEngine(blade);
-    if(!bladeData||!ratchet||!bit) return null;
-    const rb=getRatchetProfile(ratchet).base;
-    const h=getHeightPhysicsV56(ratchet.height);
-    const bp=getBitPhysicalProfileV56(bit);
+    if(!bladeData) return null;
+    const base=cardStatsFromBlade(bladeData);
+    if(!ratchet && !bit){
+        const stats={...base};
+        for(const key of Object.keys(stats)) stats[key]=normalizePhysicalStat(stats[key]);
+        const ovr=displayOvr(stats);
+        return {stats,ovr,meta:bladeMetaValue(bladeData)||ovr,compatibility:80,physical:{}};
+    }
+    const hasRatchet=!!ratchet;
+    const hasBit=!!bit;
+    const rb=hasRatchet?getRatchetProfile(ratchet).base:{exposure:.5,attack:.5,knockback:.5,defense:.5,balance:.5,stamina:.5,mobility:.5,burst:.5};
+    const h=hasRatchet?getHeightPhysicsV56(ratchet.height):{attack:0,knockback:0,defense:0,balance:0,stamina:0,mobility:0,burst:0};
+    const bp=hasBit?getBitPhysicalProfileV56(bit):{stability:.7,speed:.5,friction:.5,stamina:.5,attack:.5,knockback:.5,defense:.5,balance:.5,mobility:.5,burst:.5};
     const bladePhys=getBladePhysicalProfileV56(bladeData);
-    const ratchetFit=getRatchetGeometryFitV56(bladeData,ratchet);
-    const heightFit=getHeightFitV56(bladeData,ratchet.height);
-    const base={
-        attack:Number(bladeData.card.attack)||70,knockback:Number(bladeData.card.knockback)||70,
-        defense:Number(bladeData.card.defense)||70,mobility:Number(bladeData.card.mobility)||70,
-        balance:Number(bladeData.card.balance)||70,stamina:Number(bladeData.card.stamina)||70,
-        burst:Number(bladeData.card.burst)||70
-    };
-    const br=k=>getBitRatedProperty(bp[k]), rr=k=>getRatchetRatedProperty(rb[k]);
+    const ratchetFit=hasRatchet?getRatchetGeometryFitV56(bladeData,ratchet):.5;
+    const heightFit=hasRatchet?getHeightFitV56(bladeData,ratchet.height):.5;
+    const br=k=>hasBit?getBitRatedProperty(bp[k]):base[k];
+    const rr=k=>hasRatchet?getRatchetRatedProperty(rb[k]):base[k];
     const stats={};
-    stats.attack=base.attack*.58+br("attack")*.28+rr("attack")*.14;
-    stats.knockback=base.knockback*.62+br("knockback")*.24+rr("knockback")*.14;
-    stats.defense=base.defense*.50+br("defense")*.30+rr("defense")*.20;
-    stats.balance=base.balance*.42+br("balance")*.32+rr("balance")*.26;
-    stats.mobility=base.mobility*.28+br("mobility")*.58+rr("mobility")*.14;
-    stats.stamina=base.stamina*.48+br("stamina")*.36+rr("stamina")*.16;
-    stats.burst=base.burst*.28+br("burst")*.12+rr("burst")*.60;
+    stats.attack=base.attack*.66+br("attack")*.22+rr("attack")*.12;
+    stats.knockback=base.knockback*.78+br("knockback")*.10+rr("knockback")*.12;
+    stats.defense=base.defense*.56+br("defense")*.22+rr("defense")*.22;
+    stats.balance=base.balance*.55+br("balance")*.27+rr("balance")*.18;
+    stats.mobility=base.mobility*.25+br("mobility")*.65+rr("mobility")*.10;
+    stats.stamina=base.stamina*.35+br("stamina")*.50+rr("stamina")*.15;
+    stats.burst=base.burst*.72+br("burst")*.16+rr("burst")*.12;
 
-    const heightN=Number(ratchet.height)||60;
-    const heightAmp=heightN===80?1.55:heightN===70?1.12:0.72;
-    const destabilizationRisk=Math.max(0,.55-bp.stability)*11+
-        Math.max(0,.55-bladePhys.stability)*3.5+Math.max(0,rb.exposure-.55)*heightAmp*3.4;
+    const destabilizationRisk=(hasBit?Math.max(0,.55-bp.stability)*8:0)+
+        Math.max(0,.55-bladePhys.stability)*3+(hasRatchet?Math.max(0,rb.exposure-.60)*2:0);
     stats.balance-=destabilizationRisk;
     stats.defense-=destabilizationRisk*.55;
 
-    const bitName=bit.name||"";
-    stats.stamina-=Math.max(0,bp.speed-.48)*6;
-    stats.stamina-=(1-Math.min(1,bp.stamina))*14;
-    if(bitName==="Low Rush") stats.stamina-=6;
-    if(bitName==="Low Flat") stats.stamina-=9;
-    if(bitName==="Quake") stats.stamina-=22;
-    if(bitName==="Flat") stats.stamina-=6;
+    if(hasBit) stats.stamina-=Math.max(0,bp.speed-.55)*4+Math.max(0,bp.friction-.65)*5;
 
     const fitDelta=ratchetFit-.50;
     if(bladeData.type==="Attack"){
@@ -2884,23 +2896,9 @@ function calculateComboStats(blade,ratchet,bit){
     }
     stats.defense+=fitDelta*3;stats.balance+=fitDelta*4;stats.stamina+=fitDelta*2;
 
-    const heightScale=14;
-    stats.attack+=h.attack*heightScale;stats.knockback+=h.knockback*heightScale;
-    stats.defense+=h.defense*heightScale;stats.balance+=h.balance*heightScale;
-    stats.stamina+=h.stamina*heightScale;stats.mobility+=h.mobility*heightScale;
-    stats.burst+=h.burst*heightScale;
-
-    const expose=(rb.exposure||.5)*heightAmp;
-    const bitGlass=Math.max(0,.58-bp.stability);
-    const bladeGlass=Math.max(0,.55-bladePhys.stability);
-    const stacked=expose*.55+bitGlass*heightAmp*.85+bladeGlass*heightAmp*.45;
-    stats.balance-=stacked*9;
-    stats.defense-=stacked*5.5;
-    stats.burst-=stacked*11;
-    if(bp.stamina>0.82 && bitGlass>0.18){
-        stats.balance-=heightN===80?7:heightN===70?3.2:0.6;
-        stats.defense-=heightN===80?5:heightN===70?2.2:0.4;
-    }
+    stats.attack+=h.attack*8;stats.knockback+=h.knockback*8;stats.defense+=h.defense*8;
+    stats.balance+=h.balance*8;stats.stamina+=h.stamina*8;stats.mobility+=h.mobility*8;
+    stats.burst+=h.burst*8;
 
     stats.knockback+=(bladePhys.weight-35)*.25+(bladePhys.contact-.50)*2;
     stats.attack+=(bladePhys.contact-.50)*1.5;
@@ -2908,27 +2906,22 @@ function calculateComboStats(blade,ratchet,bit){
     stats.balance+=(bladePhys.stability-.50)*2;
     stats.stamina+=(bladePhys.retention-.50);
 
-    const explicitBitFit=getBitCompatibility(bladeData,bit)/100;
-    const bitFitDelta=(explicitBitFit-.70)*2.8;
+    const explicitBitFit=hasBit?getBitCompatibility(bladeData,bit)/100:.7;
+    const bitFitDelta=(explicitBitFit-.70)*2;
     if(bladeData.type==="Attack"){
-        stats.attack+=bitFitDelta;stats.knockback+=bitFitDelta*.45;
+        stats.attack+=bitFitDelta;stats.knockback+=bitFitDelta*.35;
     }else{
-        stats.balance+=bitFitDelta*.45;stats.stamina+=bitFitDelta*.55;
-    }
-    if(explicitBitFit<0.45){
-        stats.stamina-=(0.45-explicitBitFit)*10;
-        stats.balance-=(0.45-explicitBitFit)*8;
+        stats.balance+=bitFitDelta*.35;stats.stamina+=bitFitDelta*.45;
     }
 
-    const staCap={Quake:46,"Low Flat":54,"Low Rush":56,Flat:66};
-    if(staCap[bitName]!=null) stats.stamina=Math.min(stats.stamina,staCap[bitName]);
-
-    for(const key of Object.keys(stats))stats[key]=normalizePhysicalStat(stats[key],key);
+    for(const key of Object.keys(stats))stats[key]=normalizePhysicalStat(stats[key]);
     const ovr=displayOvr(stats);
-    const meta=calculateMetaScoreV57(bladeData,ratchet,bit,stats,ratchetFit*heightFit);
+    const meta=hasRatchet&&hasBit
+        ? calculateMetaScoreV57(bladeData,ratchet,bit,stats,ratchetFit*heightFit)
+        : (bladeMetaValue(bladeData)||ovr);
     return {stats,compatibility:Math.round((explicitBitFit*.55+heightFit*.25+ratchetFit*.20)*100),ovr,meta,
         physical:{ratchetFit,heightFit,bitFit:explicitBitFit,bladeWeight:bladePhys.weight,
-            bitMode:(bit.name==="Point"||bit.name==="Level")?"Physical behavior":"fixed"}};
+            bitMode:(bit&&(bit.name==="Point"||bit.name==="Level"))?"Physical behavior":"fixed"}};
 }
 
 
@@ -3025,7 +3018,7 @@ function createComboSummaryCard(side,combo){
           ${hideMeta?"":`<div class="vs-rating meta"><small>META</small><b>${meta}</b></div>`}
           <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
         </div>
-        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade,{compact:true}):""}
+        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
         <div class="stat-grid vs-stat-grid">
           ${statBox("ATK","attack")}${statBox("KNO","knockback")}${statBox("DEF","defense")}
           ${statBox("BAL","balance")}${statBox("MOB","mobility")}${statBox("STA","stamina")}
@@ -3103,6 +3096,7 @@ function showComboCard(){
         showBitDraft();
     });
     const menu=document.querySelector(".vs-screen");
+    bindAbilityDrops(document.querySelector(".vs-board"));
     if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue.persist==="function") SpinWarsRogue.persist();
 }
@@ -4814,11 +4808,62 @@ function renderNewBattle(){
               <!-- Actual battle impact renderer. These IDs are the targets
                    updated by newBattleFrame() on every collision. -->
               <g id="impactEffect" opacity="0" pointer-events="none">
-                <circle id="impactCore" cx="50" cy="46" r="1.6" fill="#fff8e8"/>
-                <circle id="impactRing" cx="50" cy="46" r="2.4"
-                        fill="none" stroke="#ffe08a" stroke-width="0.7"/>
-                <circle id="impactSparkA" cx="50" cy="46" r="0.7" fill="#ffffff"/>
-                <circle id="impactSparkB" cx="50" cy="46" r="0.55" fill="#ffe08a"/>
+                <circle id="impactFlash" cx="50" cy="46" r="10"
+                        fill="none" stroke="#ffffff" stroke-width="2.6"/>
+                <circle id="impactRing" cx="50" cy="46" r="6"
+                        fill="none" stroke="#ffd43b" stroke-width="1.8"/>
+                <circle id="impactRing2" cx="50" cy="46" r="4"
+                        fill="none" stroke="#ffffff" stroke-width="1.5"/>
+                <circle id="impactRing3" cx="50" cy="46" r="2"
+                        fill="none" stroke="#ffd43b" stroke-width="1.2"/>
+                <circle id="impactExplosion" cx="50" cy="46" r="4"
+                        fill="#ffffff" stroke="#ffffff" stroke-width="2.4"/>
+                <circle id="impactCore" cx="50" cy="46" r="3"
+                        fill="#ffd43b"/>
+                <g id="impactShock" opacity="0">
+                  <circle id="impactShockOuter" cx="50" cy="46" r="6"
+                          fill="none" stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="50" y2="40"
+                        stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="56" y2="46"
+                        stroke="#ffffff" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="50" y2="52"
+                        stroke="#ffd43b" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="44" y2="46"
+                        stroke="#ffd43b" stroke-width="1.8"/>
+                  <line x1="50" y1="46" x2="54.5" y2="41.5"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="45.5" y2="50.5"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                </g>
+                <g id="impactSpokes" opacity="0">
+                  <line x1="50" y1="46" x2="50" y2="42"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="54" y2="46"
+                        stroke="#ffffff" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="50" y2="50"
+                        stroke="#ffd43b" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="46" y2="46"
+                        stroke="#ffd43b" stroke-width="1.5"/>
+                  <line x1="50" y1="46" x2="53" y2="43"
+                        stroke="#ffffff" stroke-width="1.3"/>
+                  <line x1="50" y1="46" x2="47" y2="49"
+                        stroke="#ffffff" stroke-width="1.3"/>
+                </g>
+                <circle id="impactBurst1" cx="50" cy="46" r="1.5"
+                        fill="#ffffff"/>
+                <circle id="impactBurst2" cx="50" cy="46" r="1.5"
+                        fill="#ffd43b"/>
+                <g id="impactDebris" pointer-events="none"></g>
+                <text id="impactText" x="50" y="40"
+                      text-anchor="middle" font-size="5.2"
+                      font-weight="900" fill="#ffffff"></text>
+                <text id="playerDamageText" x="50" y="46"
+                      text-anchor="middle" font-size="3.5"
+                      font-weight="900" fill="#35d26b" opacity="0"></text>
+                <text id="cpuDamageText" x="50" y="46"
+                      text-anchor="middle" font-size="3.5"
+                      font-weight="900" fill="#ff4b4b" opacity="0"></text>
               </g>
               <text id="playerRecoveredText" x="50" y="46"
                     text-anchor="middle" font-size="8.6" font-weight="1000"
@@ -5777,17 +5822,109 @@ const IMPACT_PAL={
     rail:["#e8fff4","#00e56a","#7dffb0","#ffffff"],
     ability:["#7ef0ff","#ffe566","#ffffff","#b8e8ff"]
 };
-function spawnImpactDebris(){ return; }
-function paintImpactDebris(){ return; }
+function spawnImpactDebris(imp){
+    const x=50+imp.x*39;
+    const y=46+imp.y*39;
+    const kind=imp.kind||"clash";
+    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
+    const n=kind==="smash"?36:kind==="clash"?26:kind==="rail"?24:kind==="ability"?20:14;
+    const nx=Number(imp.nx)||0;
+    const ny=Number(imp.ny)||-1;
+    const bits=[];
+    for(let i=0;i<n;i++){
+        const spray=Math.random()*Math.PI*2;
+        const along=i%3===0;
+        const ang=along?Math.atan2(ny,nx)+(Math.random()-0.5)*0.9:spray;
+        const spd=(kind==="graze"?10:kind==="smash"?28:18)*(0.5+Math.random());
+        bits.push({
+            type:Math.random()<0.38?"shard":"spark",
+            x,y,
+            vx:Math.cos(ang)*spd,
+            vy:Math.sin(ang)*spd,
+            ang:ang*180/Math.PI,
+            len:kind==="smash"?3.6+Math.random()*5.5:2.2+Math.random()*3.8,
+            w:kind==="smash"?0.95:0.62,
+            color:pal[i%pal.length],
+            life:kind==="smash"?0.48:kind==="graze"?0.26:0.36,
+            born:performance.now()
+        });
+    }
+    if(kind==="smash"||kind==="rail"){
+        for(let i=0;i<6;i++){
+            const a=i/6*Math.PI*2;
+            bits.push({
+                type:"ember",
+                x,y,
+                vx:Math.cos(a)*6,
+                vy:Math.sin(a)*6,
+                r:1.1+Math.random()*1.4,
+                color:kind==="rail"?"#7dffb0":"#ff6a2a",
+                life:0.38,
+                born:performance.now()
+            });
+        }
+    }
+    NEW_BATTLE.impactDebris=bits;
+    NEW_BATTLE.impactDebrisAt=imp.time;
+    const cam=document.querySelector(".stadium-cam");
+    if(cam){
+        cam.classList.remove("is-graze","is-clash","is-smash","is-rail","is-ability");
+        cam.classList.add("is-"+kind);
+        clearTimeout(NEW_BATTLE.hitFlashTimer);
+        NEW_BATTLE.hitFlashTimer=setTimeout(()=>cam.classList.remove("is-"+kind),220);
+    }
+}
+function paintImpactDebris(now){
+    const g=document.getElementById("impactDebris");
+    if(!g) return;
+    const bits=NEW_BATTLE.impactDebris;
+    if(!bits||!bits.length){
+        if(g.childElementCount) g.innerHTML="";
+        return;
+    }
+    let html="";
+    const live=[];
+    for(const b of bits){
+        const age=Math.max(0,(now-b.born)/1000);
+        if(age>=b.life) continue;
+        const u=age/b.life;
+        const x=b.x+b.vx*age;
+        const y=b.y+b.vy*age+11*age*age;
+        const op=Math.max(0,1-u*1.05);
+        if(b.type==="spark"){
+            const x2=x+Math.cos(b.ang*Math.PI/180)*b.len*(1-u*0.35);
+            const y2=y+Math.sin(b.ang*Math.PI/180)*b.len*(1-u*0.35);
+            html+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${b.color}" stroke-width="${b.w||0.45}" stroke-linecap="round" opacity="${op.toFixed(2)}"/>`;
+        }else if(b.type==="ember"){
+            html+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${((b.r||1)*(1-u*0.4)).toFixed(2)}" fill="${b.color}" opacity="${(op*0.85).toFixed(2)}"/>`;
+        }else{
+            const s=1.1*(1-u*0.5);
+            const a=b.ang+u*80;
+            html+=`<rect x="${(x-s).toFixed(1)}" y="${(y-s*0.35).toFixed(1)}" width="${(s*2).toFixed(1)}" height="${(s*0.7).toFixed(1)}" fill="${b.color}" opacity="${(op*0.9).toFixed(2)}" transform="rotate(${a.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+        }
+        live.push(b);
+    }
+    NEW_BATTLE.impactDebris=live;
+    g.innerHTML=html;
+}
 function impactNodeCache(){
     if(NEW_BATTLE._impactNodes) return NEW_BATTLE._impactNodes;
     NEW_BATTLE._impactNodes={
         g:document.getElementById("impactEffect"),
-        core:document.getElementById("impactCore"),
+        flash:document.getElementById("impactFlash"),
         ring:document.getElementById("impactRing"),
-        sparkA:document.getElementById("impactSparkA"),
-        sparkB:document.getElementById("impactSparkB"),
-        cam:document.querySelector(".stadium-cam")
+        ring2:document.getElementById("impactRing2"),
+        ring3:document.getElementById("impactRing3"),
+        explosion:document.getElementById("impactExplosion"),
+        core:document.getElementById("impactCore"),
+        spokes:document.getElementById("impactSpokes"),
+        shock:document.getElementById("impactShock"),
+        shockOuter:document.getElementById("impactShockOuter"),
+        burst1:document.getElementById("impactBurst1"),
+        burst2:document.getElementById("impactBurst2"),
+        txt:document.getElementById("impactText"),
+        playerDamageText:document.getElementById("playerDamageText"),
+        cpuDamageText:document.getElementById("cpuDamageText")
     };
     return NEW_BATTLE._impactNodes;
 }
@@ -5800,62 +5937,122 @@ function paintImpactFx(now){
         if(g.getAttribute("opacity")!=="0") g.setAttribute("opacity","0");
         return;
     }
-    const kind=imp.kind||"clash";
-    const life=kind==="smash"?0.28:kind==="rail"?0.22:kind==="graze"?0.10:0.18;
+    if(imp.time!==NEW_BATTLE.impactDebrisAt) spawnImpactDebris(imp);
     const age=Math.max(0,(now-imp.time)/1000);
+    const kind=imp.kind||(imp.fromAbility?"ability":imp.impactClass==="heavy"?"smash":"clash");
+    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
+    const ink=pal[0], gold=pal[1]||pal[0];
+    const life=
+        kind==="smash" ? 1.18 :
+        kind==="rail" ? 1.02 :
+        imp.impactClass==="heavy" ? 1.05 :
+        imp.impactClass==="medium" ? 0.86 : 0.62;
     if(age>=life){
         g.setAttribute("opacity","0");
+        if(nodes.playerDamageText) nodes.playerDamageText.setAttribute("opacity","0");
+        if(nodes.cpuDamageText) nodes.cpuDamageText.setAttribute("opacity","0");
         NEW_BATTLE.lastImpact=null;
         return;
-    }
-    if(imp.time!==NEW_BATTLE.impactFlashAt){
-        NEW_BATTLE.impactFlashAt=imp.time;
-        const cam=nodes.cam;
-        if(cam && kind!=="graze"){
-            cam.classList.remove("is-graze","is-clash","is-smash","is-rail","is-ability");
-            cam.classList.add("is-"+kind);
-            clearTimeout(NEW_BATTLE.hitFlashTimer);
-            NEW_BATTLE.hitFlashTimer=setTimeout(()=>cam.classList.remove("is-"+kind),80);
-        }
     }
     const u=age/life;
     const x=50+imp.x*39;
     const y=46+imp.y*39;
-    const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
-    const strength=Math.min(1.15, Number(imp.strength)||1);
-    g.setAttribute("opacity", String(Math.max(0, 0.92-u*1.05)));
-    if(nodes.core){
-        nodes.core.setAttribute("cx", x);
-        nodes.core.setAttribute("cy", y);
-        nodes.core.setAttribute("r", String(Math.max(0.25, (kind==="smash"?1.7:1.15)*(1-u*0.82))));
-        nodes.core.setAttribute("fill", pal[0]);
-        nodes.core.setAttribute("opacity", String(Math.max(0, 1-u*1.35)));
+    const strength=imp.strength||1;
+    const impactMultiplier=
+        imp.impactClass==="heavy" ? 1.22 :
+        imp.impactClass==="medium" ? 1.0 : 0.78;
+    g.setAttribute("opacity", String(Math.max(0,0.90-u*0.90)));
+    if(nodes.flash){
+        nodes.flash.setAttribute("cx",x);
+        nodes.flash.setAttribute("cy",y);
+        nodes.flash.setAttribute("stroke",ink);
+        const flashPhase=Math.min(1,u*7);
+        nodes.flash.setAttribute("r",String(4.5+u*(kind==="smash"?11:7.5)*strength*impactMultiplier));
+        nodes.flash.setAttribute("stroke-width",String((kind==="graze"?3.2:5.4)-u*2.2));
+        nodes.flash.setAttribute("opacity",String(Math.max(0,1.0-flashPhase)));
     }
     if(nodes.ring){
-        nodes.ring.setAttribute("cx", x);
-        nodes.ring.setAttribute("cy", y);
-        nodes.ring.setAttribute("r", String(1.15 + u*(kind==="smash"?3.4:2.4)*strength));
-        nodes.ring.setAttribute("stroke", pal[1]||pal[0]);
-        nodes.ring.setAttribute("stroke-width", String(Math.max(0.22, 0.72-u*0.5)));
-        nodes.ring.setAttribute("opacity", String(Math.max(0, 0.78-u*0.95)));
+        nodes.ring.setAttribute("cx",x);
+        nodes.ring.setAttribute("cy",y);
+        nodes.ring.setAttribute("stroke",gold);
+        nodes.ring.setAttribute("r",String(2.5+u*9.0*strength*impactMultiplier));
     }
-    const nx=Number(imp.nx)||0;
-    const ny=Number(imp.ny)||-1;
-    const px=-ny, py=nx;
-    const travel=(kind==="smash"?2.1:1.45)*u;
-    if(nodes.sparkA){
-        nodes.sparkA.setAttribute("cx", String(x+px*travel*1.1));
-        nodes.sparkA.setAttribute("cy", String(y+py*travel*1.1));
-        nodes.sparkA.setAttribute("r", String(Math.max(0.15, 0.62*(1-u))));
-        nodes.sparkA.setAttribute("fill", pal[0]);
-        nodes.sparkA.setAttribute("opacity", String(Math.max(0, 0.85-u*1.2)));
+    if(nodes.ring2){
+        nodes.ring2.setAttribute("cx",x);
+        nodes.ring2.setAttribute("cy",y);
+        nodes.ring2.setAttribute("stroke",ink);
+        nodes.ring2.setAttribute("r",String(2.0+u*7.0*strength));
     }
-    if(nodes.sparkB){
-        nodes.sparkB.setAttribute("cx", String(x-px*travel));
-        nodes.sparkB.setAttribute("cy", String(y-py*travel));
-        nodes.sparkB.setAttribute("r", String(Math.max(0.12, 0.48*(1-u))));
-        nodes.sparkB.setAttribute("fill", pal[1]||pal[0]);
-        nodes.sparkB.setAttribute("opacity", String(Math.max(0, 0.7-u*1.15)));
+    if(nodes.ring3){
+        nodes.ring3.setAttribute("cx",x);
+        nodes.ring3.setAttribute("cy",y);
+        nodes.ring3.setAttribute("stroke",gold);
+        nodes.ring3.setAttribute("r",String(1.2+u*5.0*strength));
+    }
+    if(nodes.explosion){
+        nodes.explosion.setAttribute("cx",x);
+        nodes.explosion.setAttribute("cy",y);
+        nodes.explosion.setAttribute("fill",kind==="graze"?"#ffffff":gold);
+        nodes.explosion.setAttribute("stroke",ink);
+        nodes.explosion.setAttribute("r",String((kind==="graze"?1.6:3.0)+u*(kind==="smash"?10:7.0)*strength*impactMultiplier));
+        nodes.explosion.setAttribute("stroke-width",String(Math.max(1.0,4.0-u*2.4)));
+        nodes.explosion.setAttribute("opacity",String(Math.max(0,(kind==="graze"?0.55:1.0)-u*1.12)));
+    }
+    if(nodes.core){
+        nodes.core.setAttribute("cx",x);
+        nodes.core.setAttribute("cy",y);
+        nodes.core.setAttribute("r",String(Math.max(0.9,4.2-u*3.0)));
+        nodes.core.setAttribute("opacity",String(Math.max(0,1.0-u*1.30)));
+        nodes.core.setAttribute("fill",gold);
+    }
+    if(nodes.spokes){
+        const spokeScale=1+u*(2.8+strength*0.9);
+        nodes.spokes.setAttribute("opacity",String(Math.max(0,0.95-u*1.15)));
+        nodes.spokes.setAttribute("transform",`translate(${x-500} ${y-420}) scale(${spokeScale}) translate(${500-x} ${420-y}) rotate(${u*18} ${x} ${y})`);
+    }
+    if(nodes.shock){
+        const shockPhase=Math.min(1,u*4.8);
+        const shockScale=1+shockPhase*(2.5+strength*0.9);
+        nodes.shock.setAttribute("opacity",String(Math.max(0,0.95-shockPhase*1.05)));
+        nodes.shock.setAttribute("transform",
+            `translate(${x-500} ${y-420}) scale(${shockScale}) translate(${500-x} ${420-y}) rotate(${u*22} ${x} ${y})`);
+    }
+    if(nodes.shockOuter){
+        nodes.shockOuter.setAttribute("cx",x);
+        nodes.shockOuter.setAttribute("cy",y);
+        nodes.shockOuter.setAttribute("r",String(8+u*30*strength));
+        nodes.shockOuter.setAttribute("opacity",String(Math.max(0,0.95-u*1.25)));
+    }
+    if(nodes.burst1){
+        nodes.burst1.setAttribute("cx",String(x-u*25*strength));
+        nodes.burst1.setAttribute("cy",String(y-u*12*strength));
+        nodes.burst1.setAttribute("r",String(Math.max(0.8,3.2-u*2.2)));
+        nodes.burst1.setAttribute("opacity",String(Math.max(0,1-u*1.4)));
+    }
+    if(nodes.burst2){
+        nodes.burst2.setAttribute("cx",String(x+u*27*strength));
+        nodes.burst2.setAttribute("cy",String(y+u*10*strength));
+        nodes.burst2.setAttribute("r",String(Math.max(0.8,2.8-u*1.8)));
+        nodes.burst2.setAttribute("opacity",String(Math.max(0,0.95-u*1.3)));
+    }
+    if(nodes.txt){
+        nodes.txt.setAttribute("x",x);
+        nodes.txt.setAttribute("y",String(y-22-u*12));
+        nodes.txt.textContent="";
+    }
+    const pLoss=imp.playerRpmLoss||0;
+    const cLoss=imp.cpuRpmLoss||0;
+    if(nodes.playerDamageText){
+        nodes.playerDamageText.setAttribute("x",String(x));
+        nodes.playerDamageText.setAttribute("y",String(y-8-u*8));
+        nodes.playerDamageText.textContent=pLoss>0.0005?`-${Math.round(pLoss*100)} RPM`:"";
+        nodes.playerDamageText.setAttribute("opacity",String(pLoss>0.0005?Math.max(0,1-u*1.08):0));
+    }
+    if(nodes.cpuDamageText){
+        nodes.cpuDamageText.setAttribute("x",String(x));
+        nodes.cpuDamageText.setAttribute("y",String(y+2-u*8));
+        nodes.cpuDamageText.textContent=cLoss>0.0005?`-${Math.round(cLoss*100)} RPM`:"";
+        nodes.cpuDamageText.setAttribute("opacity",String(cLoss>0.0005?Math.max(0,1-u*1.08):0));
     }
 }
 function updateBeyBattleVisual(state, circleId, spriteId, dt){
@@ -5905,6 +6102,9 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.style.filter=state.metallic
             ?"grayscale(1) saturate(0) brightness(2.15) contrast(1.55)"
             :"";
+        if(state.dashBurst && (state.dashBurst.until||0)>performance.now()){
+            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 3.4px #e8fff4)";
+        }
         paintSpinGhosts(state,ghostId);
     }else{
         if(spriteEl) spriteEl.style.display="none";
@@ -6019,6 +6219,7 @@ function newBattleFrame(now){
         updateBeyMotionTrail(c,"cpuMotionTrail",now);
 
         paintImpactFx(now);
+        paintImpactDebris(now);
 
         const nowRecovery=now;
         const recDom=NEW_BATTLE._dom||{};
@@ -6041,8 +6242,8 @@ function newBattleFrame(now){
 
         p.hitFlash=Math.max(0,(p.hitFlash||0)-frameDt);
         c.hitFlash=Math.max(0,(c.hitFlash||0)-frameDt);
-        p.impactScale=Math.max(1,(p.impactScale||1)-frameDt*2.6);
-        c.impactScale=Math.max(1,(c.impactScale||1)-frameDt*2.6);
+        p.impactScale=Math.max(1,(p.impactScale||1)-frameDt*1.8);
+        c.impactScale=Math.max(1,(c.impactScale||1)-frameDt*1.8);
 
         const rpmP=recDom.playerRpm||document.getElementById("newPlayerRPM");
         const rpmC=recDom.cpuRpm||document.getElementById("newCpuRPM");
@@ -8236,10 +8437,10 @@ function newPhysicsCollision(dt){
         false
     );
 
-    p.hitFlash=0.14*visualStrength;
-    c.hitFlash=0.14*visualStrength;
-    p.impactScale=1.04+0.08*visualStrength;
-    c.impactScale=1.04+0.08*visualStrength;
+    p.hitFlash=0.36*visualStrength;
+    c.hitFlash=0.36*visualStrength;
+    p.impactScale=1.18+0.46*visualStrength;
+    c.impactScale=1.18+0.46*visualStrength;
 
     // Used by the multi-ring visual system.
     NEW_BATTLE.lastImpact={

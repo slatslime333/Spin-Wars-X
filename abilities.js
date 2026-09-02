@@ -358,9 +358,10 @@
         s.vy+=hy*DASH_SHOVE;
         s.impactMomentumState=Math.max(s.impactMomentumState||0,0.42);
         const t=nowMs();
-        s.dashGust={until:t+220};
-        s.dashBurst=null;
-        s.hitFlash=Math.max(s.hitFlash||0,0.12);
+        s.dashGust={hx,hy,x:s.x,y:s.y,until:t+560};
+        s.dashBurst={until:t+480,hx,hy,born:t};
+        s.impactScale=Math.max(s.impactScale||1,1.28);
+        s.hitFlash=Math.max(s.hitFlash||0,0.28);
         state.dashAt[side]=t+dashCdSec(side)*1000;
         if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onDash){
             SpinWarsScoreboard.onDash(side,s);
@@ -1293,13 +1294,17 @@
                 });
             }
             if(s.dashGust && s.dashGust.until>t){
+                const g2=s.dashGust;
                 const gp=worldToSvg(s.x,s.y);
-                const life=Math.max(0,(s.dashGust.until-t)/220);
-                const sp=Math.hypot(s.vx,s.vy)||1;
-                const bx=-(s.vx/sp)*3.8, by=-(s.vy/sp)*3.8;
-                html+=`<g class="fx-gust" opacity="${(life*0.5).toFixed(2)}">
-                    <circle cx="${gp.x+bx}" cy="${gp.y+by}" r="${3.6+life*1.4}" fill="#e8fff4" fill-opacity="0.14"/>
-                    <circle cx="${gp.x+bx}" cy="${gp.y+by}" r="${3.1+life}" fill="none" stroke="#e8fff4" stroke-width="0.7"/>
+                const life=Math.max(0.2,(g2.until-t)/560);
+                const bx=-g2.hx*8.4, by=-g2.hy*8.4;
+                html+=`<g class="fx-gust" opacity="${life.toFixed(2)}">
+                    <circle cx="${gp.x}" cy="${gp.y}" r="${6.2+life*3.1}" fill="#e8fff4" fill-opacity="0.16"/>
+                    <circle cx="${gp.x}" cy="${gp.y}" r="${5.6+life*2.4}" fill="none" stroke="#e8fff4" stroke-width="1.55"/>
+                    <path d="M${gp.x+bx} ${gp.y+by} L${gp.x+bx*2.8} ${gp.y+by*2.8}" fill="none" stroke="#ffffff" stroke-width="1.9" stroke-linecap="round"/>
+                    <path d="M${gp.x+bx*0.5-by*0.4} ${gp.y+by*0.5+bx*0.4} L${gp.x+bx*2.1-by*0.7} ${gp.y+by*2.1+bx*0.7}" fill="none" stroke="#9ad7b8" stroke-width="1.3"/>
+                    <path d="M${gp.x+bx*0.5+by*0.4} ${gp.y+by*0.5-bx*0.4} L${gp.x+bx*2.1+by*0.7} ${gp.y+by*2.1-bx*0.7}" fill="none" stroke="#d7efe4" stroke-width="1.3"/>
+                    <circle cx="${gp.x+bx*0.45}" cy="${gp.y+by*0.45}" r="2.8" fill="#e8fff4" fill-opacity="0.42"/>
                 </g>`;
             }
             if((s.flamePhase||0)>=1){

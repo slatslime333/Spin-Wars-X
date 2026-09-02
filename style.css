@@ -2729,7 +2729,7 @@ footer{
   .home-door-row{grid-template-columns:1fr}
   .home-league{min-height:64px}
   .home-league-copy b{font-size:20px}
-  .vs-board{grid-template-columns:1fr 1fr;gap:6px}
+  .vs-board{grid-template-columns:1fr;gap:8px}
   .vs-stamp{display:none}
 
   .selection-card{
@@ -4114,13 +4114,13 @@ button:focus-visible{
   .garage .pick-grid.catalog{
     grid-template-columns:repeat(2,minmax(0,1fr))!important;
   }
-  .vs-board{grid-template-columns:1fr 1fr!important;gap:6px}
+  .vs-board{grid-template-columns:1fr!important;gap:8px}
   .vs-plate{
     grid-template-columns:1fr!important;
     padding:7px;
     clip-path:none;
   }
-  .vs-art{width:100%!important;height:64px!important}
+  .vs-art{width:72px!important;height:72px!important;margin:0!important}
   .vs-copy h2{font-size:15px}
   .vs-rating b{font-size:16px}
   .rogue-offers{grid-template-columns:1fr;gap:6px}
@@ -4131,7 +4131,7 @@ button:focus-visible{
   .garage .blade-pick-grid,
   .garage .pick-grid.trio{grid-template-columns:repeat(3,minmax(0,1fr))!important}
   .vs-plate{grid-template-columns:1fr!important;padding:6px}
-  .vs-art{width:100%!important;height:56px!important}
+  .vs-art{width:64px!important;height:64px!important;margin:0!important}
   .vs-copy h2{font-size:14px}
   .g-live{grid-template-columns:48px 1fr;padding:5px 6px}
   .g-live-art{width:48px;height:48px}
