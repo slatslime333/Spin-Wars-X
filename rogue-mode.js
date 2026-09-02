@@ -45,8 +45,8 @@ function partsMeta(blade,ratchet,bit){
 
 function formMetaAdj(form,enhanced){
     const f=String(form||"Bronze");
-    let n=f==="Gold"?0:f==="Silver"?-5:-10;
-    if(enhanced) n+=3;
+    let n=f==="Gold"?0:f==="Silver"?-2:-4;
+    if(enhanced) n+=2;
     return n;
 }
 
@@ -64,7 +64,7 @@ function stackMetaBonus(bonuses,blade){
         focus=["attack","knockback","defense","mobility","balance","stamina"]
             .reduce((s,k)=>s+(Number(b[k])||0),0)*0.45;
     }
-    return clamp(Math.round(6*(1-Math.exp(-Math.max(0,focus)/14))),0,14);
+    return clamp(Math.round(5*(1-Math.exp(-Math.max(0,focus)/14))),0,10);
 }
 
 function rogueDisplayMeta(side){
@@ -76,7 +76,7 @@ function rogueDisplayMeta(side){
     const bonuses=side==="cpu"?r.cpuBonuses:r.bonuses;
     let meta=partsMeta(blade,ratchet,bit);
     if(side==="cpu"){
-        if(r.cpuEnhanced) meta+=3;
+        if(r.cpuEnhanced) meta+=2;
     }else{
         meta+=formMetaAdj(r.currentRogueTier,r.enhanced);
     }
@@ -888,7 +888,7 @@ function bossExtraStacks(){
 function battleCombo(side){
     const stats=side==="cpu"?cpuEffective():playerEffective();
     const ovr=round(STATS.reduce((a,k)=>a+(Number(stats[k])||0),0)/STATS.length);
-    return {stats,ovr,meta:ovr,compatibility:80,physical:{}};
+    return {stats,ovr,meta:rogueDisplayMeta(side),compatibility:80,physical:{}};
 }
 
 function applyLiveToBattle(){
@@ -1472,7 +1472,7 @@ function plateDecor(side){
     const mark=side==="cpu"?(r.finalBoss||r.matchIndex===18?"final":(r.matchIndex===6||r.matchIndex===12?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
     return {
-        stats,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        stats,ovr,meta:rogueDisplayMeta(side),delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
         bossMark:mark||"",
@@ -3530,7 +3530,7 @@ function inspectBattle(side){
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
-    mountDevButton,endRun,persist,hasSave,plateDecor,inspectBattle,MAX_MATCHES,BOSS_AT,MODIFIERS,
+    mountDevButton,endRun,persist,hasSave,plateDecor,rogueDisplayMeta,inspectBattle,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
