@@ -360,23 +360,27 @@ html[data-shell="phone"] .draft-feature .ability-drop summary{
   padding:4px 8px;
 }
 html[data-shell="phone"] .draft-carousel{
-  display:grid;
-  grid-template-columns:32px minmax(0,1fr) 32px;
-  align-items:center;
-  gap:2px;
-  padding:0 4px 8px;
+  display:block;
+  position:relative;
+  padding:0 0 8px;
   min-height:168px;
 }
 html[data-shell="phone"] .carousel-arrow{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:6;
   width:32px;
   height:44px;
   border:0;
-  background:rgba(255,196,46,.12);
+  background:rgba(255,196,46,.16);
   color:var(--gold,#ffc42e);
   font-size:28px;
   line-height:1;
   cursor:pointer;
 }
+html[data-shell="phone"] .carousel-arrow#carouselPrev{left:4px}
+html[data-shell="phone"] .carousel-arrow#carouselNext{right:4px}
 html[data-shell="phone"] .draft-carousel .draft-roster{
   position:relative;
   overflow:hidden;
@@ -387,7 +391,9 @@ html[data-shell="phone"] .draft-carousel .roster-row,
 html[data-shell="phone"] .draft-carousel .pick-tile,
 html[data-shell="phone"] .draft-carousel .blade-tile{
   position:absolute;
-  inset:8px 26%;
+  inset:8px 30%;
+  width:auto!important;
+  max-width:none;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -407,26 +413,26 @@ html[data-shell="phone"] .draft-carousel .roster-row.is-current{
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-prev{
   z-index:3;
-  transform:translateX(-48%) scale(.62);
-  opacity:.5;
+  transform:translateX(-72%) scale(.58);
+  opacity:.55;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-next{
   z-index:3;
-  transform:translateX(48%) scale(.62);
-  opacity:.5;
+  transform:translateX(72%) scale(.58);
+  opacity:.55;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-prev-2{
   z-index:1;
-  transform:translateX(-86%) scale(.42);
-  opacity:.28;
+  transform:translateX(-128%) scale(.4);
+  opacity:.34;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-peek-next-2{
   z-index:1;
-  transform:translateX(86%) scale(.42);
-  opacity:.28;
+  transform:translateX(128%) scale(.4);
+  opacity:.34;
   pointer-events:none;
 }
 html[data-shell="phone"] .draft-carousel .roster-row.is-off{display:none}
@@ -470,34 +476,41 @@ html[data-shell="phone"] .vs-plate{
   width:100%;
   min-height:0;
   max-height:none;
-  padding:10px 10px 12px;
+  padding:8px 10px 10px;
   overflow:hidden!important;
-  display:flex!important;
-  flex-direction:column!important;
-  grid-template-columns:none!important;
-  grid-template-rows:none!important;
-  gap:8px;
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  gap:6px 10px;
   background:rgba(8,6,12,.92)!important;
-  align-items:stretch;
+  align-items:start;
 }
 html[data-shell="phone"] .vs-kit{
-  grid-row:auto;
+  grid-column:1;
+  grid-row:1 / span 2;
   display:flex;
   flex-direction:row;
   align-items:center;
   gap:8px;
   flex:0 0 auto;
-  align-self:flex-start;
+  align-self:start;
 }
 html[data-shell="phone"] .vs-copy{
+  grid-column:2;
+  grid-row:1;
   min-width:0;
   overflow:hidden;
   position:relative;
   z-index:1;
 }
+html[data-shell="phone"] .vs-reroll{
+  grid-column:2;
+  grid-row:2;
+  justify-self:start;
+}
 html[data-shell="phone"] .vs-id h2,
 html[data-shell="phone"] .vs-copy h2{
-  font-size:20px;
+  font-size:18px;
   line-height:1;
   color:#fff;
   overflow:hidden;
@@ -505,18 +518,19 @@ html[data-shell="phone"] .vs-copy h2{
   white-space:nowrap;
 }
 html[data-shell="phone"] .vs-art{
-  width:72px!important;
-  height:72px!important;
-  min-width:72px;
-  min-height:72px;
+  width:64px!important;
+  height:64px!important;
+  min-width:64px;
+  min-height:64px;
   margin:0!important;
 }
-html[data-shell="phone"] .vs-part-disc{width:32px;height:32px;min-width:32px;min-height:32px}
-html[data-shell="phone"] .vs-rating b{font-size:20px}
+html[data-shell="phone"] .vs-part-disc{width:28px;height:28px;min-width:28px;min-height:28px}
+html[data-shell="phone"] .vs-rating b{font-size:18px}
 html[data-shell="phone"] .vs-full{display:none}
-html[data-shell="phone"] .vs-stat-grid{gap:2px 10px}
-html[data-shell="phone"] .vs-plate .ability-drop{margin-top:4px}
-html[data-shell="phone"] .vs-plate .ability-drop summary{min-height:28px;padding:4px 8px}
+html[data-shell="phone"] .vs-stat-grid{gap:1px 8px;margin-top:4px}
+html[data-shell="phone"] .vs-plate .hud-stat{padding:2px 0}
+html[data-shell="phone"] .vs-plate .ability-drop{margin-top:2px}
+html[data-shell="phone"] .vs-plate .ability-drop summary{min-height:26px;padding:3px 6px}
 
 html[data-shell="phone"] .battle-shell{
   padding:4px 6px max(4px, env(safe-area-inset-bottom,0px));
