@@ -26,48 +26,21 @@ function bossLevel(m=match()){
 }
 function isBoss(){return !!bossLevel();}
 
-/* Rogue Meta: deliberately separate from Quick Play.
- * 65% neutral physical combo quality, 35% upgraded effective power.
- * Height is measured against the same ratchet number at 70 when possible,
- * then only 40% of the height delta is allowed to affect Rogue Meta.
+/* Rogue Meta is the same V57 combo score as Quick Play, plus a small
+ * shop/form delta from rogueDisplayMeta. Height is a real physical hit.
+ * Do not damp 80 vs 70 or blend META with upgraded OVR.
  */
-function neutralRatchet(actual){
-    const list=global.RATCHETS||[];
-    const same=list.find(x=>Number(x.number)===Number(actual?.number)&&Number(x.height)===70);
-    return same||list.find(x=>Number(x.height)===70)||actual;
-}
 function rawCombo(blade,ratchet,bit){
     try{return typeof global.calculateComboStats==="function"?global.calculateComboStats(blade,ratchet,bit):null;}catch(_e){return null;}
 }
 function avgStats(stats){return STATS.reduce((s,k)=>s+(Number(stats?.[k])||70),0)/STATS.length;}
 function rogueMeta(side){
+    const fn=global.SpinWarsRogue?.rogueDisplayMeta;
+    if(typeof fn==="function") return fn(side);
     const r=R(); if(!r)return 70;
     const cpu=side==="cpu";
-    const blade=cpu?r.cpuBlade:r.blade;
-    const ratchet=cpu?r.cpuRatchet:r.ratchet;
-    const bit=cpu?r.cpuBit:r.bit;
-    if(!blade)return 70;
-    const raw=rawCombo(blade,ratchet,bit)||{};
-    const neutral=rawCombo(blade,neutralRatchet(ratchet),bit)||raw;
-    const rawMeta=Number(raw.meta)||avgStats(raw.stats);
-    const neutralMeta=Number(neutral.meta)||avgStats(neutral.stats);
-    const dampedHeight=neutralMeta+(rawMeta-neutralMeta)*0.40;
-    const effective=cpu?cpuEffectiveStats():playerEffectiveStats();
-    const upgradedPower=avgStats(effective);
-    const physical=dampedHeight*0.65+upgradedPower*0.35;
-    const role=String(blade.type||"Balance");
-    let synergy=0;
-    const bitName=String(bit?.name||"");
-    const compat=Number(blade.compatibility?.bits?.[bitName]);
-    if(Number.isFinite(compat)) synergy=(compat-70)*0.035;
-    const h=Number(ratchet?.height);
-    if(h===60) synergy+=1.0;
-    else if(h===80) synergy-=1.0;
-    if(cpu&&r.cpuModifier) synergy+=0.5;
-    if(!cpu&&r.activeModifier) synergy+=0.5;
-    if(role==="Attack"&&Number(effective.attack)>Number(effective.stamina)+8) synergy+=0.5;
-    if(role==="Stamina"&&Number(effective.stamina)>Number(effective.attack)+8) synergy+=0.5;
-    return clamp(rnd(physical+synergy),40,99);
+    const raw=rawCombo(cpu?r.cpuBlade:r.blade,cpu?r.cpuRatchet:r.ratchet,cpu?r.cpuBit:r.bit);
+    return clamp(rnd(Number(raw?.meta)||avgStats(raw?.stats)),40,99);
 }
 function playerEffectiveStats(){
     const r=R(); if(!r)return empty();
