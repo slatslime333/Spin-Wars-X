@@ -1233,7 +1233,7 @@ function bindPosterArt(imgId,src){
     else if(img.complete && img.naturalWidth) mark();
 }
 function bindHomeArt(){
-    bindPosterArt("homeArtImg","assets/HomeARt.png?v=9.83");
+    bindPosterArt("homeArtImg","assets/HomeARt.png?v=9.84");
 }
 
 function renderMainMenu(){
@@ -1252,7 +1252,7 @@ function renderMainMenu(){
     ${bgHTML("lobby")}
     <main class="lobby has-art">
         <div class="lobby-poster" aria-hidden="true">
-            <div class="lobby-art"><img id="homeArtImg" src="assets/HomeARt.png?v=9.83" alt=""></div>
+            <div class="lobby-art"><img id="homeArtImg" src="assets/HomeARt.png?v=9.84" alt=""></div>
         </div>
         <section class="lobby-arena">
             ${homeBowlHTML()}
@@ -1476,7 +1476,7 @@ function renderLeagueSelect(){
     ${bgHTML("board")}
     <main class="room board has-art">
         <div class="room-poster" aria-hidden="true">
-            <div class="lobby-art"><img id="boardArtImg" src="assets/HomeARt.png?v=9.83" alt=""></div>
+            <div class="lobby-art"><img id="boardArtImg" src="assets/HomeARt.png?v=9.84" alt=""></div>
         </div>
         ${roomBarHTML({kicker:"QUICK PLAY",title:"PICK A FIGHT"})}
         <p class="board-lead">Featured roll, or draft a league. First to 7.</p>
@@ -1538,7 +1538,7 @@ function renderLeagueSelect(){
             if(pack) openSheet(pack.title,pack.body);
         });
     });
-    bindPosterArt("boardArtImg","assets/HomeARt.png?v=9.83");
+    bindPosterArt("boardArtImg","assets/HomeARt.png?v=9.84");
 }
 
 function playableBlades(){
@@ -2033,6 +2033,10 @@ function ratchetSpriteFile(ratchet){
 function ratchetSpritePath(ratchet){
     const path=ratchetSpriteFile(ratchet);
     return path ? encodeURI(path) : "";
+}
+function battleHudPcPane(s){
+    const stats=s?.stats||{};
+    return `<div class="hud-pc-pane">${garageStatLine(stats)}</div>`;
 }
 function battleHudPartsLine(s){
     const ratchet=s?.ratchet?.name || "";
@@ -4774,7 +4778,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newPlayerStability">${Math.round(p.stability*100)}</b></div>
-                <div class="hud-pc-pane">${garageStatLine(p.stats)}</div>
+                ${battleHudPcPane(p)}
                 <div class="hud-drop"></div>
               </div>
               <div class="battle-score">
@@ -4807,7 +4811,7 @@ function renderNewBattle(){
                   </div>
                 </div>
                 <div class="stability-readout">STA <b id="newCpuStability">${Math.round(c.stability*100)}</b></div>
-                <div class="hud-pc-pane">${garageStatLine(c.stats)}</div>
+                ${battleHudPcPane(c)}
                 <div class="hud-drop"></div>
               </div>
             </div>

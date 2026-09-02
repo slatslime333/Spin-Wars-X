@@ -59,10 +59,11 @@ html[data-shell="phone"] #app{
 
 .hud-pc-pane{display:none}
 html[data-shell="pc"] .hud-pc-pane{
-  display:block;
-  margin-top:auto;
+  display:block!important;
+  margin-top:12px;
   padding-top:10px;
   border-top:1px solid rgba(255,255,255,.08);
+  flex:1 1 auto;
 }
 html[data-shell="pc"] .hud-pc-pane .hud-stats{
   margin-top:8px;

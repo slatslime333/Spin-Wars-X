@@ -2308,7 +2308,7 @@ function showLanding(){
     app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
     <main class="room locker has-art">
         <div class="room-poster" aria-hidden="true">
-            <div class="lobby-art"><img id="rogueArtImg" src="assets/rogue.png?v=9.83" alt=""></div>
+            <div class="lobby-art"><img id="rogueArtImg" src="assets/rogue.png?v=9.84" alt=""></div>
         </div>
         ${bar}
         <section class="locker-hero">${hero}</section>
@@ -2341,7 +2341,7 @@ function showLanding(){
     };
     document.getElementById("rogueScoreboard").onclick=()=>showRunHistory();
     document.getElementById("rogueHelp").onclick=()=>showHelp();
-    if(typeof bindPosterArt==="function") bindPosterArt("rogueArtImg","assets/rogue.png?v=9.83");
+    if(typeof bindPosterArt==="function") bindPosterArt("rogueArtImg","assets/rogue.png?v=9.84");
     mountDevButton();
 }
 
