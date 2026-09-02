@@ -1191,7 +1191,7 @@ function ratingsHTML(ovr,meta){
     if(!showMetaRating() || meta==null || meta==="—"){
         return `<span class="draft-ratings"><b>OVR ${o}</b></span>`;
     }
-    return `<span class="draft-ratings"><b>OVR ${o}</b><b class="meta">META ${meta}</b></span>`;
+    return `<span class="draft-ratings"><b class="meta">META ${meta}</b><b>OVR ${o}</b></span>`;
 }
 function closeSheet(){
     document.getElementById("swxSheet")?.remove();
@@ -1758,6 +1758,7 @@ function garagePaintLive(preview){
 }
 function garageBindPreview(root){
     if(!root) return;
+    if(typeof isPhoneShell==="function" && isPhoneShell()) return;
     const read=tile=>{
         if(tile._previewBlade) return {blade:tile._previewBlade};
         if(tile._previewRatchet) return {blade:Game.player?.blade,ratchet:tile._previewRatchet};
@@ -1828,6 +1829,81 @@ function filterDraftPool(active,pool){
     }
     return list;
 }
+function draftFocusItem(active){
+    const sel=Game.selection||{};
+    if(active==="blade") return sel.focusBlade;
+    if(active==="ratchet") return sel.focusRatchet;
+    return sel.focusBit;
+}
+function draftFocusIndex(active,shown){
+    const item=draftFocusItem(active);
+    const i=(shown||[]).findIndex(p=>p && item && p.name===item.name);
+    return i<0?0:i;
+}
+function setDraftFocus(active,item){
+    Game.selection=Game.selection||{};
+    if(active==="blade") Game.selection.focusBlade=item;
+    else if(active==="ratchet") Game.selection.focusRatchet=item;
+    else Game.selection.focusBit=item;
+}
+function focusDraftPart(active,item){
+    if(!item) return;
+    setDraftFocus(active,item);
+    const sel=Game.selection||{};
+    const preview=active==="blade"
+        ? {blade:item}
+        : active==="ratchet"
+            ? {blade:Game.player?.blade,ratchet:item}
+            : {blade:Game.player?.blade,ratchet:Game.player?.ratchet,bit:item};
+    garagePaintLive(preview);
+    const box=document.getElementById("garagePicks");
+    syncDraftCarousel(box,active,sel.draftShown||[]);
+}
+function syncDraftCarousel(box,active,shown){
+    if(!box) return;
+    const n=(shown||[]).length;
+    const i=draftFocusIndex(active,shown);
+    [...box.children].forEach((tile,idx)=>{
+        tile.classList.remove("is-peek-prev","is-peek-next","is-current","is-off","is-focus");
+        if(!n) return;
+        if(idx===i) tile.classList.add("is-current","is-focus");
+        else if(n>1 && idx===(i-1+n)%n) tile.classList.add("is-peek-prev");
+        else if(n>1 && idx===(i+1)%n) tile.classList.add("is-peek-next");
+        else tile.classList.add("is-off");
+    });
+}
+function stepDraftCarousel(active,dir){
+    const shown=Game.selection?.draftShown||[];
+    if(!shown.length) return;
+    const i=draftFocusIndex(active,shown);
+    focusDraftPart(active, shown[(i+dir+shown.length)%shown.length]);
+}
+function bindDraftCarousel(active){
+    const host=document.getElementById("draftCarousel");
+    const box=document.getElementById("garagePicks");
+    if(!host||!box) return;
+    document.getElementById("carouselPrev")?.addEventListener("click",event=>{
+        event.preventDefault();
+        stepDraftCarousel(active,-1);
+    });
+    document.getElementById("carouselNext")?.addEventListener("click",event=>{
+        event.preventDefault();
+        stepDraftCarousel(active,1);
+    });
+    let x0=null;
+    host.addEventListener("pointerdown",event=>{
+        if(event.pointerType==="mouse" && event.button!==0) return;
+        x0=event.clientX;
+    },{passive:true});
+    host.addEventListener("pointerup",event=>{
+        if(x0==null) return;
+        const dx=event.clientX-x0;
+        x0=null;
+        if(Math.abs(dx)<36) return;
+        stepDraftCarousel(active, dx<0?1:-1);
+    });
+    syncDraftCarousel(box,active,Game.selection?.draftShown||[]);
+}
 function renderGarage(active){
     active=active==="ratchet"||active==="bit"?active:"blade";
     Game.screen=active==="blade"?"bladeDraft":active==="ratchet"?"ratchetDraft":"bitDraft";
@@ -1854,6 +1930,7 @@ function renderGarage(active){
     if(active==="blade" && focusPreview.blade && !sel.focusBlade) sel.focusBlade=focusPreview.blade;
     if(active==="ratchet" && focusPreview.ratchet && !sel.focusRatchet) sel.focusRatchet=focusPreview.ratchet;
     if(active==="bit" && focusPreview.bit && !sel.focusBit) sel.focusBit=focusPreview.bit;
+    Game.selection.draftShown=shown;
     app.innerHTML=`${bgHTML("bay")}
     <main class="room bay draft-screen">
         ${roomBarHTML({kicker:garageLeagueLine(),title:titles[active]})}
@@ -1866,8 +1943,13 @@ function renderGarage(active){
             ${garageLiveHTML(focusPreview)}
             <div class="bay-list">
                 ${bayFilterHTML(active)}
-                <p class="draft-roster-label">TAP TO INSPECT · LOCK TO TAKE IT</p>
-                <section class="draft-roster" id="garagePicks"></section>
+                <p class="draft-roster-label is-phone">SWIPE OR TAP ARROWS · LOCK TO TAKE IT</p>
+                <p class="draft-roster-label is-pc">TAP TO INSPECT · LOCK TO TAKE IT</p>
+                <div class="draft-carousel" id="draftCarousel">
+                    <button type="button" class="carousel-arrow" id="carouselPrev" aria-label="Previous">‹</button>
+                    <section class="draft-roster" id="garagePicks"></section>
+                    <button type="button" class="carousel-arrow" id="carouselNext" aria-label="Next">›</button>
+                </div>
             </div>
         </div>
         ${roomDockHTML({backId:"garageBack",goId:"draftLock",goClass:"is-lock",goLabel:locks[active]})}
@@ -1895,6 +1977,7 @@ function renderGarage(active){
         if(name && name===focusedName) tile.classList.add("is-focus");
     });
     garageBindPreview(box);
+    bindDraftCarousel(active);
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined") SpinWarsRogue.mountDevButton();
 }
 function lockDraftPart(active){
@@ -2077,6 +2160,7 @@ function battleInspectBody(side){
     const {blade,stats,hud,rogue}=model;
     if(!blade) return `<p>No Bey loaded.</p>`;
     const ovr=displayOvr(stats);
+    const meta=showMetaRating()?battleHudMetaValue(model,side):null;
     const kit=typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade,{compact:true}):"";
     const chargeHTML=hud?.charges
         ? `<p class="hud-charge">${hud.charges.name} · ${hud.charges.left}/${hud.charges.max}</p>`
@@ -2104,7 +2188,7 @@ function battleInspectBody(side){
             `<p data-timer="${t.id||t.label}"><strong>${t.label}</strong> · <b data-live="1">${t.left.toFixed(1)}s</b></p>`
         ).join("")}</div>`
         : "";
-    return `<div class="hud-drop-head"><strong>${blade.name}</strong><b>OVR ${ovr}</b></div>
+    return `<div class="hud-drop-head"><strong>${blade.name}</strong>${meta!=null&&meta!=="—"?`<b class="meta">META ${meta}</b>`:""}<b>OVR ${ovr}</b></div>
         ${kit}${chargeHTML}
         ${garageStatLine(stats)}
         ${rogueHTML}
@@ -2179,10 +2263,11 @@ function paintBattleInspect(){
 }
 if(typeof window!=="undefined") window.paintBattleInspect=paintBattleInspect;
 function battleHudRating(s,side){
-    if(showMetaRating()){
-        return `<div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(s,side)}</b></div>`;
-    }
-    return `<div class="battle-hud-meta"><small>OVR</small><b>${displayOvr(s?.stats||Game[side]?.stats)}</b></div>`;
+    const ovr=displayOvr(s?.stats||Game[side]?.stats);
+    const ovrBox=`<div class="battle-hud-ovr"><small>OVR</small><b>${ovr}</b></div>`;
+    if(!showMetaRating()) return `<div class="hud-ratings">${ovrBox}</div>`;
+    const meta=battleHudMetaValue(s,side);
+    return `<div class="hud-ratings"><div class="battle-hud-meta"><small>META</small><b>${meta}</b></div>${ovrBox}</div>`;
 }
 function battleHudMetaValue(s,side){
     const live=Number(s?.comboMeta);
@@ -2215,11 +2300,7 @@ function createBladeCard(blade){
         drop.addEventListener("click",event=>event.stopPropagation());
         drop.addEventListener("pointerdown",event=>event.stopPropagation());
     });
-    const pick=()=>{
-        Game.selection=Game.selection||{};
-        Game.selection.focusBlade=blade;
-        renderGarage("blade");
-    };
+    const pick=()=>focusDraftPart("blade",blade);
     card.addEventListener("click",pick);
     card.addEventListener("keydown",event=>{
         if(event.key==="Enter"||event.key===" "){
@@ -2277,11 +2358,7 @@ function ratchetCard(r){
         extra:`<span class="part-index">${r.number}</span>`,
         description:"",
         sprite:ratchetSpriteFile(r),
-        onClick:()=>{
-            Game.selection=Game.selection||{};
-            Game.selection.focusRatchet=r;
-            renderGarage("ratchet");
-        }});
+        onClick:()=>focusDraftPart("ratchet",r)});
     card._previewRatchet=r;
     return card;
 }
@@ -2330,11 +2407,7 @@ function bitCard(bit){
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
         description:"",
         sprite:bitSpriteFile(bit),
-        onClick:()=>{
-            Game.selection=Game.selection||{};
-            Game.selection.focusBit=bit;
-            renderGarage("bit");
-        }});
+        onClick:()=>focusDraftPart("bit",bit)});
     card._previewBit=bit;
     return card;
 }
@@ -2934,17 +3007,23 @@ function createComboSummaryCard(side,combo){
     const mod=combo.rogueMod;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
-      <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+      <div class="vs-kit">
+        <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+        <div class="vs-parts-discs">
+          ${ratchetArt?`<span class="vs-part-disc"><img class="vs-bit-sprite" src="${ratchetArt}" alt=""></span>`:""}
+          ${bitArt?`<span class="vs-part-disc"><img class="vs-bit-sprite" src="${bitArt}" alt=""></span>`:""}
+        </div>
+      </div>
       <div class="vs-copy">
         <div class="vs-id">
           <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
           ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
           <h2>${combo.blade.name}</h2>
-          <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name} · ${spin}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
+          <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name} · ${spin}</p>
         </div>
         <div class="vs-ratings">
-          <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
           ${hideMeta?"":`<div class="vs-rating meta"><small>META</small><b>${meta}</b></div>`}
+          <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
         </div>
         ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade,{compact:true}):""}
         <div class="stat-grid vs-stat-grid">
@@ -3446,10 +3525,10 @@ const KILL_CAM={
     holdMaxMs:2400,
     afterHitMs:280,
     openDelay:0.55,
-    chance:0.5,
+    chance:0.35,
     shakeMs:170,
     shakePx:5.2,
-    dashChance:0.40,
+    dashChance:0.35,
     dashHoldMs:1500,
     dashSlow:0.42
 };
@@ -4735,11 +4814,11 @@ function renderNewBattle(){
               <!-- Actual battle impact renderer. These IDs are the targets
                    updated by newBattleFrame() on every collision. -->
               <g id="impactEffect" opacity="0" pointer-events="none">
-                <circle id="impactCore" cx="50" cy="46" r="2.2" fill="#fff8e8"/>
-                <circle id="impactRing" cx="50" cy="46" r="3"
-                        fill="none" stroke="#ffd43b" stroke-width="1.1"/>
-                <line id="impactSlash" x1="50" y1="46" x2="50" y2="46"
-                      stroke="#ffffff" stroke-width="1.15" stroke-linecap="round"/>
+                <circle id="impactCore" cx="50" cy="46" r="1.6" fill="#fff8e8"/>
+                <circle id="impactRing" cx="50" cy="46" r="2.4"
+                        fill="none" stroke="#ffe08a" stroke-width="0.7"/>
+                <circle id="impactSparkA" cx="50" cy="46" r="0.7" fill="#ffffff"/>
+                <circle id="impactSparkB" cx="50" cy="46" r="0.55" fill="#ffe08a"/>
               </g>
               <text id="playerRecoveredText" x="50" y="46"
                     text-anchor="middle" font-size="8.6" font-weight="1000"
@@ -5706,7 +5785,8 @@ function impactNodeCache(){
         g:document.getElementById("impactEffect"),
         core:document.getElementById("impactCore"),
         ring:document.getElementById("impactRing"),
-        slash:document.getElementById("impactSlash"),
+        sparkA:document.getElementById("impactSparkA"),
+        sparkB:document.getElementById("impactSparkB"),
         cam:document.querySelector(".stadium-cam")
     };
     return NEW_BATTLE._impactNodes;
@@ -5742,34 +5822,40 @@ function paintImpactFx(now){
     const x=50+imp.x*39;
     const y=46+imp.y*39;
     const pal=IMPACT_PAL[kind]||IMPACT_PAL.clash;
-    const strength=Math.min(1.2, Number(imp.strength)||1);
-    g.setAttribute("opacity", String(Math.max(0, 0.88-u*0.95)));
+    const strength=Math.min(1.15, Number(imp.strength)||1);
+    g.setAttribute("opacity", String(Math.max(0, 0.92-u*1.05)));
     if(nodes.core){
         nodes.core.setAttribute("cx", x);
         nodes.core.setAttribute("cy", y);
-        nodes.core.setAttribute("r", String(Math.max(0.35, (kind==="smash"?2.05:1.45)*(1-u*0.78))));
+        nodes.core.setAttribute("r", String(Math.max(0.25, (kind==="smash"?1.7:1.15)*(1-u*0.82))));
         nodes.core.setAttribute("fill", pal[0]);
-        nodes.core.setAttribute("opacity", String(Math.max(0, 1-u*1.2)));
+        nodes.core.setAttribute("opacity", String(Math.max(0, 1-u*1.35)));
     }
     if(nodes.ring){
         nodes.ring.setAttribute("cx", x);
         nodes.ring.setAttribute("cy", y);
-        nodes.ring.setAttribute("r", String(1.35 + u*(kind==="smash"?5.2:3.6)*strength));
+        nodes.ring.setAttribute("r", String(1.15 + u*(kind==="smash"?3.4:2.4)*strength));
         nodes.ring.setAttribute("stroke", pal[1]||pal[0]);
-        nodes.ring.setAttribute("stroke-width", String(Math.max(0.28, 0.95-u*0.7)));
-        nodes.ring.setAttribute("opacity", String(Math.max(0, 0.9-u)));
+        nodes.ring.setAttribute("stroke-width", String(Math.max(0.22, 0.72-u*0.5)));
+        nodes.ring.setAttribute("opacity", String(Math.max(0, 0.78-u*0.95)));
     }
-    if(nodes.slash){
-        const nx=Number(imp.nx)||0;
-        const ny=Number(imp.ny)||-1;
-        const len=(kind==="graze"?2.6:kind==="smash"?6.2:4.4)*(1-u*0.4);
-        nodes.slash.setAttribute("x1", String(x-nx*len));
-        nodes.slash.setAttribute("y1", String(y-ny*len));
-        nodes.slash.setAttribute("x2", String(x+nx*len));
-        nodes.slash.setAttribute("y2", String(y+ny*len));
-        nodes.slash.setAttribute("stroke", pal[0]);
-        nodes.slash.setAttribute("stroke-width", String(kind==="graze"?0.55:0.95));
-        nodes.slash.setAttribute("opacity", String(Math.max(0, 1-u*1.45)));
+    const nx=Number(imp.nx)||0;
+    const ny=Number(imp.ny)||-1;
+    const px=-ny, py=nx;
+    const travel=(kind==="smash"?2.1:1.45)*u;
+    if(nodes.sparkA){
+        nodes.sparkA.setAttribute("cx", String(x+px*travel*1.1));
+        nodes.sparkA.setAttribute("cy", String(y+py*travel*1.1));
+        nodes.sparkA.setAttribute("r", String(Math.max(0.15, 0.62*(1-u))));
+        nodes.sparkA.setAttribute("fill", pal[0]);
+        nodes.sparkA.setAttribute("opacity", String(Math.max(0, 0.85-u*1.2)));
+    }
+    if(nodes.sparkB){
+        nodes.sparkB.setAttribute("cx", String(x-px*travel));
+        nodes.sparkB.setAttribute("cy", String(y-py*travel));
+        nodes.sparkB.setAttribute("r", String(Math.max(0.12, 0.48*(1-u))));
+        nodes.sparkB.setAttribute("fill", pal[1]||pal[0]);
+        nodes.sparkB.setAttribute("opacity", String(Math.max(0, 0.7-u*1.15)));
     }
 }
 function updateBeyBattleVisual(state, circleId, spriteId, dt){
@@ -5819,9 +5905,6 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
         spriteEl.style.filter=state.metallic
             ?"grayscale(1) saturate(0) brightness(2.15) contrast(1.55)"
             :"";
-        if(state.dashBurst && (state.dashBurst.until||0)>performance.now()){
-            spriteEl.style.filter=(spriteEl.style.filter||"")+" drop-shadow(0 0 1.1px #e8fff4)";
-        }
         paintSpinGhosts(state,ghostId);
     }else{
         if(spriteEl) spriteEl.style.display="none";
