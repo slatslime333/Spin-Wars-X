@@ -393,7 +393,10 @@ html[data-shell="pc"] .board-grid{
   width:100%;
   padding:12px 16px;
 }
-html[data-shell="pc"] .board-cell.featured{grid-row:1 / span 2}
+html[data-shell="pc"] .board-cell.featured{
+  grid-column:1;
+  grid-row:1 / span 2;
+}
 html[data-shell="pc"] .board-cell{min-height:108px}
 
 html[data-shell="pc"] .bay-stage{
