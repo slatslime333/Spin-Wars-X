@@ -966,7 +966,103 @@ html:has(.room), body:has(.room), #app:has(.room){
   left:auto;
   width:min(340px,92vw);
 }
-.battle-hud-card.is-open .hud-drop{display:block}
+.battle-hud-card.is-open .hud-drop{display:none}
+.battle-inspect{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:400;
+  pointer-events:auto;
+}
+.battle-shell.is-inspect .battle-inspect{display:block}
+.battle-shell.is-inspect .battle-dock,
+.battle-shell.is-inspect .battle-fighters,
+.battle-shell.is-inspect .battle-callout,
+.battle-shell.is-inspect .stadium-slot{
+  pointer-events:none;
+}
+.battle-inspect-scrim{
+  position:absolute;
+  inset:0;
+  background:rgba(4,3,8,.82);
+}
+.battle-inspect-sheet{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  z-index:1;
+  max-height:min(74dvh,640px);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  padding:8px 10px 12px;
+  background:linear-gradient(180deg,#161218,#0c0a0e);
+  border-bottom:1px solid rgba(255,196,46,.45);
+  box-shadow:0 18px 40px rgba(0,0,0,.55);
+}
+.battle-inspect-bar{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:8px;
+  margin:0 0 8px;
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#161218;
+  padding:2px 0 8px;
+}
+.battle-inspect-bar b{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:22px;
+  font-weight:400;
+  letter-spacing:.08em;
+}
+.battle-inspect-pause{
+  color:var(--gold,#ffc42e);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.18em;
+}
+.battle-inspect-close{
+  height:32px;
+  padding:0 12px;
+  border:1px solid rgba(255,196,46,.45);
+  background:transparent;
+  color:var(--gold,#ffc42e);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.14em;
+  cursor:pointer;
+}
+.battle-inspect-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.battle-inspect-pane{
+  min-width:0;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(8,6,12,.72);
+}
+.battle-inspect-pane.is-player,
+.battle-inspect-pane[data-inspect-side="player"]{
+  box-shadow:inset 3px 0 0 var(--green,#00e56a);
+}
+.battle-inspect-pane[data-inspect-side="cpu"]{
+  box-shadow:inset 3px 0 0 var(--red,#ff3b1a);
+}
+.battle-inspect-who{
+  display:block;
+  color:var(--gold,#ffc42e);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.16em;
+  margin-bottom:4px;
+}
+.battle-inspect-pane .hud-drop-head{position:static;background:transparent;padding:0 0 6px}
+.battle-inspect-pane .hud-stats{margin-top:6px}
 .hud-drop-head{
   display:flex;
   justify-content:space-between;

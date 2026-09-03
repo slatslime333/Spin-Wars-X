@@ -2194,20 +2194,54 @@ function battleInspectBody(side){
         ${rogueHTML}
         ${timerHTML}`;
 }
-function closeBattleInspect(except){
+function closeBattleInspect(){
     document.querySelectorAll(".battle-hud-card.is-open").forEach(card=>{
-        if(card===except) return;
         card.classList.remove("is-open");
         card.setAttribute("aria-expanded","false");
     });
+    const shell=document.querySelector(".battle-shell");
+    const root=document.getElementById("battleInspect");
+    shell?.classList.remove("is-inspect");
+    if(root){
+        root.hidden=true;
+        root.setAttribute("aria-hidden","true");
+    }
+    if(typeof NEW_BATTLE!=="undefined"){
+        NEW_BATTLE.inspectPause=false;
+        NEW_BATTLE.last=performance.now();
+    }
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.pauseClock){
+        SpinWarsAbilities.pauseClock(false);
+    }
 }
-function openBattleInspect(card){
-    const drop=card.querySelector(".hud-drop");
-    if(!drop) return;
-    card.classList.add("is-open");
-    card.setAttribute("aria-expanded","true");
-    drop.innerHTML=battleInspectBody(card.dataset.side);
-    drop.dataset.stamp=battleInspectStamp(battleInspectModel(card.dataset.side));
+function fillBattleInspectPanes(){
+    ["player","cpu"].forEach(side=>{
+        const pane=document.querySelector(`[data-inspect-side="${side}"]`);
+        if(!pane) return;
+        const who=side==="player"?"YOU":"CPU";
+        pane.innerHTML=`<small class="battle-inspect-who">${who}</small>${battleInspectBody(side)}`;
+        pane.dataset.stamp=battleInspectStamp(battleInspectModel(side));
+    });
+}
+function openBattleInspect(){
+    const root=document.getElementById("battleInspect");
+    const shell=document.querySelector(".battle-shell");
+    if(!root||!shell) return;
+    document.querySelectorAll(".battle-hud-card[data-side]").forEach(card=>{
+        card.classList.add("is-open");
+        card.setAttribute("aria-expanded","true");
+    });
+    fillBattleInspectPanes();
+    root.hidden=false;
+    root.setAttribute("aria-hidden","false");
+    shell.classList.add("is-inspect");
+    if(typeof NEW_BATTLE!=="undefined"){
+        NEW_BATTLE.inspectPause=true;
+    }
+    if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.pauseClock){
+        SpinWarsAbilities.pauseClock(true);
+    }
+    document.getElementById("battleInspectClose")?.focus();
 }
 let battleInspectAbort=null;
 function bindBattleInspect(){
@@ -2216,13 +2250,10 @@ function bindBattleInspect(){
     const signal=battleInspectAbort?.signal;
     document.querySelectorAll(".battle-hud-card[data-side]").forEach(card=>{
         card.setAttribute("aria-expanded","false");
-        card.querySelector(".hud-drop")?.addEventListener("click",event=>event.stopPropagation(),{signal});
         const toggle=event=>{
-            if(event.target.closest(".hud-drop")) return;
             event.preventDefault();
-            const willOpen=!card.classList.contains("is-open");
-            closeBattleInspect();
-            if(willOpen) openBattleInspect(card);
+            if(document.querySelector(".battle-shell.is-inspect")) return;
+            openBattleInspect();
         };
         card.addEventListener("click",toggle,{signal});
         card.addEventListener("keydown",event=>{
@@ -2231,31 +2262,35 @@ function bindBattleInspect(){
             toggle(event);
         },{signal});
     });
-    document.addEventListener("pointerdown",event=>{
-        if(event.target.closest(".battle-hud-card")) return;
+    document.getElementById("battleInspectClose")?.addEventListener("click",event=>{
+        event.preventDefault();
         closeBattleInspect();
     },{signal});
+    document.getElementById("battleInspectScrim")?.addEventListener("click",closeBattleInspect,{signal});
     document.addEventListener("keydown",event=>{
         if(event.key==="Escape") closeBattleInspect();
     },{signal});
 }
 function paintBattleInspect(){
-    document.querySelectorAll(".battle-hud-card.is-open[data-side]").forEach(card=>{
-        const drop=card.querySelector(".hud-drop");
-        if(!drop) return;
-        const model=battleInspectModel(card.dataset.side);
+    const root=document.getElementById("battleInspect");
+    if(!root||root.hidden) return;
+    ["player","cpu"].forEach(side=>{
+        const pane=root.querySelector(`[data-inspect-side="${side}"]`);
+        if(!pane) return;
+        const model=battleInspectModel(side);
         const stamp=battleInspectStamp(model);
-        if(drop.dataset.stamp!==stamp){
-            drop.innerHTML=battleInspectBody(card.dataset.side);
-            drop.dataset.stamp=stamp;
+        if(pane.dataset.stamp!==stamp){
+            const who=side==="player"?"YOU":"CPU";
+            pane.innerHTML=`<small class="battle-inspect-who">${who}</small>${battleInspectBody(side)}`;
+            pane.dataset.stamp=stamp;
             return;
         }
         (model.hud?.timers||[]).forEach(t=>{
-            const el=drop.querySelector(`[data-timer="${t.id||t.label}"] [data-live]`);
+            const el=pane.querySelector(`[data-timer="${t.id||t.label}"] [data-live]`);
             if(el) el.textContent=`${t.left.toFixed(1)}s`;
         });
         (model.rogue?.clocks||[]).forEach(c=>{
-            const row=drop.querySelector(`[data-clock="${c.id}"]`);
+            const row=pane.querySelector(`[data-clock="${c.id}"]`);
             if(!row) return;
             row.innerHTML=battleInspectLiveInner(c.label,c.state,c.left,c.note);
         });
@@ -3508,7 +3543,8 @@ const NEW_BATTLE = {
     cpu:null,
     railGeometry:null,
     killCam:null,
-    killCamPendingFinish:null
+    killCamPendingFinish:null,
+    inspectPause:false
 };
 window.Game=Game;
 window.NEW_BATTLE=NEW_BATTLE;
@@ -4896,6 +4932,20 @@ function renderNewBattle(){
             </div>
             <div id="launchDock"></div>
           </div>
+        <div id="battleInspect" class="battle-inspect" hidden aria-hidden="true">
+          <div class="battle-inspect-scrim" id="battleInspectScrim"></div>
+          <aside class="battle-inspect-sheet" role="dialog" aria-label="Bey stats">
+            <header class="battle-inspect-bar">
+              <b>STATS</b>
+              <span class="battle-inspect-pause">PAUSED</span>
+              <button type="button" class="battle-inspect-close" id="battleInspectClose">CLOSE</button>
+            </header>
+            <div class="battle-inspect-grid">
+              <section class="battle-inspect-pane" data-inspect-side="player"></section>
+              <section class="battle-inspect-pane" data-inspect-side="cpu"></section>
+            </div>
+          </aside>
+        </div>
       </main>`;
     updateBeyBattleVisual(p,"newPlayerBey","newPlayerBeySprite",0);
     updateBeyBattleVisual(c,"newCpuBey","newCpuBeySprite",0);
@@ -4976,6 +5026,7 @@ function devAwardSpinRound(winnerSide){
 }
 
 function finishNewBattle(winnerSide,finishType="Spin Finish"){
+    closeBattleInspect();
     if(NEW_BATTLE.finishPending) return;
 
     if(
@@ -5921,6 +5972,10 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
 
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
+    if(NEW_BATTLE.inspectPause){
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+        return;
+    }
 
     if(NEW_BATTLE.killCamPendingFinish){
         const cam=killCamState();

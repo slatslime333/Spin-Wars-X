@@ -98,7 +98,22 @@
     function other(side){return side==="player"?"cpu":"player";}
     function bey(side){return global.NEW_BATTLE?.[side];}
     function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-    function nowMs(){return performance.now();}
+    function nowMs(){
+        if(clockFreeze) return clockFreeze;
+        return performance.now()-clockHold;
+    }
+    let clockHold=0;
+    let clockFreeze=0;
+    function pauseClock(on){
+        if(on){
+            if(!clockFreeze) clockFreeze=performance.now()-clockHold;
+            return;
+        }
+        if(clockFreeze){
+            clockHold=performance.now()-clockFreeze;
+            clockFreeze=0;
+        }
+    }
     function battleLive(){
         return !!(global.NEW_BATTLE?.active && !global.Game?.battle?.finished);
     }
@@ -111,6 +126,7 @@
     }
     function blocked(s){
         if(!s||!battleLive()) return true;
+        if(global.NEW_BATTLE?.inspectPause) return true;
         if(s.railEngaged) return true;
         if(dropStalling(s)) return true;
         if(s.rpm<=0.001) return true;
@@ -1539,7 +1555,7 @@
         tryDash, tryAbility, forceFieldStorm, popup, grantCharge, abilityMax,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
-        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus, inspectHud,
+        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus, inspectHud, pauseClock,
         SWORD_R, STORM_R, QUAKE_R, IRON_MS, FREE_SPIN_CHANCE, KITS, META
     };
     if(typeof window!=="undefined"){
