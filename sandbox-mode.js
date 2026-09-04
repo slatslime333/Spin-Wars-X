@@ -8,9 +8,26 @@ const ANGLES=["Flat","Slight Tilt","Hard Tilt"];
 const TECHNIQUES=["Center","X-Rail","Direct Clash","Drop Launch"];
 const QUALITIES=["Horrible","Bad","Okay","Good","Perfect"];
 const VS_MODES=[
-    {id:"pve",label:"PLAYER VS CPU",short:"P v CPU"},
-    {id:"pvp",label:"PLAYER VS PLAYER",short:"P v P"},
-    {id:"cvc",label:"CPU VS CPU",short:"CPU v CPU"}
+    {id:"pve",label:"PLAYER VS CPU",short:"P v CPU",kicker:"YOU DRIVE",blurb:"You launch one Bey. The CPU launches the other."},
+    {id:"pvp",label:"PLAYER VS PLAYER",short:"P v P",kicker:"TWO DOCKS",blurb:"P1 left dock · Space / E. P2 right dock · Enter / Shift."},
+    {id:"cvc",label:"CPU VS CPU",short:"CPU v CPU",kicker:"WATCH",blurb:"Both Beys on CPU brains. No combat buttons. Sit back."}
+];
+const KIT_PRESETS=[
+    {id:"",label:"KIT PRESET"},
+    {id:"attack",label:"ATTACK (Rush / Flat)"},
+    {id:"tank",label:"TANK (Ball / Needle)"},
+    {id:"stamina",label:"STAMINA (Orb / Hexa)"},
+    {id:"balance",label:"BALANCE (Point / Level)"},
+    {id:"gold",label:"GOLD BLADES"},
+    {id:"random",label:"RANDOM KIT"}
+];
+const LAUNCH_PRESETS=[
+    {id:"",label:"BOTH LAUNCHES"},
+    {id:"Center",label:"BOTH CENTER"},
+    {id:"X-Rail",label:"BOTH X-RAIL"},
+    {id:"Direct Clash",label:"BOTH CLASH"},
+    {id:"Drop Launch",label:"BOTH DROP"},
+    {id:"mirror",label:"COPY LEFT → RIGHT"}
 ];
 
 function clampVs(id,beys){
@@ -20,10 +37,13 @@ function clampVs(id,beys){
     return "pve";
 }
 function defaultLaunch(){
-    return {angle:"Flat",technique:"Center",quality:"Okay",autoQuality:false};
+    return {angle:"Flat",technique:"Center",quality:"Okay",autoQuality:false,lock:false};
 }
 function emptySide(){
     return {blade:null,ratchet:null,bit:null,launch:defaultLaunch()};
+}
+function emptySession(){
+    return {score:{player:0,cpu:0},log:[],round:0};
 }
 function ensure(){
     if(!Game.sandbox){
@@ -33,7 +53,8 @@ function ensure(){
             infiniteCharges:true,
             autoRelaunch:true,
             player:emptySide(),
-            cpu:emptySide()
+            cpu:emptySide(),
+            session:emptySession()
         };
     }
     const s=Game.sandbox;
@@ -41,8 +62,11 @@ function ensure(){
     s.vs=clampVs(s.vs,s.beys);
     s.player=s.player||emptySide();
     s.cpu=s.cpu||emptySide();
-    s.player.launch=s.player.launch||defaultLaunch();
-    s.cpu.launch=s.cpu.launch||defaultLaunch();
+    s.player.launch=Object.assign(defaultLaunch(),s.player.launch||{});
+    s.cpu.launch=Object.assign(defaultLaunch(),s.cpu.launch||{});
+    s.session=s.session||emptySession();
+    s.session.score=s.session.score||{player:0,cpu:0};
+    s.session.log=Array.isArray(s.session.log)?s.session.log:[];
     if(s.infiniteCharges==null) s.infiniteCharges=true;
     if(s.autoRelaunch==null) s.autoRelaunch=true;
     return s;
@@ -50,6 +74,7 @@ function ensure(){
 function isActive(){return Game.mode==="sandbox";}
 function isSolo(){return isActive() && ensure().beys===1;}
 function vsMode(){return isActive()?ensure().vs:"pve";}
+function vsMeta(id){return VS_MODES.find(m=>m.id===(id||ensure().vs))||VS_MODES[0];}
 function sideIsHuman(side){
     if(!isActive()) return side==="player";
     const vs=ensure().vs;
@@ -73,7 +98,11 @@ function labels(){
 }
 function who(side){return labels()[side==="cpu"?"cpu":"player"];}
 
-function pick(list){return list[Math.floor(Math.random()*list.length)];}
+function pick(list){
+    const src=Array.isArray(list)?list.filter(Boolean):[];
+    if(!src.length) return null;
+    return src[Math.floor(Math.random()*src.length)];
+}
 function fillRandom(side,avoid){
     const s=ensure()[side];
     const blades=typeof playableBlades==="function"?playableBlades():[];
@@ -83,10 +112,86 @@ function fillRandom(side,avoid){
     s.ratchet=pick(rats.filter(r=>r && r.name!==avoid?.ratchet?.name))||pick(rats)||s.ratchet;
     s.bit=pick(bits.filter(b=>b && b.name!==avoid?.bit?.name))||pick(bits)||s.bit;
 }
+function applyKitPreset(side,kind){
+    const pack=ensure()[side];
+    const blades=typeof playableBlades==="function"?playableBlades():[];
+    const rats=typeof RATCHETS!=="undefined"?RATCHETS:[];
+    const bits=typeof selectableBits==="function"?selectableBits():[];
+    const byType=(t)=>blades.filter(b=>String(b.type).toLowerCase()===t);
+    const bitNames=(names)=>bits.filter(b=>names.includes(b.name));
+    if(kind==="random"){ fillRandom(side,ensure()[side==="player"?"cpu":"player"]); return; }
+    if(kind==="attack"){
+        pack.blade=pick(byType("attack"))||pick(blades);
+        pack.bit=pick(bitNames(["Rush","Low Rush","Flat","Low Flat"]))||pick(bits);
+        pack.ratchet=pick(rats.filter(r=>r.height===60||r.height===70))||pick(rats);
+        return;
+    }
+    if(kind==="tank"){
+        pack.blade=pick(byType("defense"))||pick(blades);
+        pack.bit=pick(bitNames(["Ball","Needle","Hexa","Wedge"]))||pick(bits);
+        pack.ratchet=pick(rats.filter(r=>r.height===60))||pick(rats);
+        return;
+    }
+    if(kind==="stamina"){
+        pack.blade=pick(byType("stamina"))||pick(byType("balance"))||pick(blades);
+        pack.bit=pick(bitNames(["Orb","Ball","Hexa","Needle"]))||pick(bits);
+        pack.ratchet=pick(rats.filter(r=>r.height===60))||pick(rats);
+        return;
+    }
+    if(kind==="balance"){
+        pack.blade=pick(byType("balance"))||pick(blades);
+        pack.bit=pick(bitNames(["Point","Level","Kick"]))||pick(bits);
+        pack.ratchet=pick(rats.filter(r=>r.height===60||r.height===70))||pick(rats);
+        return;
+    }
+    if(kind==="gold"){
+        pack.blade=pick(blades.filter(b=>String(b.tier).toLowerCase()==="gold"))||pick(blades);
+        pack.bit=pick(bits);
+        pack.ratchet=pick(rats);
+    }
+}
+function applyLaunchPreset(kind){
+    const s=ensure();
+    const set=(side,tech)=>{
+        const L=s[side].launch;
+        L.technique=tech;
+        L.autoQuality=false;
+        L.lock=true;
+        if(!L.angle) L.angle="Flat";
+        if(!L.quality) L.quality="Okay";
+    };
+    if(kind==="mirror"){
+        s.cpu.launch=Object.assign(defaultLaunch(),s.player.launch,{lock:true});
+        return;
+    }
+    if(TECHNIQUES.includes(kind)){
+        set("player",kind);
+        set("cpu",kind);
+    }
+}
 function fillIfEmpty(){
     const s=ensure();
     if(!s.player.blade||!s.player.ratchet||!s.player.bit) fillRandom("player",s.cpu);
     if(!s.cpu.blade||!s.cpu.ratchet||!s.cpu.bit) fillRandom("cpu",s.player);
+}
+function applyLaunchToGame(from,to,cpuBrain){
+    to.blade=from.blade;
+    to.ratchet=from.ratchet;
+    to.bit=from.bit;
+    to.spin=from.blade?.spin||"Right";
+    const q=from.launch.autoQuality?null:from.launch.quality;
+    to.launch={
+        angle:from.launch.angle||"Flat",
+        technique:from.launch.technique||"Center",
+        quality:q,
+        autoQuality:!!from.launch.autoQuality
+    };
+    if(cpuBrain && !from.launch.lock && typeof getAutomaticLaunchPlan==="function"){
+        const plan=getAutomaticLaunchPlan(to===Game.cpu?"cpu":"player");
+        to.launch.technique=plan.technique;
+        to.launch.angle=plan.angle;
+        if(from.launch.autoQuality || !from.launch.quality) to.launch.quality=plan.quality;
+    }
 }
 function syncToGame(){
     const s=ensure();
@@ -95,45 +200,17 @@ function syncToGame(){
     Game.quickMatch=false;
     Game.player=Game.player||{};
     Game.cpu=Game.cpu||{};
-    const apply=(from,to)=>{
-        to.blade=from.blade;
-        to.ratchet=from.ratchet;
-        to.bit=from.bit;
-        to.spin=from.blade?.spin||"Right";
-        const q=from.launch.autoQuality?null:from.launch.quality;
-        to.launch={
-            angle:from.launch.angle||"Flat",
-            technique:from.launch.technique||"Center",
-            quality:q,
-            autoQuality:!!from.launch.autoQuality
-        };
-    };
-    apply(s.player,Game.player);
-    apply(s.cpu,Game.cpu);
+    applyLaunchToGame(s.player,Game.player,sideIsCpu("player"));
+    applyLaunchToGame(s.cpu,Game.cpu,sideIsCpu("cpu"));
     if(typeof syncComboStats==="function"){
         syncComboStats("player");
         syncComboStats("cpu");
     }
-    if(sideIsCpu("player") && typeof getAutomaticLaunchPlan==="function"){
-        const plan=getAutomaticLaunchPlan("player");
-        Game.player.launch.technique=plan.technique;
-        Game.player.launch.angle=plan.angle;
-        if(s.player.launch.autoQuality || !s.player.launch.quality) Game.player.launch.quality=plan.quality;
-    }
-    if(sideIsCpu("cpu") && typeof getAutomaticLaunchPlan==="function"){
-        Game.cpu.lockedLaunchPlan=null;
-        const plan=getAutomaticLaunchPlan("cpu");
-        Game.cpu.launch.technique=plan.technique;
-        Game.cpu.launch.angle=plan.angle;
-        if(s.cpu.launch.autoQuality || !s.cpu.launch.quality) Game.cpu.launch.quality=plan.quality;
-        Game.cpu.lockedLaunchPlan={technique:plan.technique,angle:plan.angle,quality:Game.cpu.launch.quality};
-    }else{
-        Game.cpu.lockedLaunchPlan={
-            technique:Game.cpu.launch.technique||"Center",
-            angle:Game.cpu.launch.angle||"Flat",
-            quality:Game.cpu.launch.quality||"Okay"
-        };
-    }
+    Game.cpu.lockedLaunchPlan={
+        technique:Game.cpu.launch.technique||"Center",
+        angle:Game.cpu.launch.angle||"Flat",
+        quality:Game.cpu.launch.quality||"Okay"
+    };
 }
 
 function comboOf(side){
@@ -143,26 +220,53 @@ function comboOf(side){
     return raw||{stats:{},ovr:60,meta:60};
 }
 
+function enterMode(vs){
+    const s=ensure();
+    if(vs==="pvp") s.beys=2;
+    s.vs=clampVs(vs,s.beys);
+    showLab();
+}
+
 function showLanding(){
     Game.mode="sandbox";
     Game.screen="sandboxLanding";
-    ensure();
+    const s=ensure();
+    const logN=s.session.log.length;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home sandbox-landing">
         ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
         ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX LAB",tag:"Build anything. Rip it. Finishes do not end the night."}):""}
-        <nav class="home-doors rogue-doors" aria-label="Sandbox">
-            <button class="home-door rip" id="sandboxOpenLab" type="button">
-                <span class="home-door-kicker">GARAGE</span>
-                <b>OPEN LAB</b>
-                <small>1 Bey or 2. PvE, PvP, or CPU vs CPU.</small>
-            </button>
+        <nav class="home-doors rogue-doors sandbox-landing-doors" aria-label="Sandbox">
+            <div class="home-door-row">
+                ${VS_MODES.map(m=>`<button class="home-door ${m.id==="cvc"?"play":"rip"}" type="button" data-enter-vs="${m.id}">
+                    <span class="home-door-kicker">${m.kicker}</span>
+                    <b>${m.label}</b>
+                    <small>${m.blurb}</small>
+                </button>`).slice(0,2).join("")}
+            </div>
+            <div class="home-door-row">
+                <button class="home-door play" type="button" data-enter-vs="cvc">
+                    <span class="home-door-kicker">${VS_MODES[2].kicker}</span>
+                    <b>${VS_MODES[2].label}</b>
+                    <small>${VS_MODES[2].blurb}</small>
+                </button>
+                <button class="home-door rip" id="sandboxOpenLab" type="button">
+                    <span class="home-door-kicker">GARAGE</span>
+                    <b>OPEN LAB</b>
+                    <small>Keep ${vsMeta(s.vs).short}. Change kits, then rip.</small>
+                </button>
+            </div>
+            <button class="home-help" id="sandboxSession" type="button">SESSION LOG${logN?` · ${logN}`:""}</button>
             <button class="home-help" id="sandboxHelp" type="button">How the lab works</button>
         </nav>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
+    document.querySelectorAll("[data-enter-vs]").forEach(btn=>{
+        btn.onclick=()=>enterMode(btn.dataset.enterVs);
+    });
     document.getElementById("sandboxOpenLab").onclick=()=>showLab();
+    document.getElementById("sandboxSession").onclick=()=>showSession();
     document.getElementById("sandboxHelp").onclick=()=>showHelp();
 }
 
@@ -181,18 +285,60 @@ function showHelp(){
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>Open Lab is the garage. Pick 1 Bey to watch a single kit spin, or 2 Beys to clash. Then pick who is driving: Player vs CPU, Player vs Player, or CPU vs CPU.</p>
-            <p>Each side has its own blade, ratchet, and bit from the full garage. CHANGE opens a picker — filter by tier, tap a part, you are back on the lab. RANDOM rolls that side. SWAP SIDES flips the kits.</p>
-            <p>Launches are set on the lab, not behind a quality ROLL. Technique, angle, and quality (or AUTO quality) for every human side. CPU sides pick like the live CPU brain. LET IT RIP dumps you in the bowl.</p>
-            <p>A Spin, Over, or Xtreme prints who scored and how many points. The scoreboard counts for the session. It never ends the match. AUTO RELAUNCH rips the same kits again. LEAVE is the only exit.</p>
-            <p>Player vs Player: P1 uses DASH / kit on the left (Space / E). P2 uses the right dock (Enter / Shift). CPU vs CPU is a watch mode — no combat buttons. Tap YOU or CPU in any live fight, including this lab, for a paused stat sheet.</p>
-            <p>Infinite charges stay on unless you flip them off. Ability kits refill every relaunch either way.</p>
+            <p><strong>Player vs CPU.</strong> You drive the left Bey. The CPU drives the right. Same dash / kit as a live fight.</p>
+            <p><strong>Player vs Player.</strong> Two human docks. P1 is left (Space / E). P2 is right (Enter / Shift). Needs two Beys.</p>
+            <p><strong>CPU vs CPU.</strong> Watch mode. Both brains run. Combat buttons hide. 1 Bey + CPU is a solo spin with the CPU piloting.</p>
+            <p>OPEN LAB is the garage. 1 Bey watches a single kit. 2 Beys clash. Each side has the full blade / ratchet / bit pool. CHANGE opens a picker with tier, type, height filters. PRESETS roll an Attack, Tank, Stamina, Balance, or Gold kit. BOTH LAUNCHES sets Center, X-Rail, Clash, or Drop on both sides.</p>
+            <p>Human sides use the launch dropdowns. CPU sides pick like the live CPU unless you tick LOCK LAUNCH. AUTO quality still rolls each rip.</p>
+            <p>A Spin, Over, or Xtreme prints who scored and how many points. The session log keeps that list. It never ends the match. AUTO RELAUNCH rips the same kits again. LEAVE is the only exit.</p>
+            <p>Infinite charges stay on unless you flip them off. Tap a name in any live fight, including this lab, for a paused stat sheet.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
 }
 
-function launchSelect(side,key,options,value,autoKey){
+function showSession(){
+    Game.mode="sandbox";
+    Game.screen="sandboxSession";
+    const s=ensure();
+    const lab=labels();
+    const rows=s.session.log.length
+        ? s.session.log.map(entry=>`<li><b>${entry.line}</b><small>${vsMeta(entry.vs).short}${entry.beys===1?" · SOLO":""}</small></li>`).join("")
+        : `<li class="sandbox-empty-row">No finishes yet. Rip something.</li>`;
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background"></div>
+    <main class="menu rogue-help sandbox-session">
+        <div class="selection-header">
+            <div class="selection-icon">X</div>
+            <div>
+                <span class="eyebrow">SANDBOX</span>
+                <h1>SESSION LOG</h1>
+                <p>Counts for the night. Never first to 7.</p>
+            </div>
+        </div>
+        <section class="sandbox-session-score" aria-label="Session score">
+            <div><small>${lab.player}</small><b>${s.session.score.player||0}</b></div>
+            <span>VS</span>
+            <div><small>${lab.cpu}</small><b>${s.session.score.cpu||0}</b></div>
+        </section>
+        <section class="menu-card rogue-help-card">
+            <ol class="sandbox-log">${rows}</ol>
+        </section>
+        <div class="sandbox-actions">
+            <button type="button" class="menu-btn silver" id="sandboxResetScore">RESET SCORE</button>
+            <button type="button" class="rip-btn compact" id="sandboxSessionLab">BACK TO LAB</button>
+        </div>
+    </main>`;
+    document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
+    document.getElementById("sandboxResetScore").onclick=()=>{
+        s.session=emptySession();
+        if(Game.battle?.score) Game.battle.score={player:0,cpu:0};
+        showSession();
+    };
+    document.getElementById("sandboxSessionLab").onclick=()=>showLab();
+}
+
+function launchSelect(side,key,options,autoKey){
     const s=ensure()[side].launch;
     const opts=options.map(v=>`<option value="${v}" ${s[key]===v?"selected":""}>${v}</option>`).join("");
     const extra=autoKey
@@ -212,9 +358,11 @@ function garageColumn(side){
     const ovr=combo?Math.round(combo.ovr):"—";
     const sprite=typeof bladeSpritePath==="function"?bladeSpritePath(pack.blade):"";
     const hidden=s.beys===1 && side==="cpu";
-    const driver=sideIsHuman(side)?"HUMAN":"CPU";
+    const human=sideIsHuman(side);
+    const driver=human?"HUMAN":"CPU";
     const tag=who(side);
-    return `<section class="sandbox-col ${side}${hidden?" is-ghost":""}" data-side="${side}">
+    const lock=!!pack.launch.lock;
+    return `<section class="sandbox-col ${side}${hidden?" is-ghost":""}${human?"":" is-cpu"}" data-side="${side}">
         <header class="sandbox-col-head">
             <span class="sandbox-who">${tag}</span>
             <small>${driver}</small>
@@ -232,10 +380,17 @@ function garageColumn(side){
             <button type="button" class="menu-btn silver" data-pick="${side}" data-part="ratchet">RATCHET</button>
             <button type="button" class="menu-btn silver" data-pick="${side}" data-part="bit">BIT</button>
         </div>
+        <label class="sandbox-field"><span>KIT PRESET</span>
+            <select data-kit-preset="${side}">
+                ${KIT_PRESETS.map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}
+            </select>
+        </label>
         <div class="sandbox-launch">
-            ${launchSelect(side,"technique",TECHNIQUES,pack.launch.technique)}
-            ${launchSelect(side,"angle",ANGLES,pack.launch.angle)}
-            ${launchSelect(side,"quality",QUALITIES,pack.launch.quality,"autoQuality")}
+            ${launchSelect(side,"technique",TECHNIQUES)}
+            ${launchSelect(side,"angle",ANGLES)}
+            ${launchSelect(side,"quality",QUALITIES,"autoQuality")}
+            ${human?"":`<label class="sandbox-check"><input type="checkbox" data-lock="${side}" ${lock?"checked":""}> Lock launch</label>`}
+            ${human?"":lock?`<p class="sandbox-hint">CPU uses these dropdowns.</p>`:`<p class="sandbox-hint">CPU picks launch unless you lock it.</p>`}
         </div>
         <div class="sandbox-part-btns">
             <button type="button" class="menu-btn silver" data-rand="${side}">RANDOM</button>
@@ -248,30 +403,40 @@ function showLab(){
     Game.screen="sandboxLab";
     const s=ensure();
     fillIfEmpty();
+    const lab=labels();
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="sandbox-lab">
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX LAB",tag:"Kits, launches, then the bowl."}):""}
+        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX LAB",tag:vsMeta(s.vs).blurb}):""}
         <section class="sandbox-toolbar">
             <div class="sandbox-seg" role="group" aria-label="Bey count">
                 <button type="button" class="sandbox-chip ${s.beys===1?"on":""}" data-beys="1">1 BEY</button>
                 <button type="button" class="sandbox-chip ${s.beys===2?"on":""}" data-beys="2">2 BEYS</button>
             </div>
-            <label class="sandbox-field sandbox-vs-field"><span>CONTROL</span>
-                <select id="sandboxVs">
-                    ${VS_MODES.map(m=>`<option value="${m.id}" ${s.vs===m.id?"selected":""} ${s.beys===1&&m.id==="pvp"?"disabled":""}>${m.label}</option>`).join("")}
-                </select>
-            </label>
+            <button type="button" class="rip-btn compact" id="sandboxRipTop">LET IT RIP</button>
+        </section>
+        <section class="sandbox-toolbar sandbox-vs-bar" aria-label="Who is driving">
+            ${VS_MODES.map(m=>`<button type="button" class="sandbox-chip sandbox-vs-chip ${s.vs===m.id?"on":""}" data-vs="${m.id}" ${s.beys===1&&m.id==="pvp"?"disabled":""}>${m.label}</button>`).join("")}
         </section>
         <section class="sandbox-toggles">
             <label class="sandbox-check"><input type="checkbox" id="sandboxInfinite" ${s.infiniteCharges?"checked":""}> Infinite charges</label>
             <label class="sandbox-check"><input type="checkbox" id="sandboxAutoRip" ${s.autoRelaunch?"checked":""}> Auto relaunch</label>
+            <label class="sandbox-field sandbox-tools-field"><span>BOTH LAUNCHES</span>
+                <select id="sandboxLaunchPreset">
+                    ${LAUNCH_PRESETS.map(p=>`<option value="${p.id}">${p.label}</option>`).join("")}
+                </select>
+            </label>
         </section>
+        <button type="button" class="sandbox-session-bar" id="sandboxOpenSession">
+            <span>${lab.player} ${s.session.score.player||0} · ${lab.cpu} ${s.session.score.cpu||0}</span>
+            <small>${s.session.log.length?s.session.log[0].line:"SESSION · tap for log"}</small>
+        </button>
         <section class="sandbox-garages">
             ${garageColumn("player")}
             ${s.beys===2?`<div class="vs-stamp" aria-hidden="true">VS</div>`:""}
             ${garageColumn("cpu")}
         </section>
+        <p class="sandbox-foot-note">Scoring never ends the lab. LEAVE on the HUD is the only way out.</p>
         <div class="sandbox-actions">
             <button type="button" class="menu-btn silver" id="sandboxSwap">SWAP SIDES</button>
             <button type="button" class="menu-btn silver" id="sandboxRandAll">RANDOM BOTH</button>
@@ -291,9 +456,12 @@ function bindLab(){
             showLab();
         };
     });
-    document.getElementById("sandboxVs")?.addEventListener("change",e=>{
-        s.vs=clampVs(e.target.value,s.beys);
-        showLab();
+    document.querySelectorAll("[data-vs]").forEach(btn=>{
+        btn.onclick=()=>{
+            if(btn.disabled) return;
+            s.vs=clampVs(btn.dataset.vs,s.beys);
+            showLab();
+        };
     });
     document.getElementById("sandboxInfinite")?.addEventListener("change",e=>{
         s.infiniteCharges=!!e.target.checked;
@@ -301,6 +469,13 @@ function bindLab(){
     document.getElementById("sandboxAutoRip")?.addEventListener("change",e=>{
         s.autoRelaunch=!!e.target.checked;
     });
+    document.getElementById("sandboxLaunchPreset")?.addEventListener("change",e=>{
+        const v=e.target.value;
+        if(!v) return;
+        applyLaunchPreset(v);
+        showLab();
+    });
+    document.getElementById("sandboxOpenSession")?.addEventListener("click",()=>showSession());
     document.querySelectorAll("[data-pick]").forEach(btn=>{
         btn.onclick=()=>openPicker(btn.dataset.pick,btn.dataset.part);
     });
@@ -308,6 +483,13 @@ function bindLab(){
         btn.onclick=()=>{
             const side=btn.dataset.rand;
             fillRandom(side,ensure()[side==="player"?"cpu":"player"]);
+            showLab();
+        };
+    });
+    document.querySelectorAll("[data-kit-preset]").forEach(sel=>{
+        sel.onchange=()=>{
+            if(!sel.value) return;
+            applyKitPreset(sel.dataset.kitPreset,sel.value);
             showLab();
         };
     });
@@ -324,6 +506,12 @@ function bindLab(){
             launch[key]=sel.value;
         };
     });
+    document.querySelectorAll("[data-lock]").forEach(box=>{
+        box.onchange=()=>{
+            ensure()[box.dataset.lock].launch.lock=!!box.checked;
+            showLab();
+        };
+    });
     document.getElementById("sandboxSwap")?.addEventListener("click",()=>{
         const a=s.player, b=s.cpu;
         s.player=b; s.cpu=a;
@@ -335,47 +523,107 @@ function bindLab(){
         showLab();
     });
     document.getElementById("sandboxRip")?.addEventListener("click",()=>rip());
+    document.getElementById("sandboxRipTop")?.addEventListener("click",()=>rip());
 }
 
-function pickerPool(part,tier){
+function uniqueSorted(list){
+    return [...new Set(list.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+}
+function pickerPool(part,filters){
+    filters=filters||{};
     if(part==="blade"){
-        const all=typeof playableBlades==="function"?playableBlades():[];
-        if(!tier||tier==="all") return all;
-        return all.filter(b=>String(b.tier).toLowerCase()===tier);
+        let all=typeof playableBlades==="function"?playableBlades():[];
+        if(filters.tier && filters.tier!=="all") all=all.filter(b=>String(b.tier).toLowerCase()===filters.tier);
+        if(filters.type && filters.type!=="all") all=all.filter(b=>String(b.type).toLowerCase()===filters.type);
+        return all;
     }
-    if(part==="ratchet") return typeof RATCHETS!=="undefined"?RATCHETS:[];
-    return typeof selectableBits==="function"?selectableBits():[];
+    if(part==="ratchet"){
+        let all=typeof RATCHETS!=="undefined"?RATCHETS.slice():[];
+        if(filters.height && filters.height!=="all") all=all.filter(r=>String(r.height)===String(filters.height));
+        if(filters.sides && filters.sides!=="all") all=all.filter(r=>String(r.number)===String(filters.sides));
+        return all;
+    }
+    let bits=typeof selectableBits==="function"?selectableBits():[];
+    if(filters.type && filters.type!=="all") bits=bits.filter(b=>String(b.type).toLowerCase()===filters.type);
+    return bits;
+}
+function pickerFilterBar(part){
+    if(part==="blade"){
+        return `<div class="sandbox-picker-filters">
+            <label class="sandbox-field"><span>TIER</span>
+                <select id="sandboxPickerTier">
+                    <option value="all">ALL</option>
+                    <option value="bronze">BRONZE</option>
+                    <option value="silver">SILVER</option>
+                    <option value="gold">GOLD</option>
+                </select>
+            </label>
+            <label class="sandbox-field"><span>TYPE</span>
+                <select id="sandboxPickerType">
+                    <option value="all">ALL</option>
+                    <option value="attack">ATTACK</option>
+                    <option value="defense">DEFENSE</option>
+                    <option value="stamina">STAMINA</option>
+                    <option value="balance">BALANCE</option>
+                </select>
+            </label>
+        </div>`;
+    }
+    if(part==="bit"){
+        const types=uniqueSorted((typeof selectableBits==="function"?selectableBits():[]).map(b=>b.type));
+        return `<div class="sandbox-picker-filters">
+            <label class="sandbox-field"><span>TYPE</span>
+                <select id="sandboxPickerType">
+                    <option value="all">ALL</option>
+                    ${types.map(t=>`<option value="${String(t).toLowerCase()}">${String(t).toUpperCase()}</option>`).join("")}
+                </select>
+            </label>
+        </div>`;
+    }
+    const rats=typeof RATCHETS!=="undefined"?RATCHETS:[];
+    const heights=uniqueSorted(rats.map(r=>r.height));
+    const sides=uniqueSorted(rats.map(r=>r.number));
+    return `<div class="sandbox-picker-filters">
+        <label class="sandbox-field"><span>HEIGHT</span>
+            <select id="sandboxPickerHeight">
+                <option value="all">ALL</option>
+                ${heights.map(h=>`<option value="${h}">${h}</option>`).join("")}
+            </select>
+        </label>
+        <label class="sandbox-field"><span>SIDES</span>
+            <select id="sandboxPickerSides">
+                <option value="all">ALL</option>
+                ${sides.map(n=>`<option value="${n}">${n}</option>`).join("")}
+            </select>
+        </label>
+    </div>`;
 }
 
 function openPicker(side,part){
     const s=ensure();
+    document.getElementById("sandboxPicker")?.remove();
     const overlay=document.createElement("div");
     overlay.className="sandbox-picker";
     overlay.id="sandboxPicker";
     const title=part.toUpperCase();
-    const tierFilter=part==="blade"
-        ? `<label class="sandbox-field"><span>TIER</span>
-            <select id="sandboxPickerTier">
-                <option value="all">ALL</option>
-                <option value="bronze">BRONZE</option>
-                <option value="silver">SILVER</option>
-                <option value="gold">GOLD</option>
-            </select>
-           </label>`
-        : "";
     overlay.innerHTML=`<div class="sandbox-picker-sheet">
         <header>
             <b>PICK ${title} · ${who(side)}</b>
             <button type="button" class="menu-btn silver" id="sandboxPickerClose">BACK</button>
         </header>
-        ${tierFilter}
+        ${pickerFilterBar(part)}
         <div class="sandbox-picker-grid" id="sandboxPickerGrid"></div>
     </div>`;
     document.body.appendChild(overlay);
+    const readFilters=()=>({
+        tier:document.getElementById("sandboxPickerTier")?.value||"all",
+        type:document.getElementById("sandboxPickerType")?.value||"all",
+        height:document.getElementById("sandboxPickerHeight")?.value||"all",
+        sides:document.getElementById("sandboxPickerSides")?.value||"all"
+    });
     const render=()=>{
-        const tier=document.getElementById("sandboxPickerTier")?.value||"all";
         const grid=document.getElementById("sandboxPickerGrid");
-        const pool=pickerPool(part,tier);
+        const pool=pickerPool(part,readFilters());
         grid.innerHTML=pool.map((item,i)=>{
             const sprite=part==="blade"?(typeof bladeSpritePath==="function"?bladeSpritePath(item):"")
                 :part==="bit"?(typeof bitSpritePath==="function"?bitSpritePath(item):"")
@@ -399,7 +647,7 @@ function openPicker(side,part){
     };
     document.getElementById("sandboxPickerClose").onclick=()=>overlay.remove();
     overlay.addEventListener("click",e=>{if(e.target===overlay) overlay.remove();});
-    document.getElementById("sandboxPickerTier")?.addEventListener("change",render);
+    overlay.querySelectorAll("select").forEach(sel=>sel.addEventListener("change",render));
     render();
 }
 
@@ -407,7 +655,12 @@ function rip(){
     const s=ensure();
     fillIfEmpty();
     syncToGame();
-    Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
+    s.session.round=(s.session.round||0)+1;
+    Game.battle={
+        score:{player:s.session.score.player||0,cpu:s.session.score.cpu||0},
+        round:s.session.round,
+        matchStarted:false
+    };
     Game.player.launch.setupStage="launch";
     if(typeof SpinWarsAbilities!=="undefined") SpinWarsAbilities.resetMatch();
     if(typeof startNewBattle==="function") startNewBattle();
@@ -421,13 +674,14 @@ function decorateBattle(){
     if(pWho) pWho.textContent=lab.player;
     if(cWho) cWho.textContent=lab.cpu;
     const ft=document.querySelector(".battle-score-ft");
-    if(ft) ft.textContent=isSolo()?"SOLO · SANDBOX":`${VS_MODES.find(m=>m.id===ensure().vs)?.short||"LAB"} · SANDBOX`;
+    if(ft) ft.textContent=isSolo()?"SOLO · SANDBOX":`${vsMeta().short} · SANDBOX`;
     const leave=document.getElementById("forfeitMatchBtn");
     if(leave) leave.textContent="LEAVE";
     if(isSolo()){
         document.querySelector(".battle-hud-cpu")?.classList.add("is-ghost");
         document.getElementById("newCpuBey")?.setAttribute("opacity","0");
-        document.getElementById("newCpuBeySprite")?.style && (document.getElementById("newCpuBeySprite").style.display="none");
+        const spr=document.getElementById("newCpuBeySprite");
+        if(spr) spr.style.display="none";
     }
 }
 
@@ -462,7 +716,19 @@ function finishCopy(winnerSide,finishType,points){
 
 function afterFinish(winnerSide,finishType,points){
     const s=ensure();
+    const sc=Game.battle?.score||{player:0,cpu:0};
+    s.session.score.player=sc.player||0;
+    s.session.score.cpu=sc.cpu||0;
     const line=finishCopy(winnerSide,finishType,points);
+    s.session.log.unshift({
+        line,
+        type:String(finishType||"Spin"),
+        winner:winnerSide,
+        points:Number(points)||1,
+        vs:s.vs,
+        beys:s.beys
+    });
+    if(s.session.log.length>40) s.session.log.length=40;
     const stadium=document.getElementById("newStadium");
     if(stadium){
         const note=document.createElement("div");
@@ -479,7 +745,9 @@ function relaunch(){
     const s=ensure();
     syncToGame();
     Game.battle=Game.battle||{score:{player:0,cpu:0},round:1};
+    Game.battle.score={player:s.session.score.player||0,cpu:s.session.score.cpu||0};
     Game.battle.round=(Game.battle.round||0)+1;
+    s.session.round=Game.battle.round;
     Game.battle.finished=false;
     Game.battle.matchFinished=false;
     NEW_BATTLE.finishPending=false;
@@ -585,7 +853,7 @@ function mountInspect(){
 
 global.SpinWarsSandbox={
     isActive,isSolo,vsMode,sideIsHuman,sideIsCpu,labels,who,
-    showLanding,showLab,showHelp,rip,leave,relaunch,
+    showLanding,showLab,showHelp,showSession,rip,leave,relaunch,
     decorateBattle,prepareGhost,skipGhostPhysics,afterFinish,finishCopy,
     mountInspect,openInspect,closeInspect,
     ensure,syncToGame
