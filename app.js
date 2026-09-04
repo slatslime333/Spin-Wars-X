@@ -2443,20 +2443,23 @@ function generateCPUCombo(force=false){
         Defense:[9,7,6,5],
         Stamina:[7,9,6,5]
     };
+    const league=String(Game.mode||"");
+    const solve=league==="gold"?1:league==="silver"?0.55:league==="bronze"?0.28:1;
+    const committed=!!(Game.quickMatch || league==="custom" || Math.random()<solve);
     while(guard++<18){
         blade=blades[Math.floor(Math.random()*blades.length)]||null;
         if(!blade) continue;
         const role=String(blade.type||"Balance");
         const bits=selectableBits();
         const prefer=(roleBits[role]||["Point","Level","Hexa","Kick"]).filter(n=>n!==playerBit?.name);
-        const bitPool=bits.filter(b=>prefer.includes(b.name));
-        const bitSource=bitPool.length?bitPool:bits.filter(b=>b.name!==playerBit?.name);
+        const bitPool=committed?bits.filter(b=>prefer.includes(b.name)):[];
+        const bitSource=(committed&&bitPool.length?bitPool:bits.filter(b=>b.name!==playerBit?.name));
         bit=(bitSource.length?bitSource:bits)[Math.floor(Math.random()*(bitSource.length?bitSource.length:bits.length))]||null;
         const nums=roleRats[role]||[3,5,7,9];
-        const height=role==="Attack"
-            ? (Math.random()<0.55?60:70)
-            : 60;
-        const rats=RATCHETS.filter(r=>Number(r.height)===height && nums.includes(Number(r.number)) && r.name!==playerRatchet?.name);
+        const height=committed
+            ? (role==="Attack"?(Math.random()<0.55?60:70):60)
+            : (Math.random()<0.55?60:(Math.random()<0.7?70:80));
+        const rats=RATCHETS.filter(r=>Number(r.height)===height && (!committed || nums.includes(Number(r.number))) && r.name!==playerRatchet?.name);
         const ratSource=rats.length?rats:RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
         ratchet=(ratSource.length?ratSource:RATCHETS)[Math.floor(Math.random()*(ratSource.length?ratSource.length:RATCHETS.length))]||null;
         if(blade && ratchet && bit && calculateComboStats(blade,ratchet,bit)) break;
@@ -4248,9 +4251,19 @@ function devAwardSpinRound(winnerSide){
     Game.battle.matchFinished=true;
     Game.battle.finished=true;
     Game.battle.winner=matchWinner;
+    closeDevMatch(matchWinner,playerScore,cpuScore,"Spin Finish");
+}
+
+function closeDevMatch(matchWinner,playerScore,cpuScore,finishType){
+    finishType=finishType||"Spin Finish";
+    Game.battle=Game.battle||{};
+    Game.battle.score={player:playerScore,cpu:cpuScore};
+    Game.battle.matchFinished=true;
+    Game.battle.finished=true;
+    Game.battle.winner=matchWinner;
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
-            SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish",{silent:true});
+            SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType,{silent:true});
             SpinWarsScoreboard.showMatchSummary({
                 matchWinner, playerScore, cpuScore, rogue:true,
                 onContinue:()=>{
@@ -4260,12 +4273,12 @@ function devAwardSpinRound(winnerSide){
                         });
                         return;
                     }
-                    SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish");
+                    SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType);
                 }
             });
             return;
         }
-        SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,"Spin Finish");
+        SpinWarsRogue.onMatchOver(matchWinner,playerScore,cpuScore,finishType);
         return;
     }
     if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showMatchSummary){
@@ -4281,6 +4294,28 @@ function devAwardSpinRound(winnerSide){
             onExit:()=>renderMainMenu()
         });
     }
+}
+
+function devAwardMatchWin(winnerSide){
+    winnerSide=winnerSide||"player";
+    const live=typeof NEW_BATTLE!=="undefined" && NEW_BATTLE &&
+        (NEW_BATTLE.active || (NEW_BATTLE.player && Game.screen==="battle"));
+    if(live){
+        NEW_BATTLE.finishPending=true;
+        NEW_BATTLE.active=false;
+        if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
+        if(typeof endKillCam==="function") endKillCam();
+    }
+    Game.battle=Game.battle||{};
+    Game.battle.score=Game.battle.score||{player:0,cpu:0};
+    if(winnerSide==="player") Game.battle.score.player=7;
+    else Game.battle.score.cpu=7;
+    const playerScore=Game.battle.score.player;
+    const cpuScore=Game.battle.score.cpu;
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onFinish){
+        SpinWarsScoreboard.onFinish(winnerSide,"Spin Finish",null);
+    }
+    closeDevMatch(winnerSide,playerScore,cpuScore,"Spin Finish");
 }
 
 function finishNewBattle(winnerSide,finishType="Spin Finish"){

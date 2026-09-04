@@ -212,10 +212,11 @@ function pickCommittedParts(blade,exclude){
 function cpuCompetence(match){
     const t=String(run()?.startingTier||"");
     if(match<=1) return 0;
-    if(match===2) return Math.random()<0.45?1:0;
-    // Bronze match 3 is still often committed, not a guaranteed role kit yet.
-    if(t==="Bronze" && match===3) return Math.random()<0.55?1:0;
-    return 1;
+    let p=0.9;
+    if(match===2) p=t==="Gold"?0.45:t==="Bronze"?0.22:0.35;
+    else if(match===3) p=t==="Gold"?0.80:t==="Bronze"?0.40:0.60;
+    else if(match===4) p=t==="Gold"?1:t==="Bronze"?0.70:0.90;
+    return Math.random()<p?1:0;
 }
 
 const MODIFIERS=[
@@ -538,8 +539,9 @@ function cpuNightMix(tier,match,boss){
         if(t==="Gold") return {easy:0.12,even:0.48,hard:0.40};
         return {easy:0.16,even:0.50,hard:0.34};
     }
+    if(m<=3) return {easy:0.36,even:0.50,hard:0.14};
     if(t==="Bronze"){
-        if(m<=5) return {easy:0.18,even:0.57,hard:0.25};
+        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
         if(m<=12) return {easy:0.24,even:0.56,hard:0.20};
         return {easy:0.30,even:0.55,hard:0.15};
     }
@@ -567,18 +569,19 @@ function cpuStackLead(){
     const t=String(r?.startingTier||"");
     const m=Math.max(1,Number(r?.matchIndex)||1);
     const night=r?.cpuNight||"even";
+    if(m<=2) return 0;
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
     if(t==="Bronze"){
-        if(m<=5){ even=0.55; plus1=0.32; plus2=0.13; plus3=0; }
+        if(m<=5){ even=0.70; plus1=0.26; plus2=0.04; plus3=0; }
         else if(m<=12){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
         else { even=0.68; plus1=0.26; plus2=0.06; plus3=0; }
     }else if(t==="Silver"){
-        if(m<=5){ even=0.28; plus1=0.50; plus2=0.20; plus3=0.02; }
-        else if(m<=12){ even=0.22; plus1=0.48; plus2=0.26; plus3=0.04; }
-        else { even=0.20; plus1=0.46; plus2=0.28; plus3=0.06; }
+        if(m<=5){ even=0.55; plus1=0.38; plus2=0.07; plus3=0; }
+        else if(m<=12){ even=0.32; plus1=0.46; plus2=0.20; plus3=0.02; }
+        else { even=0.24; plus1=0.46; plus2=0.26; plus3=0.04; }
     }else{
-        if(m<=5){ even=0.48; plus1=0.42; plus2=0.10; plus3=0; }
-        else if(m<=12){ even=0.16; plus1=0.42; plus2=0.32; plus3=0.10; }
+        if(m<=5){ even=0.62; plus1=0.32; plus2=0.06; plus3=0; }
+        else if(m<=12){ even=0.20; plus1=0.42; plus2=0.30; plus3=0.08; }
         else { even=0.12; plus1=0.40; plus2=0.36; plus3=0.12; }
     }
     if(night==="easy"){
@@ -947,8 +950,8 @@ function canEnhance(){
     const start=startTier();
     const m=Number(r.matchIndex)||1;
     if(start==="Gold") return false;
-    if(start==="Bronze") return m>=5;
-    return formTier()==="Silver" && m>=8;
+    if(start==="Bronze") return m>=3;
+    return formTier()==="Silver" && m>=5;
 }
 function canEvolve(){
     const r=run();
@@ -957,9 +960,9 @@ function canEvolve(){
     const form=formTier();
     const m=Number(r.matchIndex)||1;
     if(start==="Bronze") return false;
-    if(start==="Silver") return form==="Bronze" && m>=3;
-    if(form==="Bronze") return m>=3;
-    if(form==="Silver") return m>=9;
+    if(start==="Silver") return form==="Bronze" && m>=2;
+    if(form==="Bronze") return m>=2;
+    if(form==="Silver") return m>=7;
     return false;
 }
 function nextFormCard(){
@@ -998,19 +1001,24 @@ function cpuPowerTarget(playerPow,match,boss){
         else band=1.04;
         if(night==="easy") band-=0.015;
         if(night==="hard") band+=0.015;
-    }else if(night==="easy") band=0.94+Math.random()*0.04;
-    else if(night==="even") band=0.99+Math.random()*0.03;
-    else band=1.03+Math.random()*0.04;
+    }else if(night==="easy") band=0.92+Math.random()*0.04;
+    else if(night==="even") band=0.96+Math.random()*0.04;
+    else band=1.00+Math.random()*0.03;
     if(!boss){
-        if(tier==="Gold" && match<=2 && night!=="hard") band=Math.min(band,0.98);
-        // Bronze open stays spicy on even nights. Hard nights already sit above 1.00 — don't stack both.
-        if(tier==="Bronze" && match<=2 && night==="even") band=Math.min(1.06,band+0.02);
+        if(match<=3){
+            if(night==="hard") band=Math.min(band,1.02);
+            else band=Math.min(band,1.00);
+            if(tier==="Gold" && night!=="hard") band=Math.min(band,0.98);
+        }else if(match<=5){
+            if(tier==="Bronze" && night!=="hard") band=Math.min(band,1.01);
+            if(tier==="Gold" && night!=="hard") band=Math.min(band,1.00);
+        }
         if(tier==="Bronze" && match>=13){
             if(night==="easy") band=Math.min(band,0.96);
             else if(night==="even") band=Math.min(band,0.99);
             else band=Math.min(band,1.04);
         }
-        band=clamp(band,0.93,1.08);
+        band=clamp(band,0.90,1.08);
     }
     return playerPow*band;
 }
@@ -1088,8 +1096,8 @@ function lockSharkKit(){
 function rarityRoll(match,tier){
     const t=String(tier||"");
     let common=62,uncommon=24,rare=9,legendary=4,evolve=1;
-    if(t==="Bronze"){rare+=3;legendary+=1;evolve+=1.2;}
-    if(t==="Gold"){common+=8;rare-=2;legendary-=0.5;evolve-=0.4;}
+    if(t==="Bronze"){rare+=4;legendary+=1.5;evolve+=1.2;}
+    if(t==="Gold"){common+=12;uncommon+=2;rare-=3;legendary-=1;evolve+=0.6;}
     if(match>=3){
         if(t==="Bronze"){rare+=2;legendary+=2;evolve+=1;}
         else if(t==="Gold"){common+=4;uncommon+=1;}
@@ -1103,6 +1111,10 @@ function rarityRoll(match,tier){
     if(match>=12 && t==="Bronze"){rare+=1;legendary+=1;evolve+=0.8;}
     if(inEndless()) evolve=0;
     if(run()?.enhanced){rare+=2;legendary+=1.5;common=Math.max(8,common-3);}
+    if(nextFormCard()){
+        const dry=Number(run()?.hubsWithoutForm)||0;
+        evolve+=1.5+dry*2.5;
+    }
     const total=common+uncommon+rare+legendary+evolve;
     let roll=Math.random()*total;
     if((roll-=common)<0) return "common";
@@ -1243,14 +1255,29 @@ function generateOffers(){
     }
 }
 
+function formSlopeChance(){
+    const dry=Number(run()?.hubsWithoutForm)||0;
+    const start=startTier();
+    let base=0.16;
+    if(start==="Bronze") base=0.18;
+    if(start==="Gold") base=0.22;
+    return Math.min(0.90, base+dry*0.14);
+}
+function formHardPity(){
+    const r=run();
+    const need=nextFormCard();
+    if(!need) return false;
+    const m=Number(r.matchIndex)||1;
+    const dry=Number(r.hubsWithoutForm)||0;
+    if(need.evolve==="enhance" || need.evolve==="final") return dry>=6 || m>=12;
+    return dry>=5 || m>=6;
+}
 function injectFormPity(cards){
     const r=run();
     const need=nextFormCard();
     if(!need||!cards) return;
     if(cards.some(c=>c.kind==="evolve")) return;
-    const hard=r.matchIndex===6||r.matchIndex===12;
-    const soft=(Number(r.hubsWithoutForm)||0)>=4;
-    if(!hard && !soft) return;
+    if(!formHardPity() && Math.random()>=formSlopeChance()) return;
     cards[cards.length?cards.length-1:0]=need;
 }
 
@@ -1602,6 +1629,7 @@ function toggleDev(){
                 <button type="button" class="menu-btn gold" id="rogueDevFinal">FINAL BOSS</button>
                 <button type="button" class="menu-btn silver" id="rogueDevOmen">OMEN</button>
                 <button type="button" class="menu-btn gold" id="rogueDevWin">WIN ROUND</button>
+                <button type="button" class="menu-btn gold" id="rogueDevWinMatch">WIN GAME</button>
                 <button type="button" class="menu-btn silver" id="rogueDevLose">FORCE MATCH LOSS</button>
                 <button type="button" class="menu-btn silver" id="rogueDevClear">CLEAR BONUSES</button>
             </div>
@@ -1668,6 +1696,23 @@ function toggleDev(){
         const c=Number(Game.battle.score.cpu)||0;
         if(p>=7) onMatchOver("player",p,c,"Spin Finish");
         else persist();
+    };
+    document.getElementById("rogueDevWinMatch").onclick=()=>{
+        if(!run()) return;
+        closeDev();
+        if(typeof devAwardMatchWin==="function"){
+            devAwardMatchWin("player");
+            return;
+        }
+        stopLiveBattle();
+        Game.battle=Game.battle||{score:{player:0,cpu:0}};
+        Game.battle.score=Game.battle.score||{player:0,cpu:0};
+        const cpuScore=Number(Game.battle.score.cpu)||0;
+        Game.battle.score.player=7;
+        if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onFinish){
+            SpinWarsScoreboard.onFinish("player","Spin Finish",null);
+        }
+        onMatchOver("player",7,cpuScore,"Spin Finish");
     };
     document.getElementById("rogueDevLose").onclick=()=>{
         if(!run()) return;
@@ -2360,13 +2405,13 @@ function showTierPick(){
         ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:"Pick a tier. Then three blades, three ratchets, three bits."}):""}
         <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
             <button class="home-league bronze" type="button" data-tier="Bronze">
-                <span class="home-league-copy"><b>BRONZE</b><small>Hard early, easier late. Enhance after 5. No evolve.</small></span>
+                <span class="home-league-copy"><b>BRONZE</b><small>Start weak. Shop snowballs. Enhance is luck with a late rescue.</small></span>
             </button>
             <button class="home-league silver" type="button" data-tier="Silver">
-                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance.</small></span>
+                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance — both on a slope.</small></span>
             </button>
             <button class="home-league gold" type="button" data-tier="Gold">
-                <span class="home-league-copy"><b>GOLD</b><small>Easy start, hard late. Climb Bronze → Silver → Gold.</small></span>
+                <span class="home-league-copy"><b>GOLD</b><small>Higher base, thinner shop. Climb Bronze → Silver → Gold.</small></span>
             </button>
         </nav>
     </main>`;
@@ -2417,9 +2462,9 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. Bronze is a hard start you can leave, then a kinder shop and kinder nights as you snowball. Gold opens gentler and squeezes later. Silver sits in the middle.</p>
-            <p>Bronze cannot evolve. After match 5 it can Enhance once — honeycomb, +5 on your best 3, +3 on the rest. Silver can evolve after a few wins, then Enhance. Gold can climb Bronze → Silver → Gold. Form cards wait for those windows. BACK keeps your current form.</p>
-            <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Some opponents are easy. Some are ahead. Bronze stays a fight early and eases off later; Gold is the reverse. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
+            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. The first few matches are easier on every door so you can farm a win and a shop — not a free bye. Bronze starts weak and snowballs upgrades. Gold starts a step higher but the shop stays thin; you grow by evolving toward full Gold form. Silver sits in the middle.</p>
+            <p>Bronze cannot evolve. Enhance can start showing after a few wins and the chance climbs if it stays missing — it is not locked to match 5. Silver can evolve, then Enhance, on the same kind of slope. Gold climbs Bronze → Silver → Gold and never Enhances. Form cards stop in endless. BACK on a kit swap keeps your current kit.</p>
+            <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Early nights stay winnable. Bronze eases as the shop snowballs; Gold squeezes later. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
         </section>
         <p class="home-leagues-label">UPGRADES</p>
         <div class="rogue-offers rogue-help-offers">
@@ -3425,7 +3470,7 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
+    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
 };
