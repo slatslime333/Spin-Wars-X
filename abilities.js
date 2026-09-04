@@ -100,7 +100,7 @@
     function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
     function nowMs(){return performance.now();}
     function battleLive(){
-        return !!(global.NEW_BATTLE?.active && !global.Game?.battle?.finished);
+        return !!(global.NEW_BATTLE?.active && !global.NEW_BATTLE?.paused && !global.Game?.battle?.finished);
     }
     function camHot(){
         const cam=global.NEW_BATTLE?.killCam;
@@ -183,6 +183,9 @@
     }
 
     function abilityMax(side){
+        if(typeof global.SpinWarsSandbox!=="undefined" && global.SpinWarsSandbox.isActive?.() && global.SpinWarsSandbox.ensure?.().infiniteCharges){
+            return 99;
+        }
         if(side==="player" && typeof global.SpinWarsRogue!=="undefined" && global.SpinWarsRogue.isActive?.()){
             const bonus=Number(global.SpinWarsRogue.run?.()?.abilityBonus)||0;
             return ABILITY_USES+Math.max(0,bonus);
@@ -404,6 +407,12 @@
     }
 
     function spend(side){
+        if(typeof global.SpinWarsSandbox!=="undefined" && global.SpinWarsSandbox.isActive?.() && global.SpinWarsSandbox.ensure?.().infiniteCharges){
+            state.charges[side]=abilityMax(side);
+            updateDock();
+            if(side==="player") rememberPlayerCombat("ability");
+            return;
+        }
         state.charges[side]=Math.max(0,(state.charges[side]||0)-1);
         persistCharges();
         if(side==="player") rememberPlayerCombat("ability");
@@ -639,6 +648,7 @@
     }
 
     function skipClash(p,c){
+        if(p?.sandboxGhost || c?.sandboxGhost) return true;
         if(p?.abilityHold || c?.abilityHold) return true;
         if(p?.abilityHidden || c?.abilityHidden) return true;
         if((p?.swordFreezeUntil||0)>nowMs() || (c?.swordFreezeUntil||0)>nowMs()) return true;
@@ -1177,19 +1187,30 @@
     }
 
     function maybeCpu(dt,p,c){
+        if(global.NEW_BATTLE?.paused) return;
         state.cpuThink+=dt;
         if(state.cpuThink<0.16) return;
         state.cpuThink=0;
         if(!battleLive()) return;
-        const cpu=c;
-        const you=p;
-        if(!cpu||!you) return;
-        const f=readFight(cpu,you);
-        if(cpuShouldDash(cpu,you,f)) tryDash("cpu");
-        const id=kitId(cpu.blade);
-        if(cpuShouldAbility(id,cpu,you,f) && tryAbility("cpu")){
-            state.cpuLastAbility=nowMs();
+        if(!p||!c) return;
+        const S=global.SpinWarsSandbox;
+        const sandbox=S&&S.isActive&&S.isActive();
+        if(sandbox && S.isSolo()) return;
+        const runAi=(side,me,foe)=>{
+            if(!me||!foe||me.sandboxGhost||foe.sandboxGhost) return;
+            const f=readFight(me,foe);
+            if(cpuShouldDash(me,foe,f)) tryDash(side);
+            const id=kitId(me.blade);
+            if(cpuShouldAbility(id,me,foe,f) && tryAbility(side)){
+                if(side==="cpu") state.cpuLastAbility=nowMs();
+            }
+        };
+        if(!sandbox){
+            runAi("cpu",c,p);
+            return;
         }
+        if(S.sideIsCpu("cpu")) runAi("cpu",c,p);
+        if(S.sideIsCpu("player")) runAi("player",p,c);
     }
 
     function paintFx(p,c,t){
@@ -1331,23 +1352,32 @@
         g.innerHTML=html;
     }
 
-    function dockHTML(){
-        const p=bey("player");
+    function dockHTML(side,ids){
+        side=side||"player";
+        const p=bey(side);
         const id=kitId(p?.blade);
         const meta=kitMeta(id);
-        const charges=state.charges.player;
-        const dashPct=Math.round(dashFill("player")*100);
-        const abPct=Math.round(abilityFill("player")*100);
+        const charges=state.charges[side];
+        const dashPct=Math.round(dashFill(side)*100);
+        const abPct=Math.round(abilityFill(side)*100);
         const passive=!meta?.active;
-        return `<div class="combat-dock" id="combatDock">
-            <button type="button" class="combat-btn dash-btn" id="dashBtn">
+        const dashId=ids?.dash||"dashBtn";
+        const abId=ids?.ability||"abilityBtn";
+        const lab=typeof global.SpinWarsSandbox!=="undefined"&&global.SpinWarsSandbox.isActive?.()
+            ? global.SpinWarsSandbox.who?.(side)
+            : "";
+        const inf=typeof global.SpinWarsSandbox!=="undefined"&&global.SpinWarsSandbox.ensure?.().infiniteCharges&&global.SpinWarsSandbox.isActive?.();
+        const pip=passive?"PASSIVE":(inf?"∞":`${charges}/${abilityMax(side)}`);
+        return `<div class="combat-dock" id="combatDock${side==="cpu"?"2":""}" data-side="${side}">
+            ${lab?`<span class="combat-who">${lab}</span>`:""}
+            <button type="button" class="combat-btn dash-btn" id="${dashId}">
                 <span class="combat-fill" style="height:${dashPct}%"></span>
                 <span class="combat-label">DASH</span>
             </button>
-            <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="abilityBtn" ${passive?"disabled":""}>
+            <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="${abId}" ${passive?"disabled":""}>
                 <span class="combat-fill" style="height:${abPct}%"></span>
                 <span class="combat-emblem">${emblemSVG(id,32)}</span>
-                <span class="combat-pips">${passive?"PASSIVE":`${charges}/${abilityMax("player")}`}</span>
+                <span class="combat-pips">${pip}</span>
             </button>
             <span class="combat-toast" id="combatToast" hidden></span>
         </div>`;
@@ -1357,9 +1387,19 @@
         if(state.keysBound) return;
         state.keysBound=true;
         state.keys={x:0,y:0};
+        const pvp=()=>{
+            const S=global.SpinWarsSandbox;
+            return !!(S&&S.isActive?.()&&S.sideIsHuman?.("cpu")&&S.sideIsHuman?.("player"));
+        };
         const down=(e)=>{
             const k=e.key;
-            if(k==="Shift"||k===" "){ e.preventDefault(); tryDash("player"); }
+            if(k===" "){ e.preventDefault(); tryDash("player"); }
+            else if(k==="Enter" && pvp()){ e.preventDefault(); tryDash("cpu"); }
+            else if(k==="Shift"){
+                e.preventDefault();
+                if(pvp()) tryAbility("cpu");
+                else tryDash("player");
+            }
             if(k==="e"||k==="E"||k==="f"||k==="F"){ e.preventDefault(); tryAbility("player"); }
             if(k==="ArrowLeft"||k==="a"||k==="A") state.keys.x=-1;
             if(k==="ArrowRight"||k==="d"||k==="D") state.keys.x=1;
@@ -1377,24 +1417,45 @@
     function mountDock(){
         const host=document.getElementById("launchDock");
         if(!host) return;
-        host.innerHTML=dockHTML();
+        const S=global.SpinWarsSandbox;
+        const sandbox=S&&S.isActive&&S.isActive();
+        const pHuman=!sandbox||S.sideIsHuman("player");
+        const cHuman=sandbox&&!S.isSolo()&&S.sideIsHuman("cpu");
+        if(!pHuman && !cHuman){
+            host.innerHTML="";
+            bindKeys();
+            return;
+        }
+        if(pHuman && cHuman){
+            host.innerHTML=`<div class="combat-docks dual">${dockHTML("player")}${dockHTML("cpu",{dash:"dashBtn2",ability:"abilityBtn2"})}</div>`;
+            host.querySelector("#dashBtn")?.addEventListener("click",()=>tryDash("player"));
+            host.querySelector("#abilityBtn")?.addEventListener("click",()=>tryAbility("player"));
+            host.querySelector("#dashBtn2")?.addEventListener("click",()=>tryDash("cpu"));
+            host.querySelector("#abilityBtn2")?.addEventListener("click",()=>tryAbility("cpu"));
+            bindKeys();
+            return;
+        }
+        host.innerHTML=dockHTML("player");
         host.querySelector("#dashBtn")?.addEventListener("click",()=>tryDash("player"));
         host.querySelector("#abilityBtn")?.addEventListener("click",()=>tryAbility("player"));
         bindKeys();
     }
     function updateDock(){
-        const dash=document.querySelector("#dashBtn .combat-fill");
-        const ab=document.querySelector("#abilityBtn .combat-fill");
-        const pips=document.querySelector("#abilityBtn .combat-pips");
-        if(dash) dash.style.height=`${Math.round(dashFill("player")*100)}%`;
-        if(ab) ab.style.height=`${Math.round(abilityFill("player")*100)}%`;
-        const id=kitId(bey("player")?.blade);
-        const meta=kitMeta(id);
-        if(pips && meta?.active) pips.textContent=`${state.charges.player}/${abilityMax("player")}`;
-        const db=document.getElementById("dashBtn");
-        const abn=document.getElementById("abilityBtn");
-        if(db) db.classList.toggle("ready", dashFill("player")>=1);
-        if(abn && meta?.active) abn.classList.toggle("ready", (state.charges.player||0)>0 && !channelBusy());
+        [["player","dashBtn","abilityBtn"],["cpu","dashBtn2","abilityBtn2"]].forEach(([side,dashId,abId])=>{
+            const dash=document.querySelector(`#${dashId} .combat-fill`);
+            const ab=document.querySelector(`#${abId} .combat-fill`);
+            const pips=document.querySelector(`#${abId} .combat-pips`);
+            if(dash) dash.style.height=`${Math.round(dashFill(side)*100)}%`;
+            if(ab) ab.style.height=`${Math.round(abilityFill(side)*100)}%`;
+            const id=kitId(bey(side)?.blade);
+            const meta=kitMeta(id);
+            const inf=typeof global.SpinWarsSandbox!=="undefined"&&global.SpinWarsSandbox.isActive?.()&&global.SpinWarsSandbox.ensure?.().infiniteCharges;
+            if(pips && meta?.active) pips.textContent=inf?"∞":`${state.charges[side]}/${abilityMax(side)}`;
+            const db=document.getElementById(dashId);
+            const abn=document.getElementById(abId);
+            if(db) db.classList.toggle("ready", dashFill(side)>=1);
+            if(abn && meta?.active) abn.classList.toggle("ready", (state.charges[side]||0)>0 && !channelBusy());
+        });
     }
 
     function fxMarkup(){
