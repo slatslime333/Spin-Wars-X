@@ -317,9 +317,9 @@ function showSession(){
             </div>
         </div>
         <section class="sandbox-session-score" aria-label="Session score">
-            <div><small>${lab.player}</small><b>${s.session.score.player||0}</b></div>
+            <div><small>${s.player.blade?.name||lab.player}</small><b>${s.session.score.player||0}</b></div>
             <span>VS</span>
-            <div><small>${lab.cpu}</small><b>${s.session.score.cpu||0}</b></div>
+            <div><small>${s.beys===1?"—":(s.cpu.blade?.name||lab.cpu)}</small><b>${s.session.score.cpu||0}</b></div>
         </section>
         <section class="menu-card rogue-help-card">
             <ol class="sandbox-log">${rows}</ol>
@@ -407,7 +407,10 @@ function showLab(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="sandbox-lab">
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX LAB",tag:vsMeta(s.vs).blurb}):""}
+        <header class="sandbox-lab-head">
+            <p class="home-kicker">SANDBOX LAB</p>
+            <p class="sandbox-mode-blurb">${vsMeta(s.vs).blurb}</p>
+        </header>
         <section class="sandbox-toolbar">
             <div class="sandbox-seg" role="group" aria-label="Bey count">
                 <button type="button" class="sandbox-chip ${s.beys===1?"on":""}" data-beys="1">1 BEY</button>
