@@ -220,6 +220,36 @@ function comboOf(side){
     return raw||{stats:{},ovr:60,meta:60};
 }
 
+function statBox(stats,label,key){
+    const n=Number(stats?.[key]);
+    const value=Number.isFinite(n)?Math.round(n):"—";
+    return `<span class="vs-stat"><small>${label}</small><span class="vs-stat-val"><b>${value}</b></span></span>`;
+}
+
+function kitStatHTML(combo){
+    const stats=combo?.stats||{};
+    return `<div class="vs-stat-groups sandbox-kit-stats" aria-label="Combo stats">
+        <div class="vs-stat-group">
+            <span class="vs-stat-group-label">HIT</span>
+            <div class="vs-stats pair">
+                ${statBox(stats,"ATK","attack")}${statBox(stats,"KB","knockback")}
+            </div>
+        </div>
+        <div class="vs-stat-group">
+            <span class="vs-stat-group-label">HOLD</span>
+            <div class="vs-stats">
+                ${statBox(stats,"DEF","defense")}${statBox(stats,"BAL","balance")}${statBox(stats,"BST","burst")}
+            </div>
+        </div>
+        <div class="vs-stat-group">
+            <span class="vs-stat-group-label">MOVE</span>
+            <div class="vs-stats pair">
+                ${statBox(stats,"MOB","mobility")}${statBox(stats,"STA","stamina")}
+            </div>
+        </div>
+    </div>`;
+}
+
 function enterMode(vs){
     const s=ensure();
     if(vs==="pvp") s.beys=2;
@@ -355,7 +385,7 @@ function garageColumn(side){
     const combo=comboOf(side);
     const name=pack.blade?.name||"No blade";
     const parts=pack.ratchet&&pack.bit?`${pack.ratchet.name} · ${pack.bit.name}`:"Pick parts";
-    const ovr=combo?Math.round(combo.ovr):"—";
+    const meta=combo&&Number.isFinite(Number(combo.meta))?Math.round(combo.meta):"—";
     const sprite=typeof bladeSpritePath==="function"?bladeSpritePath(pack.blade):"";
     const hidden=s.beys===1 && side==="cpu";
     const human=sideIsHuman(side);
@@ -372,9 +402,10 @@ function garageColumn(side){
             <div class="sandbox-kit-copy">
                 <h2>${name}</h2>
                 <p>${parts}</p>
-                <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
+                <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
             </div>
         </div>
+        ${kitStatHTML(combo)}
         <div class="sandbox-part-btns">
             <button type="button" class="menu-btn gold" data-pick="${side}" data-part="blade">BLADE</button>
             <button type="button" class="menu-btn silver" data-pick="${side}" data-part="ratchet">RATCHET</button>
