@@ -98,22 +98,7 @@
     function other(side){return side==="player"?"cpu":"player";}
     function bey(side){return global.NEW_BATTLE?.[side];}
     function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-    function nowMs(){
-        if(clockFreeze) return clockFreeze;
-        return performance.now()-clockHold;
-    }
-    let clockHold=0;
-    let clockFreeze=0;
-    function pauseClock(on){
-        if(on){
-            if(!clockFreeze) clockFreeze=performance.now()-clockHold;
-            return;
-        }
-        if(clockFreeze){
-            clockHold=performance.now()-clockFreeze;
-            clockFreeze=0;
-        }
-    }
+    function nowMs(){return performance.now();}
     function battleLive(){
         return !!(global.NEW_BATTLE?.active && !global.Game?.battle?.finished);
     }
@@ -126,7 +111,6 @@
     }
     function blocked(s){
         if(!s||!battleLive()) return true;
-        if(global.NEW_BATTLE?.inspectPause) return true;
         if(s.railEngaged) return true;
         if(dropStalling(s)) return true;
         if(s.rpm<=0.001) return true;
@@ -158,7 +142,6 @@
             time:nowMs(),
             strength:0.9,
             impactClass:"light",
-            kind:"ability",
             playerRpmLoss:isPlayer?lost:0,
             cpuRpmLoss:isPlayer?0:lost,
             kb:0,
@@ -191,11 +174,8 @@
         if(!meta){
             return `<div class="ability-chip empty"><span>No ability</span></div>`;
         }
-        const tag=meta.active?"ACTIVE":"PASSIVE";
-        if(opts.compact){
-            return `<span class="ability-pill ${meta.active?"is-active":"is-passive"}">${emblemSVG(id,14)}<b>${meta.name}</b><small>${tag}</small></span>`;
-        }
         const open=opts.open?" open":"";
+        const tag=meta.active?"ACTIVE":"PASSIVE";
         return `<details class="swx-drop ability-drop"${open}>
             <summary><span class="swx-drop-mark">${emblemSVG(id,22)}</span><span class="swx-drop-title">${meta.name}</span><span class="swx-drop-tag">${tag}</span><span class="swx-drop-caret" aria-hidden="true">▾</span></summary>
             <p class="swx-drop-body">${meta.blurb}</p>
@@ -374,9 +354,10 @@
         s.vy+=hy*DASH_SHOVE;
         s.impactMomentumState=Math.max(s.impactMomentumState||0,0.42);
         const t=nowMs();
-        s.dashGust={until:t+220};
-        s.dashBurst=null;
-        s.hitFlash=Math.max(s.hitFlash||0,0.12);
+        s.dashGust={hx,hy,x:s.x,y:s.y,until:t+560};
+        s.dashBurst={until:t+480,hx,hy,born:t};
+        s.impactScale=Math.max(s.impactScale||1,1.28);
+        s.hitFlash=Math.max(s.hitFlash||0,0.28);
         state.dashAt[side]=t+dashCdSec(side)*1000;
         if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.onDash){
             SpinWarsScoreboard.onDash(side,s);
@@ -1214,6 +1195,7 @@
     function paintFx(p,c,t){
         const g=document.getElementById("abilityFx");
         if(!g) return;
+        const NS=true;
         let html="";
         const ring=(s,r,cls,sw)=>{
             if(!s) return "";
@@ -1225,10 +1207,10 @@
             const pt=worldToSvg(s.x,s.y);
             const age=1-Math.max(0,(s.swordSmoke-t)/1700);
             let out="";
-            for(let i=0;i<8;i++){
-                const a=i*0.85+t/160;
-                const rad=2.4+i*1.15+age*3.2;
-                out+=`<circle class="fx-smoke" cx="${(pt.x+Math.cos(a)*rad).toFixed(1)}" cy="${(pt.y+Math.sin(a)*rad*0.68).toFixed(1)}" r="${(1.6+i*0.4).toFixed(1)}" fill="#9aa3ad" fill-opacity="${(0.34-age*0.22).toFixed(2)}"/>`;
+            for(let i=0;i<5;i++){
+                const a=i*1.256+t/180;
+                const rad=2.2+i*1.1+age*2;
+                out+=`<circle class="fx-smoke" cx="${(pt.x+Math.cos(a)*rad).toFixed(1)}" cy="${(pt.y+Math.sin(a)*rad*0.7).toFixed(1)}" r="${(1.4+i*0.35).toFixed(1)}" fill="#9aa3ad" fill-opacity="${(0.28-age*0.18).toFixed(2)}"/>`;
             }
             return out;
         };
@@ -1237,60 +1219,46 @@
             const id=kitId(s.blade);
             const pt=worldToSvg(s.x,s.y);
             if(id==="ancient-sword" && (state.charges[side]||0)>0 && !s.abilityHold){
-                html+=ring(s,SWORD_R,"fx-sword-radius",1.05);
-                html+=motes(pt.x,pt.y,8,t,SWORD_R*18,"#f0d070",220);
+                html+=ring(s,SWORD_R,"fx-sword-radius",0.9);
             }
             html+=smoke(s);
             if(s.abilityHold && id==="ancient-sword"){
-                const flick=Math.sin(t/40);
-                const ox=flick*3.2;
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="7.4" fill="#fff6d0" fill-opacity="0.16" filter="url(#fxSoft)"/>`;
+                const flick=Math.sin(t/45);
+                const ox=flick*2.4;
                 html+=`<g class="fx-slash">
-                    <line x1="${pt.x-8+ox}" y1="${pt.y-6}" x2="${pt.x+9-ox}" y2="${pt.y+7}" stroke="#fff8e8" stroke-width="1.35" stroke-linecap="round"/>
-                    <line x1="${pt.x+7}" y1="${pt.y-7}" x2="${pt.x-6}" y2="${pt.y+8}" stroke="#ffd36a" stroke-width="1.05" stroke-linecap="round"/>
-                    <line x1="${pt.x-4}" y1="${pt.y-9}" x2="${pt.x+5}" y2="${pt.y+8}" stroke="#ffffff" stroke-width="0.55" opacity="0.8"/>
+                    <line x1="${pt.x-5+ox}" y1="${pt.y-4}" x2="${pt.x+6-ox}" y2="${pt.y+5}" stroke="#f4f0e4" stroke-width="0.9"/>
+                    <line x1="${pt.x+5}" y1="${pt.y-5}" x2="${pt.x-4}" y2="${pt.y+6}" stroke="#c9b48a" stroke-width="0.7"/>
                 </g>`;
-                html+=shards(pt.x,pt.y,10,t,6.5,"#ffe08a");
             }
             if(s.hurricaneUntil>t){
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${STORM_R*39}" fill="url(#fxGlowCyan)" fill-opacity="0.55"/>`;
-                html+=ring(s,STORM_R,"fx-storm",1.35);
-                const spin=t/55;
-                html+=`<g class="fx-tornado" transform="rotate(${(spin*48)%360} ${pt.x} ${pt.y})">
-                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.42}" ry="${STORM_R*39*0.16}" fill="none" stroke="#ffffff" stroke-width="1.05" opacity="0.85"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.62}" ry="${STORM_R*39*0.24}" fill="none" stroke="#bfefff" stroke-width="0.95" opacity="0.75"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.88}" ry="${STORM_R*39*0.36}" fill="none" stroke="#7ec8ff" stroke-width="0.8" opacity="0.5"/>
-                    <path d="M${pt.x} ${pt.y-STORM_R*20} C${pt.x+6} ${pt.y} ${pt.x-6} ${pt.y} ${pt.x} ${pt.y+STORM_R*18}" fill="none" stroke="#e8f7ff" stroke-width="1.25"/>
+                html+=ring(s,STORM_R,"fx-storm",1.1);
+                const spin=t/80;
+                html+=`<g class="fx-tornado" transform="rotate(${(spin*40)%360} ${pt.x} ${pt.y})">
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.55}" ry="${STORM_R*39*0.22}" fill="none" stroke="#bfefff" stroke-width="0.9" opacity="0.8"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y}" rx="${STORM_R*39*0.85}" ry="${STORM_R*39*0.34}" fill="none" stroke="#7ec8ff" stroke-width="0.7" opacity="0.55"/>
+                    <path d="M${pt.x} ${pt.y-STORM_R*18} C${pt.x+4} ${pt.y} ${pt.x-4} ${pt.y} ${pt.x} ${pt.y+STORM_R*16}" fill="none" stroke="#e8f7ff" stroke-width="1"/>
                 </g>`;
-                html+=motes(pt.x,pt.y,14,t,STORM_R*32,"#d7f6ff",90);
-                html+=shards(pt.x,pt.y,8,t,STORM_R*26,"#9ee7ff");
                 const shown=Math.max(1,Math.round((s.hurricaneGain||0)*100));
-                html+=`<text class="fx-rpm-gain" x="${pt.x}" y="${pt.y-10.4}" text-anchor="middle" font-size="4.4" font-weight="900" fill="#7ef0ff" stroke="#041018" stroke-width="0.45">+${shown}</text>`;
+                html+=`<text class="fx-rpm-gain" x="${pt.x}" y="${pt.y-9.2}" text-anchor="middle" font-size="4.2" font-weight="900" fill="#7ef0ff" stroke="#041018" stroke-width="0.45">+${shown}</text>`;
             }
             if(s.quakeUntil>t){
-                html+=ring(s,QUAKE_R,"fx-quake",1.2);
-                const pulse=0.7+Math.abs(Math.sin(t/70))*0.3;
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${(QUAKE_R*22*pulse).toFixed(1)}" fill="#c4a06a" fill-opacity="0.12"/>`;
+                html+=ring(s,QUAKE_R,"fx-quake",1);
                 (s.quakeCracks||[]).forEach(k=>{
                     const life=Math.max(0,Math.min(1,(k.until-t)/180));
                     const fadeIn=Math.max(0,Math.min(1,(t-k.born)/90));
                     const op=(life*fadeIn).toFixed(2);
                     const v=worldToSvg(k.x,k.y);
-                    const dx=Math.cos(k.rot)*5.4, dy=Math.sin(k.rot)*2.5;
+                    const dx=Math.cos(k.rot)*4.8, dy=Math.sin(k.rot)*2.2;
                     html+=`<g class="fx-cracks" opacity="${op}">
-                        <path d="M${v.x-dx} ${v.y-dy} L${v.x} ${v.y+1.4} L${v.x+dx} ${v.y+dy}" fill="none" stroke="#ffd36a" stroke-width="1.55"/>
-                        <path d="M${v.x-dx} ${v.y-dy} L${v.x} ${v.y+1.4} L${v.x+dx} ${v.y+dy}" fill="none" stroke="#6a4a28" stroke-width="0.85"/>
-                        <circle cx="${v.x}" cy="${v.y}" r="1.1" fill="#8a6230" fill-opacity="0.7"/>
+                        <path d="M${v.x-dx} ${v.y-dy} L${v.x} ${v.y+1.2} L${v.x+dx} ${v.y+dy}" fill="none" stroke="#6a4a28" stroke-width="1.15"/>
+                        <path d="M${v.x-dx*0.4} ${v.y-1.6} L${v.x+1.2} ${v.y+2.4}" fill="none" stroke="#8a6230" stroke-width="0.7"/>
                     </g>`;
                 });
-                html+=shards(pt.x,pt.y,12,t,QUAKE_R*24,"#c4a06a");
             }
             if(s.metallic){
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*1.55}" fill="url(#fxGlowIron)" fill-opacity="0.9"/>`;
-                html+=ring(s,s.radius*1.38,"fx-iron",2.1);
-                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*1.08}" fill="#dfe7ee" fill-opacity="0.42"/>`;
-                html+=`<circle cx="${pt.x-1.4}" cy="${pt.y-1.6}" r="${s.radius*39*0.42}" fill="#ffffff" fill-opacity="0.5"/>`;
-                html+=motes(pt.x,pt.y,10,t,s.radius*22,"#ffffff",160);
+                html+=ring(s,s.radius*1.22,"fx-iron",1.6);
+                html+=`<circle cx="${pt.x}" cy="${pt.y}" r="${s.radius*39*1.05}" fill="#dfe7ee" fill-opacity="0.72"/>`;
+                html+=`<circle cx="${pt.x-1.2}" cy="${pt.y-1.4}" r="${s.radius*39*0.35}" fill="#ffffff" fill-opacity="0.35"/>`;
             }
             const trail=state.flame[side];
             if(trail?.length>1){
@@ -1298,36 +1266,30 @@
                     const v=worldToSvg(q.x,q.y);
                     return `${v.x.toFixed(1)},${v.y.toFixed(1)}`;
                 }).join(" ");
-                html+=`<polyline class="fx-flame-under" points="${pts}" fill="none" stroke="#4a0600" stroke-width="4.4" stroke-linecap="round" opacity="0.55"/>`;
-                html+=`<polyline class="fx-flame" points="${pts}" fill="none" stroke="#ff4a24" stroke-width="2.6" stroke-linecap="round"/>`;
-                html+=`<polyline points="${pts}" fill="none" stroke="#ffe566" stroke-width="1.15" stroke-linecap="round" opacity="0.85"/>`;
-                trail.forEach((q,i)=>{
-                    if(i%2) return;
-                    const v=worldToSvg(q.x,q.y);
-                    const flick=0.55+Math.sin(t/50+i)*0.35;
-                    html+=`<circle cx="${v.x}" cy="${(v.y-0.8).toFixed(1)}" r="${(1.1+flick).toFixed(2)}" fill="#ff6a2a" fill-opacity="${(0.4*flick).toFixed(2)}"/>`;
-                });
+                html+=`<polyline class="fx-flame-under" points="${pts}" fill="none" stroke="#7a1208" stroke-width="3.4" stroke-linecap="round" opacity="0.45"/>`;
+                html+=`<polyline class="fx-flame" points="${pts}" fill="none" stroke="#ff4a24" stroke-width="2.1" stroke-linecap="round"/>`;
             }
             if(s.dashGust && s.dashGust.until>t){
+                const g2=s.dashGust;
                 const gp=worldToSvg(s.x,s.y);
-                const life=Math.max(0,(s.dashGust.until-t)/220);
-                const sp=Math.hypot(s.vx,s.vy)||1;
-                const bx=-(s.vx/sp)*3.8, by=-(s.vy/sp)*3.8;
-                html+=`<g class="fx-gust" opacity="${(life*0.5).toFixed(2)}">
-                    <circle cx="${gp.x+bx}" cy="${gp.y+by}" r="${3.6+life*1.4}" fill="#e8fff4" fill-opacity="0.14"/>
-                    <circle cx="${gp.x+bx}" cy="${gp.y+by}" r="${3.1+life}" fill="none" stroke="#e8fff4" stroke-width="0.7"/>
+                const life=Math.max(0.2,(g2.until-t)/560);
+                const bx=-g2.hx*7.2, by=-g2.hy*7.2;
+                html+=`<g class="fx-gust" opacity="${life.toFixed(2)}">
+                    <circle cx="${gp.x}" cy="${gp.y}" r="${5.4+life*2.2}" fill="none" stroke="#e8fff4" stroke-width="1.35"/>
+                    <path d="M${gp.x+bx} ${gp.y+by} L${gp.x+bx*2.4} ${gp.y+by*2.4}" fill="none" stroke="#ffffff" stroke-width="1.6"/>
+                    <path d="M${gp.x+bx*0.55-by*0.35} ${gp.y+by*0.55+bx*0.35} L${gp.x+bx*1.9-by*0.55} ${gp.y+by*1.9+bx*0.55}" fill="none" stroke="#9ad7b8" stroke-width="1.15"/>
+                    <path d="M${gp.x+bx*0.55+by*0.35} ${gp.y+by*0.55-bx*0.35} L${gp.x+bx*1.9+by*0.55} ${gp.y+by*1.9-bx*0.55}" fill="none" stroke="#d7efe4" stroke-width="1.15"/>
+                    <circle cx="${gp.x+bx*0.4}" cy="${gp.y+by*0.4}" r="2.4" fill="#e8fff4" fill-opacity="0.35"/>
                 </g>`;
             }
             if((s.flamePhase||0)>=1){
                 const big=s.flamePhase>=2;
-                const flick=0.7+Math.sin(t/50)*0.3;
-                const fr=big?4.4:2.2;
+                const flick=0.7+Math.sin(t/55)*0.3;
+                const fr=big?3.6:1.8;
                 html+=`<g class="fx-burn">
-                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.2}" rx="${fr*1.35}" ry="${fr*1.45}" fill="url(#fxGlowFire)" fill-opacity="${flick.toFixed(2)}"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.45}" rx="${fr*0.95}" ry="${fr*1.25}" fill="#ff4a24" fill-opacity="${(0.5*flick).toFixed(2)}"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.85}" rx="${fr*0.48}" ry="${fr*0.8}" fill="#ffe566" fill-opacity="${(0.7*flick).toFixed(2)}"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.35}" rx="${fr*0.9}" ry="${fr*1.15}" fill="#ff4a24" fill-opacity="${(0.45*flick).toFixed(2)}"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y-fr*0.7}" rx="${fr*0.45}" ry="${fr*0.7}" fill="#ffe566" fill-opacity="${(0.55*flick).toFixed(2)}"/>
                 </g>`;
-                html+=motes(pt.x,pt.y-fr,7,t,fr*1.6,"#ffb040",70);
             }
             if(s.ninjaFlick!=null && s.abilityHold){
                 const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
@@ -1341,22 +1303,11 @@
                 const cir=document.getElementById(side==="player"?"newPlayerBey":"newCpuBey");
                 if(spr) spr.style.display="none";
                 if(cir) cir.style.display="none";
-                const peg=state.pegasus;
-                const liftU=peg&&peg.side===side&&peg.phase==="lift"
-                    ? 1-Math.max(0,(peg.liftUntil-t)/PEGASUS_LIFT_MS)
-                    : 1;
-                const rise=liftU*26;
-                const coreY=pt.y-rise;
-                const beamTop=Math.max(2,coreY-22);
-                html+=`<g class="fx-pegasus">
-                    <rect x="${pt.x-6.2}" y="${beamTop}" width="12.4" height="${(pt.y+6-beamTop).toFixed(1)}" fill="url(#fxBeam)" opacity="${(0.62+liftU*0.38).toFixed(2)}"/>
-                    <rect x="${pt.x-1.7}" y="${beamTop}" width="3.4" height="${(pt.y+6-beamTop).toFixed(1)}" fill="#ffffff" fill-opacity="${(0.42+liftU*0.4).toFixed(2)}"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y+1}" rx="9.2" ry="2.6" fill="#7ef0ff" fill-opacity="0.34"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="${5.4+liftU*2.1}" fill="url(#fxGlowCyan)"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="2.4" fill="#ffffff" fill-opacity="0.95"/>
-                    <circle cx="${pt.x}" cy="${coreY}" r="7.4" fill="none" stroke="#e8ffff" stroke-width="0.85" opacity="0.8"/>
+                html+=`<g class="fx-ufo">
+                    <ellipse cx="${pt.x}" cy="${pt.y-9}" rx="7.2" ry="2.4" fill="#8fd0ff" fill-opacity="0.85"/>
+                    <ellipse cx="${pt.x}" cy="${pt.y-10.2}" rx="3.2" ry="1.4" fill="#e8f7ff"/>
+                    <path d="M${pt.x-5} ${pt.y-7} L${pt.x} ${pt.y+3} L${pt.x+5} ${pt.y-7}" fill="#b8e8ff" fill-opacity="0.35"/>
                 </g>`;
-                html+=motes(pt.x,coreY,12,t,8+liftU*6,"#b8f4ff",70);
             }
             if(s.quakePulse && s.quakePulse!==1){
                 s.impactScale=s.quakePulse;
@@ -1364,28 +1315,17 @@
         });
         if(state.pegasus?.phase==="aim"){
             const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
-            const pulse=0.82+Math.sin(t/90)*0.18;
             html+=`<g class="fx-aim">
-                <circle cx="${v.x}" cy="${v.y}" r="${(13.2*pulse).toFixed(1)}" fill="#7ef0ff" fill-opacity="0.16"/>
-                <circle cx="${v.x}" cy="${v.y}" r="12.2" fill="none" stroke="#7ef0ff" stroke-width="2.2"/>
-                <circle cx="${v.x}" cy="${v.y}" r="8.4" fill="none" stroke="#ffffff" stroke-width="0.7" opacity="0.7"/>
-                <circle cx="${v.x}" cy="${v.y}" r="2.1" fill="#e8ffff" fill-opacity="0.85"/>
+                <circle cx="${v.x}" cy="${v.y}" r="13.2" fill="#7ef0ff" fill-opacity="0.12"/>
+                <circle cx="${v.x}" cy="${v.y}" r="11.8" fill="none" stroke="#7ef0ff" stroke-width="2.1"/>
             </g>`;
-            const liftSrc=state.pegasus.side==="cpu"?c:p;
-            if(liftSrc){
-                const origin=worldToSvg(liftSrc.x,liftSrc.y);
-                html+=`<rect x="${origin.x-3.2}" y="2" width="6.4" height="${Math.max(4,origin.y-8)}" fill="url(#fxBeam)" opacity="0.42"/>`;
-            }
         }
         if(state.pegasusCrash && state.pegasusCrash>t){
+            const v=worldToSvg(p.x,p.y);
             const focus=state.pegasusSide==="cpu"?c:p;
             const w=worldToSvg(focus.x,focus.y);
-            const life=Math.max(0.15,(state.pegasusCrash-t)/420);
             html+=`<g class="fx-bolt">
-                <rect x="${w.x-5}" y="2" width="10" height="${w.y-2}" fill="url(#fxBeam)" opacity="${(0.7*life).toFixed(2)}"/>
-                <circle cx="${w.x}" cy="${w.y}" r="${(9+life*8).toFixed(1)}" fill="#ffffff" fill-opacity="${(0.35*life).toFixed(2)}"/>
-                <circle cx="${w.x}" cy="${w.y}" r="${(6+life*5).toFixed(1)}" fill="#7ef0ff" fill-opacity="${(0.4*life).toFixed(2)}"/>
-                <path d="M${w.x+2.4} ${w.y-14} L${w.x-2.6} ${w.y-3} L${w.x+1.4} ${w.y-3} L${w.x-3.4} ${w.y+11}" fill="#fff8a8" stroke="#ffe566" stroke-width="0.45"/>
+                <path d="M${w.x+2} ${w.y-10} L${w.x-2} ${w.y-2} L${w.x+1} ${w.y-2} L${w.x-3} ${w.y+8}" fill="#fff8a8" stroke="#ffe566" stroke-width="0.4"/>
             </g>`;
         }
         g.innerHTML=html;
@@ -1455,98 +1395,11 @@
         const abn=document.getElementById("abilityBtn");
         if(db) db.classList.toggle("ready", dashFill("player")>=1);
         if(abn && meta?.active) abn.classList.toggle("ready", (state.charges.player||0)>0 && !channelBusy());
-        if(typeof global.paintBattleInspect==="function") global.paintBattleInspect();
-    }
-
-    function inspectStatus(side){
-        const s=bey(side);
-        const t=nowMs();
-        const lines=[];
-        const push=(id,label,until)=>{
-            const left=(Number(until)||0)-t;
-            if(left>50) lines.push({id,label,left:left/1000});
-        };
-        if(state.channel && state.channel.side===side){
-            const kind=state.channel.kind;
-            push("ch-"+kind, META[kind]?.name||kind, state.channel.until);
-        }
-        if(s){
-            push("iron","Iron Skin", s.ironSkinUntil);
-            push("storm","Hurricane", s.hurricaneUntil);
-            push("flame","Flame Trail", s.flameUntil);
-            push("sword","Sword lock", s.swordFreezeUntil);
-        }
-        const peg=state.pegasus;
-        if(peg && peg.side===side){
-            if(t<(peg.liftUntil||0)) push("peg-lift","Pegasus lift", peg.liftUntil);
-            else push("peg-aim","Pegasus aim", peg.aimUntil||state.channel?.until);
-        }
-        const dashUntil=state.dashAt[side]||0;
-        if(dashUntil>t) push("dash","Dash CD", dashUntil);
-        return lines;
-    }
-    function inspectHud(side){
-        const id=kitId(bey(side)?.blade);
-        const meta=kitMeta(id);
-        return {
-            timers:inspectStatus(side),
-            charges:meta?.active
-                ? {left:state.charges[side]||0, max:abilityMax(side), name:meta.name||"Ability"}
-                : null
-        };
     }
 
     function fxMarkup(){
-        return `<defs id="abilityFxDefs">
-            <radialGradient id="fxGlowCyan" cx="50%" cy="50%">
-                <stop offset="0%" stop-color="#e8ffff" stop-opacity="0.9"/>
-                <stop offset="55%" stop-color="#7ef0ff" stop-opacity="0.28"/>
-                <stop offset="100%" stop-color="#7ef0ff" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="fxGlowFire" cx="50%" cy="80%">
-                <stop offset="0%" stop-color="#fff4c0" stop-opacity="0.95"/>
-                <stop offset="40%" stop-color="#ff6a2a" stop-opacity="0.55"/>
-                <stop offset="100%" stop-color="#7a0800" stop-opacity="0"/>
-            </radialGradient>
-            <radialGradient id="fxGlowIron" cx="35%" cy="30%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/>
-                <stop offset="100%" stop-color="#9ab0c4" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="fxBeam" x1="0" y1="1" x2="0" y2="0">
-                <stop offset="0%" stop-color="#7ef0ff" stop-opacity="0"/>
-                <stop offset="18%" stop-color="#b8f4ff" stop-opacity="0.55"/>
-                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
-            </linearGradient>
-            <filter id="fxSoft" x="-40%" y="-40%" width="180%" height="180%">
-                <feGaussianBlur stdDeviation="0.55"/>
-            </filter>
-        </defs>
-        <g id="abilityFx" pointer-events="none"></g>
-        <text id="abilityCallout" x="50" y="18" text-anchor="middle" font-size="5.8" font-weight="900" fill="#ffe08a" stroke="#120c04" stroke-width="0.5" opacity="0"></text>`;
-    }
-
-    function motes(cx,cy,n,t,r,color,speed){
-        let s="";
-        const sp=speed||280;
-        for(let i=0;i<n;i++){
-            const a=i/n*Math.PI*2+t/sp;
-            const rad=r*(0.28+0.72*((i*17%10)/10));
-            const x=cx+Math.cos(a)*rad;
-            const y=cy+Math.sin(a)*rad*0.7;
-            const op=0.22+0.4*Math.abs(Math.sin(t/160+i));
-            s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(0.28+(i%3)*0.12).toFixed(2)}" fill="${color}" fill-opacity="${op.toFixed(2)}"/>`;
-        }
-        return s;
-    }
-    function shards(cx,cy,n,t,r,color){
-        let s="";
-        for(let i=0;i<n;i++){
-            const a=i/n*Math.PI*2+t/900;
-            const x=cx+Math.cos(a)*r;
-            const y=cy+Math.sin(a)*r*0.65;
-            s+=`<rect x="${(x-0.7).toFixed(1)}" y="${(y-0.25).toFixed(1)}" width="1.4" height="0.5" fill="${color}" opacity="0.55" transform="rotate(${(a*57).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
-        }
-        return s;
+        return `<g id="abilityFx" pointer-events="none"></g>
+            <text id="abilityCallout" x="50" y="22" text-anchor="middle" font-size="5.4" font-weight="900" fill="#ffe08a" stroke="#120c04" stroke-width="0.45" opacity="0"></text>`;
     }
 
     global.SpinWarsAbilities={
@@ -1555,7 +1408,7 @@
         tryDash, tryAbility, forceFieldStorm, popup, grantCharge, abilityMax,
         onClashKnock, skipClash, holdPhysics, step,
         mountDock, updateDock, fxMarkup, dashFill, abilityFill,
-        cpuShouldDash, cpuShouldAbility, readFight, inspectStatus, inspectHud, pauseClock,
+        cpuShouldDash, cpuShouldAbility, readFight,
         SWORD_R, STORM_R, QUAKE_R, IRON_MS, FREE_SPIN_CHANCE, KITS, META
     };
     if(typeof window!=="undefined"){

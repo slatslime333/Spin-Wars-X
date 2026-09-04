@@ -45,8 +45,8 @@ function partsMeta(blade,ratchet,bit){
 
 function formMetaAdj(form,enhanced){
     const f=String(form||"Bronze");
-    let n=f==="Gold"?0:f==="Silver"?-2:-4;
-    if(enhanced) n+=2;
+    let n=f==="Gold"?0:f==="Silver"?-5:-10;
+    if(enhanced) n+=3;
     return n;
 }
 
@@ -64,7 +64,7 @@ function stackMetaBonus(bonuses,blade){
         focus=["attack","knockback","defense","mobility","balance","stamina"]
             .reduce((s,k)=>s+(Number(b[k])||0),0)*0.45;
     }
-    return clamp(Math.round(5*(1-Math.exp(-Math.max(0,focus)/14))),0,10);
+    return clamp(Math.round(6*(1-Math.exp(-Math.max(0,focus)/14))),0,14);
 }
 
 function rogueDisplayMeta(side){
@@ -76,7 +76,7 @@ function rogueDisplayMeta(side){
     const bonuses=side==="cpu"?r.cpuBonuses:r.bonuses;
     let meta=partsMeta(blade,ratchet,bit);
     if(side==="cpu"){
-        if(r.cpuEnhanced) meta+=2;
+        if(r.cpuEnhanced) meta+=3;
     }else{
         meta+=formMetaAdj(r.currentRogueTier,r.enhanced);
     }
@@ -887,7 +887,7 @@ function bossExtraStacks(){
 
 function battleCombo(side){
     const stats=side==="cpu"?cpuEffective():playerEffective();
-    const ovr=round(STATS.reduce((a,k)=>a+(Number(stats[k])||0),0)/STATS.length);
+    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/7);
     return {stats,ovr,meta:rogueDisplayMeta(side),compatibility:80,physical:{}};
 }
 
@@ -1465,7 +1465,7 @@ function plateDecor(side){
         stats[k]=shown;
         delta[k]=shown-(Number(tintBase[k])||70);
     });
-    const ovr=round(STATS.reduce((a,k)=>a+(Number(stats[k])||0),0)/STATS.length);
+    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
     const mod=packed?modifierById(packed.id):null;
     const stack=upgradeStack(side);
@@ -2135,19 +2135,15 @@ function showRunHistory(){
         ? past.map(runHistoryRowHTML).join("")
         : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
     const app=document.getElementById("app");
-    const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({kicker:"ROGUE RUN",title:"RUN SCOREBOARD"})
-        : "";
-    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueHistBack"}):"";
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
-    <main class="room locker">
-        ${bar}
-        <section class="room-body rogue-run-history" aria-label="Finished runs">
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-landing rogue-run-board">
+        ${homeBowlHTML()}
+        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"RUN SCOREBOARD"})}
+        <section class="rogue-run-history" aria-label="Finished runs">
             ${body}
         </section>
-        ${dock}
     </main>`;
-    document.getElementById("rogueHistBack")?.addEventListener("click",()=>showLanding());
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
     bindRunHistoryRows();
     mountDevButton();
 }
@@ -2298,42 +2294,32 @@ function showLanding(){
         ? `${past.length} finished run${past.length===1?"":"s"}`
         : "No finished runs yet";
     const app=document.getElementById("app");
-    const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({kicker:"ROGUE RUN",title:"ONE BEY"})
-        : "";
-    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueBack"}):"";
-    const hero=canContinue
-        ? `<div class="locker-save"><div><h2>CONTINUE</h2><p>${continueNote}</p></div></div>`
-        : `<h2>THE NIGHT</h2><p>One Bey. Eighteen matches. Then the dark.</p>`;
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
-    <main class="room locker has-art">
-        <div class="room-poster" aria-hidden="true">
-            <div class="lobby-art"><img id="rogueArtImg" src="assets/rogue.png?v=9.84" alt=""></div>
-        </div>
-        ${bar}
-        <section class="locker-hero">${hero}</section>
-        <nav class="locker-dock" aria-label="Rogue">
-            <button class="${canContinue?"":"is-go"}" id="rogueNewGame" type="button">
-                <span><b>NEW GAME</b><em>Pick a tier. Build a combo.</em></span>
-                <span class="gate-go">START</span>
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-landing">
+        ${homeBowlHTML()}
+        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Eighteen matches. Then the dark."})}
+        <nav class="home-doors rogue-doors" aria-label="Rogue">
+            <button class="home-door rip" id="rogueNewGame" type="button">
+                <span class="home-door-kicker">NEW RUN</span>
+                <b>NEW GAME</b>
+                <small>Pick a tier. Build a combo.</small>
             </button>
-            <button class="${canContinue?"is-gold":"is-locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span><b>CONTINUE</b><em>${continueNote}</em></span>
-                <span class="gate-go">${canContinue?"RESUME":"LOCKED"}</span>
+            <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
+                <span class="home-door-kicker">SAVE</span>
+                <b>CONTINUE</b>
+                <small>${continueNote}</small>
+                ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
             </button>
-            <button class="is-log" id="rogueScoreboard" type="button">
-                <span><b>RUN SCOREBOARD</b><em>${boardNote}</em></span>
-                <span class="gate-go">LOG</span>
+            <button class="home-door rogue" id="rogueScoreboard" type="button">
+                <span class="home-door-kicker">HISTORY</span>
+                <b>RUN SCOREBOARD</b>
+                <small>${boardNote}</small>
             </button>
-            <button class="is-help" id="rogueHelp" type="button">
-                <span><b>HOW A RUN WORKS</b><em>Shop, luck, eighteen nights.</em></span>
-                <span class="gate-go">READ</span>
-            </button>
+            <button class="home-help" id="rogueHelp" type="button">How a run works</button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
-        ${dock}
     </main>`;
-    document.getElementById("rogueBack")?.addEventListener("click",()=>renderMainMenu());
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
     document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
     document.getElementById("rogueContinue").onclick=()=>{
         if(!canContinue) return;
@@ -2341,7 +2327,6 @@ function showLanding(){
     };
     document.getElementById("rogueScoreboard").onclick=()=>showRunHistory();
     document.getElementById("rogueHelp").onclick=()=>showHelp();
-    if(typeof bindPosterArt==="function") bindPosterArt("rogueArtImg","assets/rogue.png?v=9.84");
     mountDevButton();
 }
 
@@ -2369,30 +2354,23 @@ function showTierPick(){
     Game.mode="rogue";
     Game.screen="rogueTier";
     const app=document.getElementById("app");
-    const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({kicker:"NEW RUN",title:"PICK A TIER"})
-        : "";
-    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueTierBack"}):"";
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background stadium"></div>`}
-    <main class="room locker">
-        ${bar}
-        <nav class="tier-col" aria-label="Starting tier">
-            <button class="is-bronze" type="button" data-tier="Bronze">
-                <b>BRONZE</b>
-                <em>Hard early, easier late. Enhance after 5. No evolve.</em>
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-landing">
+        ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
+        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:"Pick a tier. Then three blades, three ratchets, three bits."}):""}
+        <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
+            <button class="home-league bronze" type="button" data-tier="Bronze">
+                <span class="home-league-copy"><b>BRONZE</b><small>Hard early, easier late. Enhance after 5. No evolve.</small></span>
             </button>
-            <button class="is-silver" type="button" data-tier="Silver">
-                <b>SILVER</b>
-                <em>Middle path. Evolve, then Enhance.</em>
+            <button class="home-league silver" type="button" data-tier="Silver">
+                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance.</small></span>
             </button>
-            <button class="is-gold" type="button" data-tier="Gold">
-                <b>GOLD</b>
-                <em>Easy start, hard late. Climb Bronze → Silver → Gold.</em>
+            <button class="home-league gold" type="button" data-tier="Gold">
+                <span class="home-league-copy"><b>GOLD</b><small>Easy start, hard late. Climb Bronze → Silver → Gold.</small></span>
             </button>
         </nav>
-        ${dock}
     </main>`;
-    document.getElementById("rogueTierBack")?.addEventListener("click",()=>showLanding());
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
     document.querySelectorAll("[data-tier]").forEach(btn=>{
         btn.onclick=()=>startRogueDraft(btn.dataset.tier);
     });
@@ -2426,14 +2404,16 @@ function startBladePick(){
 function showHelp(){
     Game.screen="rogueHelp";
     const app=document.getElementById("app");
-    const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({kicker:"ROGUE",title:"HOW A RUN WORKS"})
-        : "";
-    const dock=typeof roomDockHTML==="function"?roomDockHTML({backId:"rogueHelpBack"}):"";
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
-    <main class="room locker">
-        ${bar}
-        <div class="room-body" style="padding:16px">
+    app.innerHTML=`<div class="background"></div>
+    <main class="menu rogue-help">
+        <div class="selection-header">
+            <div class="selection-icon">X</div>
+            <div>
+                <span class="eyebrow">ROGUE</span>
+                <h1>HOW A RUN WORKS</h1>
+                <p>Same stadium. One Bey. Eighteen matches, then endless.</p>
+            </div>
+        </div>
         <section class="menu-card rogue-help-card">
             <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
@@ -2453,10 +2433,8 @@ function showHelp(){
             <p class="eyebrow">MODIFIERS</p>
             <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
         </section>
-    </div>
-        ${dock}
     </main>`;
-    document.getElementById("rogueHelpBack")?.addEventListener("click",()=>showLanding());
+    document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
     mountDevButton();
 }
 
@@ -2477,11 +2455,9 @@ function onStarterPicked(blade,ratchet,bit){
 
 function decorateVs(root){
     if(!isActive()||!root) return;
-    if(!root.querySelector(".room-bar")){
-        const banner=el(bannerHTML());
-        root.insertBefore(banner,root.firstChild);
-    }
-    const back=root.querySelector("#vsBack, .back-btn");
+    const banner=el(bannerHTML());
+    root.insertBefore(banner,root.firstChild);
+    const back=root.querySelector(".back-btn");
     if(back) back.onclick=()=>{persist();showLanding();};
     const btn=document.getElementById("battleButton");
     if(btn) btn.textContent="LET IT RIP";
@@ -2905,7 +2881,7 @@ function showScenario(id){
             ${scenarioOddsHTML(c)}
           </div>`).join("")
         : `<button class="rip-btn" type="button" data-scene-choice="ok">CONTINUE</button>`;
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="home rogue-scenario">
         ${homeMarkHTML({tag:pack.kicker||"SIDELINE"})}
         <p class="win-name">${pack.title}</p>
@@ -2950,7 +2926,7 @@ function showResults(){
         <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
         <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
         : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>`;
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(r.matchIndex===18?"FINAL BOSS DOWN":(r.matchIndex===6||r.matchIndex===12?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(r.matchIndex===18?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
@@ -2992,7 +2968,7 @@ function showRunWin(){
         return;
     }
     const app=document.getElementById("app");
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="home home-win">
         ${homeMarkHTML({compact:true,tag:"ROGUE COMPLETE"})}
         <p class="win-name">${r.blade.name}</p>
@@ -3021,25 +2997,30 @@ function showHub(){
     const sprite=bladeSpritePath(r.blade);
     const mod=r.activeModifier?modifierById(r.activeModifier.id):null;
     const app=document.getElementById("app");
-    const bar=typeof roomBarHTML==="function"
-        ? roomBarHTML({backId:null,kicker:"ROGUE RUN",title:r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex}`:`MATCH ${r.matchIndex} / ${FINAL_MATCH}`})
-        : "";
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("hub"):`<div class="background"></div>`}
-    <main class="room hub">
-        ${bar}
-        <section class="rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
+    app.innerHTML=`<div class="background"></div>
+    <main class="menu rogue-hub">
+        <div class="selection-header">
+            <div class="selection-icon">X</div>
+            <div>
+                <span class="eyebrow">ROGUE RUN</span>
+                <h1>${r.matchIndex>FINAL_MATCH?`ENDLESS ${r.matchIndex} CLEAR`:`MATCH ${r.matchIndex} / ${FINAL_MATCH} CLEAR`}</h1>
+                <p>${r.blade.name} · ${r.ratchet.name} · ${r.bit.name}</p>
+            </div>
+        </div>
+        <section class="menu-card rogue-build ${r.enhanced?"enhanced":""} ${"tier-"+String(r.currentRogueTier||"bronze").toLowerCase()}">
             <div class="rogue-build-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
-            <div class="rogue-build-copy">
+            <div>
                 <b>${r.blade.name}</b>
-                <small>${r.ratchet.name} · ${r.bit.name} · ${String(r.currentRogueTier||"Bronze").toUpperCase()}${r.enhanced?" · ENHANCED":""}</small>
-                <div class="stat-grid rogue-stat-grid">${STATS.map(k=>{
+                <small>${String(r.currentRogueTier||"Bronze").toUpperCase()} FORM${r.enhanced?" · ENHANCED":""}</small>
+                <div class="rogue-statline">${STATS.map(k=>{
                     const d=stats[k]-base[k];
-                    return `<span class="mini-stat"><span>${LABEL[k]}</span><b>${stats[k]}${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</b></span>`;
+                    return `<span>${LABEL[k]} <b>${stats[k]}</b>${d?`<i class="${d>0?"up":"down"}">${d>0?"+":""}${d}</i>`:""}</span>`;
                 }).join("")}</div>
-                ${mod?`<details class="vs-full rogue-mod-drop"><summary>${mod.name}</summary><p class="rogue-mod-line">${mod.blurb}</p></details>`:"<p class=\"rogue-mod-line\">No modifier</p>"}
+                ${mod?`<p class="rogue-mod-line">${mod.name} · ${mod.blurb}</p>`:"<p class=\"rogue-mod-line\">No Rogue Modifier</p>"}
                 ${upgradeStackHTML(upgradeStack("player"))}
             </div>
         </section>
+        <p class="home-leagues-label">CHOOSE ONE UPGRADE</p>
         <div class="rogue-offers" id="rogueOffers"></div>
     </main>`;
     const box=document.getElementById("rogueOffers");
@@ -3087,7 +3068,7 @@ function openReforge(card,fromDev){
         ? shuffle(selectableBits().filter(b=>b.name!==r.bit.name)).slice(0,3)
         : shuffle(RATCHETS.filter(x=>x.name!==r.ratchet.name)).slice(0,3);
     const app=document.getElementById("app");
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="menu selection-screen">
         <div class="selection-header"><div class="selection-icon">⚙</div>
         <div><span class="eyebrow">RARE REFORGE</span><h1>PICK ${isBit?"BIT":"RATCHET"}</h1>
@@ -3126,7 +3107,7 @@ function openAbilitySwap(card,fromDev){
     const meta=(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META)||{};
     const choices=(card.choices||[]).filter(id=>meta[id]).slice(0,2);
     const app=document.getElementById("app");
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="menu selection-screen">
         <div class="selection-header"><div class="selection-icon">✦</div>
         <div><span class="eyebrow">RARE SWAP</span><h1>PICK AN ABILITY</h1>
@@ -3206,7 +3187,7 @@ function showUpgradeResult(){
         body=`<p class="rogue-mod-line">${card.title}</p><p>${card.body||""}</p>`+body;
     }
     const app=document.getElementById("app");
-    app.innerHTML=`${typeof bgHTML==="function"?bgHTML("locker"):`<div class="background"></div>`}
+    app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:"UPGRADE LOCKED"})}
         <p class="win-name">${card.title||"UPGRADE"}</p>
@@ -3440,101 +3421,10 @@ function flavorCallLine(){
     return (isActive() && run()?.flavorCall) || "";
 }
 
-function inspectBattle(side){
-    const r=run();
-    if(!isActive()||!r) return null;
-    const plate=plateDecor(side);
-    const s=typeof NEW_BATTLE!=="undefined"?NEW_BATTLE?.[side]:null;
-    const elapsed=Number(NEW_BATTLE?.elapsed)||0;
-    const rpm=Number(s?.rpm);
-    const clocks=[];
-    const pushClock=(id,label,opts)=>{
-        clocks.push(Object.assign({id,label,state:"",left:0,note:""},opts||{}));
-    };
-    const mod=plate?.mod||null;
-    if(mod){
-        if(mod.id==="first_blood"){
-            if(elapsed<=5) pushClock("fb","First Blood",{state:"LIVE",left:5-elapsed});
-            else pushClock("fb","First Blood",{state:"SPENT"});
-        }else if(mod.id==="endurance"){
-            if(elapsed<8) pushClock("en","Endurance",{state:"WAIT",left:8-elapsed,note:"long fight"});
-            else pushClock("en","Endurance",{state:"LIVE",note:"long fight"});
-        }else if(mod.id==="late_bloom"){
-            if(elapsed<7.5) pushClock("lb","Late Bloom",{state:"WAIT",left:7.5-elapsed});
-            else pushClock("lb","Late Bloom",{state:"LIVE"});
-        }else if(mod.id==="psyshock"){
-            const hits=Number(s?.roguePsyshockHits)||0;
-            const next=hits%2===0?"60% next hit":"160% next hit";
-            if(elapsed<=5) pushClock("ps","Psyshock",{state:"LIVE",left:5-elapsed,note:next});
-            else pushClock("ps","Psyshock",{state:"OPEN",note:next});
-        }else if(mod.id==="last_stand"){
-            pushClock("ls","Last Stand",{state:rpm<0.40?"LIVE":"WAIT",note:Number.isFinite(rpm)?Math.round(rpm*100)+"% RPM":""});
-        }else if(mod.id==="berserker"){
-            pushClock("bz","Berserker",{state:rpm>=0.70?"HIGH":rpm<0.35?"TIRED":"MID"});
-        }else if(mod.id==="final_spin"){
-            pushClock("fs","Final Spin",{state:rpm<0.28?"LIVE":rpm>0.62?"EARLY":"WAIT"});
-        }else if(mod.id==="heavy_contact"){
-            pushClock("hc","Heavy Contact",{state:s?.rogueHeavyArmed?"ARMED":"WAIT"});
-        }else if(mod.id==="counterweight"){
-            pushClock("cw","Counterweight",{state:s?.rogueCounterArmed?"ARMED":"WAIT"});
-        }else if(mod.id==="rail_rush"){
-            const on=!!(s?.railEngaged||s?.xrailExitRampActive||(s?.lastXRailExitReason==="x-exit"&&(s.railExitRefractory||0)>0));
-            pushClock("rr","Rail Rush",{state:on?"LIVE":"WAIT"});
-        }else if(mod.id==="x_exit_swing"){
-            const age=s&&s.lastXRailExitReason==="x-exit"?performance.now()-(Number(s.railExitAt)||0):9999;
-            const swing=!!(s&&!s.railEngaged&&s.lastXRailExitReason==="x-exit"&&age<=1000);
-            pushClock("xe","X-Exit Swing",{state:swing?"LIVE":"WAIT",left:swing?Math.max(0,1-age/1000):0});
-        }else if(mod.id==="pin_lock"){
-            const rad=Math.hypot(Number(s?.x)||0,Number(s?.y)||0);
-            pushClock("pl","Pin Lock",{state:rad<0.42?"INNER":rad>0.72?"WIDE":"MID"});
-        }
-    }
-    const toys=[];
-    if(side==="player"){
-        CONSUMABLE_KEYS.forEach(id=>{
-            const n=Number(r.consumables?.[id])||0;
-            if(n>0){
-                toys.push({
-                    id,
-                    name:CONSUMABLE_META[id].name,
-                    games:n,
-                    note:n===1?"1 game":n+" games",
-                    body:CONSUMABLE_META[id].body||""
-                });
-            }
-        });
-        if((Number(r.hellsChainPct)||0)>0){
-            pushClock("hcp","Hells Chain",{state:"LIVE",note:Math.round(r.hellsChainPct*100)+"% KB"});
-        }
-        if((Number(r.matchBuffs?.burst2)||0)>0 && r.matchBuffs.burst2Stat){
-            toys.push({
-                id:"burst2",
-                name:`${LABEL[r.matchBuffs.burst2Stat]} +2`,
-                games:Number(r.matchBuffs.burst2)||0,
-                note:`${r.matchBuffs.burst2} game${r.matchBuffs.burst2===1?"":"s"} left`
-            });
-        }
-        if(r.matchBuffs?.dashHaste){
-            toys.push({id:"dash",name:"15% DASH CD",games:1,note:"this game"});
-        }
-        if(s?.rogueForceFieldUsed){
-            pushClock("ff","Force Field",{state:"USED",note:"this round"});
-        }
-    }
-    return {
-        mod,
-        clocks,
-        toys,
-        stacks:plate?.stack||[],
-        stackHTML:plate?.stackHTML||"",
-        pressure:plate?.pressure||""
-    };
-}
-
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
-    mountDevButton,endRun,persist,hasSave,plateDecor,rogueDisplayMeta,inspectBattle,MAX_MATCHES,BOSS_AT,MODIFIERS,
+    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
