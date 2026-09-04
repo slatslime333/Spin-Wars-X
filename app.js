@@ -1134,6 +1134,9 @@ function renderMainMenu(){
     Game.quickMatch=false;
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
+    document.getElementById("battleInspect")?.remove();
+    document.body.classList.remove("battle-inspect-open");
+    if(typeof NEW_BATTLE!=="undefined" && NEW_BATTLE) NEW_BATTLE.paused=false;
     if(typeof SpinWarsRogue!=="undefined" && Game.mode==="rogue"){
         SpinWarsRogue.persist();
     }
@@ -1148,26 +1151,36 @@ function renderMainMenu(){
         ${homeMarkHTML()}
         <p class="home-ver">ALPHA</p>
         <nav class="home-doors" aria-label="Choose a mode">
-            <button class="home-door rip" data-home="rogue" type="button">
-                <span class="home-door-kicker">RUN</span>
-                <b>ROGUE</b>
-                <small>18 matches · build the Bey · first to 7</small>
-            </button>
-            <button class="home-door locked" type="button" aria-disabled="true">
-                <span class="home-door-kicker">STORY</span>
-                <b>CAMPAIGN</b>
-                <small>Coming soon</small>
-                <span class="home-door-lock">LOCKED</span>
-            </button>
-            <button class="home-door play" data-home="quick" type="button">
-                <span class="home-door-kicker">QUICK PLAY</span>
-                <b>LET IT RIP</b>
-                <small>Leagues · random fights · first to 7</small>
-            </button>
+            <div class="home-door-row">
+                <button class="home-door rip" data-home="rogue" type="button">
+                    <span class="home-door-kicker">RUN</span>
+                    <b>ROGUE</b>
+                    <small>18 matches · build the Bey · first to 7</small>
+                </button>
+                <button class="home-door play" data-home="sandbox" type="button">
+                    <span class="home-door-kicker">LAB</span>
+                    <b>SANDBOX</b>
+                    <small>Build. Launch. Repeat.</small>
+                </button>
+            </div>
+            <div class="home-door-row">
+                <button class="home-door locked" type="button" aria-disabled="true">
+                    <span class="home-door-kicker">STORY</span>
+                    <b>CAMPAIGN</b>
+                    <small>Coming soon</small>
+                    <span class="home-door-lock">LOCKED</span>
+                </button>
+                <button class="home-door play" data-home="quick" type="button">
+                    <span class="home-door-kicker">QUICK PLAY</span>
+                    <b>LET IT RIP</b>
+                    <small>Leagues · random fights · first to 7</small>
+                </button>
+            </div>
             <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
         </nav>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
+    document.querySelector("[data-home='sandbox']")?.addEventListener("click",()=>SpinWarsSandbox.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
     document.querySelector("[data-home='help']")?.addEventListener("click",()=>renderHowTo());
 }
@@ -1211,8 +1224,9 @@ function renderHowTo(){
         </section>
 
         <section class="menu-card howto-card" id="ht-modes">
-            <h2>The three doors</h2>
+            <h2>The doors</h2>
             <p><strong>Rogue</strong> is the main mode. One Bey. Eighteen matches, each first to 7, then the night keeps going if you beat the hidden final. New Game: pick Bronze / Silver / Gold, then three blades, three ratchets, three bits — same as Quick Play. Win a match, pick an upgrade in the shop. Lose, and the run is over. Matches 6 and 12 are minis. Continue remembers the run — even a mid-battle close comes back at the saved score. Rogue has its own short help on the landing if you want the shop and luck stuff in one place.</p>
+            <p><strong>Sandbox</strong> is the lab. Landing doors for Player vs CPU, Player vs Player, and CPU vs CPU. 1 Bey or 2. Full garage, kit presets, launch presets, a session log. Finishes call out a score and keep going. Leave is the only exit. PvP uses two docks (P1 Space / E, P2 Enter / Shift). CPU vs CPU is watch mode. Tap a name in battle for a paused stat sheet — that works in Rogue and Quick Play too.</p>
             <p><strong>Campaign</strong> is locked. Story is not in yet. That door is a promise, not a bug.</p>
             <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
         </section>
@@ -2293,7 +2307,7 @@ function createComboSummaryCard(side,combo){
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
-        <span class="vs-who">${isPlayer?"YOU":"CPU"}</span>
+        <span class="vs-who">${combo.who||(isPlayer?"YOU":"CPU")}</span>
         ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
         <h2>${combo.blade.name}</h2>
         <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
@@ -2332,7 +2346,7 @@ function createComboSummaryCard(side,combo){
 }
 function showComboCard(){
     Game.screen="comboCheck";
-    if(Game.mode!=="rogue") generateCPUCombo();
+    if(Game.mode!=="rogue" && Game.mode!=="sandbox") generateCPUCombo();
     if(typeof SpinWarsAbilities!=="undefined"){
         if(SpinWarsAbilities.syncMatchCharges) SpinWarsAbilities.syncMatchCharges();
         else if(SpinWarsAbilities.resetMatch) SpinWarsAbilities.resetMatch();
@@ -2479,7 +2493,7 @@ function generateCPUCombo(force=false){
 
 
 function showVS(){
-    if(Game.mode!=="rogue") generateCPUCombo();
+    if(Game.mode!=="rogue" && Game.mode!=="sandbox") generateCPUCombo();
     assignStadiumSides();
 
     // Match is first-to-7 points. Only initialize this when creating the
@@ -2693,7 +2707,10 @@ function showLetItRip(){
             };
         }
 
-        if(backToVS) backToVS.onclick=showVS;
+        if(backToVS) backToVS.onclick=()=>{
+            if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined") SpinWarsSandbox.showLab();
+            else showVS();
+        };
         return;
     }
 
@@ -3408,13 +3425,14 @@ function newBattleLaunchState(side){
         : calculateComboStats(combo.blade,combo.ratchet,combo.bit);
     const stats=comboCalc?.stats||{};
 
+    const sandboxHuman=Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.sideIsHuman?.(side);
     const plan =
-        side==="player" && Game.player.launch?.technique
+        (side==="player" && Game.player.launch?.technique) || sandboxHuman
             ? {
-                technique:Game.player.launch.technique,
-                angle:Game.player.launch.angle||"Flat",
-                quality:Game.player.launch.quality ||
-                    ensureLaunchQuality("player")
+                technique:(Game[side].launch?.technique)||Game.player.launch?.technique||"Center",
+                angle:Game[side].launch?.angle||"Flat",
+                quality:Game[side].launch?.quality ||
+                    ensureLaunchQuality(side)
               }
             : side==="cpu"
                 ? {
@@ -3831,8 +3849,14 @@ function applyDirectClashLaunches(p, c){
 function forfeitLiveMatch(){
     if(NEW_BATTLE.raf) cancelAnimationFrame(NEW_BATTLE.raf);
     NEW_BATTLE.active=false;
+    NEW_BATTLE.paused=false;
     NEW_BATTLE.finishPending=false;
     endKillCam();
+    if(typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.closeInspect) SpinWarsSandbox.closeInspect();
+    if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined"){
+        SpinWarsSandbox.leave();
+        return;
+    }
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.showLanding();
         return;
@@ -3875,6 +3899,8 @@ function startNewBattle(){
     Game.battle.orientation=
         Math.floor(Game.battle.round/2)%2;
     NEW_BATTLE.finishPending=false;
+    NEW_BATTLE.paused=false;
+    if(typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.closeInspect) SpinWarsSandbox.closeInspect();
 
     if(typeof SpinWarsScoreboard!=="undefined"){
         const sc=Game.battle.score||{player:0,cpu:0};
@@ -3886,7 +3912,11 @@ function startNewBattle(){
     // that starts physical battle state.
     NEW_BATTLE.player=newBattleLaunchState("player");
     NEW_BATTLE.cpu=newBattleLaunchState("cpu");
-    applyDirectClashLaunches(NEW_BATTLE.player, NEW_BATTLE.cpu);
+    if(typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.isSolo && SpinWarsSandbox.isSolo()){
+        SpinWarsSandbox.prepareGhost(NEW_BATTLE.cpu);
+    }else{
+        applyDirectClashLaunches(NEW_BATTLE.player, NEW_BATTLE.cpu);
+    }
 
     Game.player.launch=Game.player.launch||{};
     Game.player.launch.angle=NEW_BATTLE.player.launchPlan.angle;
@@ -4215,6 +4245,10 @@ function renderNewBattle(){
     updateBeyMotionTrail(p,"playerMotionTrail",performance.now());
     updateBeyMotionTrail(c,"cpuMotionTrail",performance.now());
     document.getElementById("forfeitMatchBtn")?.addEventListener("click",forfeitLiveMatch);
+    if(typeof SpinWarsSandbox!=="undefined"){
+        if(SpinWarsSandbox.decorateBattle) SpinWarsSandbox.decorateBattle();
+        if(SpinWarsSandbox.mountInspect) SpinWarsSandbox.mountInspect();
+    }
     if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
         SpinWarsRogue.mountDevButton();
         Game.screen="battle";
@@ -4352,10 +4386,12 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         finishPoints=1;
     }
 
-    if(winnerSide==="player"){
-        Game.battle.score.player+=finishPoints;
-    }else{
-        Game.battle.score.cpu+=finishPoints;
+    if(!(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.isSolo?.() && winnerSide==="cpu")){
+        if(winnerSide==="player"){
+            Game.battle.score.player+=finishPoints;
+        }else{
+            Game.battle.score.cpu+=finishPoints;
+        }
     }
     const scoreP=document.getElementById("battleScorePlayer");
     const scoreC=document.getElementById("battleScoreCpu");
@@ -4384,7 +4420,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
     const playerScore=Game.battle.score.player;
     const cpuScore=Game.battle.score.cpu;
-    const matchWinner=
+    const matchWinner=Game.mode==="sandbox"?null:
         playerScore>=7 ? "player" :
         cpuScore>=7 ? "cpu" : null;
 
@@ -4441,6 +4477,14 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                  <div class="finish-flash-points">+${finishPoints}</div>`;
         }
         stadium.appendChild(flash);
+        if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.afterFinish){
+            const line=SpinWarsSandbox.afterFinish(winnerSide,finishType,finishPoints);
+            const kick=flash.querySelector(".finish-flash-kicker");
+            if(kick && typeof SpinWarsSandbox.finishCopy==="function"){
+                kick.textContent=SpinWarsSandbox.finishCopy(winnerSide,finishType,finishPoints);
+            }
+            void line;
+        }
     }
     const commentary=document.getElementById("newCommentaryCopy")||document.getElementById("newCommentary");
     if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.onFinish){
@@ -4455,6 +4499,19 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
     }
 
     setTimeout(()=>{
+        if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined"){
+            NEW_BATTLE.finishPending=false;
+            NEW_BATTLE.active=false;
+            resetKillCam();
+            Game.player.recoveredFlashUntil=0;
+            Game.cpu.recoveredFlashUntil=0;
+            NEW_BATTLE.player=null;
+            NEW_BATTLE.cpu=null;
+            const s=SpinWarsSandbox.ensure?.();
+            if(s?.autoRelaunch) SpinWarsSandbox.relaunch();
+            else SpinWarsSandbox.showLab();
+            return;
+        }
         if(matchWinner){
             Game.battle.matchFinished=true;
             Game.battle.finished=true;
@@ -5154,6 +5211,11 @@ function updateBeyBattleVisual(state, circleId, spriteId, dt){
 
 function newBattleFrame(now){
     if(!NEW_BATTLE.active) return;
+    if(NEW_BATTLE.paused){
+        NEW_BATTLE.last=now;
+        NEW_BATTLE.raf=requestAnimationFrame(newBattleFrame);
+        return;
+    }
 
     if(NEW_BATTLE.killCamPendingFinish){
         const cam=killCamState();
@@ -5203,8 +5265,8 @@ function newBattleFrame(now){
                 Game.battle.phase="Battle";
             }
 
-            newPhysicsStep(p,PHYSICS_DT);
-            newPhysicsStep(c,PHYSICS_DT);
+            if(!p.sandboxGhost) newPhysicsStep(p,PHYSICS_DT);
+            if(!c.sandboxGhost) newPhysicsStep(c,PHYSICS_DT);
 
             if(
                 !Number.isFinite(p.x)||!Number.isFinite(p.y)||
@@ -5433,7 +5495,7 @@ function newBattleFrame(now){
 
         // checkForcedStadiumFinish identifies the Bey that ENTERED the zone.
         // The opponent is therefore the finisher/winner for scoring purposes.
-        if(playerFinish && playerFinish!=="Recovered"){
+        if(playerFinish && playerFinish!=="Recovered" && !p.sandboxGhost){
             finishCandidates.push({
                 enteredSide:"player",
                 winnerSide:"cpu",
@@ -5441,7 +5503,7 @@ function newBattleFrame(now){
                 strength:(p.lastImpactForce||0)+Math.hypot(p.vx,p.vy)*0.35
             });
         }
-        if(cpuFinish && cpuFinish!=="Recovered"){
+        if(cpuFinish && cpuFinish!=="Recovered" && !c.sandboxGhost){
             finishCandidates.push({
                 enteredSide:"cpu",
                 winnerSide:"player",
@@ -5534,7 +5596,19 @@ function newBattleFrame(now){
         // Xtreme / Over have already been resolved above by the single
         // authoritative finish resolver.
 
-        if(p.rpm<=0.001 || c.rpm<=0.001){
+        if(p.sandboxGhost){
+            if(p.rpm<=0.001){
+                endKillCam();
+                finishNewBattle("cpu");
+                return;
+            }
+        }else if(c.sandboxGhost){
+            if(p.rpm<=0.001){
+                endKillCam();
+                finishNewBattle("cpu");
+                return;
+            }
+        }else if(p.rpm<=0.001 || c.rpm<=0.001){
             endKillCam();
             finishNewBattle(p.rpm>c.rpm?"player":"cpu");
             return;
@@ -6790,6 +6864,8 @@ function newPhysicsCollision(dt){
     const dx=c.x-p.x, dy=c.y-p.y;
     const dist=Math.hypot(dx,dy);
     const minDist=p.radius+c.radius;
+
+    if(p.sandboxGhost||c.sandboxGhost) return;
 
     if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.skipClash(p,c)){
         if(!(p.abilityHold||c.abilityHold)){
