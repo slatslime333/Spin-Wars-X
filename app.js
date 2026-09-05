@@ -1291,7 +1291,7 @@ function renderHowTo(){
         <section class="menu-card howto-card" id="ht-combo">
             <h2>Building a combo</h2>
             <p>A Bey is three parts stacked: <strong>blade</strong> on top, <strong>ratchet</strong> in the middle, <strong>bit</strong> on the bottom. Blade is the personality and the ability kit. Ratchet is sides × height — 3-60, 5-70, 9-80, like that. Bit is how it actually moves in the bowl.</p>
-            <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, OVR, and the HIT / HOLD / MOVE boxes.</p>
+            <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, OVR, and the HIT / HOLD / MOVE bars.</p>
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. Compatibility matters — an Attack blade is happier on Rush or Flat than on Ball. A Defense blade wants Needle, Hexa, Ball, that family. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
             <p><strong>Ratchet.</strong> Height is exposure. 60 sits in. 70 is a step out. 80 is the tall, pokey one — more attack and knock on the card, less hold. Sides change the shape of those numbers; 1-something is wild and asymmetric, 9-something is compact and stubborn. You will feel 80 more than you will feel a 2-point stat bump.</p>
             <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home — it is not glued to the pin. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not in the garage.</p>
@@ -1644,19 +1644,28 @@ function statDeltaMap(from,to){
 function comboStatGroupsHTML(stats,delta){
     stats=stats||{};
     delta=delta||{};
-    const useBars=typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.useStatBars && SpinWarsRogueRun.useStatBars();
-    if(useBars) return SpinWarsRogueRun.statGroupsHTML(stats,delta);
-    const box=(label,key)=>{
-        const value=Number.isFinite(Number(stats[key]))?Math.round(stats[key]):"—";
+    const max=99;
+    const row=(label,key)=>{
+        const n=Number(stats[key]);
+        const shown=Number.isFinite(n)?Math.round(n):0;
+        const pct=Math.max(0,Math.min(100,shown/max*100));
         const d=Number(delta[key])||0;
         const tint=d>0?" up":d<0?" down":"";
         const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
-        return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
+        return `<div class="rr-stat${tint}">
+            <span class="rr-stat-lab">${label}</span>
+            <span class="rr-stat-num"><b>${Number.isFinite(n)?shown:"—"}</b>${mark}</span>
+            <span class="rr-stat-rail" aria-hidden="true"><span class="rr-stat-fill" style="width:${pct}%"></span></span>
+        </div>`;
     };
-    return `<div class="vs-stat-groups">
-      <div class="vs-stat-group"><span class="vs-stat-group-label">HIT</span><div class="vs-stats pair">${box("ATK","attack")}${box("KB","knockback")}</div></div>
-      <div class="vs-stat-group"><span class="vs-stat-group-label">HOLD</span><div class="vs-stats">${box("DEF","defense")}${box("BAL","balance")}${box("BST","burst")}</div></div>
-      <div class="vs-stat-group"><span class="vs-stat-group-label">MOVE</span><div class="vs-stats pair">${box("MOB","mobility")}${box("STA","stamina")}</div></div>
+    const group=(id,keys,pair)=>`<div class="rr-stat-group">
+        <span class="rr-stat-group-label">${id}</span>
+        <div class="rr-stat-rows${pair?" pair":""}">${keys}</div>
+    </div>`;
+    return `<div class="rr-stat-groups" aria-label="Combo stats">
+      ${group("HIT",row("ATK","attack")+row("KB","knockback"),true)}
+      ${group("HOLD",row("DEF","defense")+row("BAL","balance")+row("BST","burst"),false)}
+      ${group("MOVE",row("MOB","mobility")+row("STA","stamina"),true)}
     </div>`;
 }
 function partEffectPreviewHTML(kind,part,ctx){
@@ -1745,12 +1754,7 @@ function createBladeCard(blade){
                 <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
             </div>
             ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
-            <div class="blade-stat-grid">
-                ${statMini("ATK",blade.card.attack)}${statMini("KNO",blade.card.knockback)}
-                ${statMini("DEF",blade.card.defense)}${statMini("MOB",blade.card.mobility)}
-                ${statMini("BAL",blade.card.balance)}${statMini("STA",blade.card.stamina)}
-                ${statMini("BST",blade.card.burst)}
-            </div>
+            ${comboStatGroupsHTML(bladeCardStats(blade))}
         </div>
         <div class="select-hint">SELECT BLADE <span>›</span></div>`;
     card.querySelectorAll(".swx-drop").forEach(drop=>{

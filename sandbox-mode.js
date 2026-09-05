@@ -220,34 +220,15 @@ function comboOf(side){
     return raw||{stats:{},ovr:60,meta:60};
 }
 
-function statBox(stats,label,key){
-    const n=Number(stats?.[key]);
-    const value=Number.isFinite(n)?Math.round(n):"—";
-    return `<span class="vs-stat"><small>${label}</small><span class="vs-stat-val"><b>${value}</b></span></span>`;
-}
-
 function kitStatHTML(combo){
     const stats=combo?.stats||{};
-    return `<div class="vs-stat-groups sandbox-kit-stats" aria-label="Combo stats">
-        <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HIT</span>
-            <div class="vs-stats pair">
-                ${statBox(stats,"ATK","attack")}${statBox(stats,"KB","knockback")}
-            </div>
-        </div>
-        <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HOLD</span>
-            <div class="vs-stats">
-                ${statBox(stats,"DEF","defense")}${statBox(stats,"BAL","balance")}${statBox(stats,"BST","burst")}
-            </div>
-        </div>
-        <div class="vs-stat-group">
-            <span class="vs-stat-group-label">MOVE</span>
-            <div class="vs-stats pair">
-                ${statBox(stats,"MOB","mobility")}${statBox(stats,"STA","stamina")}
-            </div>
-        </div>
-    </div>`;
+    const delta=combo?.delta||{};
+    const bars=typeof comboStatGroupsHTML==="function"
+        ? comboStatGroupsHTML(stats,delta)
+        : (typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.statGroupsHTML
+            ? SpinWarsRogueRun.statGroupsHTML(stats,delta)
+            : "");
+    return `<div class="sandbox-kit-stats">${bars}</div>`;
 }
 
 function enterMode(vs){

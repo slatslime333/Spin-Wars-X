@@ -231,6 +231,7 @@ function statBarRow(label,value,delta){
 }
 
 function statGroupsHTML(stats,delta){
+    if(typeof comboStatGroupsHTML==="function") return comboStatGroupsHTML(stats,delta);
     stats=stats||{};
     delta=delta||{};
     return `<div class="rr-stat-groups" aria-label="Combo stats">
@@ -244,10 +245,7 @@ function statGroupsHTML(stats,delta){
 }
 
 function useStatBars(){
-    const g=global.Game;
-    if(!g) return false;
-    if(g.mode==="rogue-run") return true;
-    return !!(g.mode==="rogue" && g.rogue && g.rogue.loop==="run");
+    return true;
 }
 
 function persistLive(){
