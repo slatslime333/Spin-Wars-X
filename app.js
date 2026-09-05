@@ -1258,9 +1258,7 @@ function renderHowTo(){
     <div class="background stadium"></div>
     <main class="menu howto">
         <header class="howto-head">
-            ${homeMarkHTML({compact:true,kicker:"MANUAL",tag:""})}
-            <h1>HOW THIS WORKS</h1>
-            <p class="howto-lead">Two Beys. One stadium. First to 7.</p>
+            ${homeMarkHTML({compact:true,kicker:"MANUAL",tag:"First to 7."})}
         </header>
         <nav class="howto-toc" aria-label="Jump">
             <a href="#ht-start">Start</a>

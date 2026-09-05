@@ -267,25 +267,27 @@ function showLanding(){
     <main class="home sandbox-landing">
         ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
         ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX",tag:""}):""}
-        <nav class="home-doors rogue-doors sandbox-landing-doors" aria-label="Sandbox">
-            <div class="home-door-row">
-                ${VS_MODES.map(m=>`<button class="home-door ${m.id==="cvc"?"play":"rip"}" type="button" data-enter-vs="${m.id}">
-                    <span class="home-door-kicker">${m.kicker}</span>
-                    <b>${m.short}</b>
-                </button>`).slice(0,2).join("")}
-            </div>
-            <div class="home-door-row">
+        <nav class="swx-nav sandbox-landing-doors" aria-label="Sandbox">
+            <button class="home-door rip swx-hero" type="button" data-enter-vs="pve">
+                <span class="home-door-kicker">${VS_MODES[0].kicker}</span>
+                <b>${VS_MODES[0].short}</b>
+                <span class="swx-hero-mark">RIP</span>
+            </button>
+            <div class="swx-sec">
+                <button class="home-door play" type="button" data-enter-vs="pvp">
+                    <span class="home-door-kicker">${VS_MODES[1].kicker}</span>
+                    <b>${VS_MODES[1].short}</b>
+                </button>
                 <button class="home-door play" type="button" data-enter-vs="cvc">
                     <span class="home-door-kicker">${VS_MODES[2].kicker}</span>
                     <b>${VS_MODES[2].short}</b>
                 </button>
-                <button class="home-door rip" id="sandboxOpenLab" type="button">
-                    <span class="home-door-kicker">GARAGE</span>
-                    <b>LAB</b>
-                </button>
             </div>
-            <button class="home-help" id="sandboxSession" type="button">LOG${logN?` · ${logN}`:""}</button>
-            <button class="home-help" id="sandboxHelp" type="button">HOW</button>
+            <div class="swx-util">
+                <button class="home-door play" id="sandboxOpenLab" type="button"><b>LAB</b></button>
+                <button class="home-help" id="sandboxSession" type="button">LOG${logN?` · ${logN}`:""}</button>
+                <button class="home-help" id="sandboxHelp" type="button">HOW</button>
+            </div>
         </nav>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));

@@ -121,7 +121,7 @@
   font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
   font-size:clamp(11px,2.8vw,14px);
   font-weight:700;letter-spacing:.46em;text-indent:.46em;
-  color:rgba(246,240,230,.5);
+  color:rgba(246,240,230,.68);
   white-space:nowrap;
 }
 .home-mark.compact .swx-wordmark{
@@ -200,6 +200,7 @@
 .rr-part,
 .rogue-offer,
 .part-select-card,
+.blade-card,
 .vs-plate,
 .vs-call,
 .battle-hud-card{
@@ -397,7 +398,16 @@
 .vs-plate{
   box-shadow:0 10px 0 #050308;
 }
-.howto-head .howto-lead{max-width:28em;color:#9a9086}
+.howto-head .home-tag{letter-spacing:.18em;text-transform:uppercase}
+.howto-toc a{
+  border-radius:2px;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  background-image:var(--swx-grain);
+  letter-spacing:.16em;
+}
+.rr-starter-row{width:min(440px,100%);z-index:1}
+.rr-starter{min-height:168px;align-items:center;text-align:center}
+.rr-starter b{font-size:18px}
 
 @media(max-width:760px){
   .swx-sec{grid-template-columns:1fr 1fr}

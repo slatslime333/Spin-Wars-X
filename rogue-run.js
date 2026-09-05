@@ -499,15 +499,9 @@ function showStarterPick(){
     const ids=cfg().STARTER_BLADES||[];
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="menu rr-shell">
-        <div class="selection-header">
-            <div class="selection-icon">X</div>
-            <div>
-                <span class="eyebrow">ROGUE RUN</span>
-                <h1>PICK A STARTER</h1>
-                <p>Shelter Drake or Knight Shield. You always get 5-80, 4-80, Needle, and Flat.</p>
-            </div>
-        </div>
+    <main class="home rr-shell">
+        ${bowl()}
+        ${mark("ROGUE RUN","STARTER")}
         <div class="rr-starter-row">
             ${ids.map(id=>{
                 const b=bladeById(id);
@@ -515,12 +509,12 @@ function showStarterPick(){
                 return `<button class="home-door rip rr-starter" type="button" data-starter="${id}">
                     <span class="rr-starter-art">${sprite?`<img src="${sprite}" alt="">`:""}</span>
                     <b>${b?b.name:id}</b>
-                    <small>${b?b.type+" · "+b.tier:"Bronze"}</small>
+                    <small class="swx-state">${b?b.type:"Defense"}</small>
                 </button>`;
             }).join("")}
         </div>
     </main>`;
-    document.querySelector(".menu")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
     document.querySelectorAll("[data-starter]").forEach(btn=>{
         btn.onclick=()=>{
             const acc=account();
