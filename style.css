@@ -3883,7 +3883,7 @@ button:focus-visible{
   display:none;font-size:9px;font-weight:800;letter-spacing:.16em;
   color:rgba(246,240,230,.55)
 }
-@media (hover:hover) and (pointer:fine) and (min-width:900px){
+@media (min-width:900px){
   .combat-hint{display:block}
 }
 @media (max-width:720px){

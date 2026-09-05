@@ -26,22 +26,25 @@ function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
 function round(n){return Math.round(Number(n)||0);}
 function pick(list){return list[Math.floor(Math.random()*list.length)];}
 
+function blades(){return typeof BLADE_ENGINE!=="undefined"?BLADE_ENGINE:{};}
+function ratchets(){return typeof RATCHETS!=="undefined"?RATCHETS:[];}
+function bits(){return typeof BIT_ENGINE!=="undefined"?BIT_ENGINE:{};}
 function bladeById(id){
-    const eng=global.BLADE_ENGINE||{};
+    const eng=blades();
     if(id&&eng[id]) return eng[id];
     return Object.values(eng).find(b=>b&&(b.id===id||b.name===id))||null;
 }
 function bladeByName(name){
-    return Object.values(global.BLADE_ENGINE||{}).find(b=>b&&b.name===name)||null;
+    return Object.values(blades()).find(b=>b&&b.name===name)||null;
 }
 function ratchetByName(name){
-    return (global.RATCHETS||[]).find(r=>r&&r.name===name)||null;
+    return ratchets().find(r=>r&&r.name===name)||null;
 }
 function bitByName(name){
-    return Object.values(global.BIT_ENGINE||{}).find(b=>b&&b.name===name)||null;
+    return Object.values(bits()).find(b=>b&&b.name===name)||null;
 }
 function playableBlades(){
-    return Object.values(global.BLADE_ENGINE||{}).filter(b=>b&&!b.hidden);
+    return Object.values(blades()).filter(b=>b&&!b.hidden);
 }
 
 function emptyOwned(){
@@ -578,15 +581,16 @@ function showPlayConfirm(){
 }
 
 function ownedRatchets(){
-    return (global.RATCHETS||[]).filter(r=>ownsRatchet(r.name));
+    return ratchets().filter(r=>ownsRatchet(r.name));
 }
 function ownedBits(){
-    const bits=typeof selectableBits==="function"?selectableBits():Object.values(global.BIT_ENGINE||{});
-    return bits.filter(b=>ownsBit(b.name));
+    const list=typeof selectableBits==="function"?selectableBits():Object.values(bits());
+    return list.filter(b=>ownsBit(b.name));
 }
 function ownedBlades(){
+    const eng=blades();
     return playableBlades().filter(b=>{
-        const id=Object.keys(global.BLADE_ENGINE||{}).find(k=>BLADE_ENGINE[k]===b);
+        const id=Object.keys(eng).find(k=>eng[k]===b);
         return id&&ownsBlade(id);
     });
 }
