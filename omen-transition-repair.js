@@ -30,7 +30,11 @@
             }
         }catch(_e){ /* fall through to the local copy */ }
         var rogue=getRogue();
-        if(!rogue || rogue.matchIndex!==18) return;
+        if(!rogue) return;
+        var shark=window.SpinWarsRogue && typeof window.SpinWarsRogue.isSharkNight==="function"
+            ? window.SpinWarsRogue.isSharkNight(rogue.matchIndex)
+            : rogue.matchIndex===18;
+        if(!shark && window.Game && window.Game.screen!=="rogueOmen") return;
         if(window.Game && window.Game.screen!=="rogueOmen") return;
         try{
             if(typeof window.SpinWarsRogue.generateCpu === "function"){
@@ -53,7 +57,7 @@
     function tick(){
         var game=window.Game;
         var rogue=getRogue();
-        if(!game || !rogue || game.screen!=="rogueOmen" || rogue.matchIndex!==18){
+        if(!game || !rogue || game.screen!=="rogueOmen"){
             enteredAt=0;
             lastRunId=null;
             handedOff=false;

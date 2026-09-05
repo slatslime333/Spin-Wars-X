@@ -1368,17 +1368,27 @@
             : "";
         const inf=typeof global.SpinWarsSandbox!=="undefined"&&global.SpinWarsSandbox.ensure?.().infiniteCharges&&global.SpinWarsSandbox.isActive?.();
         const pip=passive?"PASSIVE":(inf?"∞":`${charges}/${abilityMax(side)}`);
+        const pvp=typeof global.SpinWarsSandbox!=="undefined"&&global.SpinWarsSandbox.isActive?.()
+            &&global.SpinWarsSandbox.sideIsHuman?.("cpu")&&global.SpinWarsSandbox.sideIsHuman?.("player");
+        const dashHint=side==="cpu"&&pvp?"ENTER":"SPACE";
+        const abHint=side==="cpu"&&pvp?"SHIFT":"M";
         return `<div class="combat-dock" id="combatDock${side==="cpu"?"2":""}" data-side="${side}">
             ${lab?`<span class="combat-who">${lab}</span>`:""}
-            <button type="button" class="combat-btn dash-btn" id="${dashId}">
-                <span class="combat-fill" style="height:${dashPct}%"></span>
-                <span class="combat-label">DASH</span>
-            </button>
-            <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="${abId}" ${passive?"disabled":""}>
-                <span class="combat-fill" style="height:${abPct}%"></span>
-                <span class="combat-emblem">${emblemSVG(id,32)}</span>
-                <span class="combat-pips">${pip}</span>
-            </button>
+            <div class="combat-slot">
+                <button type="button" class="combat-btn dash-btn" id="${dashId}">
+                    <span class="combat-fill" style="height:${dashPct}%"></span>
+                    <span class="combat-label">DASH</span>
+                </button>
+                <span class="combat-hint">${dashHint}</span>
+            </div>
+            <div class="combat-slot">
+                <button type="button" class="combat-btn ability-btn${passive?" is-passive":""}" id="${abId}" ${passive?"disabled":""}>
+                    <span class="combat-fill" style="height:${abPct}%"></span>
+                    <span class="combat-emblem">${emblemSVG(id,32)}</span>
+                    <span class="combat-pips">${pip}</span>
+                </button>
+                <span class="combat-hint">${abHint}</span>
+            </div>
             <span class="combat-toast" id="combatToast" hidden></span>
         </div>`;
     }
@@ -1400,7 +1410,7 @@
                 if(pvp()) tryAbility("cpu");
                 else tryDash("player");
             }
-            if(k==="e"||k==="E"||k==="f"||k==="F"){ e.preventDefault(); tryAbility("player"); }
+            if(k==="e"||k==="E"||k==="f"||k==="F"||k==="m"||k==="M"){ e.preventDefault(); tryAbility("player"); }
             if(k==="ArrowLeft"||k==="a"||k==="A") state.keys.x=-1;
             if(k==="ArrowRight"||k==="d"||k==="D") state.keys.x=1;
             if(k==="ArrowUp"||k==="w"||k==="W") state.keys.y=-1;

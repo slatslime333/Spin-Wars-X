@@ -59,9 +59,15 @@
     }else{
       ratio=m<=2?0.965:m<=5?0.985:m<=11?1.005:m<=17?1.025:1.105;
     }
-    if(m===6)ratio=t==="Bronze"?1.040:t==="Silver"?1.050:1.060;
-    if(m===12)ratio=t==="Bronze"?1.050:t==="Silver"?1.065:1.080;
-    if(m===18)ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    const R=global.SpinWarsRogue;
+    if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)&&m<=Math.ceil((R.finalMatch?.()||18)/2)) ratio=t==="Bronze"?1.040:t==="Silver"?1.050:1.060;
+    else if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)) ratio=t==="Bronze"?1.050:t==="Silver"?1.065:1.080;
+    else if(R&&typeof R.isSharkNight==="function"&&R.isSharkNight(m)) ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    else {
+      if(m===6)ratio=t==="Bronze"?1.040:t==="Silver"?1.050:1.060;
+      if(m===12)ratio=t==="Bronze"?1.050:t==="Silver"?1.065:1.080;
+      if(m===18)ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    }
     return ratio;
   }
 
@@ -72,6 +78,13 @@
 
   function bossInfo(){
     const m=match();
+    const R=global.SpinWarsRogue;
+    if(R&&typeof R.isSharkNight==="function"&&R.isSharkNight(m)) return {label:"FINAL BOSS",cls:"final"};
+    if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)){
+      return m<=Math.ceil((R.finalMatch?.()||18)/2)
+        ? {label:"MINI BOSS · TIER CHECK I",cls:"mini"}
+        : {label:"MINI BOSS · TIER CHECK II",cls:"mini"};
+    }
     if(m===6)return {label:"MINI BOSS · TIER CHECK I",cls:"mini"};
     if(m===12)return {label:"MINI BOSS · TIER CHECK II",cls:"mini"};
     if(m===18)return {label:"FINAL BOSS",cls:"final"};
