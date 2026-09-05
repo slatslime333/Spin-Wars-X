@@ -280,12 +280,18 @@ const attackLike=attackWeight>=0.70;
   (high friction, high center, low movement) still sit heavier than
   Point/Level. This is not a second knock layer.
 */
-const plant=clamp(
+let plant=clamp(
     bitFriction*0.40+
     centerAffinity*0.35+
     (1-clamp(movement,0,1))*0.25,
     0,1
 );
+/*
+  Ball was rubber-banding smashes back to the pin. Keep the short
+  stamina ring; ease the glue so a real knock can travel.
+*/
+const bitNameNow=String(ctx.bitName||s.bitName||(s.bit&&s.bit.name)||"").toLowerCase();
+if(bitNameNow==="ball") plant*=0.82;
 /*
   A real collision owns the trajectory briefly. Attack sheds hit-stun
   a little faster so it can re-hook the rail. Non-Attack keeps the
@@ -851,7 +857,7 @@ s.axisStability=
 }
 
 global.SpinWarsMovementEngine = {
-    version:"1.4.5",
+    version:"1.4.6",
     step,
     homeOrbitRadius,
     orbitOmega,

@@ -1079,7 +1079,7 @@ const BIT_PHYSICS = {
     Hexa:{movement:40,control:96,spinDrain:.68,xRailAffinity:34,centerAffinity:94,recovery:88,attackBias:-4,acceleration:42,friction:86,precession:24,stability:88},
     Needle:{movement:18,control:86,spinDrain:.40,xRailAffinity:14,centerAffinity:100,recovery:82,attackBias:-8,acceleration:20,friction:95,precession:24,stability:34},
     "High Needle":{movement:27,control:80,spinDrain:.37,xRailAffinity:20,centerAffinity:96,recovery:84,attackBias:-7,acceleration:29,friction:94,precession:30,stability:30},
-    Ball:{movement:30,control:96,spinDrain:.34,xRailAffinity:18,centerAffinity:96,recovery:94,attackBias:-7,acceleration:32,friction:94,precession:18,stability:94},
+    Ball:{movement:34,control:96,spinDrain:.34,xRailAffinity:20,centerAffinity:90,recovery:82,attackBias:-7,acceleration:34,friction:86,precession:20,stability:88},
     Orb:{movement:22,control:94,spinDrain:.39,xRailAffinity:14,centerAffinity:98,recovery:88,attackBias:-6,acceleration:28,friction:95,precession:18,stability:90},
     Point:{movement:58,control:86,spinDrain:.78,xRailAffinity:52,centerAffinity:74,recovery:76,attackBias:1,acceleration:58,friction:77,precession:34,stability:72},
     Quake:{movement:89,control:40,spinDrain:1.88,xRailAffinity:75,centerAffinity:20,recovery:24,attackBias:11,acceleration:92,friction:43,precession:74,stability:30}
@@ -1237,7 +1237,7 @@ function renderHowTo(){
             <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, OVR, and the HIT / HOLD / MOVE boxes.</p>
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. Compatibility matters — an Attack blade is happier on Rush or Flat than on Ball. A Defense blade wants Needle, Hexa, Ball, that family. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
             <p><strong>Ratchet.</strong> Height is exposure. 60 sits in. 70 is a step out. 80 is the tall, pokey one — more attack and knock on the card, less hold. Sides change the shape of those numbers; 1-something is wild and asymmetric, 9-something is compact and stubborn. You will feel 80 more than you will feel a 2-point stat bump.</p>
-            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not in the garage.</p>
+            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home — it is not glued to the pin. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not in the garage.</p>
             <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is two or three sentences about what the Beys are trying to do, not a stat lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
         </section>
 
@@ -1733,7 +1733,7 @@ function bitCard(bit){
         "Wedge":"Semi-mobile Defense Bit with strong stamina, then a more stationary late battle.",
         "Needle":"Very stationary and stamina-efficient, but its tiny tip can wobble and destabilize.",
         "High Needle":"More mobile than Needle, with strong stamina but even more exposure to destabilization.",
-        "Ball":"High-stamina center Bit with excellent stability and low movement.",
+        "Ball":"High-stamina center Bit. Short ring, but a real smash can move it.",
         "Orb":"High-stamina Bit with slightly more movement and less pure stability than Ball.",
         "Quake":"Jumping attack Bit: high impact and knockback, but poor stamina and balance."
     };
