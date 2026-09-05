@@ -840,18 +840,21 @@ footer{
 }
 .blade-card.game-blade-card.tier-gold .blade-card-head,
 .blade-card.game-blade-card.tier-gold .blade-stat-grid,
+.blade-card.game-blade-card.tier-gold .rr-stat-groups,
 .blade-card.game-blade-card.tier-gold .select-hint{
   background:#1c1404;
   border-color:#6a5214;
 }
 .blade-card.game-blade-card.tier-silver .blade-card-head,
 .blade-card.game-blade-card.tier-silver .blade-stat-grid,
+.blade-card.game-blade-card.tier-silver .rr-stat-groups,
 .blade-card.game-blade-card.tier-silver .select-hint{
   background:#14181e;
   border-color:#4b5562;
 }
 .blade-card.game-blade-card.tier-bronze .blade-card-head,
 .blade-card.game-blade-card.tier-bronze .blade-stat-grid,
+.blade-card.game-blade-card.tier-bronze .rr-stat-groups,
 .blade-card.game-blade-card.tier-bronze .select-hint{
   background:#1a100a;
   border-color:#6a3c20;
@@ -1055,6 +1058,12 @@ footer{
   border-top:1px solid #2f3a45;
   background:#10161d;
 }
+.blade-card .rr-stat-groups{
+  position:relative;
+  z-index:3;
+  width:100%;
+  margin-top:8px;
+}
 
 .mini-stat{
   min-width:0;
@@ -1227,6 +1236,12 @@ footer{
 }
 .part-select-card .vs-stat-groups,
 .part-select-card .rr-stat-groups{margin-top:0}
+.part-select-card .rr-stat-group,
+.blade-card .rr-stat-group{padding:5px}
+.part-select-card .rr-stat,
+.blade-card .rr-stat{grid-template-columns:28px 22px minmax(0,1fr);gap:4px}
+.part-select-card .rr-stat-num b,
+.blade-card .rr-stat-num b{font-size:13px}
 .part-select-card .mini-stat{
   padding:7px 2px;
 }
@@ -2481,6 +2496,7 @@ footer{
   .blade-pick-grid .blade-card-art{height:168px}
   .blade-card-title h2{font-size:16px!important}
   .blade-stat-grid{margin-top:6px}
+  .blade-card .rr-stat-groups{margin-top:6px}
   .blade-pick-grid .blade-stat-grid{
     grid-template-columns:repeat(4,minmax(0,1fr));
   }
@@ -3753,9 +3769,10 @@ button:focus-visible{
 .sandbox-kit-copy .vs-rating{display:inline-flex;flex-direction:column;min-width:72px;margin-top:4px;padding:4px 8px}
 .sandbox-kit-copy .vs-rating b{font-size:24px}
 .sandbox-kit-stats{margin-top:2px}
-.sandbox-kit-stats .vs-stat-group{padding:5px}
-.sandbox-kit-stats .vs-stat{padding:4px 5px}
-.sandbox-kit-stats .vs-stat b{font-size:15px}
+.sandbox-kit-stats .rr-stat-groups{margin-top:0}
+.sandbox-kit-stats .rr-stat-group{padding:5px}
+.sandbox-kit-stats .rr-stat{grid-template-columns:28px 24px minmax(0,1fr);gap:4px}
+.sandbox-kit-stats .rr-stat-num b{font-size:14px}
 .sandbox-part-btns,.sandbox-launch{display:flex;flex-wrap:wrap;gap:6px}
 .sandbox-launch{flex-direction:column}
 .sandbox-picker{
