@@ -1772,7 +1772,13 @@ footer{
 .launch-row.three{display:grid;grid-template-columns:repeat(3,1fr)}
 .launch-row.two{display:grid;grid-template-columns:repeat(2,1fr)}
 .launch-row.four{display:grid;grid-template-columns:repeat(4,1fr)}
-.launch-row.intent{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.launch-row.intent{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px}
+.launch-row.intent .menu-btn{
+  min-height:32px;
+  padding:4px 6px;
+  font-size:12px;
+  letter-spacing:.10em;
+}
 .launch-tilt-btn{
   flex-direction:column!important;
   gap:2px;
@@ -1791,23 +1797,23 @@ footer{
   text-transform:none;
 }
 .tilt-chip{
-  display:flex;
-  flex-direction:column;
-  gap:1px;
-  margin:4px 0 2px;
-  padding:4px 6px;
-  border:1px solid rgba(240,180,41,.4);
-  background:rgba(12,9,7,.72);
-  color:#f6f0e6;
-}
-.tilt-chip small{
-  color:var(--gold);
+  position:absolute;
+  left:36px;
+  top:3px;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#f0b429;
+  font-style:normal;
   font-size:8px;
   font-weight:800;
-  letter-spacing:.16em;
+  letter-spacing:.10em;
+  line-height:1;
+  pointer-events:none;
+  white-space:nowrap;
 }
-.tilt-chip b{font-size:11px;color:#7dff9f}
-.tilt-chip span{font-size:10px;color:#ff8aa0}
+.tilt-chip[hidden]{display:none!important}
 .rip-btn.compact{min-height:46px;font-size:22px;flex:1.85}
 
 #launchInfo{
@@ -2127,6 +2133,7 @@ footer{
 .battle-hud-top span{color:var(--muted);font-size:11px;letter-spacing:.12em}
 
 .rpm-readout{
+  position:relative;
   display:flex;
   align-items:baseline;
   gap:6px;

@@ -1317,10 +1317,10 @@ function renderHowTo(){
             <h2>The launch screen</h2>
             <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
             <p><strong>Angle.</strong> Flat is neutral. Slight and Hard add a short oval and a little more hit, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
-            <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
-            <p><strong>X-Rail.</strong> Starts at the live lower corner of the ring and rides. You pick your corner and whether you want to hook, run along, or peel into the bowl. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
-            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. You pick the approach lane. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
-            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot. You pick the hang and whether that shot goes middle or across. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
+            <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw. No extra Left / Middle / Right buttons — it is already center.</p>
+            <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Middle hooks that rail. The inward button peels you slightly off the ring into the bowl — Left if you are on the right, Right if you are on the left. There is no button that would mean "more onto the rail you are already on." Quality is how clean that entry is. You are on the rail, not in a hole.</p>
+            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Middle is the normal drive. Left and Right cut that way. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
+            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot. Middle is the normal shot to stadium middle. Left and Right shoot that way. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
             <p>The CPU is not reading your live pick. It locked a plan at round start from how you have been launching: Center-heavy habits get more rail, drop, and clash answers; X-Rail habits get rail contests and clashes, not more Center; Clash habits get Center, rail, and drop; Drop habits get Center and clash. It also tries not to repeat itself.</p>
         </section>
 
@@ -2687,6 +2687,10 @@ function showLetItRip(){
     NEW_BATTLE.cpu.launchQuality=null;
     NEW_BATTLE.cpu.launchPlan=null;
 
+    if((Game.player.launch.technique||"")==="Direct Clash"){
+        applyDirectClashAim(NEW_BATTLE.player, NEW_BATTLE.cpu, 0);
+    }
+
     NEW_BATTLE.active=false;
 
     // Technique/angle stay hidden until LET IT RIP. Quality is locked once
@@ -2787,19 +2791,16 @@ function showLetItRip(){
         `;
     }else{
         const technique=Game.player.launch.technique||"Center";
-        const intent=normalizeLaunchIntent(technique,Game.player.launch);
-        Game.player.launch.zone=intent.zone;
-        Game.player.launch.heading=intent.heading;
-        const spec=launchIntentSpec(technique);
-        const zoneRow=spec.zones.length
-            ? `<div class="launch-row intent">${spec.zones.map(z=>intentChip("zone",z,intent.zone)).join("")}</div>`
+        const sideSign=currentPlayerSideSign();
+        const intent=normalizeLaunchIntent(technique,Game.player.launch,sideSign);
+        Game.player.launch.lane=intent.lane;
+        const lanes=launchLaneOptions(technique,sideSign);
+        const laneRow=lanes.length
+            ? `<div class="launch-row intent">${lanes.map(id=>intentChip("lane",{id,label:launchLaneLabel(id)},intent.lane)).join("")}</div>`
             : "";
-        const headRow=spec.headings.length
-            ? `<div class="launch-row intent">${spec.headings.map(h=>intentChip("heading",h,intent.heading)).join("")}</div>`
-            : "";
-        const zoneLab=launchIntentLabel(technique,"zones",intent.zone);
-        const headLab=launchIntentLabel(technique,"headings",intent.heading);
-        const intentBits=[zoneLab,headLab].filter(Boolean).join(" · ");
+        const laneLab=launchLaneLabel(intent.lane);
+        const laneHint=launchLaneBlurb(technique,intent.lane);
+        const intentBits=[laneLab,laneHint].filter(Boolean).join(" · ");
         controls.innerHTML=`
           <div class="launch-pad">
             <div class="launch-row three">
@@ -2813,8 +2814,7 @@ function showLetItRip(){
               ${techButton("CLASH","Direct Clash","launchClash")}
               ${techButton("DROP","Drop Launch","launchDrop")}
             </div>
-            ${zoneRow}
-            ${headRow}
+            ${laneRow}
             <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique}${intentBits?" · "+intentBits:""} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
             <div class="launch-row">
               <button class="rip-btn compact" id="startBattleNow" type="button">LET IT RIP</button>
@@ -2832,13 +2832,11 @@ function showLetItRip(){
         Game.player.launch.angle=angle;
         Game.player.launch.technique=technique;
         if(prev!==technique){
-            const fresh=defaultLaunchIntent(technique);
-            Game.player.launch.zone=fresh.zone;
-            Game.player.launch.heading=fresh.heading;
+            const fresh=defaultLaunchIntent(technique,currentPlayerSideSign());
+            Game.player.launch.lane=fresh.lane;
         }else{
-            const keep=normalizeLaunchIntent(technique,Game.player.launch);
-            Game.player.launch.zone=keep.zone;
-            Game.player.launch.heading=keep.heading;
+            const keep=normalizeLaunchIntent(technique,Game.player.launch,currentPlayerSideSign());
+            Game.player.launch.lane=keep.lane;
         }
         // Quality is already selected and MUST NOT reroll here.
         Game.player.launch.setupStage="launch";
@@ -2914,8 +2912,7 @@ function showLetItRip(){
         btn.onclick=()=>{
             const kind=btn.getAttribute("data-intent");
             const id=btn.getAttribute("data-id");
-            if(kind==="zone") Game.player.launch.zone=id;
-            if(kind==="heading") Game.player.launch.heading=id;
+            if(kind==="lane") Game.player.launch.lane=id;
             Game.player.launch.setupStage="launch";
             showLetItRip();
         };
@@ -3320,13 +3317,14 @@ function paintTiltChip(s){
     if(fade<=0.03 || !(s?.launchTiltBias>0)){
         el.hidden=true;
         el.style.opacity="";
+        el.textContent="";
         return;
     }
     const n=Math.max(1,Math.round(fade*2));
     const hard=(s.launchTiltKind||"")==="Hard Tilt";
     el.hidden=false;
-    el.style.opacity=String(Math.max(0.22,fade));
-    el.innerHTML=`<small>${hard?"HARD":"SLIGHT"} TILT</small><b>+${n} ATK · +${n} KB</b><span>−${n} MOB · −${n} DEF</span>`;
+    el.style.opacity=String(Math.max(0.28,fade));
+    el.textContent=`${hard?"H":"S"} +${n}`;
 }
 
 function paintLaunchIntentArrow(s){
@@ -3586,8 +3584,7 @@ function rememberLaunch(side,plan){
     list.push({
         technique:plan?.technique||"Center",
         angle:plan?.angle||"Flat",
-        zone:plan?.zone||null,
-        heading:plan?.heading||null
+        lane:plan?.lane||null
     });
     if(list.length>12) list.splice(0,list.length-12);
 }
@@ -3599,87 +3596,125 @@ function ensureCpuLaunchPlan(){
     Game.cpu.lockedLaunchPlan={
         technique:plan.technique,
         angle:plan.angle,
-        zone:plan.zone||null,
-        heading:plan.heading||null
+        lane:plan.lane||null
     };
     return Game.cpu.lockedLaunchPlan;
 }
 
-const LAUNCH_INTENTS={
-    Center:{
-        zones:[],
-        headings:[]
-    },
-    "Drop Launch":{
-        zones:[
-            {id:"exit-home",label:"EXIT"},
-            {id:"exit-far",label:"FAR EXIT"},
-            {id:"mid",label:"MID"}
-        ],
-        headings:[
-            {id:"center",label:"MIDDLE"},
-            {id:"across",label:"ACROSS"}
-        ]
-    },
-    "X-Rail":{
-        zones:[
-            {id:"home-corner",label:"MY CORNER"},
-            {id:"far-corner",label:"FAR CORNER"}
-        ],
-        headings:[
-            {id:"hook",label:"HOOK"},
-            {id:"along",label:"ALONG"},
-            {id:"bowl",label:"BOWL"}
-        ]
-    },
-    "Direct Clash":{
-        zones:[
-            {id:"wide",label:"WIDE"},
-            {id:"mid",label:"MID"},
-            {id:"high",label:"HIGH"}
-        ],
-        headings:[]
-    }
-};
+const LAUNCH_LANES=["left","middle","right"];
 
-function launchIntentSpec(technique){
-    return LAUNCH_INTENTS[technique]||LAUNCH_INTENTS.Center;
+function currentPlayerSideSign(){
+    const orientationCycle=Math.floor((Game.battle?.round||0)/2)%2;
+    return orientationCycle===0?-1:1;
 }
 
-function defaultLaunchIntent(technique){
-    const spec=launchIntentSpec(technique);
-    return {
-        zone:spec.zones[0]?.id||null,
-        heading:spec.headings[0]?.id||null
-    };
+function launchSideSign(side){
+    const playerSign=currentPlayerSideSign();
+    return side==="player"?playerSign:-playerSign;
 }
 
-function normalizeLaunchIntent(technique,intent){
-    const spec=launchIntentSpec(technique);
-    const fallback=defaultLaunchIntent(technique);
-    const zone=spec.zones.some(z=>z.id===intent?.zone)?intent.zone:fallback.zone;
-    const heading=spec.headings.some(h=>h.id===intent?.heading)?intent.heading:fallback.heading;
-    return {zone,heading};
-}
-
-function launchIntentLabel(technique,kind,id){
-    const spec=launchIntentSpec(technique);
-    return (spec[kind]||[]).find(x=>x.id===id)?.label||"";
-}
-
-function pickCpuLaunchIntent(technique,blade){
-    const next=defaultLaunchIntent(technique);
-    const type=blade?.type||"Balance";
+function launchLaneOptions(technique,sideSign){
+    if(technique==="Center" || !technique) return [];
     if(technique==="X-Rail"){
-        next.heading=type==="Attack"?(Math.random()<0.62?"hook":"along"):(Math.random()<0.55?"bowl":"hook");
-        if(type==="Attack"&&Math.random()<0.28) next.zone="far-corner";
-    }else if(technique==="Drop Launch"){
-        next.zone=(type==="Defense"||type==="Stamina")&&Math.random()<0.42?"mid":"exit-home";
-        next.heading=type==="Attack"&&Math.random()<0.45?"across":"center";
-    }else if(technique==="Direct Clash"){
-        next.zone=type==="Attack"?(Math.random()<0.65?"wide":"high"):"mid";
+        // Already sitting on that rail — no button that would mean
+        // "more onto the side you are already on."
+        return sideSign>0?["left","middle"]:["middle","right"];
     }
-    return next;
+    return LAUNCH_LANES.slice();
+}
+
+function defaultLaunchLane(technique,sideSign){
+    const opts=launchLaneOptions(technique,sideSign);
+    if(!opts.length) return null;
+    return opts.includes("middle")?"middle":opts[0];
+}
+
+function launchLaneFromLegacy(technique,intent,sideSign){
+    if(intent?.lane && LAUNCH_LANES.includes(intent.lane)) return intent.lane;
+    if(technique==="X-Rail"){
+        if(intent?.heading==="bowl" || intent?.zone==="far-corner"){
+            return sideSign>0?"left":"right";
+        }
+        return "middle";
+    }
+    if(technique==="Drop Launch"){
+        if(intent?.heading==="across" || intent?.zone==="exit-far"){
+            return sideSign>0?"left":"right";
+        }
+        return "middle";
+    }
+    if(technique==="Direct Clash"){
+        if(intent?.zone==="high") return sideSign>0?"right":"left";
+        return "middle";
+    }
+    return null;
+}
+
+function normalizeLaunchLane(technique,lane,sideSign){
+    const opts=launchLaneOptions(technique,sideSign);
+    if(!opts.length) return null;
+    if(opts.includes(lane)) return lane;
+    return defaultLaunchLane(technique,sideSign);
+}
+
+function defaultLaunchIntent(technique,sideSign){
+    return {lane:defaultLaunchLane(technique,sideSign)};
+}
+
+function normalizeLaunchIntent(technique,intent,sideSign){
+    const sign=Number.isFinite(sideSign)?sideSign:currentPlayerSideSign();
+    const raw=launchLaneFromLegacy(technique,intent,sign);
+    return {lane:normalizeLaunchLane(technique,raw,sign)};
+}
+
+function launchLaneLabel(lane){
+    if(lane==="left") return "LEFT";
+    if(lane==="right") return "RIGHT";
+    if(lane==="middle") return "MIDDLE";
+    return "";
+}
+
+function launchLaneBlurb(technique,lane){
+    if(!lane) return "";
+    if(technique==="X-Rail"){
+        return lane==="middle"?"hook this rail":"peel slightly off the rail";
+    }
+    if(technique==="Drop Launch"){
+        if(lane==="middle") return "shoot middle";
+        return lane==="left"?"shoot left":"shoot right";
+    }
+    if(technique==="Direct Clash"){
+        if(lane==="middle") return "drive at them";
+        return lane==="left"?"cut left":"cut right";
+    }
+    return "";
+}
+
+function xrailLanePeels(lane,sideSign){
+    return (sideSign>0 && lane==="left") || (sideSign<0 && lane==="right");
+}
+
+function pickCpuLaunchIntent(technique,blade,sideSign){
+    const type=blade?.type||"Balance";
+    const opts=launchLaneOptions(technique,sideSign);
+    const peel=opts.find(id=>id && id!=="middle")||null;
+    if(technique==="X-Rail"){
+        if(peel && Math.random()<(type==="Attack"?0.22:0.38)) return {lane:peel};
+        return {lane:"middle"};
+    }
+    if(technique==="Drop Launch"){
+        if(type==="Attack" && Math.random()<0.40){
+            return {lane:Math.random()<0.5?"left":"right"};
+        }
+        return {lane:"middle"};
+    }
+    if(technique==="Direct Clash"){
+        if(type==="Attack" && Math.random()<0.42){
+            return {lane:sideSign>0?"right":"left"};
+        }
+        return {lane:"middle"};
+    }
+    return defaultLaunchIntent(technique,sideSign);
 }
 
 function tiltBiasFromAngle(angle){
@@ -3761,9 +3796,10 @@ function getAutomaticLaunchPlan(side){
         qualityRoll>=68?"Okay":
         qualityRoll>=55?"Bad":"Horrible";
     const quality=side==="cpu" ? (Game.cpu?.launch?.quality||rolledQuality) : (Game.player?.launch?.quality||rolledQuality);
+    const sideSign=launchSideSign(side);
     const intent=side==="cpu"
-        ? pickCpuLaunchIntent(technique,combo.blade)
-        : normalizeLaunchIntent(technique,Game.player?.launch);
+        ? pickCpuLaunchIntent(technique,combo.blade,sideSign)
+        : normalizeLaunchIntent(technique,Game.player?.launch,sideSign);
 
     return {technique,angle,quality,...intent};
 }
@@ -3776,11 +3812,18 @@ function newBattleLaunchState(side){
     const stats=comboCalc?.stats||{};
 
     const sandboxHuman=Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.sideIsHuman?.(side);
+    const orientationCycle=
+        Math.floor((Game.battle?.round||0)/2)%2;
+    const playerOnLeft=orientationCycle===0;
+    const playerSideSign=playerOnLeft?-1:1;
+    const sideXSign=
+        side==="player" ? playerSideSign : -playerSideSign;
+    const launchDirection=-sideXSign;
     const plan =
         (side==="player" && Game.player.launch?.technique) || sandboxHuman
             ? (()=>{
                 const technique=(Game[side].launch?.technique)||Game.player.launch?.technique||"Center";
-                const intent=normalizeLaunchIntent(technique,Game[side].launch||Game.player.launch);
+                const intent=normalizeLaunchIntent(technique,Game[side].launch||Game.player.launch,sideXSign);
                 return {
                     technique,
                     angle:Game[side].launch?.angle||"Flat",
@@ -3792,7 +3835,7 @@ function newBattleLaunchState(side){
             : side==="cpu"
                 ? (()=>{
                     const locked=ensureCpuLaunchPlan();
-                    const intent=normalizeLaunchIntent(locked.technique,locked);
+                    const intent=normalizeLaunchIntent(locked.technique,locked,sideXSign);
                     return {
                         ...locked,
                         quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu"),
@@ -3831,20 +3874,6 @@ function newBattleLaunchState(side){
 
     const isDropLaunch=plan.technique==="Drop Launch";
 
-    /*
-      Stadium orientation alternates every two completed battle sequences.
-      0-1: player left / CPU right.
-      2-3: player right / CPU left.
-      Then the orientation repeats.
-    */
-    const orientationCycle=
-        Math.floor((Game.battle?.round||0)/2)%2;
-    const playerOnLeft=orientationCycle===0;
-    const playerSideSign=playerOnLeft?-1:1;
-    const sideXSign=
-        side==="player" ? playerSideSign : -playerSideSign;
-    const launchDirection=-sideXSign;
-
     const isXRailLaunch=plan.technique==="X-Rail";
     const isCenterLaunch=plan.technique==="Center";
 
@@ -3858,28 +3887,32 @@ function newBattleLaunchState(side){
       little toward its own stadium side so two Center launches cannot
       spawn on top of each other.
     */
-    const intent=normalizeLaunchIntent(plan.technique,{zone:plan.zone,heading:plan.heading});
-    plan.zone=intent.zone;
-    plan.heading=intent.heading;
+    const intent=normalizeLaunchIntent(plan.technique,plan,sideXSign);
+    plan.lane=intent.lane;
+    const lane=intent.lane;
 
     const centerSideOffset=0.16;
     let startX=isCenterLaunch
         ? sideXSign*centerSideOffset
         : isDropLaunch
-            ? sideXSign*(intent.zone==="exit-far"?-0.28:intent.zone==="mid"?0.12:0.28) + placementJitter*0.05
+            ? (lane==="left"?-0.32:lane==="right"?0.32:sideXSign*0.28) + placementJitter*0.05
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
-                : sideXSign*(intent.zone==="mid"?0.48:intent.zone==="high"?0.58:0.70);
+                : sideXSign*0.70 + (lane==="left"?-0.12:lane==="right"?0.12:0);
+
+    if(!isCenterLaunch && !isDropLaunch && !isXRailLaunch){
+        startX=Math.max(-0.78,Math.min(0.78,startX));
+    }
 
     // Drop hangs under the top X-Rail, beside the X-Exit (not on the rail
     // and not inside the V). X-Rail still starts at the lower corner.
     let startY=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? (intent.zone==="mid"?-0.42:-0.64) + placementJitter*0.02
+            ? -0.64 + placementJitter*0.02
             : isXRailLaunch
                 ? placementJitter*0.06
-                : (intent.zone==="high"?-0.22:0) + placementJitter;
+                : placementJitter;
 
     const direction=(isDropLaunch || isCenterLaunch) ? 0 : launchDirection;
 
@@ -3939,10 +3972,11 @@ function newBattleLaunchState(side){
           IMPORTANT: the launch tangent and the rider tangent use the SAME
           railDirection() convention. No separate sign inversion is allowed.
         */
-        const railSide=intent.zone==="far-corner"?-sideXSign:sideXSign;
+        const railSide=sideXSign;
         const railHint = railSide < 0
             ? {x:-0.75,y:0.45}
             : {x: 0.75,y:0.45};
+        const peelOffRail=xrailLanePeels(lane,sideXSign);
 
         const railTarget=
             (window.SpinWarsXRailEngine &&
@@ -3973,13 +4007,14 @@ function newBattleLaunchState(side){
         const missX=Math.cos(missAngle)*qualityMiss;
         const missY=Math.sin(missAngle)*qualityMiss;
 
-        const entryOffset={
+        let entryOffset={
             Horrible:0.165,
             Bad:0.092,
             Okay:0.048,
             Good:0.022,
             Perfect:0.010
         }[plan.quality]||0.048;
+        if(peelOffRail) entryOffset=Math.min(0.22,entryOffset+0.070);
 
         const actualStartX=
             railTarget.x+
@@ -4019,8 +4054,11 @@ function newBattleLaunchState(side){
             plan.quality==="Good" ? 0.80 :
             plan.quality==="Okay" ? 0.74 :
             plan.quality==="Bad" ? 0.64 : 0.54;
-        if(intent.heading==="along") tangentWeight=Math.min(0.94,tangentWeight+0.10);
-        if(intent.heading==="bowl") tangentWeight=Math.max(0.36,tangentWeight-0.16);
+        if(peelOffRail){
+            // Inward lane: sit a little more inside and shove toward the
+            // bowl so this is a slight peel off the rail, not a far-corner hop.
+            tangentWeight=Math.max(0.22,tangentWeight-0.30);
+        }
         const approachWeight=1-tangentWeight;
         const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
 
@@ -4033,6 +4071,11 @@ function newBattleLaunchState(side){
             (railTangentY*tangentWeight+
              approachY*approachWeight)*
             railLaunchSpeed;
+
+        if(peelOffRail){
+            vx+=inwardX*railLaunchSpeed*0.24 - sideXSign*railLaunchSpeed*0.10;
+            vy+=inwardY*railLaunchSpeed*0.12;
+        }
     }
 
     if(plan.technique==="Drop Launch"){
@@ -4052,9 +4095,11 @@ function newBattleLaunchState(side){
                plan.angle==="Slight Tilt" ? 0.72 : 0.42)
             : 0;
 
-    const dropAim=intent.heading==="across"
-        ? {x:-sideXSign*0.22,y:0.10}
-        : {x:0,y:0};
+    const dropAim=lane==="left"
+        ? {x:-0.40,y:0.08}
+        : lane==="right"
+            ? {x:0.40,y:0.08}
+            : {x:0,y:0};
 
     const tiltBias=tiltBiasFromAngle(plan.angle);
     const tiltMax=tiltDurationFromAngle(plan.angle);
@@ -4193,11 +4238,14 @@ function applyDropLaunchShot(s, missOverride){
     s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.88);
 }
 
-function applyDirectClashAim(self, other){
+function applyDirectClashAim(self, other, missOverride){
     if(!self || !other) return;
     if(self.launchPlan?.technique!=="Direct Clash") return;
-    const dx=other.x-self.x;
-    const dy=other.y-self.y;
+    const lane=self.launchPlan?.lane||"middle";
+    const aimX=other.x+(lane==="left"?-0.20:lane==="right"?0.20:0);
+    const aimY=other.y+(lane==="left"||lane==="right"?-0.03:0);
+    const dx=aimX-self.x;
+    const dy=aimY-self.y;
     const dist=Math.hypot(dx,dy)||0.001;
     const quality=self.launchQuality || self.launchPlan?.quality || "Okay";
     const missRad={
@@ -4210,7 +4258,9 @@ function applyDirectClashAim(self, other){
         Horrible:0.48,
         Terrible:0.48
     }[quality]||0.18;
-    const miss=(Math.random()*2-1)*missRad;
+    const miss=Number.isFinite(missOverride)
+        ? missOverride
+        : (Math.random()*2-1)*missRad;
     const ux=dx/dist;
     const uy=dy/dist;
     const cos=Math.cos(miss);
@@ -4576,9 +4626,8 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-player">
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
-                <div id="playerTiltChip" class="tilt-chip" hidden></div>
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
-                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
+                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em id="playerTiltChip" class="tilt-chip" hidden></em></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
                     <div id="newPlayerRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
@@ -4975,6 +5024,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.qualityRollStarted=0;
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
+        Game.player.launch.lane=null;
         Game.player.launch.zone=null;
         Game.player.launch.heading=null;
         Game.cpu.lockedLaunchPlan=null;
