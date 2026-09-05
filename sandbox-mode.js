@@ -184,7 +184,10 @@ function applyLaunchToGame(from,to,cpuBrain){
         angle:from.launch.angle||"Flat",
         technique:from.launch.technique||"Center",
         quality:q,
-        autoQuality:!!from.launch.autoQuality
+        autoQuality:!!from.launch.autoQuality,
+        lane:from.launch.lane||null,
+        zone:from.launch.zone||null,
+        heading:from.launch.heading||null
     };
     if(cpuBrain && !from.launch.lock && typeof getAutomaticLaunchPlan==="function"){
         const plan=getAutomaticLaunchPlan(to===Game.cpu?"cpu":"player");

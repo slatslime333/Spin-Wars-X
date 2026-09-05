@@ -1772,6 +1772,48 @@ footer{
 .launch-row.three{display:grid;grid-template-columns:repeat(3,1fr)}
 .launch-row.two{display:grid;grid-template-columns:repeat(2,1fr)}
 .launch-row.four{display:grid;grid-template-columns:repeat(4,1fr)}
+.launch-row.intent{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px}
+.launch-row.intent .menu-btn{
+  min-height:32px;
+  padding:4px 6px;
+  font-size:12px;
+  letter-spacing:.10em;
+}
+.launch-tilt-btn{
+  flex-direction:column!important;
+  gap:2px;
+  min-height:52px!important;
+  padding:6px 4px!important;
+  line-height:1.1;
+}
+.launch-tilt-btn b{display:block;font-size:13px;letter-spacing:.08em}
+.launch-tilt-btn small{
+  display:block;
+  color:inherit;
+  opacity:.72;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:none;
+}
+.tilt-chip{
+  position:absolute;
+  left:36px;
+  top:3px;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#f0b429;
+  font-style:normal;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.10em;
+  line-height:1;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.tilt-chip[hidden]{display:none!important}
 .rip-btn.compact{min-height:46px;font-size:22px;flex:1.85}
 
 #launchInfo{
@@ -2091,6 +2133,7 @@ footer{
 .battle-hud-top span{color:var(--muted);font-size:11px;letter-spacing:.12em}
 
 .rpm-readout{
+  position:relative;
   display:flex;
   align-items:baseline;
   gap:6px;
