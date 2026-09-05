@@ -378,17 +378,16 @@ function showFork(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
         ${bowl()}
-        ${mark("ROGUE","Two nights. Same stadium.")}
+        ${mark("ROGUE","")}
         <nav class="home-doors rogue-doors" aria-label="Rogue modes">
-            <button class="home-door rip" id="rrForkRun" type="button">
-                <span class="home-door-kicker">PRIMARY</span>
+            <button class="home-door rip swx-hero" id="rrForkRun" type="button">
+                <span class="home-door-kicker">NIGHT</span>
                 <b>ROGUE RUN</b>
-                <small>Hub · Track · 30 nights · Shark · endless</small>
+                <span class="swx-hero-mark">PRIMARY</span>
             </button>
             <button class="home-door play" id="rrForkTier" type="button">
                 <span class="home-door-kicker">CLASSIC</span>
                 <b>TIER ROGUE</b>
-                <small>Bronze / Silver / Gold door · 18 nights</small>
             </button>
         </nav>
     </main>`;
@@ -448,42 +447,38 @@ function showHub(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell rr-hub">
         ${bowl()}
-        ${mark("ROGUE RUN","Locker. Track. Thirty nights.")}
+        ${mark("ROGUE RUN","")}
         ${hudStrip()}
         ${loadoutCard()}
         <nav class="home-doors rogue-doors rr-doors" aria-label="Rogue Run">
-            ${live?`<button class="home-door rip" id="rrContinue" type="button">
+            ${live?`<button class="home-door rip swx-hero" id="rrContinue" type="button">
                 <span class="home-door-kicker">SAVE</span>
                 <b>CONTINUE</b>
-                <small>Night ${live.match||1} · ${live.blade}${live.score?` · ${live.score.player}-${live.score.cpu}`:""}</small>
-            </button>`:`<button class="home-door rip" id="rrPlay" type="button">
+                <small class="swx-state">N${live.match||1} · ${live.blade}${live.score?` · ${live.score.player}-${live.score.cpu}`:""}</small>
+            </button>`:`<button class="home-door rip swx-hero" id="rrPlay" type="button">
                 <span class="home-door-kicker">NIGHT</span>
                 <b>PLAY</b>
-                <small>Take this Bey into night 1.</small>
             </button>`}
             ${live?`<button class="home-door play" id="rrNew" type="button">
                 <span class="home-door-kicker">RESET</span>
                 <b>NEW RUN</b>
-                <small>Wipe the live night. Hub Bey stays.</small>
             </button>`:""}
             <div class="home-door-row">
                 <button class="home-door play" id="rrGarage" type="button">
                     <span class="home-door-kicker">KIT</span>
                     <b>GARAGE</b>
-                    <small>Equip what you own.</small>
                 </button>
                 <button class="home-door play" id="rrTrack" type="button">
                     <span class="home-door-kicker">UNLOCKS</span>
                     <b>TRACK</b>
-                    <small>Battle-pass shop.</small>
                 </button>
             </div>
             <button class="home-door rogue" id="rrBoard" type="button">
                 <span class="home-door-kicker">HISTORY</span>
-                <b>RUN SCOREBOARD</b>
-                <small>${past.length?`${past.length} finished run${past.length===1?"":"s"}`:"No finished runs yet"}</small>
+                <b>SCOREBOARD</b>
+                <small class="swx-state">${past.length?`${past.length} RUN${past.length===1?"":"S"}`:"EMPTY"}</small>
             </button>
-            <button class="home-help" id="rrHelp" type="button">How Rogue Run works</button>
+            <button class="home-help" id="rrHelp" type="button">HOW</button>
         </nav>
         <div id="rrConfirm" hidden></div>
     </main>`;
@@ -504,15 +499,9 @@ function showStarterPick(){
     const ids=cfg().STARTER_BLADES||[];
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="menu rr-shell">
-        <div class="selection-header">
-            <div class="selection-icon">X</div>
-            <div>
-                <span class="eyebrow">ROGUE RUN</span>
-                <h1>PICK A STARTER</h1>
-                <p>Shelter Drake or Knight Shield. You always get 5-80, 4-80, Needle, and Flat.</p>
-            </div>
-        </div>
+    <main class="home rr-shell">
+        ${bowl()}
+        ${mark("ROGUE RUN","STARTER")}
         <div class="rr-starter-row">
             ${ids.map(id=>{
                 const b=bladeById(id);
@@ -520,12 +509,12 @@ function showStarterPick(){
                 return `<button class="home-door rip rr-starter" type="button" data-starter="${id}">
                     <span class="rr-starter-art">${sprite?`<img src="${sprite}" alt="">`:""}</span>
                     <b>${b?b.name:id}</b>
-                    <small>${b?b.type+" · "+b.tier:"Bronze"}</small>
+                    <small class="swx-state">${b?b.type:"Defense"}</small>
                 </button>`;
             }).join("")}
         </div>
     </main>`;
-    document.querySelector(".menu")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
     document.querySelectorAll("[data-starter]").forEach(btn=>{
         btn.onclick=()=>{
             const acc=account();

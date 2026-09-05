@@ -1103,22 +1103,77 @@ function getBitPhysics(blader){
 
 
 
+function swxMotesHTML(){
+    const bits=[];
+    for(let i=0;i<11;i++){
+        const x=6+i*8+(i%3)*3;
+        const t=11+i*0.55;
+        const dx=(i%2?1:-1)*(8+i*1.4);
+        bits.push(`<i class="swx-mote" style="--x:${x}%;--t:${t}s;--dx:${dx}px;animation-delay:${(-i*1.15).toFixed(2)}s"></i>`);
+    }
+    return `<div class="swx-motes" aria-hidden="true">${bits.join("")}</div>`;
+}
+
+let swxAtmoBound=false;
+function bindSwxAtmosphere(){
+    const bg=document.querySelector(".background");
+    if(bg && !bg.querySelector(".swx-motes")){
+        bg.insertAdjacentHTML("beforeend", swxMotesHTML());
+    }
+    if(swxAtmoBound) return;
+    swxAtmoBound=true;
+    const fine=window.matchMedia("(hover:hover) and (pointer:fine)");
+    let raf=0;
+    window.addEventListener("pointermove",(e)=>{
+        if(!fine.matches) return;
+        if(raf) return;
+        raf=requestAnimationFrame(()=>{
+            raf=0;
+            const bowl=document.querySelector(".home-bowl");
+            if(!bowl) return;
+            const r=bowl.getBoundingClientRect();
+            const x=((e.clientX-(r.left+r.width/2))/Math.max(r.width,1))*16;
+            const y=((e.clientY-(r.top+r.height/2))/Math.max(r.height,1))*10;
+            bowl.style.setProperty("--px", x.toFixed(2)+"px");
+            bowl.style.setProperty("--py", y.toFixed(2)+"px");
+        });
+    },{passive:true});
+}
+
+function swxProfileChip(){
+    try{
+        const raw=JSON.parse(localStorage.getItem("spinWarsX.rogueRun.account.v1")||"null");
+        if(!raw || !raw.starterId) return `<aside class="swx-profile" aria-label="Progress"><span>NEW</span></aside>`;
+        return `<aside class="swx-profile" aria-label="Progress"><b>LV ${raw.level||1}</b><i></i><span>${raw.money||0}</span></aside>`;
+    }catch(_e){
+        return `<aside class="swx-profile" aria-label="Progress"><span>NEW</span></aside>`;
+    }
+}
+
 function homeMarkHTML(opts){
     opts=opts||{};
+    queueMicrotask(bindSwxAtmosphere);
     const compact=opts.compact?" compact":"";
     const kicker=opts.kicker||"X STADIUM";
-    const tagText=opts.tag!==undefined
-        ? opts.tag
-        : (opts.compact?"":"Two Beys. X-Rail. First to 7.");
+    const tagText=opts.tag!==undefined ? opts.tag : "";
     const tag=tagText?`<p class="home-tag">${tagText}</p>`:"";
-    return `<header class="home-mark${compact}">
-        <p class="home-kicker">${kicker}</p>
-        <h1>SPIN WARS<i>X</i></h1>
+    return `<header class="home-mark swx-mark${compact}">
+        <span class="swx-slash" aria-hidden="true"></span>
+        <p class="home-kicker swx-kicker">${kicker}</p>
+        <h1 class="swx-wordmark">
+            <span class="swx-wordmark-spin">SPIN</span>
+            <span class="swx-wordmark-row">
+                <span class="swx-wordmark-wars">WARS</span>
+                <i class="swx-xmark">X</i>
+            </span>
+        </h1>
+        <p class="swx-jp" lang="ja">スピンウォーズ</p>
         ${tag}
     </header>`;
 }
 
 function homeBowlHTML(){
+    queueMicrotask(bindSwxAtmosphere);
     return `<div class="home-bowl" aria-hidden="true">
         <span class="home-bowl-rail"></span>
         <span class="home-bowl-floor"></span>
@@ -1126,6 +1181,7 @@ function homeBowlHTML(){
         <span class="home-pocket home-pocket-l"></span>
         <span class="home-pocket home-pocket-c"></span>
         <span class="home-pocket home-pocket-r"></span>
+        <span class="swx-bowl-glint"></span>
     </div>`;
 }
 
@@ -1149,37 +1205,35 @@ function renderMainMenu(){
     app.innerHTML=`
     <div class="background stadium"></div>
     <main class="home lobby">
+        ${swxProfileChip()}
         ${homeBowlHTML()}
-        ${homeMarkHTML()}
-        <p class="home-ver">ALPHA</p>
-        <nav class="home-doors" aria-label="Choose a mode">
-            <div class="home-door-row">
-                <button class="home-door rip" data-home="rogue" type="button">
-                    <span class="home-door-kicker">RUN</span>
-                    <b>ROGUE</b>
-                    <small>Tier night · 30-night run · first to 7</small>
+        <div class="swx-lobby-top">
+            ${homeMarkHTML({tag:""})}
+        </div>
+        <nav class="swx-nav" aria-label="Play">
+            <button class="home-door rip swx-hero" data-home="rogue" type="button">
+                <span class="home-door-kicker">NIGHT</span>
+                <b>ROGUE</b>
+                <span class="swx-hero-mark">PRIMARY</span>
+            </button>
+            <div class="swx-sec">
+                <button class="home-door play" data-home="quick" type="button">
+                    <span class="home-door-kicker">LEAGUE</span>
+                    <b>QUICK</b>
                 </button>
                 <button class="home-door play" data-home="sandbox" type="button">
                     <span class="home-door-kicker">LAB</span>
                     <b>SANDBOX</b>
-                    <small>Build. Launch. Repeat.</small>
                 </button>
             </div>
-            <div class="home-door-row">
+            <div class="swx-util">
                 <button class="home-door locked" type="button" aria-disabled="true">
-                    <span class="home-door-kicker">STORY</span>
                     <b>CAMPAIGN</b>
-                    <small>Coming soon</small>
-                    <span class="home-door-lock">LOCKED</span>
                 </button>
-                <button class="home-door play" data-home="quick" type="button">
-                    <span class="home-door-kicker">QUICK PLAY</span>
-                    <b>LET IT RIP</b>
-                    <small>Leagues · random fights · first to 7</small>
-                </button>
+                <button class="home-help" data-home="help" type="button">HOW</button>
             </div>
-            <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
         </nav>
+        <p class="home-ver">ALPHA</p>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>{
         if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork) SpinWarsRogueRun.showFork();
@@ -1204,9 +1258,7 @@ function renderHowTo(){
     <div class="background stadium"></div>
     <main class="menu howto">
         <header class="howto-head">
-            <p class="home-kicker">SPIN WARS X</p>
-            <h1>HOW THIS WORKS</h1>
-            <p class="howto-lead">Two Beys. One stadium. First to 7. This is the whole game, in the same voice I would use if you asked me at the door.</p>
+            ${homeMarkHTML({compact:true,kicker:"MANUAL",tag:"First to 7."})}
         </header>
         <nav class="howto-toc" aria-label="Jump">
             <a href="#ht-start">Start</a>
@@ -1335,10 +1387,10 @@ function renderLeagueSelect(){
     <div class="background stadium"></div>
     <main class="home league-board">
         ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:"Pick a fight. First to 7."})}
+        ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:""})}
         <nav class="home-leagues board" aria-label="Choose a league">
             <button class="home-league featured" data-quick-match="1" type="button">
-                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random combos · reroll both sides</small></span>
+                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random · reroll</small></span>
                 <span class="home-league-go">RIP</span>
             </button>
             <div class="home-league-grid">
@@ -1477,7 +1529,7 @@ function createBackButton(onClick){
 
     button.className="back-btn";
 
-    button.textContent="‹ Back";
+    button.textContent="‹ BACK";
 
     button.onclick=onClick;
 
