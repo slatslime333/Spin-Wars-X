@@ -328,11 +328,12 @@ function captureDecision(s,p,contact){
    Tired Beys need a cleaner hook; lingering rail-width laps at low RPM
    should bounce instead of riding out the rest of the match.
  */
+ const launchTilt=clamp(Number(s.launchTiltFade)||0,0,1);
  if(!contact?.entering)return{ok:false,reason:"no-rail-entry",contact:c};
- if(c.inward<0.0038+tired*0.0014)return{ok:false,reason:"weak-impact",contact:c};
- if(c.tangential<0.0028+tired*0.0016||c.tangentRatio<0.16+tired*0.09)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
+ if(c.inward<0.0038+tired*0.0014+launchTilt*0.0028)return{ok:false,reason:"weak-impact",contact:c};
+ if(c.tangential<0.0028+tired*0.0016+launchTilt*0.0022||c.tangentRatio<0.16+tired*0.09+launchTilt*0.14)return{ok:false,reason:"insufficient-ccw-momentum",contact:c};
  if(c.approachRatio>0.95)return{ok:false,reason:"too-direct",contact:c};
- if(c.tilt>0.44)return{ok:false,reason:"tilt-too-high",contact:c};
+ if(c.tilt>0.44-launchTilt*0.12)return{ok:false,reason:"tilt-too-high",contact:c};
  /*
    Free hits on the X-Exit bounce to center unless they are a real
    hook: strong CCW and speed into the rail, not a bump on the V.
@@ -454,19 +455,21 @@ function bounce(s,p){
   s.lastXRailResult=d<gap?"rail-separate":"near-rail-no-impact";
   return false;
  }
- const restitution=fromExit?0.44:0.36;
+ const launchTilt=clamp(Number(s.launchTiltFade)||0,0,1);
+ const creep=launchTilt>0.08 && !fromExit;
+ const restitution=fromExit?0.44:(creep?0.22:0.36);
  const reflected=-normal*restitution;
  s.vx-=nx*normal;s.vy-=ny*normal;s.vx+=nx*reflected;s.vy+=ny*reflected;
  const r=Math.hypot(s.x,s.y)||1;
  const spin=(Number(s.spinDirection)||1)>=0?1:-1;
  const tx=-s.y/r,ty=s.x/r;
- s.vx+=tx*spin*incoming*0.12;
- s.vy+=ty*spin*incoming*0.12;
- restoreBounceSpeed(s,incoming,fromExit?0.58:0.50,fromExit?0.020:0.018);
- s.surfaceBounce=Math.max(s.surfaceBounce||0,0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
- s.lastXRailResult="bounce";
- s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.36:0.22);
- s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,0.10);
+ s.vx+=tx*spin*incoming*(creep?0.22+launchTilt*0.16:0.12);
+ s.vy+=ty*spin*incoming*(creep?0.22+launchTilt*0.16:0.12);
+ restoreBounceSpeed(s,incoming,fromExit?0.58:(creep?0.66+launchTilt*0.12:0.50),fromExit?0.020:0.018);
+ s.surfaceBounce=Math.max(s.surfaceBounce||0,creep?0.10:0.16);s.surfaceRecovery=Math.max(s.surfaceRecovery||0,0.10);
+ s.lastXRailResult=creep?"creep":"bounce";
+ s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0,fromExit?0.36:(creep?0.16:0.22));
+ s.railCaptureCooldown=Math.max(Number(s.railCaptureCooldown)||0,creep?0.04:0.10);
  return true;
 }
 function contactSafety(s,p){return bounce(s,p);}

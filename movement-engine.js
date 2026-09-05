@@ -200,7 +200,8 @@ const centerAffinity=Number.isFinite(ctx.centerAffinity) ? ctx.centerAffinity : 
 const movement=Number.isFinite(ctx.movement) ? ctx.movement : 0.60;
 const bitStability=Number.isFinite(ctx.bitStability) ? ctx.bitStability : 0.60;
 const balance=Number.isFinite(ctx.balance) ? ctx.balance : 0.70;
-const control=Number.isFinite(ctx.control) ? ctx.control : 0.60;
+const tiltFade=Math.max(0,Math.min(1,Number(s.launchTiltFade)||0));
+const control=(Number.isFinite(ctx.control) ? ctx.control : 0.60)+tiltFade*0.08;
 const stamina=Number.isFinite(ctx.stamina) ? ctx.stamina : 0.70;
 const bitPrecession=Number.isFinite(ctx.bitPrecession) ? ctx.bitPrecession : 0.50;
 const bitFriction=Number.isFinite(ctx.bitFriction) ? ctx.bitFriction : 0.60;
@@ -273,6 +274,16 @@ const orbit=bitOrbitProfile({
     railUses:Number(s.railUses)||0
 });
 let preferredRadius=orbit.home;
+if(
+  tiltFade>0.02 &&
+  !s.railEngaged &&
+  (s.impactMomentumState||0)<0.18
+){
+  const theta=Math.atan2(s.y,s.x);
+  const phase=Number(s.launchTiltPhase)||0;
+  preferredRadius*=1+tiltFade*0.09*Math.cos(2*(theta-phase));
+  preferredRadius=clamp(preferredRadius,0.05,orbit.attackWeight>=0.70?0.78:0.40);
+}
 const attackWeight=orbit.attackWeight;
 const attackLike=attackWeight>=0.70;
 /*

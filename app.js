@@ -1316,11 +1316,11 @@ function renderHowTo(){
         <section class="menu-card howto-card" id="ht-launch">
             <h2>The launch screen</h2>
             <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
-            <p><strong>Angle.</strong> Flat is the clean one. Slight Tilt and Hard Tilt stall a beat longer and cost a little stability. On a Drop they also change how long you hang before the shot.</p>
+            <p><strong>Angle.</strong> Flat is neutral. Slight and Hard add a short oval and a little more hit, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
             <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
-            <p><strong>X-Rail.</strong> Starts at the live lower corner of the ring and rides. You are on the rail, not in a hole. Do not expect a free pocket from spawn.</p>
-            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
-            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot straight at stadium middle. Quality is that shot's accuracy. Left vs right is still your stadium side. The rail does not grab you while you are stalling up there.</p>
+            <p><strong>X-Rail.</strong> Starts at the live lower corner of the ring and rides. You pick your corner and whether you want to hook, run along, or peel into the bowl. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
+            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. You pick the approach lane. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
+            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot. You pick the hang and whether that shot goes middle or across. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
             <p>The CPU is not reading your live pick. It locked a plan at round start from how you have been launching: Center-heavy habits get more rail, drop, and clash answers; X-Rail habits get rail contests and clashes, not more Center; Clash habits get Center, rail, and drop; Drop habits get Center and clash. It also tries not to repeat itself.</p>
         </section>
 
@@ -2712,13 +2712,17 @@ function showLetItRip(){
     controls.id="launchControls";
     controls.className="launch-panel";
 
-    const angleButton=(label,value,id)=>`
-      <button id="${id}" class="menu-btn ${Game.player.launch.angle===value?"gold":"silver"}"
-        type="button">${label}</button>`;
+    const angleButton=(label,value,id,blurb)=>`
+      <button id="${id}" class="menu-btn launch-tilt-btn ${Game.player.launch.angle===value?"gold":"silver"}"
+        type="button"><b>${label}</b><small>${blurb}</small></button>`;
 
     const techButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.technique===value?"gold":"silver"}"
         type="button">${label}</button>`;
+
+    const intentChip=(kind,item,current)=>`
+      <button type="button" class="menu-btn ${current===item.id?"gold":"silver"}"
+        data-intent="${kind}" data-id="${item.id}">${item.label}</button>`;
 
     const qualityRPM={
         Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
@@ -2782,12 +2786,26 @@ function showLetItRip(){
           </div>
         `;
     }else{
+        const technique=Game.player.launch.technique||"Center";
+        const intent=normalizeLaunchIntent(technique,Game.player.launch);
+        Game.player.launch.zone=intent.zone;
+        Game.player.launch.heading=intent.heading;
+        const spec=launchIntentSpec(technique);
+        const zoneRow=spec.zones.length
+            ? `<div class="launch-row intent">${spec.zones.map(z=>intentChip("zone",z,intent.zone)).join("")}</div>`
+            : "";
+        const headRow=spec.headings.length
+            ? `<div class="launch-row intent">${spec.headings.map(h=>intentChip("heading",h,intent.heading)).join("")}</div>`
+            : "";
+        const zoneLab=launchIntentLabel(technique,"zones",intent.zone);
+        const headLab=launchIntentLabel(technique,"headings",intent.heading);
+        const intentBits=[zoneLab,headLab].filter(Boolean).join(" · ");
         controls.innerHTML=`
           <div class="launch-pad">
             <div class="launch-row three">
-              ${angleButton("FLAT","Flat","launchFlat")}
-              ${angleButton("SLIGHT","Slight Tilt","launchSlight")}
-              ${angleButton("HARD","Hard Tilt","launchHard")}
+              ${angleButton("FLAT","Flat","launchFlat",tiltAngleBlurb("Flat"))}
+              ${angleButton("SLIGHT","Slight Tilt","launchSlight",tiltAngleBlurb("Slight Tilt"))}
+              ${angleButton("HARD","Hard Tilt","launchHard",tiltAngleBlurb("Hard Tilt"))}
             </div>
             <div class="launch-row four">
               ${techButton("CENTER","Center","launchCenter")}
@@ -2795,7 +2813,9 @@ function showLetItRip(){
               ${techButton("CLASH","Direct Clash","launchClash")}
               ${techButton("DROP","Drop Launch","launchDrop")}
             </div>
-            <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
+            ${zoneRow}
+            ${headRow}
+            <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique}${intentBits?" · "+intentBits:""} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
             <div class="launch-row">
               <button class="rip-btn compact" id="startBattleNow" type="button">LET IT RIP</button>
             </div>
@@ -2808,8 +2828,18 @@ function showLetItRip(){
     else document.getElementById("newStadium")?.parentNode?.appendChild(controls);
 
     const rebuildAngleTechnique=(angle,technique)=>{
+        const prev=Game.player.launch.technique;
         Game.player.launch.angle=angle;
         Game.player.launch.technique=technique;
+        if(prev!==technique){
+            const fresh=defaultLaunchIntent(technique);
+            Game.player.launch.zone=fresh.zone;
+            Game.player.launch.heading=fresh.heading;
+        }else{
+            const keep=normalizeLaunchIntent(technique,Game.player.launch);
+            Game.player.launch.zone=keep.zone;
+            Game.player.launch.heading=keep.heading;
+        }
         // Quality is already selected and MUST NOT reroll here.
         Game.player.launch.setupStage="launch";
         showLetItRip();
@@ -2880,6 +2910,17 @@ function showLetItRip(){
     bindLaunchButton("launchDrop",()=>
         rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch"));
 
+    controls.querySelectorAll("[data-intent]").forEach(btn=>{
+        btn.onclick=()=>{
+            const kind=btn.getAttribute("data-intent");
+            const id=btn.getAttribute("data-id");
+            if(kind==="zone") Game.player.launch.zone=id;
+            if(kind==="heading") Game.player.launch.heading=id;
+            Game.player.launch.setupStage="launch";
+            showLetItRip();
+        };
+    });
+
     const startButton=controls.querySelector("#startBattleNow");
     if(startButton){
         startButton.onclick=(event)=>{
@@ -2890,6 +2931,8 @@ function showLetItRip(){
             startNewBattle();
         };
     }
+
+    paintLaunchIntentArrow(NEW_BATTLE.player);
 }
 
 /*========================================================
@@ -3270,6 +3313,47 @@ function paintMomentumBars(p,c){
     fill("newCpuMomBar",c);
 }
 
+function paintTiltChip(s){
+    const el=document.getElementById("playerTiltChip");
+    if(!el) return;
+    const fade=launchTiltFade(s);
+    if(fade<=0.03 || !(s?.launchTiltBias>0)){
+        el.hidden=true;
+        el.style.opacity="";
+        return;
+    }
+    const n=Math.max(1,Math.round(fade*2));
+    const hard=(s.launchTiltKind||"")==="Hard Tilt";
+    el.hidden=false;
+    el.style.opacity=String(Math.max(0.22,fade));
+    el.innerHTML=`<small>${hard?"HARD":"SLIGHT"} TILT</small><b>+${n} ATK · +${n} KB</b><span>−${n} MOB · −${n} DEF</span>`;
+}
+
+function paintLaunchIntentArrow(s){
+    const el=document.getElementById("launchIntentArrow");
+    if(!el) return;
+    const launching=document.querySelector(".battle-shell")?.classList.contains("is-launching");
+    if(!launching||!s){
+        el.setAttribute("opacity","0");
+        return;
+    }
+    const pos=battleDrawPos(s);
+    const x=50+pos.x*39;
+    const y=46+pos.y*39;
+    let vx=Number(s.vx)||0,vy=Number(s.vy)||0;
+    if(s.launchDropActive && !s.launchDropReleased){
+        vx=(Number(s.launchAimX)||0)-s.x;
+        vy=(Number(s.launchAimY)||0)-s.y;
+    }
+    const len=Math.hypot(vx,vy)||1;
+    const reach=7.2;
+    el.setAttribute("x1",String(x));
+    el.setAttribute("y1",String(y));
+    el.setAttribute("x2",String(x+(vx/len)*reach));
+    el.setAttribute("y2",String(y+(vy/len)*reach));
+    el.setAttribute("opacity","0.85");
+}
+
 function considerKillCam(p,c,now){
     const cam=killCamState();
     const imp=NEW_BATTLE.lastImpact;
@@ -3501,7 +3585,9 @@ function rememberLaunch(side,plan){
     const list=Game.battle[key]=Game.battle[key]||[];
     list.push({
         technique:plan?.technique||"Center",
-        angle:plan?.angle||"Flat"
+        angle:plan?.angle||"Flat",
+        zone:plan?.zone||null,
+        heading:plan?.heading||null
     });
     if(list.length>12) list.splice(0,list.length-12);
 }
@@ -3510,8 +3596,129 @@ function ensureCpuLaunchPlan(){
     Game.cpu=Game.cpu||{};
     if(Game.cpu.lockedLaunchPlan?.technique) return Game.cpu.lockedLaunchPlan;
     const plan=getAutomaticLaunchPlan("cpu");
-    Game.cpu.lockedLaunchPlan={technique:plan.technique,angle:plan.angle};
+    Game.cpu.lockedLaunchPlan={
+        technique:plan.technique,
+        angle:plan.angle,
+        zone:plan.zone||null,
+        heading:plan.heading||null
+    };
     return Game.cpu.lockedLaunchPlan;
+}
+
+const LAUNCH_INTENTS={
+    Center:{
+        zones:[],
+        headings:[]
+    },
+    "Drop Launch":{
+        zones:[
+            {id:"exit-home",label:"EXIT"},
+            {id:"exit-far",label:"FAR EXIT"},
+            {id:"mid",label:"MID"}
+        ],
+        headings:[
+            {id:"center",label:"MIDDLE"},
+            {id:"across",label:"ACROSS"}
+        ]
+    },
+    "X-Rail":{
+        zones:[
+            {id:"home-corner",label:"MY CORNER"},
+            {id:"far-corner",label:"FAR CORNER"}
+        ],
+        headings:[
+            {id:"hook",label:"HOOK"},
+            {id:"along",label:"ALONG"},
+            {id:"bowl",label:"BOWL"}
+        ]
+    },
+    "Direct Clash":{
+        zones:[
+            {id:"wide",label:"WIDE"},
+            {id:"mid",label:"MID"},
+            {id:"high",label:"HIGH"}
+        ],
+        headings:[]
+    }
+};
+
+function launchIntentSpec(technique){
+    return LAUNCH_INTENTS[technique]||LAUNCH_INTENTS.Center;
+}
+
+function defaultLaunchIntent(technique){
+    const spec=launchIntentSpec(technique);
+    return {
+        zone:spec.zones[0]?.id||null,
+        heading:spec.headings[0]?.id||null
+    };
+}
+
+function normalizeLaunchIntent(technique,intent){
+    const spec=launchIntentSpec(technique);
+    const fallback=defaultLaunchIntent(technique);
+    const zone=spec.zones.some(z=>z.id===intent?.zone)?intent.zone:fallback.zone;
+    const heading=spec.headings.some(h=>h.id===intent?.heading)?intent.heading:fallback.heading;
+    return {zone,heading};
+}
+
+function launchIntentLabel(technique,kind,id){
+    const spec=launchIntentSpec(technique);
+    return (spec[kind]||[]).find(x=>x.id===id)?.label||"";
+}
+
+function pickCpuLaunchIntent(technique,blade){
+    const next=defaultLaunchIntent(technique);
+    const type=blade?.type||"Balance";
+    if(technique==="X-Rail"){
+        next.heading=type==="Attack"?(Math.random()<0.62?"hook":"along"):(Math.random()<0.55?"bowl":"hook");
+        if(type==="Attack"&&Math.random()<0.28) next.zone="far-corner";
+    }else if(technique==="Drop Launch"){
+        next.zone=(type==="Defense"||type==="Stamina")&&Math.random()<0.42?"mid":"exit-home";
+        next.heading=type==="Attack"&&Math.random()<0.45?"across":"center";
+    }else if(technique==="Direct Clash"){
+        next.zone=type==="Attack"?(Math.random()<0.65?"wide":"high"):"mid";
+    }
+    return next;
+}
+
+function tiltBiasFromAngle(angle){
+    if(angle==="Hard Tilt") return 1;
+    if(angle==="Slight Tilt") return 0.5;
+    return 0;
+}
+
+function tiltDurationFromAngle(angle){
+    if(angle==="Hard Tilt") return 4.0;
+    if(angle==="Slight Tilt") return 3.0;
+    return 0;
+}
+
+function launchTiltFade(s){
+    const bias=Number(s?.launchTiltBias)||0;
+    const max=Number(s?.launchTiltMax)||0;
+    const left=Number(s?.launchTiltLeft)||0;
+    if(!(bias>0) || !(max>0)) return 0;
+    return Math.max(0,Math.min(1,bias*(left/max)));
+}
+
+function tickLaunchTilt(s,dt){
+    if(!s) return 0;
+    if(s.launchDropActive && !s.launchDropReleased){
+        s.launchTiltFade=s.launchTiltBias||0;
+        return s.launchTiltFade;
+    }
+    if((s.launchTiltLeft||0)>0){
+        s.launchTiltLeft=Math.max(0,(s.launchTiltLeft||0)-(Number(dt)||0));
+    }
+    s.launchTiltFade=launchTiltFade(s);
+    return s.launchTiltFade;
+}
+
+function tiltAngleBlurb(angle){
+    if(angle==="Hard Tilt") return "Oval · more hit, less hold · harder rail hook";
+    if(angle==="Slight Tilt") return "Short oval · a little hit · rail can creep";
+    return "Neutral orbit. No tilt bias.";
 }
 
 function getAutomaticLaunchPlan(side){
@@ -3554,8 +3761,11 @@ function getAutomaticLaunchPlan(side){
         qualityRoll>=68?"Okay":
         qualityRoll>=55?"Bad":"Horrible";
     const quality=side==="cpu" ? (Game.cpu?.launch?.quality||rolledQuality) : (Game.player?.launch?.quality||rolledQuality);
+    const intent=side==="cpu"
+        ? pickCpuLaunchIntent(technique,combo.blade)
+        : normalizeLaunchIntent(technique,Game.player?.launch);
 
-    return {technique,angle,quality};
+    return {technique,angle,quality,...intent};
 }
 
 function newBattleLaunchState(side){
@@ -3568,17 +3778,27 @@ function newBattleLaunchState(side){
     const sandboxHuman=Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined" && SpinWarsSandbox.sideIsHuman?.(side);
     const plan =
         (side==="player" && Game.player.launch?.technique) || sandboxHuman
-            ? {
-                technique:(Game[side].launch?.technique)||Game.player.launch?.technique||"Center",
-                angle:Game[side].launch?.angle||"Flat",
-                quality:Game[side].launch?.quality ||
-                    ensureLaunchQuality(side)
-              }
+            ? (()=>{
+                const technique=(Game[side].launch?.technique)||Game.player.launch?.technique||"Center";
+                const intent=normalizeLaunchIntent(technique,Game[side].launch||Game.player.launch);
+                return {
+                    technique,
+                    angle:Game[side].launch?.angle||"Flat",
+                    quality:Game[side].launch?.quality ||
+                        ensureLaunchQuality(side),
+                    ...intent
+                };
+              })()
             : side==="cpu"
-                ? {
-                    ...ensureCpuLaunchPlan(),
-                    quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu")
-                  }
+                ? (()=>{
+                    const locked=ensureCpuLaunchPlan();
+                    const intent=normalizeLaunchIntent(locked.technique,locked);
+                    return {
+                        ...locked,
+                        quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu"),
+                        ...intent
+                    };
+                  })()
                 : getAutomaticLaunchPlan(side);
 
     const qualityFactor={
@@ -3638,24 +3858,28 @@ function newBattleLaunchState(side){
       little toward its own stadium side so two Center launches cannot
       spawn on top of each other.
     */
+    const intent=normalizeLaunchIntent(plan.technique,{zone:plan.zone,heading:plan.heading});
+    plan.zone=intent.zone;
+    plan.heading=intent.heading;
+
     const centerSideOffset=0.16;
     let startX=isCenterLaunch
         ? sideXSign*centerSideOffset
         : isDropLaunch
-            ? sideXSign*(0.28 + placementJitter*0.05)
+            ? sideXSign*(intent.zone==="exit-far"?-0.28:intent.zone==="mid"?0.12:0.28) + placementJitter*0.05
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
-                : sideXSign*(0.70 + placementJitter*0.18);
+                : sideXSign*(intent.zone==="mid"?0.48:intent.zone==="high"?0.58:0.70);
 
     // Drop hangs under the top X-Rail, beside the X-Exit (not on the rail
     // and not inside the V). X-Rail still starts at the lower corner.
     let startY=isCenterLaunch
         ? 0
         : isDropLaunch
-            ? -0.64 + placementJitter*0.02
+            ? (intent.zone==="mid"?-0.42:-0.64) + placementJitter*0.02
             : isXRailLaunch
                 ? placementJitter*0.06
-                : placementJitter;
+                : (intent.zone==="high"?-0.22:0) + placementJitter;
 
     const direction=(isDropLaunch || isCenterLaunch) ? 0 : launchDirection;
 
@@ -3715,7 +3939,8 @@ function newBattleLaunchState(side){
           IMPORTANT: the launch tangent and the rider tangent use the SAME
           railDirection() convention. No separate sign inversion is allowed.
         */
-        const railHint = sideXSign < 0
+        const railSide=intent.zone==="far-corner"?-sideXSign:sideXSign;
+        const railHint = railSide < 0
             ? {x:-0.75,y:0.45}
             : {x: 0.75,y:0.45};
 
@@ -3789,11 +4014,13 @@ function newBattleLaunchState(side){
         const railTangentX=railTarget.tx*railTravelDirection;
         const railTangentY=railTarget.ty*railTravelDirection;
 
-        const tangentWeight=
+        let tangentWeight=
             plan.quality==="Perfect" ? 0.86 :
             plan.quality==="Good" ? 0.80 :
             plan.quality==="Okay" ? 0.74 :
             plan.quality==="Bad" ? 0.64 : 0.54;
+        if(intent.heading==="along") tangentWeight=Math.min(0.94,tangentWeight+0.10);
+        if(intent.heading==="bowl") tangentWeight=Math.max(0.36,tangentWeight-0.16);
         const approachWeight=1-tangentWeight;
         const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
 
@@ -3825,6 +4052,13 @@ function newBattleLaunchState(side){
                plan.angle==="Slight Tilt" ? 0.72 : 0.42)
             : 0;
 
+    const dropAim=intent.heading==="across"
+        ? {x:-sideXSign*0.22,y:0.10}
+        : {x:0,y:0};
+
+    const tiltBias=tiltBiasFromAngle(plan.angle);
+    const tiltMax=tiltDurationFromAngle(plan.angle);
+
     return {
         side,x:startX,y:startY,vx,vy,rpm:qualityRPM,
         stability:newBattleClamp(
@@ -3854,6 +4088,14 @@ function newBattleLaunchState(side){
         launchDropFalling:false,
         launchDropElapsed:0,
         launchSideSign:sideXSign,
+        launchAimX:dropAim.x,
+        launchAimY:dropAim.y,
+        launchTiltKind:plan.angle||"Flat",
+        launchTiltBias:tiltBias,
+        launchTiltMax:tiltMax,
+        launchTiltLeft:tiltMax,
+        launchTiltFade:tiltBias,
+        launchTiltPhase:Math.atan2(startY,startX),
         launchComplete:false,
 
         // Natural movement state: these alter forces over time rather than
@@ -3930,8 +4172,8 @@ function dropLaunchMissRadians(quality){
 
 function applyDropLaunchShot(s, missOverride){
     if(!s) return;
-    const dx=0-s.x;
-    const dy=0-s.y;
+    const dx=(Number.isFinite(s.launchAimX)?s.launchAimX:0)-s.x;
+    const dy=(Number.isFinite(s.launchAimY)?s.launchAimY:0)-s.y;
     const dist=Math.hypot(dx,dy)||1;
     const quality=s.launchQuality || s.launchPlan?.quality || "Okay";
     const miss=Number.isFinite(missOverride)
@@ -4241,6 +4483,8 @@ function renderNewBattle(){
               </g>
 
               <!-- Beys -->
+              <line id="launchIntentArrow" x1="${px}" y1="${py}" x2="${px}" y2="${py}"
+                    stroke="#f0b429" stroke-width="1.15" stroke-linecap="round" opacity="0"/>
               <circle id="newPlayerBey" cx="${px}" cy="${py}" r="4.85"
                       fill="#d8a82c" stroke="#ffffff" stroke-width=".65"/>
               <circle id="newCpuBey" cx="${cx}" cy="${cy}" r="4.85"
@@ -4332,6 +4576,7 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-player">
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
+                <div id="playerTiltChip" class="tilt-chip" hidden></div>
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
@@ -5623,6 +5868,7 @@ function newBattleFrame(now){
         }
         paintRpmGhostBars(p,c,frameDt);
         paintMomentumBars(p,c);
+        paintTiltChip(p);
 
         considerKillCam(p,c,now);
 
@@ -6065,7 +6311,11 @@ function getBattleStatPoints(s,key,fallback=70){
     const live=typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()
         ? SpinWarsRogue.liveBonus(s,key)
         : 0;
-    const total=(Number.isFinite(value)?value:fallback)+live;
+    const tilt=launchTiltFade(s);
+    const tiltDelta=(key==="attack"||key==="knockback")?tilt*2
+        :(key==="defense"||key==="mobility")?-tilt*2
+        :0;
+    const total=(Number.isFinite(value)?value:fallback)+live+tiltDelta;
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
         return Math.max(1,Math.min(220,total));
     }
@@ -6414,6 +6664,7 @@ function applyXRailConstraint(s,dt){
 }
 
 function newPhysicsStep(s,dt){
+    tickLaunchTilt(s,dt);
 
         const stats = s.stats || {};
         const bp = bitPhysics(s);

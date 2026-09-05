@@ -1772,6 +1772,42 @@ footer{
 .launch-row.three{display:grid;grid-template-columns:repeat(3,1fr)}
 .launch-row.two{display:grid;grid-template-columns:repeat(2,1fr)}
 .launch-row.four{display:grid;grid-template-columns:repeat(4,1fr)}
+.launch-row.intent{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.launch-tilt-btn{
+  flex-direction:column!important;
+  gap:2px;
+  min-height:52px!important;
+  padding:6px 4px!important;
+  line-height:1.1;
+}
+.launch-tilt-btn b{display:block;font-size:13px;letter-spacing:.08em}
+.launch-tilt-btn small{
+  display:block;
+  color:inherit;
+  opacity:.72;
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:none;
+}
+.tilt-chip{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+  margin:4px 0 2px;
+  padding:4px 6px;
+  border:1px solid rgba(240,180,41,.4);
+  background:rgba(12,9,7,.72);
+  color:#f6f0e6;
+}
+.tilt-chip small{
+  color:var(--gold);
+  font-size:8px;
+  font-weight:800;
+  letter-spacing:.16em;
+}
+.tilt-chip b{font-size:11px;color:#7dff9f}
+.tilt-chip span{font-size:10px;color:#ff8aa0}
 .rip-btn.compact{min-height:46px;font-size:22px;flex:1.85}
 
 #launchInfo{
