@@ -1587,16 +1587,92 @@ function tierClass(tier){
 function statMini(label,value){
     return `<div class="mini-stat"><span>${label}</span><b>${value}</b></div>`;
 }
-function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description="",sprite=""}){
+function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",description="",sprite="",footer=""}){
     const card=document.createElement("button");
     card.type="button";
     const art=sprite?encodeURI(sprite):"";
     card.className=`part-select-card ${accentClass||""}${art?" has-sprite":""}`;
     card.innerHTML=`${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
     ${description?`<p class="part-description">${description}</p>`:""}
-    <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>`;
+    <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>
+    ${footer||""}`;
     card.onclick=onClick;
     return card;
+}
+function bladeCardStats(blade){
+    const c=blade?.card||{};
+    return {
+        attack:Number(c.attack)||70,knockback:Number(c.knockback)||70,
+        defense:Number(c.defense)||70,mobility:Number(c.mobility)||70,
+        balance:Number(c.balance)||70,stamina:Number(c.stamina)||70,
+        burst:Number(c.burst)||70
+    };
+}
+function applyRatchetToBladeStats(blade,ratchet){
+    const base=bladeCardStats(blade);
+    if(!ratchet||typeof getRatchetProfile!=="function") return base;
+    const rb=getRatchetProfile(ratchet).base||{};
+    const rr=k=>typeof getRatchetRatedProperty==="function"?getRatchetRatedProperty(rb[k]||0.5):70;
+    const w={attack:.12,knockback:.12,defense:.22,mobility:.10,balance:.18,stamina:.15,burst:.12};
+    const out={};
+    Object.keys(w).forEach(k=>{
+        const b=base[k]||70;
+        out[k]=b+(rr(k)-b)*w[k];
+    });
+    if(typeof getHeightPhysicsV56==="function"){
+        const hp=getHeightPhysicsV56(ratchet.height)||{};
+        out.attack+=(hp.attack||0)*8;
+        out.knockback+=(hp.knockback||0)*8;
+        out.defense+=(hp.defense||0)*8;
+        out.balance+=(hp.balance||0)*8;
+        out.stamina+=(hp.stamina||0)*8;
+        out.mobility+=(hp.mobility||0)*8;
+        out.burst+=(hp.burst||0)*8;
+    }
+    Object.keys(out).forEach(k=>{
+        out[k]=Math.max(60,Math.min(99,Math.round(out[k])));
+    });
+    return out;
+}
+function statDeltaMap(from,to){
+    const d={};
+    ["attack","knockback","defense","mobility","balance","stamina","burst"].forEach(k=>{
+        d[k]=Math.round((Number(to?.[k])||0)-(Number(from?.[k])||0));
+    });
+    return d;
+}
+function comboStatGroupsHTML(stats,delta){
+    stats=stats||{};
+    delta=delta||{};
+    const useBars=typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.useStatBars && SpinWarsRogueRun.useStatBars();
+    if(useBars) return SpinWarsRogueRun.statGroupsHTML(stats,delta);
+    const box=(label,key)=>{
+        const value=Number.isFinite(Number(stats[key]))?Math.round(stats[key]):"—";
+        const d=Number(delta[key])||0;
+        const tint=d>0?" up":d<0?" down":"";
+        const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
+        return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
+    };
+    return `<div class="vs-stat-groups">
+      <div class="vs-stat-group"><span class="vs-stat-group-label">HIT</span><div class="vs-stats pair">${box("ATK","attack")}${box("KB","knockback")}</div></div>
+      <div class="vs-stat-group"><span class="vs-stat-group-label">HOLD</span><div class="vs-stats">${box("DEF","defense")}${box("BAL","balance")}${box("BST","burst")}</div></div>
+      <div class="vs-stat-group"><span class="vs-stat-group-label">MOVE</span><div class="vs-stats pair">${box("MOB","mobility")}${box("STA","stamina")}</div></div>
+    </div>`;
+}
+function partEffectPreviewHTML(kind,part,ctx){
+    const blade=ctx?.blade||Game.player?.blade;
+    if(!blade||!part) return "";
+    if(kind==="ratchet"){
+        const from=bladeCardStats(blade);
+        const to=applyRatchetToBladeStats(blade,part);
+        return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE</p>${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
+    }
+    const ratchet=ctx?.ratchet||Game.player?.ratchet;
+    if(!ratchet) return "";
+    const from=applyRatchetToBladeStats(blade,ratchet);
+    const combo=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,part):null;
+    const to=combo?.stats||from;
+    return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE · RATCHET</p>${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
 }
 function bladeSpritePath(blade){
     const path=blade && typeof blade.sprite==="string" ? blade.sprite.trim() : "";
@@ -1741,6 +1817,7 @@ function ratchetCard(r){
         extra:`<span class="part-index">${r.number}</span>`,
         description:desc,
         sprite:ratchetSpriteFile(r),
+        footer:partEffectPreviewHTML("ratchet",r),
         onClick:()=>{Game.player.ratchet=r;showBitDraft();}});
 }
 
@@ -1801,6 +1878,7 @@ function bitCard(bit){
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
         description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
         sprite:bitSpriteFile(bit),
+        footer:partEffectPreviewHTML("bit",bit),
         onClick:()=>{
             Game.player.bit=bit;
             if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
@@ -2352,36 +2430,7 @@ function createComboSummaryCard(side,combo){
     const tier=tierClass(combo.plateTier||combo.blade?.tier);
     const bossMark=combo.bossMark||"";
     const enhanced=!!combo.enhanced;
-    const statBox=(label,key)=>{
-        const value=stats[key];
-        const d=Number(combo.statDelta?.[key])||0;
-        const tint=d>0?" up":d<0?" down":"";
-        const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
-        return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
-    };
-    const useBars=typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.useStatBars && SpinWarsRogueRun.useStatBars();
-    const statBlock=useBars
-        ? SpinWarsRogueRun.statGroupsHTML(stats,combo.statDelta||{})
-        : `<div class="vs-stat-groups">
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HIT</span>
-            <div class="vs-stats pair">
-              ${statBox("ATK","attack")}${statBox("KB","knockback")}
-            </div>
-          </div>
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">HOLD</span>
-            <div class="vs-stats">
-              ${statBox("DEF","defense")}${statBox("BAL","balance")}${statBox("BST","burst")}
-            </div>
-          </div>
-          <div class="vs-stat-group">
-            <span class="vs-stat-group-label">MOVE</span>
-            <div class="vs-stats pair">
-              ${statBox("MOB","mobility")}${statBox("STA","stamina")}
-            </div>
-          </div>
-        </div>`;
+    const statBlock=comboStatGroupsHTML(stats,combo.statDelta||{});
     const mod=combo.rogueMod;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
@@ -2671,18 +2720,42 @@ function showLetItRip(){
         Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
     }[Game.player.launch.quality]||97;
 
-    if(stage==="qualityReveal"){
+    if(stage==="qualityRolling"||stage==="qualityReveal"){
+        const rolling=stage==="qualityRolling";
+        const playerQ=Game.player.launch.quality||"Okay";
+        const cpuQ=Game.cpu.launch?.quality||"Okay";
+        const ladder=["Horrible","Bad","Okay","Good","Perfect"];
+        const reel=(side,final)=>{
+            const strip=ladder.concat(ladder).concat([final]);
+            return `<div class="launch-quality-column ${side}-quality-reveal${rolling?" is-reel":""}">
+              <span class="launch-quality-who">${side==="player"?"YOU":"CPU"}</span>
+              ${rolling
+                ? `<div class="swx-reel"><div class="swx-reel-strip">${strip.map(q=>`<b>${q}</b>`).join("")}</div></div>`
+                : `<strong>${final}</strong>`}
+            </div>`;
+        };
         controls.innerHTML=`
-          <div class="launch-quality-reveal">
-            <div class="launch-quality-column player-quality-reveal"><strong>${Game.player.launch.quality}</strong></div>
-            <div class="launch-quality-divider">VS</div>
-            <div class="launch-quality-column cpu-quality-reveal"><strong>${Game.cpu.launch?.quality||"Okay"}</strong></div>
+          <div class="launch-quality-reveal${rolling?" is-rolling":""}">
+            ${reel("player",playerQ)}
+            <div class="launch-quality-divider"><b>VS</b></div>
+            ${reel("cpu",cpuQ)}
           </div>
         `;
-
-        // Reveal exactly once. No buttons exist during this stage, so there
-        // is no way to reroll or go backward during the reveal.
-        if(!Game.player.launch.qualityRevealStarted){
+        if(rolling && !Game.player.launch.qualityRollStarted){
+            Game.player.launch.qualityRollStarted=Date.now();
+            requestAnimationFrame(()=>{
+                controls.querySelectorAll(".swx-reel-strip").forEach(el=>{
+                    el.style.transform="translateY(-340px)";
+                });
+            });
+            setTimeout(()=>{
+                if(Game.player.launch.setupStage==="qualityRolling"){
+                    Game.player.launch.setupStage="qualityReveal";
+                    Game.player.launch.qualityRollStarted=0;
+                    showLetItRip();
+                }
+            },900);
+        }else if(!rolling && !Game.player.launch.qualityRevealStarted){
             Game.player.launch.qualityRevealStarted=Date.now();
             setTimeout(()=>{
                 if(Game.player.launch.setupStage==="qualityReveal"){
@@ -2690,7 +2763,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRevealStarted=0;
                     showLetItRip();
                 }
-            },1000);
+            },900);
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
@@ -2753,6 +2826,7 @@ function showLetItRip(){
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.qualityMode="Fixed";
                 Game.player.launch.setupStage="qualityReveal";
+                Game.player.launch.qualityRevealStarted=0;
                 showLetItRip();
             };
         }
@@ -2763,7 +2837,8 @@ function showLetItRip(){
                 Game.player.launch.quality=bumpLuckyLaunchQuality(Game.player.launch.quality);
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
-                Game.player.launch.setupStage="qualityReveal";
+                Game.player.launch.setupStage="qualityRolling";
+                Game.player.launch.qualityRollStarted=0;
                 showLetItRip();
             };
         }
@@ -4648,6 +4723,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.qualityMode=null;
         Game.player.launch.fixedQualityPreview=null;
         Game.player.launch.qualityRevealStarted=0;
+        Game.player.launch.qualityRollStarted=0;
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
         Game.cpu.lockedLaunchPlan=null;

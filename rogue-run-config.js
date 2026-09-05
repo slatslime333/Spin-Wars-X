@@ -94,17 +94,17 @@ function levelNeed(level){
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?8:4;
-    const base=win?(10+m):(5+Math.floor(m/2));
-    return base+(opts.shark&&win?40:0);
+    if(opts.endless) return win?10:5;
+    const base=win?(12+m):(6+Math.floor(m/2));
+    return base+(opts.shark&&win?48:0);
 }
 
 function nightExp(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?6:3;
-    const base=win?(12+m):(5+Math.floor(m/2));
-    return base+(opts.shark&&win?30:0);
+    if(opts.endless) return win?8:4;
+    const base=win?(15+m):(6+Math.floor(m/2));
+    return base+(opts.shark&&win?36:0);
 }
 
 function cpuLane(match){
@@ -120,7 +120,7 @@ global.SpinWarsRogueRunConfig={
     FINAL_MATCH,BOSS_AT,MIX_FROM,MIX_TO,MAX_LEVEL,STAT_MAX,
     STARTER_BLADES,STARTER_RATCHETS,STARTER_BITS,TRACK,
     levelForRow,rowPrice,levelNeed,nightMoney,nightExp,cpuLane,
-    RANDOMIZE_BONUS:5,
+    RANDOMIZE_BONUS:6,
     rules:{
         finalMatch:FINAL_MATCH,
         bossAt:BOSS_AT,

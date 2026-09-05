@@ -37,6 +37,10 @@ function bladeById(id){
 function bladeByName(name){
     return Object.values(blades()).find(b=>b&&b.name===name)||null;
 }
+function bladeIdOf(blade){
+    const eng=blades();
+    return Object.keys(eng).find(k=>eng[k]===blade)||"";
+}
 function ratchetByName(name){
     return ratchets().find(r=>r&&r.name===name)||null;
 }
@@ -240,7 +244,10 @@ function statGroupsHTML(stats,delta){
 }
 
 function useStatBars(){
-    return !!(global.Game&&Game.rogue&&Game.rogue.loop==="run");
+    const g=global.Game;
+    if(!g) return false;
+    if(g.mode==="rogue-run") return true;
+    return !!(g.mode==="rogue" && g.rogue && g.rogue.loop==="run");
 }
 
 function persistLive(){
@@ -317,6 +324,7 @@ function archiveAndClear(status){
             stats,ovr,
             lastScore:r.lastResult||null,
             scoreboard:sb,
+            runEarn:r.runEarn?{exp:Number(r.runEarn.exp)||0,money:Number(r.runEarn.money)||0}:null,
             finalScore:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.runFinal():0
         };
         const list=loadArchive();
@@ -327,11 +335,20 @@ function archiveAndClear(status){
 }
 
 function onNightOver(win,matchIndex,isShark){
+    const r=Game.rogue;
+    if(r && Number(r._paidMatch)===Number(matchIndex) && r.lastPayout) return r.lastPayout;
     const endless=Number(matchIndex)>(cfg().FINAL_MATCH||30);
     const money=cfg().nightMoney(win,matchIndex,{shark:!!isShark,endless});
     const exp=cfg().nightExp(win,matchIndex,{shark:!!isShark,endless});
     addMoney(money);
     addExp(exp);
+    if(r){
+        r._paidMatch=Number(matchIndex)||0;
+        r.lastPayout={exp,money,match:Number(matchIndex)||0};
+        r.runEarn=r.runEarn||{exp:0,money:0};
+        r.runEarn.exp=(Number(r.runEarn.exp)||0)+exp;
+        r.runEarn.money=(Number(r.runEarn.money)||0)+money;
+    }
     persistLive();
     return {money,exp};
 }
@@ -410,15 +427,35 @@ function hudStrip(){
     </section>`;
 }
 
+function partSprite(part){
+    if(!part) return "";
+    if(part.kind==="blade"){
+        const b=bladeById(part.id);
+        return typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+    }
+    if(part.kind==="ratchet"){
+        const r=ratchetByName(part.name);
+        return typeof ratchetSpritePath==="function"?ratchetSpritePath(r):"";
+    }
+    const b=bitByName(part.name);
+    return typeof bitSpritePath==="function"?bitSpritePath(b):"";
+}
+
 function loadoutCard(){
     const parts=loadoutParts();
     const combo=comboOfLoadout();
-    const sprite=parts.blade&&typeof bladeSpritePath==="function"?bladeSpritePath(parts.blade):"";
+    const bladeArt=parts.blade&&typeof bladeSpritePath==="function"?bladeSpritePath(parts.blade):"";
+    const ratArt=parts.ratchet&&typeof ratchetSpritePath==="function"?ratchetSpritePath(parts.ratchet):"";
+    const bitArt=parts.bit&&typeof bitSpritePath==="function"?bitSpritePath(parts.bit):"";
     if(!parts.blade){
         return `<section class="menu-card rr-loadout empty"><p>Pick a starter blade to open the locker.</p></section>`;
     }
     return `<section class="menu-card rr-loadout">
-        <div class="rr-loadout-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+        <div class="rr-loadout-arts">
+            <div class="rr-loadout-art">${bladeArt?`<img src="${bladeArt}" alt="">`:"<span></span>"}</div>
+            <div class="rr-loadout-art sm">${ratArt?`<img src="${ratArt}" alt="">`:"<span></span>"}</div>
+            <div class="rr-loadout-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
+        </div>
         <div class="rr-loadout-copy">
             <span class="eyebrow">${String(parts.blade.tier||"").toUpperCase()}</span>
             <b>${parts.blade.name}</b>
@@ -622,8 +659,10 @@ function showGarage(){
     const rats=ownedRatchets();
     const bits=ownedBits();
     const app=document.getElementById("app");
-    const chip=(kind,name,on)=>{
-        return `<button type="button" class="rr-part ${on?"on":""}" data-kind="${kind}" data-name="${name}">${name}</button>`;
+    const chip=(kind,name,on,src,label)=>{
+        return `<button type="button" class="rr-part ${on?"on":""}" data-kind="${kind}" data-name="${name}">
+            ${src?`<img src="${src}" alt="">`:""}<span>${label||name}</span>
+        </button>`;
     };
     app.innerHTML=`<div class="background stadium"></div>
     <main class="menu rr-shell rr-garage">
@@ -639,13 +678,14 @@ function showGarage(){
         ${loadoutCard()}
         <p class="home-leagues-label">BLADES</p>
         <div class="rr-part-row">${blades.map(b=>{
-            const id=Object.keys(BLADE_ENGINE).find(k=>BLADE_ENGINE[k]===b);
-            return chip("blade",id,acc.loadout.bladeId===id);
+            const id=bladeIdOf(b);
+            const src=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+            return chip("blade",id,acc.loadout.bladeId===id,src,b.name);
         }).join("")||"<p class='rr-empty'>No blades yet.</p>"}</div>
         <p class="home-leagues-label">RATCHETS</p>
-        <div class="rr-part-row">${rats.map(r=>chip("ratchet",r.name,acc.loadout.ratchet===r.name)).join("")}</div>
+        <div class="rr-part-row">${rats.map(r=>chip("ratchet",r.name,acc.loadout.ratchet===r.name,typeof ratchetSpritePath==="function"?ratchetSpritePath(r):"",r.name)).join("")}</div>
         <p class="home-leagues-label">BITS</p>
-        <div class="rr-part-row">${bits.map(b=>chip("bit",b.name,acc.loadout.bit===b.name)).join("")}</div>
+        <div class="rr-part-row">${bits.map(b=>chip("bit",b.name,acc.loadout.bit===b.name,typeof bitSpritePath==="function"?bitSpritePath(b):"",b.name)).join("")}</div>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showHub()));
     document.querySelectorAll(".rr-part").forEach(btn=>{
@@ -659,12 +699,6 @@ function showGarage(){
             persistAccount();
             showGarage();
         };
-    });
-    document.querySelectorAll(".rr-part").forEach(btn=>{
-        if(btn.getAttribute("data-kind")==="blade"){
-            const b=bladeById(btn.getAttribute("data-name"));
-            if(b) btn.textContent=b.name;
-        }
     });
     mountDev();
 }
@@ -687,7 +721,10 @@ function showTrack(focusN){
     const combo=preview&&loadoutParts().ratchet&&loadoutParts().bit&&typeof calculateComboStats==="function"
         ? calculateComboStats(preview,loadoutParts().ratchet,loadoutParts().bit)
         : comboOfLoadout();
-    const sprite=preview&&typeof bladeSpritePath==="function"?bladeSpritePath(preview):"";
+    const arts=parts.map(p=>{
+        const src=partSprite(p);
+        return src?`<img src="${src}" alt="${partLabel(p)}">`:`<span></span>`;
+    }).join("");
     const canBuy=!rowOwned(focus,acc)&&acc.level>=focus.level&&acc.money>=focus.price;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
@@ -702,7 +739,7 @@ function showTrack(focusN){
         </div>
         ${hudStrip()}
         <section class="menu-card rr-track-inspect">
-            <div class="rr-loadout-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+            <div class="rr-loadout-arts">${arts}</div>
             <div>
                 <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}</span>
                 <b>${parts.map(partLabel).join(" · ")}</b>
@@ -764,6 +801,7 @@ function showBoard(){
                 run:entry.scoreboard||{},
                 bladeName:entry.bladeName,
                 status:entry.status,
+                earn:entry.runEarn||null,
                 onHome:()=>{Game._viewingArchive=false;showBoard();}
             });
         };
