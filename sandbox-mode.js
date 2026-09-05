@@ -386,6 +386,8 @@ function garageColumn(side){
     const parts=pack.ratchet&&pack.bit?`${pack.ratchet.name} · ${pack.bit.name}`:"Pick parts";
     const meta=combo&&Number.isFinite(Number(combo.meta))?Math.round(combo.meta):"—";
     const sprite=typeof bladeSpritePath==="function"?bladeSpritePath(pack.blade):"";
+    const ratArt=typeof ratchetSpritePath==="function"?ratchetSpritePath(pack.ratchet):"";
+    const bitArt=typeof bitSpritePath==="function"?bitSpritePath(pack.bit):"";
     const hidden=s.beys===1 && side==="cpu";
     const human=sideIsHuman(side);
     const driver=human?"HUMAN":"CPU";
@@ -397,7 +399,11 @@ function garageColumn(side){
             <small>${driver}</small>
         </header>
         <div class="sandbox-kit">
-            <div class="sandbox-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+            <div class="sandbox-arts">
+                <div class="sandbox-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+                <div class="sandbox-art sm">${ratArt?`<img src="${ratArt}" alt="">`:"<span></span>"}</div>
+                <div class="sandbox-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
+            </div>
             <div class="sandbox-kit-copy">
                 <h2>${name}</h2>
                 <p>${parts}</p>
@@ -662,10 +668,14 @@ function openPicker(side,part){
                 :part==="bit"?(typeof bitSpritePath==="function"?bitSpritePath(item):"")
                 :(typeof ratchetSpritePath==="function"?ratchetSpritePath(item):"");
             const sub=part==="blade"?`${item.type} · ${item.tier}`:part==="bit"?item.type:`${item.number}-SIDED · ${item.height}`;
+            const preview=part!=="blade"&&typeof partEffectPreviewHTML==="function"
+                ? partEffectPreviewHTML(part,item,{blade:s[side].blade,ratchet:s[side].ratchet})
+                : "";
             return `<button type="button" class="sandbox-pick-card" data-idx="${i}">
                 ${sprite?`<img src="${sprite}" alt="">`:""}
                 <strong>${item.name}</strong>
                 <small>${sub}</small>
+                ${preview}
             </button>`;
         }).join("")||`<p class="sandbox-empty">Nothing in this filter.</p>`;
         grid.querySelectorAll("[data-idx]").forEach(btn=>{

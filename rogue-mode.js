@@ -1832,7 +1832,10 @@ function createRun(blade,ratchet,bit,opts){
         hellsChainLastAt:0,
         perfectLaunchMatches:0,
         flavorCall:null,
-        _scenarioDone:false
+        _scenarioDone:false,
+        runEarn:{exp:0,money:0},
+        lastPayout:null,
+        _paidMatch:0
     };
     Game.player.launch={angle:"Flat",technique:"Center"};
     Game.battle={score:{player:0,cpu:0},round:1,matchStarted:false};
@@ -2091,6 +2094,9 @@ function buildSave(){
             hellsChainPct:Number(r.hellsChainPct)||0,
             perfectLaunchMatches:Number(r.perfectLaunchMatches)||0,
             flavorCall:r.flavorCall||null,
+            runEarn:{exp:Number(r.runEarn?.exp)||0,money:Number(r.runEarn?.money)||0},
+            lastPayout:r.lastPayout||null,
+            _paidMatch:Number(r._paidMatch)||0,
             scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
         }
     };
@@ -2316,6 +2322,9 @@ function hydrate(data){
         hellsChainLastAt:0,
         perfectLaunchMatches:Number(raw.perfectLaunchMatches)||0,
         flavorCall:raw.flavorCall||null,
+        runEarn:{exp:Number(raw.runEarn?.exp)||0,money:Number(raw.runEarn?.money)||0},
+        lastPayout:raw.lastPayout||null,
+        _paidMatch:Number(raw._paidMatch)||0,
         _scenarioDone:false
     };
     if(raw.enhanced===undefined && !(raw.history||[]).some(c=>c&&c.kind==="evolve")){
@@ -2605,7 +2614,7 @@ function scoreboardLabel(){
     return `MATCH ${m}/${finalMatch()} · first to 7`;
 }
 
-const SCENARIO_CHANCE=0.10;
+const SCENARIO_CHANCE=0.20;
 const SCENARIO_IDS=[
     "rookie-tuner","parts-dealer","rival","shortcut","coin-flip",
     "shop-secret","double-or-nothing","autograph","clearance","bathroom",
@@ -3062,6 +3071,7 @@ function showResults(){
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(isSharkNight(r.matchIndex)?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
+        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span><b>+${r.lastPayout.exp} EXP</b><b>+${r.lastPayout.money} MONEY</b></p>`:""}
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
