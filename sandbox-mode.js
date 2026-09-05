@@ -266,29 +266,26 @@ function showLanding(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home sandbox-landing">
         ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX LAB",tag:"Build anything. Rip it. Finishes do not end the night."}):""}
+        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX",tag:""}):""}
         <nav class="home-doors rogue-doors sandbox-landing-doors" aria-label="Sandbox">
             <div class="home-door-row">
                 ${VS_MODES.map(m=>`<button class="home-door ${m.id==="cvc"?"play":"rip"}" type="button" data-enter-vs="${m.id}">
                     <span class="home-door-kicker">${m.kicker}</span>
-                    <b>${m.label}</b>
-                    <small>${m.blurb}</small>
+                    <b>${m.short}</b>
                 </button>`).slice(0,2).join("")}
             </div>
             <div class="home-door-row">
                 <button class="home-door play" type="button" data-enter-vs="cvc">
                     <span class="home-door-kicker">${VS_MODES[2].kicker}</span>
-                    <b>${VS_MODES[2].label}</b>
-                    <small>${VS_MODES[2].blurb}</small>
+                    <b>${VS_MODES[2].short}</b>
                 </button>
                 <button class="home-door rip" id="sandboxOpenLab" type="button">
                     <span class="home-door-kicker">GARAGE</span>
-                    <b>OPEN LAB</b>
-                    <small>Keep ${vsMeta(s.vs).short}. Change kits, then rip.</small>
+                    <b>LAB</b>
                 </button>
             </div>
-            <button class="home-help" id="sandboxSession" type="button">SESSION LOG${logN?` · ${logN}`:""}</button>
-            <button class="home-help" id="sandboxHelp" type="button">How the lab works</button>
+            <button class="home-help" id="sandboxSession" type="button">LOG${logN?` · ${logN}`:""}</button>
+            <button class="home-help" id="sandboxHelp" type="button">HOW</button>
         </nav>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));

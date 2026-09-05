@@ -2230,7 +2230,7 @@ function showRunHistory(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing rogue-run-board">
         ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"RUN SCOREBOARD"})}
+        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:"SCOREBOARD"})}
         <section class="rogue-run-history" aria-label="Finished runs">
             ${body}
         </section>
@@ -2391,29 +2391,32 @@ function showLanding(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
         ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"ROGUE RUN",tag:"One Bey. Eighteen matches. Then the dark."})}
+        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:""})}
         <nav class="home-doors rogue-doors" aria-label="Rogue">
-            <button class="home-door rip" id="rogueNewGame" type="button">
+            <button class="home-door rip swx-hero" id="rogueNewGame" type="button">
                 <span class="home-door-kicker">NEW RUN</span>
                 <b>NEW GAME</b>
-                <small>Pick a tier. Build a combo.</small>
             </button>
             <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
                 <span class="home-door-kicker">SAVE</span>
                 <b>CONTINUE</b>
-                <small>${continueNote}</small>
+                <small class="swx-state">${continueNote}</small>
                 ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
             </button>
             <button class="home-door rogue" id="rogueScoreboard" type="button">
                 <span class="home-door-kicker">HISTORY</span>
-                <b>RUN SCOREBOARD</b>
-                <small>${boardNote}</small>
+                <b>SCOREBOARD</b>
+                <small class="swx-state">${boardNote}</small>
             </button>
-            <button class="home-help" id="rogueHelp" type="button">How a run works</button>
+            <button class="home-help" id="rogueHelp" type="button">HOW</button>
         </nav>
         <div id="rogueNewConfirm" hidden></div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>
+        (typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork)
+            ? SpinWarsRogueRun.showFork()
+            : renderMainMenu()
+    ));
     document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
     document.getElementById("rogueContinue").onclick=()=>{
         if(!canContinue) return;
@@ -2451,16 +2454,16 @@ function showTierPick(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing">
         ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:"Pick a tier. Then three blades, three ratchets, three bits."}):""}
+        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:""}):""}
         <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
             <button class="home-league bronze" type="button" data-tier="Bronze">
-                <span class="home-league-copy"><b>BRONZE</b><small>Start weak. Shop snowballs. Enhance is luck with a late rescue.</small></span>
+                <span class="home-league-copy"><b>BRONZE</b><small>Shop snowballs</small></span>
             </button>
             <button class="home-league silver" type="button" data-tier="Silver">
-                <span class="home-league-copy"><b>SILVER</b><small>Middle path. Evolve, then Enhance — both on a slope.</small></span>
+                <span class="home-league-copy"><b>SILVER</b><small>Evolve · Enhance</small></span>
             </button>
             <button class="home-league gold" type="button" data-tier="Gold">
-                <span class="home-league-copy"><b>GOLD</b><small>Higher base, thinner shop. Climb Bronze → Silver → Gold.</small></span>
+                <span class="home-league-copy"><b>GOLD</b><small>Climb the forms</small></span>
             </button>
         </nav>
     </main>`;
