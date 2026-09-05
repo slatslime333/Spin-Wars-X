@@ -76,6 +76,13 @@
         return s.replace(/\B(?=(\d{3})+(?!\d))/g,",");
     }
     function pts(n){return (n>0?"+":"")+commas(n)+" pts";}
+    function earnHTML(earn){
+        if(!earn) return "";
+        const exp=Number(earn.exp)||0;
+        const money=Number(earn.money)||0;
+        if(!exp && !money) return "";
+        return `<p class="sb-earn"><span>EARNED</span><b>+${exp} EXP</b><b>+${money} MONEY</b></p>`;
+    }
 
     function ensureMatch(){
         if(!state.match) beginMatch();
@@ -473,6 +480,7 @@
             </div>
             ${records}
             <p class="sb-quality"><span>GAME QUALITY</span><b>${quality}</b></p>
+            ${earnHTML(opts.payout||global.Game?.rogue?.lastPayout)}
             ${boss?`<p class="sb-boss">Rogue boss bonus +${commas(boss)}</p>`:""}
             <div class="sb-actions">${next}</div>
         </main>`;
@@ -504,6 +512,7 @@
             <p class="win-name">${blade}</p>
             <p class="sb-kicker">FINAL SCORE</p>
             <p class="sb-final sb-run-final">${commas(final)}</p>
+            ${earnHTML(opts.earn||global.Game?.rogue?.runEarn)}
             <ul class="sb-run-stats">
                 <li>Battles Won <b>${r.battlesWon||0}</b></li>
                 <li>Total RPM Damage <b>${commas(r.rpmDamage)}</b></li>

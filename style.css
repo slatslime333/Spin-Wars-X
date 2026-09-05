@@ -1213,6 +1213,20 @@ footer{
   background:#10161c;
 }
 
+.part-effect{
+  padding:8px 10px 12px;
+  border-top:1px solid #2a241c;
+  text-align:left;
+}
+.part-effect-kicker{
+  margin:0 0 6px;
+  color:#c4a056;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.18em;
+}
+.part-select-card .vs-stat-groups,
+.part-select-card .rr-stat-groups{margin-top:0}
 .part-select-card .mini-stat{
   padding:7px 2px;
 }
@@ -1784,12 +1798,15 @@ footer{
   clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
 }
 
-.launch-quality-column span{
+.launch-quality-column span,
+.launch-quality-who{
   color:#7c8995;
-  font-size:7px;
+  font-size:11px;
   font-weight:950;
-  letter-spacing:1.2px;
+  letter-spacing:.28em;
 }
+.player-quality-reveal .launch-quality-who{color:#7dff9f}
+.cpu-quality-reveal .launch-quality-who{color:#ff8aa0}
 
 .launch-quality-column strong{
   font-family:Staatliches,Impact,sans-serif;
@@ -1821,9 +1838,37 @@ footer{
 .launch-quality-divider{
   display:grid;
   place-items:center;
-  color:#727f8c;
+  color:#f0b429;
   font-size:8px;
   font-weight:950;
+}
+.launch-quality-divider b{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:28px;
+  font-weight:400;
+  letter-spacing:.06em;
+  line-height:1;
+}
+.swx-reel{
+  height:34px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.swx-reel-strip{
+  display:flex;
+  flex-direction:column;
+  will-change:transform;
+  transition:transform .85s cubic-bezier(.12,.82,.18,1);
+}
+.swx-reel-strip b{
+  height:34px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:26px;
+  font-weight:400;
+  line-height:1;
 }
 
 #launchInfo{
@@ -3567,6 +3612,12 @@ button:focus-visible{
   color:var(--green);
 }
 .sb-boss{text-align:center;color:var(--gold)}
+.sb-earn{
+  display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;
+  margin:8px 0 0;color:#d8ffe4;font-weight:800;letter-spacing:.08em;
+}
+.sb-earn span{color:#c4a056;font-size:10px;letter-spacing:.22em}
+.sb-earn b{font-family:Staatliches,Impact,sans-serif;font-size:22px;font-weight:400}
 .sb-actions{display:flex;flex-direction:column;gap:8px;margin-top:6px}
 .sb-run-final{text-align:center;font-size:42px}
 .sb-run-stats{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -3689,12 +3740,14 @@ button:focus-visible{
 .sandbox-col.is-ghost{display:none}
 .sandbox-col-head{display:flex;justify-content:space-between;align-items:baseline}
 .sandbox-who{font-family:Staatliches,Impact,sans-serif;font-size:22px;letter-spacing:.08em}
-.sandbox-kit{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center}
+.sandbox-kit{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+.sandbox-arts{display:flex;align-items:center;gap:6px}
 .sandbox-art{
   width:72px;height:72px;border-radius:50%;overflow:hidden;
   background:#0a0806;display:flex;align-items:center;justify-content:center;
 }
 .sandbox-art img{max-width:100%;max-height:100%;object-fit:contain}
+.sandbox-art.sm{width:44px;height:44px}
 .sandbox-kit-copy h2{margin:0;font-size:20px;font-family:Staatliches,Impact,sans-serif;font-weight:400}
 .sandbox-kit-copy p{margin:4px 0;color:var(--muted);font-size:12px}
 .sandbox-kit-copy .vs-rating{display:inline-flex;flex-direction:column;min-width:72px;margin-top:4px;padding:4px 8px}
@@ -3732,6 +3785,7 @@ button:focus-visible{
 .sandbox-pick-card img{max-width:88px;max-height:88px;object-fit:contain}
 .sandbox-pick-card strong{font-size:13px;text-align:center}
 .sandbox-pick-card small{color:var(--muted);font-size:10px;letter-spacing:.08em}
+.sandbox-pick-card .part-effect{width:100%;text-align:left}
 .sandbox-empty{color:var(--muted);text-align:center;padding:24px}
 .sandbox-score-note{
   position:absolute;left:50%;top:12%;transform:translateX(-50%);
@@ -3803,14 +3857,16 @@ button:focus-visible{
 .rr-hud-exp{display:flex;flex-direction:column;gap:4px;min-width:0}
 .rr-loadout{
   position:relative;z-index:1;
-  display:grid;grid-template-columns:88px 1fr;gap:10px;align-items:start;
+  display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;
   width:100%;padding:10px;
 }
 .rr-loadout.empty{display:block}
+.rr-loadout-arts{display:flex;align-items:center;gap:6px}
 .rr-loadout-art{
   width:88px;height:88px;display:flex;align-items:center;justify-content:center;
   background:rgba(0,0,0,.28);overflow:hidden
 }
+.rr-loadout-art.sm{width:52px;height:52px}
 .rr-loadout-art img{max-width:100%;max-height:100%;object-fit:contain}
 .rr-loadout-copy{min-width:0}
 .rr-loadout-copy b{display:block;font-size:18px}
@@ -3821,13 +3877,19 @@ button:focus-visible{
 .rr-starter-art img{max-width:100%;max-height:100%;object-fit:contain}
 .rr-part-row{display:flex;flex-wrap:wrap;gap:6px}
 .rr-part{
-  padding:7px 10px;border:1px solid #3a3128;background:#16110d;color:#f6f0e6;
-  font-size:12px;font-weight:800;letter-spacing:.04em;cursor:pointer
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  min-width:72px;padding:8px 8px 7px;border:1px solid #3a3128;background:#16110d;color:#f6f0e6;
+  font-size:11px;font-weight:800;letter-spacing:.04em;cursor:pointer
 }
+.rr-part img{width:48px;height:48px;object-fit:contain}
 .rr-part.on{border-color:var(--gold);color:var(--gold)}
 .rr-empty{color:var(--muted);font-size:13px}
 .rr-track-inspect{
-  display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start
+  display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start
+}
+.rr-track-inspect .rr-loadout-arts img,
+.rr-track-inspect .rr-loadout-arts span{
+  width:64px;height:64px;object-fit:contain;background:rgba(0,0,0,.28)
 }
 .rr-track-list{
   display:flex;flex-direction:column;gap:6px;
@@ -3887,8 +3949,9 @@ button:focus-visible{
   .combat-hint{display:block}
 }
 @media (max-width:720px){
-  .rr-loadout,.rr-track-inspect{grid-template-columns:64px 1fr}
+  .rr-loadout,.rr-track-inspect{grid-template-columns:auto 1fr}
   .rr-loadout-art{width:64px;height:64px}
+  .rr-loadout-art.sm{width:40px;height:40px}
   .rr-stat{grid-template-columns:28px 24px minmax(0,1fr);gap:4px}
   .rr-stat-num b{font-size:13px}
   .rr-track-list{max-height:min(40vh,280px)}
