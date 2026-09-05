@@ -19,6 +19,11 @@ function normTier(){
 }
 function match(){return Number(R()?.matchIndex)||1;}
 function bossLevel(m=match()){
+    const R=global.SpinWarsRogue;
+    if(R&&typeof R.isSharkNight==="function"&&R.isSharkNight(m)) return "final";
+    if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)){
+        return m<=Math.ceil((R.finalMatch?.()||18)/2)?"mini1":"mini2";
+    }
     if(m===6)return "mini1";
     if(m===12)return "mini2";
     if(m===18)return "final";
@@ -73,7 +78,7 @@ function playerEffectiveStats(){
     const r=R(); if(!r)return empty();
     const raw=rawCombo(r.blade,r.ratchet,r.bit);
     const out={};
-    STATS.forEach(k=>out[k]=rnd((Number(raw?.stats?.[k])||70)+(Number(r.startScale?.[k])||0)+(Number(r.bonuses?.[k])||0)));
+    STATS.forEach(k=>out[k]=rnd((Number(raw?.stats?.[k])||70)+(Number(r.startScale?.[k])||0)+(Number(r.bonuses?.[k])||0)+(Number(r.runChip?.[k])||0)));
     return out;
 }
 function cpuEffectiveStats(){
@@ -98,9 +103,15 @@ function cpuTargetRatio(){
         // Gold starts with a player advantage, then reverses into the hardest finish.
         ratio=m<=2?0.965:m<=5?0.985:m<=11?1.005:m<=17?1.035:1.105;
     }
-    if(m===6) ratio=t==="Bronze"?1.045:t==="Silver"?1.055:1.065;
-    if(m===12) ratio=t==="Bronze"?1.060:t==="Silver"?1.075:1.090;
-    if(m===18) ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    const R=global.SpinWarsRogue;
+    if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)&&m<=Math.ceil((R.finalMatch?.()||18)/2)) ratio=t==="Bronze"?1.045:t==="Silver"?1.055:1.065;
+    else if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(m)) ratio=t==="Bronze"?1.060:t==="Silver"?1.075:1.090;
+    else if(R&&typeof R.isSharkNight==="function"&&R.isSharkNight(m)) ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    else{
+        if(m===6) ratio=t==="Bronze"?1.045:t==="Silver"?1.055:1.065;
+        if(m===12) ratio=t==="Bronze"?1.060:t==="Silver"?1.075:1.090;
+        if(m===18) ratio=t==="Bronze"?1.075:t==="Silver"?1.090:1.105;
+    }
     return ratio;
 }
 

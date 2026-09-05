@@ -379,9 +379,13 @@
         if(p.biggestImpact>state.run.biggestImpact) state.run.biggestImpact=p.biggestImpact;
         state.run.battleScores.push(pT.final);
         const idx=Number(global.Game?.rogue?.matchIndex)||0;
+        const R=global.SpinWarsRogue;
         let bonus=0;
         if(winner==="player"){
-            if(idx===6) bonus=SCORE.BOSS_BRONZE;
+            if(R&&typeof R.isSharkNight==="function"&&R.isSharkNight(idx)) bonus=SCORE.BOSS_FINAL;
+            else if(R&&typeof R.isMiniNight==="function"&&R.isMiniNight(idx)){
+                bonus=idx<=Math.ceil((R.finalMatch?.()||18)/2)?SCORE.BOSS_BRONZE:SCORE.BOSS_SILVER;
+            }else if(idx===6) bonus=SCORE.BOSS_BRONZE;
             else if(idx===12) bonus=SCORE.BOSS_SILVER;
             else if(idx===18) bonus=SCORE.BOSS_FINAL;
         }

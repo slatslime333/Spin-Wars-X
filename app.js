@@ -1134,6 +1134,8 @@ function renderMainMenu(){
     Game.quickMatch=false;
     document.getElementById("rogueDevBtn")?.remove();
     document.getElementById("rogueDevPanel")?.remove();
+    document.getElementById("rrDevBtn")?.remove();
+    document.getElementById("rrDevPanel")?.remove();
     document.getElementById("battleInspect")?.remove();
     document.body.classList.remove("battle-inspect-open");
     if(typeof NEW_BATTLE!=="undefined" && NEW_BATTLE) NEW_BATTLE.paused=false;
@@ -1155,7 +1157,7 @@ function renderMainMenu(){
                 <button class="home-door rip" data-home="rogue" type="button">
                     <span class="home-door-kicker">RUN</span>
                     <b>ROGUE</b>
-                    <small>18 matches · build the Bey · first to 7</small>
+                    <small>Tier night · 30-night run · first to 7</small>
                 </button>
                 <button class="home-door play" data-home="sandbox" type="button">
                     <span class="home-door-kicker">LAB</span>
@@ -1179,7 +1181,10 @@ function renderMainMenu(){
             <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
         </nav>
     </main>`;
-    document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>SpinWarsRogue.showLanding());
+    document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>{
+        if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork) SpinWarsRogueRun.showFork();
+        else SpinWarsRogue.showLanding();
+    });
     document.querySelector("[data-home='sandbox']")?.addEventListener("click",()=>SpinWarsSandbox.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
     document.querySelector("[data-home='help']")?.addEventListener("click",()=>renderHowTo());
@@ -1225,7 +1230,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-modes">
             <h2>The doors</h2>
-            <p><strong>Rogue</strong> is the main mode. One Bey. Eighteen matches, each first to 7, then the night keeps going if you beat the hidden final. New Game: pick Bronze / Silver / Gold, then three blades, three ratchets, three bits — same as Quick Play. Win a match, pick an upgrade in the shop. Lose, and the run is over. Matches 6 and 12 are minis. Continue remembers the run — even a mid-battle close comes back at the saved score. Rogue has its own short help on the landing if you want the shop and luck stuff in one place.</p>
+            <p><strong>Rogue</strong> opens two doors. <strong>Rogue Run</strong> is the locker: Garage, Track, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). EXP levels the account. Money buys the Track. <strong>Tier Rogue</strong> is the classic night: Bronze / Silver / Gold door, eighteen matches, shop cards, minis at 6 and 12. Both are first to 7. Lose, and that run is over. Continue remembers a live night.</p>
             <p><strong>Sandbox</strong> is the lab. Landing doors for Player vs CPU, Player vs Player, and CPU vs CPU. 1 Bey or 2. Full garage, kit presets, launch presets, a session log. Finishes call out a score and keep going. Leave is the only exit. PvP uses two docks (P1 Space / E, P2 Enter / Shift). CPU vs CPU is watch mode. Tap a name in battle for a paused stat sheet — that works in Rogue and Quick Play too.</p>
             <p><strong>Campaign</strong> is locked. Story is not in yet. That door is a promise, not a bug.</p>
             <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
@@ -1269,7 +1274,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-battle">
             <h2>How a battle actually plays</h2>
-            <p>The LIVE booth sits above the stadium — same chrome as the VS plates. It holds a line for a beat: one event, one line. Launch, clash, rail, recover, finish. Witty, not a lecture. Late in a match it will sometimes call a prediction. Names and ratchet · bit are text on the health row. RPM bars keep a faint amber trail when spin falls, and a cyan chunk that lands ahead of the fill when you gain (Hurricane). META sits in a box on that row. Dash and ability live in the thumb zone. On a phone the whole battle is a locked screen — no page scroll.</p>
+            <p>The LIVE booth sits above the stadium — same chrome as the VS plates. It holds a line for a beat: one event, one line. Launch, clash, rail, recover, finish. Witty, not a lecture. Late in a match it will sometimes call a prediction. Names and ratchet · bit are text on the health row. RPM bars keep a faint amber trail when spin falls, and a cyan chunk that lands ahead of the fill when you gain (Hurricane). META sits in a box on that row. Dash and ability live in the thumb zone. On a PC, Space dashes and M pops the kit — those key labels only print under the buttons on a desktop pointer. On a phone the whole battle is a locked screen — no page scroll.</p>
             <p>You are watching two discs in a bowl. They have a home radius the bit likes, but knockback can throw them off it, and they have to walk back. They always un-overlap, even during hit-lock, so they cannot phase through. Head-on clashes bounce; they do not zero both speeds and they do not swap spin direction.</p>
             <p>Idle spin drains the whole time. Stamina stretches that clock. Two tanks at low RPM drain a little faster than they did at full, so the endgame does not become a staring contest. When they hit, Attack vs Defense spends RPM. Knockback vs Balance spends shove. The shove is capped — heavy, not air hockey.</p>
             <p>If you smash someone toward Over or Xtreme, the inner lens can zoom (~50%, once per point) on a real pocket-bound hit. Player dashes have a 40% chance to reuse that cam for a second and a half. CPU dashes do not. Physics ticks stay 1/60. Only the clock feeding them slows. The green stadium outline does not scale, so a bigger phone does not mean a bigger knock.</p>
@@ -1293,7 +1298,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-combat">
             <h2>Dash and abilities</h2>
-            <p>Dash is a shove along the heading you already have. About a 3.8 second cooldown. You cannot dash from a dead stop. It is for committing a line, not for teleporting. Player dashes can trigger that inner-lens cam. Ability charges are 2 per match, keyed to this match (mode + blades). Leave and come back to the same fight and they stay spent. A new Quick Play or league match starts at 2/2. They do not refill because you got bored mid-set.</p>
+            <p>Dash is a shove along the heading you already have. About a 3.8 second cooldown. You cannot dash from a dead stop. It is for committing a line, not for teleporting. Player dashes can trigger that inner-lens cam. On a PC, Space dashes and M uses the kit; those labels sit under the buttons only on a desktop pointer. Ability charges are 2 per match, keyed to this match (mode + blades). Leave and come back to the same fight and they stay spent. A new Quick Play or league match starts at 2/2. They do not refill because you got bored mid-set.</p>
             <p>Active kits spend a charge. Passives do not. CPU spends like that blade's personality: tanks hold dash, Attack and Flame dash into clashes, Pegasus and Iron Skin save charges, Hurricane waits until RPM is actually down. The last charge is usually clutched until the CPU is behind by 2 or you are at 5.</p>
             ${howToKitLine("ancient-sword")}
             ${howToKitLine("hurricane")}
@@ -2302,21 +2307,10 @@ function createComboSummaryCard(side,combo){
         const mark=d?`<i>${d>0?"+":""}${d}</i>`:"";
         return `<span class="vs-stat${tint}"><small>${label}</small><span class="vs-stat-val"><b>${value}</b>${mark}</span></span>`;
     };
-    const mod=combo.rogueMod;
-    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
-      ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
-      <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
-      <div class="vs-copy">
-        <span class="vs-who">${combo.who||(isPlayer?"YOU":"CPU")}</span>
-        ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
-        <h2>${combo.blade.name}</h2>
-        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
-        <div class="vs-ratings">
-          <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
-          <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
-        </div>
-        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
-        <div class="vs-stat-groups">
+    const useBars=typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.useStatBars && SpinWarsRogueRun.useStatBars();
+    const statBlock=useBars
+        ? SpinWarsRogueRun.statGroupsHTML(stats,combo.statDelta||{})
+        : `<div class="vs-stat-groups">
           <div class="vs-stat-group">
             <span class="vs-stat-group-label">HIT</span>
             <div class="vs-stats pair">
@@ -2335,7 +2329,22 @@ function createComboSummaryCard(side,combo){
               ${statBox("MOB","mobility")}${statBox("STA","stamina")}
             </div>
           </div>
+        </div>`;
+    const mod=combo.rogueMod;
+    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
+      ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
+      <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
+      <div class="vs-copy">
+        <span class="vs-who">${combo.who||(isPlayer?"YOU":"CPU")}</span>
+        ${!isPlayer&&combo.pressure?`<p class="vs-pressure ${combo.pressureKind||""}">${combo.pressure}</p>`:""}
+        <h2>${combo.blade.name}</h2>
+        <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
+        <div class="vs-ratings">
+          <div class="vs-rating"><small>OVR</small><b>${ovr}</b></div>
+          <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
         </div>
+        ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
+        ${statBlock}
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
         ${combo.rogueStack||""}
       </div>
