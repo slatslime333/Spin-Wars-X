@@ -1224,7 +1224,7 @@ footer{
 
 .mini-stat-grid{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(auto-fit,minmax(0,1fr));
   border-top:1px solid #2e3944;
   background:#10161c;
 }
@@ -1234,13 +1234,6 @@ footer{
   border-top:1px solid #2a241c;
   text-align:left;
 }
-.part-effect-kicker{
-  margin:0 0 6px;
-  color:#c4a056;
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:.18em;
-}
 .part-effect .vs-ratings{
   margin:0 0 8px;
   gap:6px;
@@ -1248,39 +1241,6 @@ footer{
 .part-effect .vs-rating{
   padding:4px 6px;
 }
-.part-effect-trade,
-.kit-lean{
-  margin:0 0 6px;
-  color:#d7c49a;
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.02em;
-  line-height:1.35;
-}
-.kit-lean{
-  color:#9da8b3;
-  font-weight:600;
-}
-.part-effect-trade{color:#e6c56a}
-.blade-card .kit-lean{
-  margin:8px 10px 0;
-  padding:0 2px;
-}
-.part-select-card .kit-lean,
-.part-select-card .part-effect-trade,
-.part-select-card .part-description{
-  font-size:10px;
-  line-height:1.35;
-}
-.sandbox-pick-card .kit-lean,
-.sandbox-pick-card .part-effect-trade{
-  font-size:10px;
-  text-align:left;
-  font-weight:600;
-}
-.vs-copy .kit-lean,
-.vs-copy .part-effect-trade{margin-top:4px}
-.vs-copy .part-effect-kicker{margin-top:8px}
 .part-select-card .vs-stat-groups,
 .part-select-card .rr-stat-groups{margin-top:0}
 .part-select-card .rr-stat-group,
