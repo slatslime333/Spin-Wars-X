@@ -389,8 +389,6 @@ function garageColumn(side){
             <div class="sandbox-kit-copy">
                 <h2>${name}</h2>
                 <p>${parts}</p>
-                ${pack.blade&&typeof comboKitLean==="function"&&pack.ratchet&&pack.bit?`<p class="kit-lean">${comboKitLean(pack.blade,pack.ratchet,pack.bit)}</p>`:pack.blade&&typeof bladeKitLean==="function"?`<p class="kit-lean">${bladeKitLean(pack.blade)}</p>`:""}
-                ${combo&&combo.kitTrade?`<p class="part-effect-trade">${combo.kitTrade}</p>`:""}
                 ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
             </div>
         </div>
@@ -652,13 +650,12 @@ function openPicker(side,part){
                 :part==="bit"?(typeof bitSpritePath==="function"?bitSpritePath(item):"")
                 :(typeof ratchetSpritePath==="function"?ratchetSpritePath(item):"");
             const sub=part==="blade"?`${item.type} · ${item.tier}`:part==="bit"?item.type:`${item.number}-SIDED · ${item.height}`;
-            const bladeLean=part==="blade"&&typeof bladeKitLean==="function"?`<p class="kit-lean">${bladeKitLean(item)}</p>`:"";
             const bladeRatings=part==="blade"&&typeof comboRatingBadgesHTML==="function"&&typeof comboPowerPoints==="function"&&typeof bladeCardStats==="function"
                 ? comboRatingBadgesHTML({power:comboPowerPoints(bladeCardStats(item)),ovr:item.card?.ovr},item.card)
                 : "";
             const preview=part!=="blade"&&typeof partEffectPreviewHTML==="function"
                 ? partEffectPreviewHTML(part,item,{blade:s[side].blade,ratchet:s[side].ratchet})
-                : `${bladeLean}${bladeRatings}`;
+                : bladeRatings;
             return `<button type="button" class="sandbox-pick-card" data-idx="${i}">
                 ${sprite?`<img src="${sprite}" alt="">`:""}
                 <strong>${item.name}</strong>

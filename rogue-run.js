@@ -461,8 +461,6 @@ function loadoutCard(){
             <span class="eyebrow">${String(parts.blade.tier||"").toUpperCase()}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
-            ${parts.ratchet&&parts.bit&&typeof comboKitLean==="function"?`<p class="kit-lean">${comboKitLean(parts.blade,parts.ratchet,parts.bit)}</p>`:typeof bladeKitLean==="function"?`<p class="kit-lean">${bladeKitLean(parts.blade)}</p>`:""}
-            ${combo&&combo.kitTrade?`<p class="part-effect-trade">${combo.kitTrade}</p>`:""}
             ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
             ${statGroupsHTML(combo?.stats||{})}
         </div>
