@@ -1317,10 +1317,10 @@ function renderHowTo(){
             <h2>The launch screen</h2>
             <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
             <p><strong>Angle.</strong> Flat is neutral. Slight and Hard add a short oval and a little more hit, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
-            <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw. No extra Left / Middle / Right buttons — it is already center.</p>
-            <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Middle hooks that rail. The inward button peels you slightly off the ring into the bowl — Left if you are on the right, Right if you are on the left. There is no button that would mean "more onto the rail you are already on." Quality is how clean that entry is. You are on the rail, not in a hole.</p>
-            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Middle is the normal drive. Left and Right cut that way. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
-            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot. Middle is the normal shot to stadium middle. Left and Right shoot that way. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
+            <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
+            <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
+            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
+            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot toward stadium middle. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
             <p>The CPU is not reading your live pick. It locked a plan at round start from how you have been launching: Center-heavy habits get more rail, drop, and clash answers; X-Rail habits get rail contests and clashes, not more Center; Clash habits get Center, rail, and drop; Drop habits get Center and clash. It also tries not to repeat itself.</p>
         </section>
 
@@ -2702,6 +2702,7 @@ function showLetItRip(){
     }
 
     renderNewBattle();
+    paintTiltChip(NEW_BATTLE.player);
     document.querySelector(".battle-shell")?.classList.add("is-launching");
 
     const card=document.querySelector("#newStadium")?.parentElement;
@@ -2723,10 +2724,6 @@ function showLetItRip(){
     const techButton=(label,value,id)=>`
       <button id="${id}" class="menu-btn ${Game.player.launch.technique===value?"gold":"silver"}"
         type="button">${label}</button>`;
-
-    const intentChip=(kind,item,current)=>`
-      <button type="button" class="menu-btn ${current===item.id?"gold":"silver"}"
-        data-intent="${kind}" data-id="${item.id}">${item.label}</button>`;
 
     const qualityRPM={
         Horrible:90,Bad:94,Okay:97,Good:99,Perfect:100
@@ -2790,17 +2787,6 @@ function showLetItRip(){
           </div>
         `;
     }else{
-        const technique=Game.player.launch.technique||"Center";
-        const sideSign=currentPlayerSideSign();
-        const intent=normalizeLaunchIntent(technique,Game.player.launch,sideSign);
-        Game.player.launch.lane=intent.lane;
-        const lanes=launchLaneOptions(technique,sideSign);
-        const laneRow=lanes.length
-            ? `<div class="launch-row intent">${lanes.map(id=>intentChip("lane",{id,label:launchLaneLabel(id)},intent.lane)).join("")}</div>`
-            : "";
-        const laneLab=launchLaneLabel(intent.lane);
-        const laneHint=launchLaneBlurb(technique,intent.lane);
-        const intentBits=[laneLab,laneHint].filter(Boolean).join(" · ");
         controls.innerHTML=`
           <div class="launch-pad">
             <div class="launch-row three">
@@ -2814,8 +2800,7 @@ function showLetItRip(){
               ${techButton("CLASH","Direct Clash","launchClash")}
               ${techButton("DROP","Drop Launch","launchDrop")}
             </div>
-            ${laneRow}
-            <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique}${intentBits?" · "+intentBits:""} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
+            <p id="launchInfo">${Game.player.launch.angle} · ${Game.player.launch.technique} · ${Game.player.launch.quality || "Okay"} · ${qualityRPM}%</p>
             <div class="launch-row">
               <button class="rip-btn compact" id="startBattleNow" type="button">LET IT RIP</button>
             </div>
@@ -2828,16 +2813,8 @@ function showLetItRip(){
     else document.getElementById("newStadium")?.parentNode?.appendChild(controls);
 
     const rebuildAngleTechnique=(angle,technique)=>{
-        const prev=Game.player.launch.technique;
         Game.player.launch.angle=angle;
         Game.player.launch.technique=technique;
-        if(prev!==technique){
-            const fresh=defaultLaunchIntent(technique,currentPlayerSideSign());
-            Game.player.launch.lane=fresh.lane;
-        }else{
-            const keep=normalizeLaunchIntent(technique,Game.player.launch,currentPlayerSideSign());
-            Game.player.launch.lane=keep.lane;
-        }
         // Quality is already selected and MUST NOT reroll here.
         Game.player.launch.setupStage="launch";
         showLetItRip();
@@ -2907,16 +2884,6 @@ function showLetItRip(){
 
     bindLaunchButton("launchDrop",()=>
         rebuildAngleTechnique(Game.player.launch.angle,"Drop Launch"));
-
-    controls.querySelectorAll("[data-intent]").forEach(btn=>{
-        btn.onclick=()=>{
-            const kind=btn.getAttribute("data-intent");
-            const id=btn.getAttribute("data-id");
-            if(kind==="lane") Game.player.launch.lane=id;
-            Game.player.launch.setupStage="launch";
-            showLetItRip();
-        };
-    });
 
     const startButton=controls.querySelector("#startBattleNow");
     if(startButton){
@@ -3314,17 +3281,25 @@ function paintTiltChip(s){
     const el=document.getElementById("playerTiltChip");
     if(!el) return;
     const fade=launchTiltFade(s);
+    const leftFrac=tiltTimeLeft(s);
     if(fade<=0.03 || !(s?.launchTiltBias>0)){
         el.hidden=true;
         el.style.opacity="";
-        el.textContent="";
         return;
     }
-    const n=Math.max(1,Math.round(fade*2));
-    const hard=(s.launchTiltKind||"")==="Hard Tilt";
+    const n=(s.launchTiltKind||"")==="Hard Tilt"?2:1;
     el.hidden=false;
-    el.style.opacity=String(Math.max(0.28,fade));
-    el.textContent=`${hard?"H":"S"} +${n}`;
+    el.style.opacity=String(Math.max(0.38,leftFrac));
+    const plus=el.querySelector(".tilt-plus");
+    const minus=el.querySelector(".tilt-minus");
+    const ring=el.querySelector(".tilt-chip-fill");
+    if(plus) plus.textContent=`+${n}`;
+    if(minus) minus.textContent=`−${n}`;
+    if(ring){
+        const c=2*Math.PI*14;
+        ring.style.strokeDasharray=String(c);
+        ring.style.strokeDashoffset=String(c*(1-leftFrac));
+    }
 }
 
 function paintLaunchIntentArrow(s){
@@ -3583,8 +3558,7 @@ function rememberLaunch(side,plan){
     const list=Game.battle[key]=Game.battle[key]||[];
     list.push({
         technique:plan?.technique||"Center",
-        angle:plan?.angle||"Flat",
-        lane:plan?.lane||null
+        angle:plan?.angle||"Flat"
     });
     if(list.length>12) list.splice(0,list.length-12);
 }
@@ -3595,126 +3569,9 @@ function ensureCpuLaunchPlan(){
     const plan=getAutomaticLaunchPlan("cpu");
     Game.cpu.lockedLaunchPlan={
         technique:plan.technique,
-        angle:plan.angle,
-        lane:plan.lane||null
+        angle:plan.angle
     };
     return Game.cpu.lockedLaunchPlan;
-}
-
-const LAUNCH_LANES=["left","middle","right"];
-
-function currentPlayerSideSign(){
-    const orientationCycle=Math.floor((Game.battle?.round||0)/2)%2;
-    return orientationCycle===0?-1:1;
-}
-
-function launchSideSign(side){
-    const playerSign=currentPlayerSideSign();
-    return side==="player"?playerSign:-playerSign;
-}
-
-function launchLaneOptions(technique,sideSign){
-    if(technique==="Center" || !technique) return [];
-    if(technique==="X-Rail"){
-        // Already sitting on that rail — no button that would mean
-        // "more onto the side you are already on."
-        return sideSign>0?["left","middle"]:["middle","right"];
-    }
-    return LAUNCH_LANES.slice();
-}
-
-function defaultLaunchLane(technique,sideSign){
-    const opts=launchLaneOptions(technique,sideSign);
-    if(!opts.length) return null;
-    return opts.includes("middle")?"middle":opts[0];
-}
-
-function launchLaneFromLegacy(technique,intent,sideSign){
-    if(intent?.lane && LAUNCH_LANES.includes(intent.lane)) return intent.lane;
-    if(technique==="X-Rail"){
-        if(intent?.heading==="bowl" || intent?.zone==="far-corner"){
-            return sideSign>0?"left":"right";
-        }
-        return "middle";
-    }
-    if(technique==="Drop Launch"){
-        if(intent?.heading==="across" || intent?.zone==="exit-far"){
-            return sideSign>0?"left":"right";
-        }
-        return "middle";
-    }
-    if(technique==="Direct Clash"){
-        if(intent?.zone==="high") return sideSign>0?"right":"left";
-        return "middle";
-    }
-    return null;
-}
-
-function normalizeLaunchLane(technique,lane,sideSign){
-    const opts=launchLaneOptions(technique,sideSign);
-    if(!opts.length) return null;
-    if(opts.includes(lane)) return lane;
-    return defaultLaunchLane(technique,sideSign);
-}
-
-function defaultLaunchIntent(technique,sideSign){
-    return {lane:defaultLaunchLane(technique,sideSign)};
-}
-
-function normalizeLaunchIntent(technique,intent,sideSign){
-    const sign=Number.isFinite(sideSign)?sideSign:currentPlayerSideSign();
-    const raw=launchLaneFromLegacy(technique,intent,sign);
-    return {lane:normalizeLaunchLane(technique,raw,sign)};
-}
-
-function launchLaneLabel(lane){
-    if(lane==="left") return "LEFT";
-    if(lane==="right") return "RIGHT";
-    if(lane==="middle") return "MIDDLE";
-    return "";
-}
-
-function launchLaneBlurb(technique,lane){
-    if(!lane) return "";
-    if(technique==="X-Rail"){
-        return lane==="middle"?"hook this rail":"peel slightly off the rail";
-    }
-    if(technique==="Drop Launch"){
-        if(lane==="middle") return "shoot middle";
-        return lane==="left"?"shoot left":"shoot right";
-    }
-    if(technique==="Direct Clash"){
-        if(lane==="middle") return "drive at them";
-        return lane==="left"?"cut left":"cut right";
-    }
-    return "";
-}
-
-function xrailLanePeels(lane,sideSign){
-    return (sideSign>0 && lane==="left") || (sideSign<0 && lane==="right");
-}
-
-function pickCpuLaunchIntent(technique,blade,sideSign){
-    const type=blade?.type||"Balance";
-    const opts=launchLaneOptions(technique,sideSign);
-    const peel=opts.find(id=>id && id!=="middle")||null;
-    if(technique==="X-Rail"){
-        if(peel && Math.random()<(type==="Attack"?0.22:0.38)) return {lane:peel};
-        return {lane:"middle"};
-    }
-    if(technique==="Drop Launch"){
-        if(type==="Attack" && Math.random()<0.40){
-            return {lane:Math.random()<0.5?"left":"right"};
-        }
-        return {lane:"middle"};
-    }
-    if(technique==="Direct Clash"){
-        if(type==="Attack" && Math.random()<0.42){
-            return {lane:sideSign>0?"right":"left"};
-        }
-        return {lane:"middle"};
-    }
-    return defaultLaunchIntent(technique,sideSign);
 }
 
 function tiltBiasFromAngle(angle){
@@ -3724,9 +3581,16 @@ function tiltBiasFromAngle(angle){
 }
 
 function tiltDurationFromAngle(angle){
-    if(angle==="Hard Tilt") return 4.0;
-    if(angle==="Slight Tilt") return 3.0;
+    if(angle==="Hard Tilt") return 5.5;
+    if(angle==="Slight Tilt") return 4.2;
     return 0;
+}
+
+function tiltTimeLeft(s){
+    const max=Number(s?.launchTiltMax)||0;
+    const left=Number(s?.launchTiltLeft)||0;
+    if(!(max>0)) return 0;
+    return Math.max(0,Math.min(1,left/max));
 }
 
 function launchTiltFade(s){
@@ -3796,12 +3660,8 @@ function getAutomaticLaunchPlan(side){
         qualityRoll>=68?"Okay":
         qualityRoll>=55?"Bad":"Horrible";
     const quality=side==="cpu" ? (Game.cpu?.launch?.quality||rolledQuality) : (Game.player?.launch?.quality||rolledQuality);
-    const sideSign=launchSideSign(side);
-    const intent=side==="cpu"
-        ? pickCpuLaunchIntent(technique,combo.blade,sideSign)
-        : normalizeLaunchIntent(technique,Game.player?.launch,sideSign);
 
-    return {technique,angle,quality,...intent};
+    return {technique,angle,quality};
 }
 
 function newBattleLaunchState(side){
@@ -3821,27 +3681,17 @@ function newBattleLaunchState(side){
     const launchDirection=-sideXSign;
     const plan =
         (side==="player" && Game.player.launch?.technique) || sandboxHuman
-            ? (()=>{
-                const technique=(Game[side].launch?.technique)||Game.player.launch?.technique||"Center";
-                const intent=normalizeLaunchIntent(technique,Game[side].launch||Game.player.launch,sideXSign);
-                return {
-                    technique,
-                    angle:Game[side].launch?.angle||"Flat",
-                    quality:Game[side].launch?.quality ||
-                        ensureLaunchQuality(side),
-                    ...intent
-                };
-              })()
+            ? {
+                technique:(Game[side].launch?.technique)||Game.player.launch?.technique||"Center",
+                angle:Game[side].launch?.angle||"Flat",
+                quality:Game[side].launch?.quality ||
+                    ensureLaunchQuality(side)
+              }
             : side==="cpu"
-                ? (()=>{
-                    const locked=ensureCpuLaunchPlan();
-                    const intent=normalizeLaunchIntent(locked.technique,locked,sideXSign);
-                    return {
-                        ...locked,
-                        quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu"),
-                        ...intent
-                    };
-                  })()
+                ? {
+                    ...ensureCpuLaunchPlan(),
+                    quality:Game.cpu.launch?.quality || ensureLaunchQuality("cpu")
+                  }
                 : getAutomaticLaunchPlan(side);
 
     const qualityFactor={
@@ -3887,22 +3737,14 @@ function newBattleLaunchState(side){
       little toward its own stadium side so two Center launches cannot
       spawn on top of each other.
     */
-    const intent=normalizeLaunchIntent(plan.technique,plan,sideXSign);
-    plan.lane=intent.lane;
-    const lane=intent.lane;
-
     const centerSideOffset=0.16;
     let startX=isCenterLaunch
         ? sideXSign*centerSideOffset
         : isDropLaunch
-            ? (lane==="left"?-0.32:lane==="right"?0.32:sideXSign*0.28) + placementJitter*0.05
+            ? sideXSign*0.28 + placementJitter*0.05
             : isXRailLaunch
                 ? sideXSign*(0.68 + placementJitter*0.05)
-                : sideXSign*0.70 + (lane==="left"?-0.12:lane==="right"?0.12:0);
-
-    if(!isCenterLaunch && !isDropLaunch && !isXRailLaunch){
-        startX=Math.max(-0.78,Math.min(0.78,startX));
-    }
+                : sideXSign*0.70;
 
     // Drop hangs under the top X-Rail, beside the X-Exit (not on the rail
     // and not inside the V). X-Rail still starts at the lower corner.
@@ -3976,7 +3818,6 @@ function newBattleLaunchState(side){
         const railHint = railSide < 0
             ? {x:-0.75,y:0.45}
             : {x: 0.75,y:0.45};
-        const peelOffRail=xrailLanePeels(lane,sideXSign);
 
         const railTarget=
             (window.SpinWarsXRailEngine &&
@@ -4007,14 +3848,13 @@ function newBattleLaunchState(side){
         const missX=Math.cos(missAngle)*qualityMiss;
         const missY=Math.sin(missAngle)*qualityMiss;
 
-        let entryOffset={
+        const entryOffset={
             Horrible:0.165,
             Bad:0.092,
             Okay:0.048,
             Good:0.022,
             Perfect:0.010
         }[plan.quality]||0.048;
-        if(peelOffRail) entryOffset=Math.min(0.22,entryOffset+0.070);
 
         const actualStartX=
             railTarget.x+
@@ -4054,11 +3894,6 @@ function newBattleLaunchState(side){
             plan.quality==="Good" ? 0.80 :
             plan.quality==="Okay" ? 0.74 :
             plan.quality==="Bad" ? 0.64 : 0.54;
-        if(peelOffRail){
-            // Inward lane: sit a little more inside and shove toward the
-            // bowl so this is a slight peel off the rail, not a far-corner hop.
-            tangentWeight=Math.max(0.22,tangentWeight-0.30);
-        }
         const approachWeight=1-tangentWeight;
         const railLaunchSpeed=launchSpeed*(1.10+0.10*qualityFactor);
 
@@ -4071,11 +3906,6 @@ function newBattleLaunchState(side){
             (railTangentY*tangentWeight+
              approachY*approachWeight)*
             railLaunchSpeed;
-
-        if(peelOffRail){
-            vx+=inwardX*railLaunchSpeed*0.24 - sideXSign*railLaunchSpeed*0.10;
-            vy+=inwardY*railLaunchSpeed*0.12;
-        }
     }
 
     if(plan.technique==="Drop Launch"){
@@ -4095,11 +3925,7 @@ function newBattleLaunchState(side){
                plan.angle==="Slight Tilt" ? 0.72 : 0.42)
             : 0;
 
-    const dropAim=lane==="left"
-        ? {x:-0.40,y:0.08}
-        : lane==="right"
-            ? {x:0.40,y:0.08}
-            : {x:0,y:0};
+    const dropAim={x:0,y:0};
 
     const tiltBias=tiltBiasFromAngle(plan.angle);
     const tiltMax=tiltDurationFromAngle(plan.angle);
@@ -4241,11 +4067,8 @@ function applyDropLaunchShot(s, missOverride){
 function applyDirectClashAim(self, other, missOverride){
     if(!self || !other) return;
     if(self.launchPlan?.technique!=="Direct Clash") return;
-    const lane=self.launchPlan?.lane||"middle";
-    const aimX=other.x+(lane==="left"?-0.20:lane==="right"?0.20:0);
-    const aimY=other.y+(lane==="left"||lane==="right"?-0.03:0);
-    const dx=aimX-self.x;
-    const dy=aimY-self.y;
+    const dx=other.x-self.x;
+    const dy=other.y-self.y;
     const dist=Math.hypot(dx,dy)||0.001;
     const quality=self.launchQuality || self.launchPlan?.quality || "Okay";
     const missRad={
@@ -4371,6 +4194,7 @@ function startNewBattle(){
         NEW_BATTLE.rpmGhost={player:null,cpu:null};
 
         renderNewBattle();
+        paintTiltChip(NEW_BATTLE.player);
         document.querySelector(".battle-shell")?.classList.remove("is-launching");
         if(typeof SpinWarsAbilities!=="undefined"){
             SpinWarsAbilities.resetRound(NEW_BATTLE.player,NEW_BATTLE.cpu);
@@ -4624,10 +4448,17 @@ function renderNewBattle(){
           <div class="battle-dock">
             <div class="battle-fighters">
               <div class="battle-hud-card battle-hud-player">
+                <div id="playerTiltChip" class="tilt-chip" hidden>
+                  <svg class="tilt-chip-ring" viewBox="0 0 36 36" aria-hidden="true">
+                    <circle class="tilt-chip-track" cx="18" cy="18" r="14"></circle>
+                    <circle class="tilt-chip-fill" cx="18" cy="18" r="14"></circle>
+                  </svg>
+                  <span class="tilt-chip-deltas"><b class="tilt-plus"></b><i class="tilt-minus"></i></span>
+                </div>
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
                 <div class="battle-hud-meta"><small>META</small><b>${battleHudMetaValue(p,"player")}</b></div>
-                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b><em id="playerTiltChip" class="tilt-chip" hidden></em></div>
+                <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
                     <div id="newPlayerRPMGhostLoss" class="rpm-bar-ghost rpm-bar-ghost-loss"></div>
@@ -5024,7 +4855,6 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
         Game.player.launch.qualityRollStarted=0;
         Game.player.launch.angle="Flat";
         Game.player.launch.technique="Center";
-        Game.player.launch.lane=null;
         Game.player.launch.zone=null;
         Game.player.launch.heading=null;
         Game.cpu.lockedLaunchPlan=null;
