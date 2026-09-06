@@ -1772,13 +1772,6 @@ footer{
 .launch-row.three{display:grid;grid-template-columns:repeat(3,1fr)}
 .launch-row.two{display:grid;grid-template-columns:repeat(2,1fr)}
 .launch-row.four{display:grid;grid-template-columns:repeat(4,1fr)}
-.launch-row.intent{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px}
-.launch-row.intent .menu-btn{
-  min-height:32px;
-  padding:4px 6px;
-  font-size:12px;
-  letter-spacing:.10em;
-}
 .launch-tilt-btn{
   flex-direction:column!important;
   gap:2px;
@@ -1796,24 +1789,59 @@ footer{
   letter-spacing:.04em;
   text-transform:none;
 }
+.battle-hud-player{position:relative}
 .tilt-chip{
   position:absolute;
-  left:36px;
-  top:3px;
+  top:24px;
+  right:7px;
+  display:flex;
+  align-items:center;
+  gap:5px;
   margin:0;
   padding:0;
   border:0;
   background:transparent;
-  color:#f0b429;
   font-style:normal;
-  font-size:8px;
-  font-weight:800;
-  letter-spacing:.10em;
   line-height:1;
   pointer-events:none;
-  white-space:nowrap;
+  z-index:2;
 }
 .tilt-chip[hidden]{display:none!important}
+.tilt-chip-ring{
+  width:20px;
+  height:20px;
+  transform:rotate(-90deg);
+}
+.tilt-chip-track{
+  fill:none;
+  stroke:rgba(240,180,41,.22);
+  stroke-width:3.2;
+}
+.tilt-chip-fill{
+  fill:none;
+  stroke:#f0b429;
+  stroke-width:3.2;
+  stroke-linecap:round;
+}
+.tilt-chip-deltas{
+  display:flex;
+  flex-direction:column;
+  gap:1px;
+  font-style:normal;
+}
+.tilt-plus{
+  color:#7dff9f;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+.tilt-minus{
+  color:#ff8aa0;
+  font-size:12px;
+  font-weight:800;
+  font-style:normal;
+  letter-spacing:.02em;
+}
 .rip-btn.compact{min-height:46px;font-size:22px;flex:1.85}
 
 #launchInfo{

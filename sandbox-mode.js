@@ -185,7 +185,6 @@ function applyLaunchToGame(from,to,cpuBrain){
         technique:from.launch.technique||"Center",
         quality:q,
         autoQuality:!!from.launch.autoQuality,
-        lane:from.launch.lane||null,
         zone:from.launch.zone||null,
         heading:from.launch.heading||null
     };
