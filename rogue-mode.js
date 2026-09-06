@@ -1540,6 +1540,9 @@ function plateDecor(side){
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
     return {
         stats,power,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        kitLean:typeof comboKitLean==="function"?comboKitLean(blade,ratchet,bit):(typeof bladeKitLean==="function"?bladeKitLean(blade):""),
+        kitTrade:typeof statTradeLine==="function"&&typeof statDeltaMap==="function"&&typeof bladeCardStats==="function"
+            ?statTradeLine(statDeltaMap(bladeCardStats(blade),stats)): "",
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
         bossMark:mark||"",
