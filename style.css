@@ -923,6 +923,7 @@ footer{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
+  flex-wrap:wrap;
   gap:8px;
   pointer-events:none;
 }
@@ -1031,6 +1032,12 @@ footer{
   min-width:36px;
   text-align:center;
   text-shadow:0 2px 4px #000;
+}
+.ovr-badge.power{
+  min-width:52px;
+}
+.ovr-badge.power b{
+  font-size:22px;
 }
 
 .ovr-badge small{
@@ -1234,6 +1241,15 @@ footer{
   font-weight:800;
   letter-spacing:.18em;
 }
+.part-effect .vs-ratings{
+  margin:0 0 8px;
+  gap:6px;
+}
+.part-effect .vs-rating{
+  padding:4px 6px;
+}
+.part-effect .vs-rating b{font-size:22px}
+.part-effect .vs-rating.power b{font-size:20px}
 .part-select-card .vs-stat-groups,
 .part-select-card .rr-stat-groups{margin-top:0}
 .part-select-card .rr-stat-group,
@@ -1486,6 +1502,7 @@ footer{
   font-weight:400;
   color:var(--gold);
 }
+.vs-rating.power b{font-size:26px}
 .vs-rating.meta{border-color:rgba(26,209,90,.45)}
 .vs-rating.meta b{color:var(--green)}
 .vs-stat-groups{
@@ -2217,15 +2234,26 @@ footer{
   box-shadow:inset 0 0 0 1px rgba(160,245,255,.5);
   z-index:1;
 }
+.battle-hud-ratings{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:6px;
+}
 .battle-hud-meta{
   display:inline-flex;
   align-items:baseline;
   gap:4px;
-  margin-top:6px;
+  margin-top:0;
   padding:2px 6px 1px;
   border:1px solid rgba(26,209,90,.45);
   background:rgba(26,209,90,.08);
 }
+.battle-hud-meta.power{
+  border-color:rgba(240,180,41,.45);
+  background:rgba(240,180,41,.08);
+}
+.battle-hud-meta.power b{color:var(--gold);}
 .battle-hud-meta small{
   color:var(--muted);
   font-size:9px;
@@ -2612,7 +2640,8 @@ footer{
   .rpm-readout{margin-top:3px}
   .rpm-readout b{font-size:16px}
   .stability-readout{display:none}
-  .battle-hud-meta{margin-top:3px;padding:1px 5px 0}
+  .battle-hud-ratings{margin-top:3px;gap:4px}
+  .battle-hud-meta{margin-top:0;padding:1px 5px 0}
   .battle-hud-meta b{font-size:13px}
   .combat-dock{
     position:static;
@@ -3837,8 +3866,10 @@ button:focus-visible{
 .sandbox-art.sm{width:44px;height:44px}
 .sandbox-kit-copy h2{margin:0;font-size:20px;font-family:Staatliches,Impact,sans-serif;font-weight:400}
 .sandbox-kit-copy p{margin:4px 0;color:var(--muted);font-size:12px}
+.sandbox-kit-copy .vs-ratings{display:flex;gap:6px;margin-top:4px}
 .sandbox-kit-copy .vs-rating{display:inline-flex;flex-direction:column;min-width:72px;margin-top:4px;padding:4px 8px}
-.sandbox-kit-copy .vs-rating b{font-size:24px}
+.sandbox-kit-copy .vs-rating b{font-size:22px}
+.sandbox-kit-copy .vs-rating.power b{font-size:20px}
 .sandbox-kit-stats{margin-top:2px}
 .sandbox-kit-stats .rr-stat-groups{margin-top:0}
 .sandbox-kit-stats .rr-stat-group{padding:5px}
@@ -3874,6 +3905,7 @@ button:focus-visible{
 .sandbox-pick-card strong{font-size:13px;text-align:center}
 .sandbox-pick-card small{color:var(--muted);font-size:10px;letter-spacing:.08em}
 .sandbox-pick-card .part-effect{width:100%;text-align:left}
+.sandbox-pick-card .vs-ratings{width:100%;margin-top:4px}
 .sandbox-empty{color:var(--muted);text-align:center;padding:24px}
 .sandbox-score-note{
   position:absolute;left:50%;top:12%;transform:translateX(-50%);

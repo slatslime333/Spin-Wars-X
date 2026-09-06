@@ -32,8 +32,8 @@
         const ratchet=side.ratchet||{};
         const bit=side.bit||{};
         const stats=combo?.stats||side.stats||{};
-        const ovr=n(combo?.ovr??side.comboOVR??70);
-        const meta=n(combo?.meta??side.comboMeta??ovr);
+        const ovr=n(combo?.ovr??side.comboOVR??side.comboMeta??70);
+        const power=n(combo?.power??side.comboPower??0);
         const bitName=bit.name||"that bit";
         const bladeType=blade.type||"Balance";
         const height=Number(ratchet.height)||60;
@@ -52,7 +52,7 @@
             attackBit:ATTACK_BITS.has(bitName),
             tankBit:TANK_BITS.has(bitName),
             ovr,
-            meta,
+            power,
             stats,
             mod:plate&&plate.mod,
             upgrades
@@ -163,7 +163,7 @@
     }
 
     function winnerCall(p,c){
-        const lean=(p.ovr-c.ovr)+((p.meta-c.meta)*0.35);
+        const lean=(p.ovr-c.ovr)+((p.power-c.power)*0.02);
         const upset=Math.random()<0.18;
         let fav,dog,margin;
         if(Math.abs(lean)<3.5){

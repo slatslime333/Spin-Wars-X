@@ -59,7 +59,7 @@ function comboBase(blade,ratchet,bit){
 
 function partsMeta(blade,ratchet,bit){
     const raw=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,bit):null;
-    return Number(raw?.meta)||70;
+    return Number(raw?.ovr ?? raw?.meta)||70;
 }
 
 function formMetaAdj(form,enhanced){
@@ -911,8 +911,9 @@ function bossExtraStacks(){
 
 function battleCombo(side){
     const stats=side==="cpu"?cpuEffective():playerEffective();
-    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/7);
-    return {stats,ovr,meta:rogueDisplayMeta(side),compatibility:80,physical:{}};
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):STATS.reduce((a,k)=>a+(Number(stats[k])||0),0);
+    const ovr=rogueDisplayMeta(side);
+    return {stats,power,ovr,meta:ovr,compatibility:80,physical:{}};
 }
 
 function applyLiveToBattle(){
@@ -938,16 +939,18 @@ function syncLoadout(){
     Game.player.spin=r.blade?.spin||"Right";
     const p=battleCombo("player");
     Game.player.stats=p.stats;
+    Game.player.comboPower=p.power;
     Game.player.comboOVR=p.ovr;
-    Game.player.comboMeta=p.meta;
+    Game.player.comboMeta=p.ovr;
     Game.cpu.blade=Object.assign({}, r.cpuBlade||{}, r.cpuAbilityId?{abilityId:r.cpuAbilityId}:{});
     Game.cpu.ratchet=r.cpuRatchet;
     Game.cpu.bit=r.cpuBit;
     Game.cpu.spin=r.cpuBlade?.spin||"Right";
     const c=battleCombo("cpu");
     Game.cpu.stats=c.stats;
+    Game.cpu.comboPower=c.power;
     Game.cpu.comboOVR=c.ovr;
-    Game.cpu.comboMeta=c.meta;
+    Game.cpu.comboMeta=c.ovr;
 }
 
 function startTier(){
@@ -1528,14 +1531,15 @@ function plateDecor(side){
         stats[k]=shown;
         delta[k]=shown-(Number(tintBase[k])||70);
     });
-    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/keys.length);
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):STATS.reduce((a,k)=>a+(Number(stats[k])||0),0);
+    const ovr=rogueDisplayMeta(side);
     const packed=side==="cpu"?r.cpuModifier:r.activeModifier;
     const mod=packed?modifierById(packed.id):null;
     const stack=upgradeStack(side);
     const mark=side==="cpu"?(r.finalBoss||isSharkNight(r.matchIndex)?"final":(isMiniNight(r.matchIndex)?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
     return {
-        stats,ovr,meta:rogueDisplayMeta(side),delta,mod,stack,stackHTML:upgradeStackHTML(stack),
+        stats,power,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
         plateTier,
         bossMark:mark||"",
@@ -2178,7 +2182,8 @@ function archiveFinishedRun(status){
     const r=run();
     if(!r||!r.blade) return;
     const stats=playerEffective();
-    const ovr=round(Object.values(stats).reduce((a,b)=>a+b,0)/STATS.length);
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):STATS.reduce((a,k)=>a+(Number(stats[k])||0),0);
+    const ovr=rogueDisplayMeta("player");
     const sb=typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():null;
     const final=typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.runFinal():0;
     const entry={
@@ -2192,6 +2197,7 @@ function archiveFinishedRun(status){
         startingTier:r.startingTier||"",
         matchIndex:r.matchIndex||1,
         stats,
+        power,
         ovr,
         lastScore:r.lastResult||null,
         scoreboard:sb,
@@ -2212,7 +2218,7 @@ function runHistoryRowHTML(e){
     return `<button type="button" class="rogue-run-row ${e.status}" data-run-id="${e.id}">
         <span class="rogue-run-row-kicker">${st} · ${match}</span>
         <b>${combo}</b>
-        <small>OVR ${e.ovr||"—"} · ${Number(e.finalScore)||0} pts</small>
+        <small>${Number.isFinite(Number(e.power))?`POWER ${Math.round(e.power)}`:Number(e.ovr)>=200?`POWER ${Math.round(e.ovr)}`:`OVR ${e.ovr||"—"}`} · ${Number(e.finalScore)||0} pts</small>
         ${statLine?`<small class="rogue-run-stats">${statLine}</small>`:""}
     </button>`;
 }

@@ -237,8 +237,10 @@ function sync(){
     rebalanceCpu();
     const p=playerEffectiveStats(),c=cpuEffectiveStats();
     Game.player.stats=p;Game.cpu.stats=c;
-    Game.player.comboOVR=rnd(avgStats(p));Game.cpu.comboOVR=rnd(avgStats(c));
-    Game.player.comboMeta=rogueMeta("player");Game.cpu.comboMeta=rogueMeta("cpu");
+    Game.player.comboPower=typeof comboPowerPoints==="function"?comboPowerPoints(p):0;
+    Game.cpu.comboPower=typeof comboPowerPoints==="function"?comboPowerPoints(c):0;
+    Game.player.comboOVR=rogueMeta("player");Game.cpu.comboOVR=rogueMeta("cpu");
+    Game.player.comboMeta=Game.player.comboOVR;Game.cpu.comboMeta=Game.cpu.comboOVR;
     Game.player.blade=Object.assign({},r.blade||{},r.abilityId?{abilityId:r.abilityId}:{});
     Game.player.ratchet=r.ratchet;Game.player.bit=r.bit;
     Game.cpu.blade=Object.assign({},r.cpuBlade||{},r.cpuAbilityId?{abilityId:r.cpuAbilityId}:{});
