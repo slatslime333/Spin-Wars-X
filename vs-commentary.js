@@ -14,9 +14,6 @@
         "Good evening from the bowl — somebody's leaving with seven."
     ];
 
-    const ATTACK_BITS=new Set(["Flat","Low Flat","Rush","Low Rush","Kick","Quake"]);
-    const TANK_BITS=new Set(["Ball","Orb","Hexa","Needle","Wedge"]);
-
     function pick(list){
         return list[Math.floor(Math.random()*list.length)];
     }
@@ -34,132 +31,23 @@
         const stats=combo?.stats||side.stats||{};
         const ovr=n(combo?.ovr??side.comboOVR??side.comboMeta??70);
         const power=n(combo?.power??side.comboPower??0);
-        const bitName=bit.name||"that bit";
-        const bladeType=blade.type||"Balance";
         const height=Number(ratchet.height)||60;
-        const upgrades=(plate&&plate.stack)||[];
         const isPlayer=label==="player";
         return {
             who:isPlayer?"the player":"the CPU",
             whoCap:isPlayer?"The player":"The CPU",
             blade:blade.name||"that Bey",
-            bladeType,
+            bladeType:blade.type||"Balance",
             tier:(blade.tier||"").toLowerCase(),
             ratchet:ratchet.name||`${ratchet.number||"?"}-${height}`,
             height,
-            bit:bitName,
-            bitType:bit.type||"Balance",
-            attackBit:ATTACK_BITS.has(bitName),
-            tankBit:TANK_BITS.has(bitName),
+            bit:bit.name||"that bit",
             ovr,
             power,
             stats,
             mod:plate&&plate.mod,
-            upgrades
+            upgrades:(plate&&plate.stack)||[]
         };
-    }
-
-    function mismatch(s){
-        if(s.bladeType==="Attack"&&s.tankBit) return "tank-on-attack";
-        if((s.bladeType==="Defense"||s.bladeType==="Stamina")&&s.attackBit) return "rush-on-tank";
-        if(s.bladeType==="Attack"&&s.attackBit) return "full-send";
-        if((s.bladeType==="Defense"||s.bladeType==="Stamina")&&s.tankBit) return "pure-tank";
-        return "mixed";
-    }
-
-    function jobOf(s){
-        const m=mismatch(s);
-        if(m==="full-send"){
-            return pick([
-                `${s.blade} on ${s.bit} is here to hit something, not wait it out.`,
-                `${s.blade} brought ${s.bit} — smash build, no mystery.`,
-                `${s.whoCap}'s ${s.blade} wants the rail and a hole.`
-            ]);
-        }
-        if(m==="pure-tank"){
-            return pick([
-                `${s.blade} on ${s.bit} is playing the long game: stay spinning, make them miss.`,
-                `${s.blade} looks like a tank with ${s.bit} under it.`,
-                `${s.whoCap} parked ${s.blade} in the middle of the bowl on purpose.`
-            ]);
-        }
-        if(m==="tank-on-attack"){
-            return pick([
-                `${s.blade} is an attack blade on ${s.bit}, so it might sit still longer than you'd like.`,
-                `${s.blade} with ${s.bit} is smash metal on tank feet.`,
-                `Don't expect ${s.blade} to fly at the rail — that ${s.bit} wants to hold.`
-            ]);
-        }
-        if(m==="rush-on-tank"){
-            return pick([
-                `${s.blade} is a tank blade on ${s.bit} — a runner in a heavy coat.`,
-                `${s.bit} under ${s.blade} can get greedy.`,
-                `${s.whoCap} put speed under ${s.blade}, for better or worse.`
-            ]);
-        }
-        return pick([
-            `${s.blade} on ${s.bit} is a mixed bag.`,
-            `${s.blade} isn't shouting a plan — the first clash will.`
-        ]);
-    }
-
-    function colorLine(s){
-        const extra=[];
-        if(s.mod){
-            extra.push(`${s.blade} is running ${s.mod.name}. Watch for that once they rip.`);
-            extra.push(`${s.whoCap} tagged ${s.blade} with ${s.mod.name}. That's the extra.`);
-        }
-        if(s.upgrades&&s.upgrades.length){
-            const u=s.upgrades[0];
-            extra.push(`${s.whoCap} brought ${u.title} in with ${s.blade}.`);
-            extra.push(`${s.blade} isn't stock — ${u.title} is riding along.`);
-        }
-        if(s.tier==="gold"){
-            extra.push(`${s.blade} is gold hardware the room already knows.`);
-        }
-        if(extra.length&&Math.random()<0.35) return pick(extra);
-        return jobOf(s);
-    }
-
-    function matchupLine(p,c){
-        if(p.blade===c.blade){
-            return pick([
-                `Same blade twice — ${p.blade} vs ${p.blade} — so the bits decide it.`,
-                `Mirror match: twin ${p.blade}s, and somebody blinks first.`
-            ]);
-        }
-        if(p.attackBit&&c.tankBit){
-            return pick([
-                `${p.blade} wants this over quick; ${c.blade} wants to still be spinning.`,
-                `Player smash, CPU stall — oldest fight in the book.`,
-                `${p.blade} hunts holes while ${c.blade} tries not to fall in one.`
-            ]);
-        }
-        if(c.attackBit&&p.tankBit){
-            return pick([
-                `${c.blade} is the aggressor and ${p.blade} is the wall.`,
-                `CPU came to punch; the player came to make those punches expensive.`,
-                `${p.blade} holds, ${c.blade} charges.`
-            ]);
-        }
-        if(p.attackBit&&c.attackBit){
-            return pick([
-                `Two attack bits — first contact might end a Bey.`,
-                `${p.blade} and ${c.blade} both brought speed.`,
-                `Nobody's here to grind; this is a collision sport tonight.`
-            ]);
-        }
-        if(p.tankBit&&c.tankBit){
-            return pick([
-                `Two tanks, so this might go late unless somebody finds a hole anyway.`,
-                `${p.blade} vs ${c.blade}, both planted.`,
-                `Patience match until one shove wakes the room up.`
-            ]);
-        }
-        return pick([
-            `${p.blade} and ${c.blade} want different nights, same first-to-seven.`,
-            `Different jobs: ${p.blade} vs ${c.blade}.`
-        ]);
     }
 
     function winnerCall(p,c){
@@ -200,8 +88,7 @@
         const p=snapshot(player,playerCombo,playerPlate,"player");
         const c=snapshot(cpu,cpuCombo,cpuPlate,"cpu");
         const intro=pick(INTROS);
-        const body=Math.random()<0.55?matchupLine(p,c):colorLine(Math.random()<0.5?p:c);
-        const beats=[intro,body];
+        const beats=[intro];
         if(Math.random()<0.82) beats.push(winnerCall(p,c));
         lastPregame={p,c,call:beats[beats.length-1],at:Date.now()};
         return beats.join(" ");

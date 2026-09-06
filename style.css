@@ -1224,7 +1224,7 @@ footer{
 
 .mini-stat-grid{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(auto-fit,minmax(0,1fr));
   border-top:1px solid #2e3944;
   background:#10161c;
 }

@@ -1482,7 +1482,7 @@ function renderHowTo(){
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
             <p><strong>Ratchet.</strong> Height is undercut versus exposure. 60 sits low — extra smash, harder to snipe. 70 is the middle. 80 is tall and pokey: easier to lift, easier to burst, a little more scrape. Sides change mass, alignment, and burst risk. The bars on the card show what that does to your blade.</p>
             <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet. Taper, High Needle, and Elevate are not in the garage.</p>
-            <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is two or three sentences about what the Beys are trying to do, not a stat lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
+            <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is a short booth line, not a kit lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-stats">
@@ -1779,7 +1779,7 @@ function createPartCard({title,subtitle,stats,accentClass,onClick,extra="",descr
     card.type="button";
     const art=sprite?encodeURI(sprite):"";
     card.className=`part-select-card ${accentClass||""}${art?" has-sprite":""}`;
-    card.innerHTML=`${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong><small>${subtitle||""}</small></div>${extra}</div>
+    card.innerHTML=`${art?`<img class="part-card-sprite" src="${art}" alt="">`:""}<div class="part-card-top"><div class="part-copy"><span class="part-card-kicker">PART</span><strong>${title}</strong>${subtitle?`<small>${subtitle}</small>`:""}</div>${extra}</div>
     ${description?`<p class="part-description">${description}</p>`:""}
     <div class="mini-stat-grid">${stats.map(x=>statMini(x[0],x[1])).join("")}</div>
     ${footer||""}`;
@@ -1983,20 +1983,12 @@ function chooseBlade(blade,card){
 //=========================
 function ratchetCard(r){
     const p=r.physics||{};
-    const shape={1:"ASYMMETRIC · DIRECTIONAL MASS",3:"3-SIDED · ALIGNMENT / VERSATILE",
-        4:"4-SIDED · EXPOSED / NICHE",5:"5-SIDED · BALANCE CORRECTION",
-        6:"6-SIDED · ROUND / LAD",7:"7-SIDED · HEAVY / STABLE",
-        9:"9-SIDED · COMPACT / BURST SAFE"}[r.number]||"RATCHET";
-    const heightNote=r.height===60?"LOW · UNDERCUT":r.height===70?"MID HEIGHT":"TALL · EXPOSED";
     const burstRisk=p.burst<.35?"HIGH":p.burst<.60?"MEDIUM":"LOW";
     const exposure=p.exposure>.65?"HIGH":p.exposure>.45?"MEDIUM":"LOW";
     const mass=p.weight>=6.8?"HEAVY":p.weight>=6.4?"MEDIUM":"LIGHT";
-    return createPartCard({title:r.name,subtitle:`${shape} · ${heightNote}`,
+    return createPartCard({title:r.name,
         accentClass:`ratchet-card ratchet-${r.number}`,
-        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",
-            r.number===5?"NICHE":
-            r.number===4?"RISKY":
-            (r.number===1||r.number===7||r.number===9)?"UNIVERSAL":"VERSATILE"]],
+        stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure]],
         extra:`<span class="part-index">${r.number}</span>`,
         sprite:ratchetSpriteFile(r),
         footer:partEffectPreviewHTML("ratchet",r),
@@ -2036,7 +2028,7 @@ function bitCard(bit){
     const sta=bp.stamina>.90?"VERY HIGH":bp.stamina>.75?"HIGH":bp.stamina>.55?"MEDIUM":"LOW";
     const mob=bp.mobility>.82?"HIGH":bp.mobility>.62?"MEDIUM":"LOW";
     const stability=bp.stability>.80?"HIGH":bp.stability>.55?"MEDIUM":"LOW";
-    return createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT`,
+    return createPartCard({title:bit.name,
         accentClass:`bit-card bit-${typeClass}`,
         stats:[["MOVE",mob],["STA",sta],["STABLE",stability],
             ["CONTROL",bp.control>.85?"HIGH":bp.control>.65?"MEDIUM":"LOW"]],
