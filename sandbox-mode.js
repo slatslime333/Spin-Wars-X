@@ -367,7 +367,6 @@ function garageColumn(side){
     const combo=comboOf(side);
     const name=pack.blade?.name||"No blade";
     const parts=pack.ratchet&&pack.bit?`${pack.ratchet.name} · ${pack.bit.name}`:"Pick parts";
-    const meta=combo&&Number.isFinite(Number(combo.meta))?Math.round(combo.meta):"—";
     const sprite=typeof bladeSpritePath==="function"?bladeSpritePath(pack.blade):"";
     const ratArt=typeof ratchetSpritePath==="function"?ratchetSpritePath(pack.ratchet):"";
     const bitArt=typeof bitSpritePath==="function"?bitSpritePath(pack.bit):"";
@@ -390,7 +389,7 @@ function garageColumn(side){
             <div class="sandbox-kit-copy">
                 <h2>${name}</h2>
                 <p>${parts}</p>
-                <div class="vs-rating meta"><small>META</small><b>${meta}</b></div>
+                ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
             </div>
         </div>
         ${kitStatHTML(combo)}
@@ -811,12 +810,12 @@ function inspectHTML(){
     const pCombo=pPlate||calculateComboStats(p.blade,p.ratchet,p.bit)||{};
     const cCombo=cPlate||calculateComboStats(c.blade,c.ratchet,c.bit)||{};
     const pCard=typeof createComboSummaryCard==="function"?createComboSummaryCard("player",{
-        ...p,...pCombo,stats:pCombo.stats,ovr:pCombo.ovr,meta:pCombo.meta,
+        ...p,...pCombo,stats:pCombo.stats,power:pCombo.power,ovr:pCombo.ovr,meta:pCombo.ovr,
         statDelta:pCombo.delta,rogueMod:pCombo.mod,rogueStack:pPlate?pPlate.stackHTML:"",
         plateTier:pPlate?.plateTier,enhanced:pPlate?.enhanced,who:lab.player
     }):"";
     const cCard=isSolo()?"": (typeof createComboSummaryCard==="function"?createComboSummaryCard("cpu",{
-        ...c,...cCombo,stats:cCombo.stats,ovr:cCombo.ovr,meta:cCombo.meta,
+        ...c,...cCombo,stats:cCombo.stats,power:cCombo.power,ovr:cCombo.ovr,meta:cCombo.ovr,
         statDelta:cCombo.delta,rogueMod:cCombo.mod,rogueStack:cPlate?cPlate.stackHTML:"",
         plateTier:cPlate?.plateTier,enhanced:cPlate?.enhanced,who:lab.cpu
     }):"");

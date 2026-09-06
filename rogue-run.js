@@ -309,7 +309,10 @@ function archiveAndClear(status){
         const stats=typeof global.SpinWarsRogue?.playerEffective==="function"
             ? SpinWarsRogue.playerEffective()
             : {};
-        const ovr=round(Object.values(stats).reduce((a,b)=>a+(Number(b)||0),0)/Math.max(1,Object.keys(stats).length));
+        const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):0;
+        const ovr=typeof calculateComboStats==="function" && r.blade && r.ratchet && r.bit
+            ? (calculateComboStats(r.blade,r.ratchet,r.bit)||{}).ovr
+            : 70;
         const sb=typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():null;
         const entry={
             id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
@@ -319,7 +322,7 @@ function archiveAndClear(status){
             ratchetName:r.ratchet?.name||"",
             bitName:r.bit?.name||"",
             matchIndex:r.matchIndex||1,
-            stats,ovr,
+            stats,power,ovr,
             lastScore:r.lastResult||null,
             scoreboard:sb,
             runEarn:r.runEarn?{exp:Number(r.runEarn.exp)||0,money:Number(r.runEarn.money)||0}:null,
@@ -458,10 +461,7 @@ function loadoutCard(){
             <span class="eyebrow">${String(parts.blade.tier||"").toUpperCase()}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
-            <div class="vs-ratings">
-                <div class="vs-rating"><small>OVR</small><b>${combo?.ovr||"—"}</b></div>
-                <div class="vs-rating meta"><small>META</small><b>${combo?.meta||"—"}</b></div>
-            </div>
+            ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
             ${statGroupsHTML(combo?.stats||{})}
         </div>
     </section>`;
@@ -779,7 +779,7 @@ function showBoard(){
         ? past.map(e=>`<button type="button" class="rogue-run-row ${e.status}" data-run-id="${e.id}">
             <span class="rogue-run-row-kicker">${e.status==="won"?"WON":"LOST"} · Night ${e.matchIndex||1}</span>
             <b>${e.bladeName||"Bey"} · ${e.ratchetName||"?"} · ${e.bitName||"?"}</b>
-            <small>OVR ${e.ovr||"—"} · ${Number(e.finalScore)||0} pts</small>
+            <small>${Number.isFinite(Number(e.power))?`POWER ${Math.round(e.power)}`:Number(e.ovr)>=200?`POWER ${Math.round(e.ovr)}`:`OVR ${e.ovr||"—"}`} · ${Number(e.finalScore)||0} pts</small>
         </button>`).join("")
         : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue Run and it shows here.</p>`;
     const app=document.getElementById("app");

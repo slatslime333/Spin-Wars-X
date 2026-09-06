@@ -923,6 +923,7 @@ footer{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
+  flex-wrap:wrap;
   gap:8px;
   pointer-events:none;
 }
@@ -1031,6 +1032,12 @@ footer{
   min-width:36px;
   text-align:center;
   text-shadow:0 2px 4px #000;
+}
+.ovr-badge.power{
+  min-width:52px;
+}
+.ovr-badge.power b{
+  font-size:22px;
 }
 
 .ovr-badge small{
@@ -1486,6 +1493,7 @@ footer{
   font-weight:400;
   color:var(--gold);
 }
+.vs-rating.power b{font-size:26px}
 .vs-rating.meta{border-color:rgba(26,209,90,.45)}
 .vs-rating.meta b{color:var(--green)}
 .vs-stat-groups{
@@ -3837,8 +3845,10 @@ button:focus-visible{
 .sandbox-art.sm{width:44px;height:44px}
 .sandbox-kit-copy h2{margin:0;font-size:20px;font-family:Staatliches,Impact,sans-serif;font-weight:400}
 .sandbox-kit-copy p{margin:4px 0;color:var(--muted);font-size:12px}
+.sandbox-kit-copy .vs-ratings{display:flex;gap:6px;margin-top:4px}
 .sandbox-kit-copy .vs-rating{display:inline-flex;flex-direction:column;min-width:72px;margin-top:4px;padding:4px 8px}
-.sandbox-kit-copy .vs-rating b{font-size:24px}
+.sandbox-kit-copy .vs-rating b{font-size:22px}
+.sandbox-kit-copy .vs-rating.power b{font-size:20px}
 .sandbox-kit-stats{margin-top:2px}
 .sandbox-kit-stats .rr-stat-groups{margin-top:0}
 .sandbox-kit-stats .rr-stat-group{padding:5px}
