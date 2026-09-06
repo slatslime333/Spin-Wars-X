@@ -59,7 +59,7 @@ function comboBase(blade,ratchet,bit){
 
 function partsMeta(blade,ratchet,bit){
     const raw=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,bit):null;
-    return Number(raw?.meta)||70;
+    return Number(raw?.ovr ?? raw?.meta)||70;
 }
 
 function formMetaAdj(form,enhanced){

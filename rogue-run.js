@@ -742,6 +742,7 @@ function showTrack(focusN){
                 <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}</span>
                 <b>${parts.map(partLabel).join(" · ")}</b>
                 <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money</small>
+                ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
                 ${statGroupsHTML(combo?.stats||{})}
                 <button class="rip-btn" id="rrBuy" type="button" ${canBuy?"":"disabled"}>${rowOwned(focus,acc)?"OWNED":acc.level<focus.level?`NEED LV ${focus.level}`:acc.money<focus.price?"NEED MONEY":"BUY"}</button>
             </div>

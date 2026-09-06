@@ -962,10 +962,11 @@ function comboPowerPoints(stats){
     },0);
 }
 function comboOverallValue(combo){
-    const o=Number(combo?.ovr);
+    if(!combo || (combo.ovr===undefined && combo.meta===undefined)) return null;
+    const o=Number(combo.ovr);
     if(Number.isFinite(o)) return Math.round(o);
-    const m=Number(combo?.meta);
-    return Number.isFinite(m)?Math.round(m):60;
+    const m=Number(combo.meta);
+    return Number.isFinite(m)?Math.round(m):null;
 }
 function comboRatingBadgesHTML(combo,stats){
     const power=Number.isFinite(Number(combo?.power))?Math.round(combo.power):comboPowerPoints(stats||combo?.stats);
@@ -1454,7 +1455,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-battle">
             <h2>How a battle actually plays</h2>
-            <p>The LIVE booth sits above the stadium — same chrome as the VS plates. It holds a line for a beat: one event, one line. Launch, clash, rail, recover, finish. Witty, not a lecture. Late in a match it will sometimes call a prediction. Names and ratchet · bit are text on the health row. RPM bars keep a faint amber trail when spin falls, and a cyan chunk that lands ahead of the fill when you gain (Hurricane). OVR sits in a box on that row. Dash and ability live in the thumb zone. On a PC, Space dashes and M pops the kit — those key labels only print under the buttons on a desktop pointer. On a phone the whole battle is a locked screen — no page scroll.</p>
+            <p>The LIVE booth sits above the stadium — same chrome as the VS plates. It holds a line for a beat: one event, one line. Launch, clash, rail, recover, finish. Witty, not a lecture. Late in a match it will sometimes call a prediction. Names and ratchet · bit are text on the health row. RPM bars keep a faint amber trail when spin falls, and a cyan chunk that lands ahead of the fill when you gain (Hurricane). POWER and OVR sit in boxes on that row. Dash and ability live in the thumb zone. On a PC, Space dashes and M pops the kit — those key labels only print under the buttons on a desktop pointer. On a phone the whole battle is a locked screen — no page scroll.</p>
             <p>You are watching two discs in a bowl. They have a home radius the bit likes, but knockback can throw them off it, and they have to walk back. They always un-overlap, even during hit-lock, so they cannot phase through. Head-on clashes bounce; they do not zero both speeds and they do not swap spin direction.</p>
             <p>Idle spin drains the whole time. Stamina stretches that clock. Two tanks at low RPM drain a little faster than they did at full, so the endgame does not become a staring contest. When they hit, Attack vs Defense spends RPM. Knockback vs Balance spends shove. The shove is capped — heavy, not air hockey.</p>
             <p>If you smash someone toward Over or Xtreme, the inner lens can zoom (~50%, once per point) on a real pocket-bound hit. Player dashes have a 40% chance to reuse that cam for a second and a half. CPU dashes do not. Physics ticks stay 1/60. Only the clock feeding them slows. The green stadium outline does not scale, so a bigger phone does not mean a bigger knock.</p>
@@ -1782,14 +1783,16 @@ function partEffectPreviewHTML(kind,part,ctx){
     if(kind==="ratchet"){
         const from=bladeCardStats(blade);
         const to=applyRatchetToBladeStats(blade,part);
-        return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE</p>${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
+        const power=comboPowerPoints(to);
+        return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE</p>${comboRatingBadgesHTML({power},to)}${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
     }
     const ratchet=ctx?.ratchet||Game.player?.ratchet;
     if(!ratchet) return "";
     const from=applyRatchetToBladeStats(blade,ratchet);
     const combo=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,part):null;
     const to=combo?.stats||from;
-    return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE · RATCHET</p>${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
+    const ratings=combo?comboRatingBadgesHTML(combo,to):comboRatingBadgesHTML({power:comboPowerPoints(to)},to);
+    return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE · RATCHET</p>${ratings}${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
 }
 function bladeSpritePath(blade){
     const path=blade && typeof blade.sprite==="string" ? blade.sprite.trim() : "";
@@ -1835,10 +1838,22 @@ function battleHudPartsLine(s){
     return `<p class="battle-hud-parts">${parts||"—"}</p>`;
 }
 function battleHudMetaValue(s,side){
-    const live=Number(s?.comboMeta);
-    const stored=Number(Game[side]?.comboMeta);
+    const live=Number(s?.comboOVR ?? s?.comboMeta);
+    const stored=Number(Game[side]?.comboOVR ?? Game[side]?.comboMeta);
     const raw=Number.isFinite(live)?live:stored;
     return Number.isFinite(raw) ? Math.round(raw) : "—";
+}
+function battleHudPowerValue(s,side){
+    const live=Number(s?.comboPower);
+    const stored=Number(Game[side]?.comboPower);
+    const raw=Number.isFinite(live)?live:stored;
+    return Number.isFinite(raw) ? Math.round(raw) : "—";
+}
+function battleHudRatingsHTML(s,side){
+    return `<div class="battle-hud-ratings">
+                <div class="battle-hud-meta power"><small>POWER</small><b>${battleHudPowerValue(s,side)}</b></div>
+                <div class="battle-hud-meta"><small>OVR</small><b>${battleHudMetaValue(s,side)}</b></div>
+              </div>`;
 }
 function createBladeCard(blade){
     const card=document.createElement("article");
@@ -4408,7 +4423,7 @@ function renderNewBattle(){
                 </div>
                 <div class="battle-hud-top"><strong>${p.blade.name}</strong><span>YOU</span></div>
                 ${battleHudPartsLine(p)}
-                <div class="battle-hud-meta"><small>OVR</small><b>${battleHudMetaValue(p,"player")}</b></div>
+                ${battleHudRatingsHTML(p,"player")}
                 <div class="rpm-readout"><span>RPM</span><b id="newPlayerRPM">${Math.round(p.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">
@@ -4436,7 +4451,7 @@ function renderNewBattle(){
               <div class="battle-hud-card battle-hud-cpu">
                 <div class="battle-hud-top"><strong>${c.blade.name}</strong><span>CPU</span></div>
                 ${battleHudPartsLine(c)}
-                <div class="battle-hud-meta"><small>OVR</small><b>${battleHudMetaValue(c,"cpu")}</b></div>
+                ${battleHudRatingsHTML(c,"cpu")}
                 <div class="rpm-readout"><span>RPM</span><b id="newCpuRPM">${Math.round(c.rpm*100)}</b></div>
                 <div class="rpm-bar-row">
                   <div class="rpm-bar-shell">

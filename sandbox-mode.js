@@ -650,9 +650,12 @@ function openPicker(side,part){
                 :part==="bit"?(typeof bitSpritePath==="function"?bitSpritePath(item):"")
                 :(typeof ratchetSpritePath==="function"?ratchetSpritePath(item):"");
             const sub=part==="blade"?`${item.type} · ${item.tier}`:part==="bit"?item.type:`${item.number}-SIDED · ${item.height}`;
+            const bladeRatings=part==="blade"&&typeof comboRatingBadgesHTML==="function"&&typeof comboPowerPoints==="function"&&typeof bladeCardStats==="function"
+                ? comboRatingBadgesHTML({power:comboPowerPoints(bladeCardStats(item)),ovr:item.card?.ovr},item.card)
+                : "";
             const preview=part!=="blade"&&typeof partEffectPreviewHTML==="function"
                 ? partEffectPreviewHTML(part,item,{blade:s[side].blade,ratchet:s[side].ratchet})
-                : "";
+                : bladeRatings;
             return `<button type="button" class="sandbox-pick-card" data-idx="${i}">
                 ${sprite?`<img src="${sprite}" alt="">`:""}
                 <strong>${item.name}</strong>
