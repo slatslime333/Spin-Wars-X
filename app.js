@@ -945,14 +945,31 @@ const BLADE_GEOMETRY={
     "Shark Scale":{symmetry:"forward",hooks:false,massBias:"forward",wantsWeight:true}
 };
 
+const STAT_SHORT={attack:"ATK",knockback:"KB",defense:"DEF",mobility:"MOB",balance:"BAL",stamina:"STA",burst:"BST"};
 const RATCHET_SIDE_DELTA={
-    1:{attack:3,knockback:3,defense:-4,balance:-4,stamina:-5,mobility:1,burst:-2},
+    1:{attack:3,knockback:3,defense:-3,balance:-3,stamina:-3,mobility:1,burst:-2},
     3:{attack:0,knockback:0,defense:0,balance:0,stamina:0,mobility:0,burst:0},
     4:{attack:-1,knockback:0,defense:1,balance:-1,stamina:0,mobility:0,burst:-8},
     5:{attack:-1,knockback:0,defense:0,balance:2,stamina:-1,mobility:0,burst:-2},
     6:{attack:0,knockback:0,defense:1,balance:2,stamina:1,mobility:0,burst:1},
-    7:{attack:0,knockback:2,defense:3,balance:3,stamina:2,mobility:-1,burst:0},
-    9:{attack:-2,knockback:-1,defense:1,balance:2,stamina:2,mobility:-1,burst:5}
+    7:{attack:0,knockback:1,defense:2,balance:2,stamina:2,mobility:-1,burst:0},
+    9:{attack:-1,knockback:-1,defense:1,balance:2,stamina:2,mobility:-1,burst:5}
+};
+const BIT_STAT_DELTA={
+    Flat:{attack:5,knockback:4,defense:-3,balance:-4,stamina:-7,mobility:5,burst:1},
+    "Low Flat":{attack:6,knockback:5,defense:-4,balance:-4,stamina:-8,mobility:6,burst:1},
+    Rush:{attack:2,knockback:1,defense:-1,balance:-1,stamina:-2,mobility:3,burst:1},
+    "Low Rush":{attack:3,knockback:2,defense:-1,balance:-1,stamina:-3,mobility:4,burst:1},
+    Kick:{attack:2,knockback:2,defense:-1,balance:1,stamina:-2,mobility:2,burst:0},
+    Quake:{attack:5,knockback:5,defense:-4,balance:-5,stamina:-8,mobility:3,burst:0},
+    Point:{attack:0,knockback:0,defense:-1,balance:1,stamina:1,mobility:2,burst:1},
+    Level:{attack:1,knockback:1,defense:-1,balance:0,stamina:0,mobility:3,burst:1},
+    Hexa:{attack:-2,knockback:-1,defense:2,balance:3,stamina:2,mobility:-3,burst:3},
+    Ball:{attack:-4,knockback:-3,defense:2,balance:3,stamina:6,mobility:-5,burst:0},
+    Orb:{attack:-3,knockback:-2,defense:2,balance:2,stamina:5,mobility:-4,burst:0},
+    Needle:{attack:-4,knockback:-3,defense:0,balance:-2,stamina:5,mobility:-6,burst:-1},
+    "High Needle":{attack:-4,knockback:-3,defense:0,balance:-2,stamina:6,mobility:-5,burst:-1},
+    Wedge:{attack:-3,knockback:-1,defense:1,balance:0,stamina:4,mobility:1,burst:0}
 };
 
 function comboPowerPoints(stats){
@@ -981,39 +998,253 @@ function addStatDelta(target,delta){
     COMBO_STAT_KEYS.forEach(k=>{target[k]=(Number(target[k])||0)+(Number(delta[k])||0);});
     return target;
 }
+function easeStatDelta(stat,delta){
+    const n=Number(stat)||70;
+    const d=Number(delta)||0;
+    if(!d) return n;
+    const t=Math.max(0,Math.min(1,(n-60)/39));
+    if(d>0){
+        const scale=1-0.78*t*t;
+        return n+d*scale;
+    }
+    const scale=0.45+0.55*t;
+    return n+d*scale;
+}
+function addEasedDelta(target,delta){
+    if(!delta) return target;
+    COMBO_STAT_KEYS.forEach(k=>{target[k]=easeStatDelta(target[k],delta[k]);});
+    return target;
+}
+function statTradeLine(delta){
+    const plus=[],minus=[];
+    COMBO_STAT_KEYS.forEach(k=>{
+        const n=Math.round(Number(delta?.[k])||0);
+        if(n>0) plus.push(`+${n} ${STAT_SHORT[k]}`);
+        if(n<0) minus.push(`${n} ${STAT_SHORT[k]}`);
+    });
+    return [...plus,...minus].join(" · ");
+}
 function getBladeGeometry(blade){
     const named=BLADE_GEOMETRY[blade?.name];
     if(named) return named;
     const key=String(blade?.name||"").toLowerCase().replace(/ /g,"_");
-    return BLADE_GEOMETRY[Object.keys(BLADE_GEOMETRY).find(n=>n.toLowerCase().replace(/ /g,"_")===key)]
-        ||{symmetry:"round",hooks:false,massBias:"balanced",wantsWeight:false};
+    const mapped=BLADE_GEOMETRY[Object.keys(BLADE_GEOMETRY).find(n=>n.toLowerCase().replace(/ /g,"_")===key)];
+    if(mapped) return mapped;
+    return inferBladeGeometry(blade);
+}
+function inferBladeGeometry(blade){
+    const shape=String(blade?.physics?.contactShape||"").toLowerCase();
+    const dist=String(blade?.physics?.weightDistribution||"").toLowerCase();
+    const weight=Number(blade?.weight)||35;
+    let symmetry="round";
+    if(shape.includes("claw")) symmetry="claw";
+    else if(shape.includes("elliptical")) symmetry="elliptical";
+    else if(shape.includes("tri")||shape.includes("three")) symmetry="three";
+    else if(shape.includes("oval")) symmetry="oval";
+    else if(shape.includes("multi")) symmetry="multi";
+    else if(dist.includes("forward")||shape.includes("forward")) symmetry="forward";
+    else if(shape.includes("smash")||shape.includes("upper")) symmetry="three";
+    else if(shape.includes("round")) symmetry="round";
+    const massBias=dist.includes("forward")?"forward":dist.includes("outer")?"outer":"balanced";
+    return {
+        symmetry,
+        hooks:shape.includes("hook"),
+        massBias,
+        wantsWeight:weight>=37 && (massBias==="outer"||symmetry==="round")
+    };
+}
+function bladeJobLine(blade){
+    if(!blade) return "";
+    const g=getBladeGeometry(blade);
+    const type=blade.type||"Balance";
+    const heavy=!!g.wantsWeight || Number(blade.weight)>=37.5;
+    const job=type==="Attack"?"smash":type==="Stamina"?"stamina":type==="Defense"?"defense":"balance";
+    let shape="Blade";
+    if(g.symmetry==="three" && g.hooks) shape="Hooked three-wing";
+    else if(g.symmetry==="three" && heavy) shape="Heavy three-wing";
+    else if(g.symmetry==="three") shape="Three-wing";
+    else if(g.symmetry==="claw") shape="Claw";
+    else if(g.symmetry==="elliptical") shape="Elliptical";
+    else if(g.symmetry==="oval") shape="Oval";
+    else if(g.symmetry==="multi") shape="Multi-contact";
+    else if(g.massBias==="forward" && heavy) shape="Heavy forward";
+    else if(g.massBias==="forward") shape="Forward-weighted";
+    else if(g.symmetry==="round" && heavy) shape="Heavy round";
+    else if(g.symmetry==="round") shape="Round";
+    return `${shape} ${job}`;
+}
+function ratchetWantLine(g){
+    if(!g) return "60-height sits low. 80 is exposure, not a smash upgrade.";
+    if(g.symmetry==="three" && g.hooks) return "1-60 smash, 9-60 burst-safe, 3-side lines up.";
+    if(g.symmetry==="three" && g.wantsWeight) return "7-side for mass, 3-side lines up. 1-60 still smashes.";
+    if(g.symmetry==="three") return "3-side lines up. 1-60 still smashes.";
+    if(g.massBias==="forward" && g.wantsWeight) return "1-side smash, 7-side for mass, 5-side to correct.";
+    if(g.massBias==="forward") return "1-side smash, 5-side to correct.";
+    if(g.wantsWeight) return "7-side for mass, 9/6 for hold.";
+    if(g.symmetry==="round") return "9/6 hold. 1-side spends stamina.";
+    if(g.symmetry==="claw") return "3-side lines up.";
+    if(g.symmetry==="elliptical") return "3-side helps the oval. 1-60 still smashes.";
+    if(g.symmetry==="oval") return "6/9 for hold.";
+    if(g.symmetry==="multi") return "5-side corrects, 9-side holds.";
+    return "60-height sits low. 80 is exposure, not a smash upgrade.";
+}
+function bitWantLine(type,g){
+    if(type==="Attack"){
+        return g?.symmetry==="elliptical"
+            ?"Quake and Flat are raw smash; Rush keeps stamina."
+            :"Rush keeps stamina; Flat and Low Flat are raw smash.";
+    }
+    if(type==="Stamina") return "Ball, Hexa, or Needle to outlast. Attack bits cut the clock. Round + 1-60 Hexa is the plant exception.";
+    if(type==="Defense") return "Hexa, Needle, or Ball to plant. Attack bits yank it wide.";
+    return "Point, Level, or Hexa to mix. Attack bits push it out.";
+}
+function bladeKitLean(blade){
+    if(!blade) return "";
+    const g=getBladeGeometry(blade);
+    return `${bladeJobLine(blade)}. ${ratchetWantLine(g)} ${bitWantLine(blade.type||"Balance",g)}`;
+}
+function ratchetIdentLine(ratchet){
+    const side=RATCHET_IDENT[Number(ratchet?.number)]||"Ratchet geometry changes height, contact, and burst.";
+    const height=HEIGHT_IDENT[Number(ratchet?.height)]||"";
+    return [side,height].filter(Boolean).join(" ");
+}
+function bitIdentLine(bit){
+    return BIT_IDENT[bit?.name]||"Distinct physical behavior and tradeoffs.";
+}
+function comboKitLean(blade,ratchet,bit){
+    if(!blade) return "";
+    if(!ratchet && !bit) return bladeKitLean(blade);
+    const g=getBladeGeometry(blade);
+    const type=blade.type||"Balance";
+    const job=bladeJobLine(blade);
+    const n=Number(ratchet?.number);
+    const h=Number(ratchet?.height)||60;
+    const bitName=bit?.name||"";
+    const parts=[ratchet?.name,bitName].filter(Boolean).join(" ");
+    const notes=[];
+    if(Number.isFinite(n)){
+        if(n===1) notes.push(h===80?"smash ratchet, tall exposure":h===70?"smash ratchet, mid height":"smash ratchet");
+        else if(n===3) notes.push((g.symmetry==="three"||g.symmetry==="claw"||g.symmetry==="elliptical")?"aligned 3-side":"3-side on a non-three blade");
+        else if(n===4) notes.push("burst trap");
+        else if(n===5) notes.push(g.massBias==="forward"?"correction on a lopsided blade":g.symmetry==="round"?"5-side on a round blade — can fight Ball":"5-side correction");
+        else if(n===6) notes.push((g.symmetry==="round"||g.symmetry==="oval")?"round hold":"6-side hold");
+        else if(n===7) notes.push(g.wantsWeight?"heavy 7-side mass":"7-side mass on a lighter blade");
+        else if(n===9) notes.push(g.hooks?"burst-safe 9-side that can line up":g.symmetry==="round"||g.symmetry==="oval"?"compact hold":"compact 9-side");
+        if(h===80 && n!==1) notes.push("tall exposure");
+        else if(h===70 && n!==1) notes.push("mid height");
+    }
+    if(bitName){
+        const raw=["Flat","Low Flat","Quake"].includes(bitName);
+        const control=["Rush","Low Rush"].includes(bitName);
+        const attackBit=raw||control||bitName==="Kick";
+        const tank=["Ball","Orb","Hexa","Needle","Wedge"].includes(bitName);
+        if(g.symmetry==="round" && n===1 && h===60 && bitName==="Hexa") notes.push("1-60 Hexa plant — the round exception");
+        else if(n===5 && g.symmetry==="round" && (bitName==="Ball"||bitName==="Orb")) notes.push("5-side plus Ball fights precession");
+        else if(type==="Attack" && n===1 && h===60 && bitName==="Ball") notes.push(blade.rogueBoss?"attack blade, stamina pin":"smash ratchet with a stamina pin");
+        else if(control) notes.push(type==="Attack"?"controlled smash, leftover stamina":"attack bit on a non-attack blade");
+        else if(raw) notes.push(type==="Attack"?"raw smash, clock falls off":"raw smash on a tank blade");
+        else if(bitName==="Kick") notes.push(type==="Attack"?"counter-leaning smash":"Kick on a non-attack blade");
+        else if(bitName==="Point") notes.push("upright mix — tilt makes it wander");
+        else if(bitName==="Level") notes.push("opens as spin dies");
+        else if(tank) notes.push(type==="Attack"?"stamina pin on an attack blade":BIT_SHORT[bitName]||bitIdentLine(bit));
+        else notes.push(BIT_SHORT[bitName]||bitIdentLine(bit));
+        if(type==="Stamina" && attackBit) notes.push("clock takes the hit");
+        if(type==="Defense" && raw) notes.push("defense blade yanked wide");
+    }
+    const seen=new Set();
+    const unique=notes.filter(line=>{
+        if(!line||seen.has(line)) return false;
+        seen.add(line);
+        return true;
+    });
+    return parts?`${job} on ${parts}. ${unique.join("; ")}.`:`${bladeKitLean(blade)}`;
+}
+function kitContextHTML({kicker,lean,trade}){
+    return `${kicker?`<p class="part-effect-kicker">${kicker}</p>`:""}${lean?`<p class="kit-lean">${lean}</p>`:""}${trade?`<p class="part-effect-trade">${trade}</p>`:""}`;
+}
+const RATCHET_IDENT={
+    1:"Smash wing. Hit up, hold down. Two orientations.",
+    3:"Three wide blades. Lines up with three-sided blades.",
+    4:"Four exposed blades. Burst trap more than a pick.",
+    5:"Balance correction. Helps a lopsided blade; can hurt a stable Ball kit.",
+    6:"Circular six-side. Mild stamina and LAD.",
+    7:"Heaviest ratchet. Mass and posture, not printed attack.",
+    9:"Compact and burst-safe. Three larger blades can line up with hooked wings."
+};
+const HEIGHT_IDENT={
+    60:"Low undercut — extra smash, harder to snipe.",
+    70:"Mid height — the default posture.",
+    80:"Tall — exposure and burst risk, not a smash upgrade."
+};
+const BIT_IDENT={
+    Flat:"Wide high-friction tip. Raw smash and X-Dash, stamina falls off fast.",
+    "Low Flat":"Lower, faster Flat. Highest attack in the garage, worst stamina.",
+    Rush:"Controlled attack. Some hit, keeps more stamina than Flat.",
+    "Low Rush":"Lower Rush. A bit more hit and speed than Rush, spends more stamina.",
+    Kick:"Counter-leaning attack. Hit with more hold than Flat.",
+    Quake:"Jumping smash. Huge knock, almost no clock.",
+    Point:"Upright and mixed. Tilt makes it wander and hit.",
+    Level:"Centered at high RPM, then it opens up as spin dies.",
+    Hexa:"Hex tip. Rights itself, plants, extra burst lock.",
+    Ball:"Center pin stamina. Short ring, a smash can still travel.",
+    Orb:"Ball with a little more wander and a little less lock.",
+    Needle:"Tiny tip. Clock is great, stability is not.",
+    "High Needle":"More mobile Needle. Same stamina idea, easier to wobble.",
+    Wedge:"Semi-mobile defense. Stamina first, then it sits.",
+    Taper:"Out of the garage. Semi-mobile, not a pick.",
+    Elevate:"Out of the garage."
+};
+const BIT_SHORT={
+    Flat:"raw smash, clock dies",
+    "Low Flat":"lowest smash tip, worst clock",
+    Rush:"controlled smash, leftover stamina",
+    "Low Rush":"lower Rush — more hit, less clock",
+    Kick:"counter smash with extra hold",
+    Quake:"jumping smash, almost no clock",
+    Point:"upright mix",
+    Level:"opens as spin dies",
+    Hexa:"plant tip, extra burst lock",
+    Ball:"center pin stamina",
+    Orb:"Ball with more wander",
+    Needle:"clock first, stability last",
+    "High Needle":"mobile Needle, easy wobble",
+    Wedge:"semi-mobile defense, stamina first"
+};
+function ratchetRoleDelta(ratchet){
+    const d={...ZERO_STAT_DELTA};
+    addStatDelta(d,RATCHET_SIDE_DELTA[Number(ratchet?.number)]||RATCHET_SIDE_DELTA[3]);
+    addStatDelta(d,getHeightDeltaV58(ratchet?.height));
+    return d;
 }
 function getHeightDeltaV58(height){
-    if(Number(height)===80) return {attack:-2,knockback:0,defense:-1,balance:-2,stamina:1,mobility:0,burst:-4};
+    if(Number(height)===80) return {attack:-1,knockback:0,defense:-1,balance:-2,stamina:1,mobility:0,burst:-4};
     if(Number(height)===70) return {attack:0,knockback:0,defense:0,balance:0,stamina:0,mobility:0,burst:-1};
-    return {attack:1,knockback:1,defense:0,balance:0,stamina:0,mobility:0,burst:2};
+    return {attack:1,knockback:0,defense:0,balance:0,stamina:0,mobility:0,burst:2};
 }
 function getAlignDeltaV58(blade,ratchet){
     const g=getBladeGeometry(blade);
     const n=Number(ratchet?.number);
-    const type=blade?.type||"Balance";
     const d={...ZERO_STAT_DELTA};
     if(g.symmetry==="three" && n===3){d.attack+=2;d.knockback+=1;}
-    if(g.symmetry==="three" && n===9 && g.hooks){d.attack+=2;d.knockback+=1;}
+    if(g.symmetry==="three" && n===9 && g.hooks){d.attack+=1;d.knockback+=1;}
     if(n===7 && g.wantsWeight){d.balance+=2;d.stamina+=1;d.knockback+=1;}
     if(g.symmetry==="round" && (n===9||n===6)){d.stamina+=1;d.balance+=1;}
     if(g.symmetry==="round" && n===1){d.stamina-=2;d.balance-=2;}
     if(g.massBias==="forward" && n===5){d.balance+=3;d.stamina+=1;}
     if(g.symmetry==="claw" && n===3){d.attack+=1;d.balance+=1;}
     if(g.symmetry==="elliptical" && n===3){d.attack+=1;}
-    if(g.symmetry==="forward" && n===1){d.attack+=1;d.knockback+=1;}
-    if(type==="Attack" && n===1 && g.symmetry!=="forward"){d.attack+=1;d.knockback+=1;}
-    if(type==="Attack" && n===4){d.burst-=1;}
+    if(g.symmetry==="oval" && (n===6||n===9)){d.stamina+=1;d.balance+=1;}
+    if(g.symmetry==="multi" && n===5){d.balance+=2;}
+    if(g.symmetry==="multi" && n===9){d.stamina+=1;}
+    if(g.massBias==="forward" && n===1){d.attack+=1;d.knockback+=1;}
+    if(n===4){d.burst-=1;}
     return d;
 }
 function getBitDeltaV58(bit){
+    const named=BIT_STAT_DELTA[bit?.name];
+    if(named) return {...named};
     const bp=getBitPhysicalProfileV56(bit);
-    const scale={attack:8,knockback:6,defense:8,mobility:20,balance:10,stamina:14,burst:6};
+    const scale={attack:5,knockback:4,defense:5,mobility:8,balance:6,stamina:8,burst:4};
     const out={};
     COMBO_STAT_KEYS.forEach(k=>{out[k]=(Number(bp[k])-0.50)*scale[k];});
     return out;
@@ -1025,8 +1256,8 @@ function getSpecialCaseDeltaV58(blade,ratchet,bit){
     const bitName=bit?.name||"";
     const g=getBladeGeometry(blade);
     const type=blade?.type||"Balance";
-    if(blade?.name==="Wizard Rod" && n===1 && h===60 && bitName==="Hexa"){
-        d.stamina+=7;d.balance+=3;d.defense+=2;d.attack+=1;
+    if(type==="Stamina" && g.symmetry==="round" && n===1 && h===60 && bitName==="Hexa"){
+        d.stamina+=2;d.balance+=3;d.defense+=2;
     }
     if(n===5 && g.symmetry==="round" && (bitName==="Ball"||bitName==="Orb")){
         d.stamina-=8;d.balance-=2;
@@ -1042,11 +1273,11 @@ function getSpecialCaseDeltaV58(blade,ratchet,bit){
 function applyComboModifiers(base,blade,ratchet,bit){
     const stats={};
     COMBO_STAT_KEYS.forEach(k=>{stats[k]=Number(base[k])||70;});
-    addStatDelta(stats,RATCHET_SIDE_DELTA[Number(ratchet?.number)]||RATCHET_SIDE_DELTA[3]);
-    addStatDelta(stats,getHeightDeltaV58(ratchet?.height));
-    addStatDelta(stats,getAlignDeltaV58(blade,ratchet));
-    if(bit) addStatDelta(stats,getBitDeltaV58(bit));
-    if(bit) addStatDelta(stats,getSpecialCaseDeltaV58(blade,ratchet,bit));
+    addEasedDelta(stats,RATCHET_SIDE_DELTA[Number(ratchet?.number)]||RATCHET_SIDE_DELTA[3]);
+    addEasedDelta(stats,getHeightDeltaV58(ratchet?.height));
+    addEasedDelta(stats,getAlignDeltaV58(blade,ratchet));
+    if(bit) addEasedDelta(stats,getBitDeltaV58(bit));
+    if(bit) addEasedDelta(stats,getSpecialCaseDeltaV58(blade,ratchet,bit));
     COMBO_STAT_KEYS.forEach(k=>{stats[k]=normalizePhysicalStat(stats[k]);});
     return stats;
 }
@@ -1420,17 +1651,39 @@ function renderHowTo(){
         <section class="menu-card howto-card" id="ht-combo">
             <h2>Building a combo</h2>
             <p>A Bey is three parts stacked: <strong>blade</strong> on top, <strong>ratchet</strong> in the middle, <strong>bit</strong> on the bottom. Blade is the personality and the ability kit. Ratchet is sides × height — 3-60, 5-70, 9-80, like that. Bit is how it actually moves in the bowl.</p>
-            <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, POWER and OVR, and the HIT / HOLD / MOVE bars.</p>
+            <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, POWER and OVR, a short kit lean (what ratchet family and bit family this blade wants), and the HIT / HOLD / MOVE bars.</p>
+            <p>Ratchet and bit cards print the part's job first — every side count, every height, every selectable bit — then what that part actually does on the blade you already locked. A Bronze Attack blade gets more Attack from 1-60 than a Gold smash blade does. Same part, different room to grow. VS plates print THIS KIT: the blade's shape plus the ratchet and bit you actually picked, not a famous named build.</p>
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. Compatibility matters — an Attack blade is happier on Rush or Flat than on Ball. A Defense blade wants Needle, Hexa, Ball, that family. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
-            <p><strong>Ratchet.</strong> Height is undercut versus exposure. 60 sits low — extra smash, harder to snipe. 70 is the middle. 80 is tall and pokey: easier to lift, easier to burst, a little more scrape. Sides are the personality. 1-something adds attack and knockback and spends stamina and defense. 3-something lines up with three-wing blades. 7-something is the heavy stabilizer. 9-something is compact and burst-safe. 4-something is the burst trap. 5-something corrects a lopsided blade and can hurt an already-stable Ball kit.</p>
-            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits (Rush, Flat, Low Flat, Low Rush, Kick, Quake) run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits (Point, Level, Hexa, Wedge, Ball, Orb, Needle) stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home — it is not glued to the pin. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet instead of circling past each other. Taper, High Needle, and Elevate are not in the garage.</p>
+            <p><strong>Ratchet.</strong> Height is undercut versus exposure. 60 sits low — extra smash, harder to snipe. 70 is the middle. 80 is tall and pokey: easier to lift, easier to burst, a little more scrape. Sides are the personality:</p>
+            <ul>
+                <li><strong>1</strong> smash wing — hit up, hold down. Two orientations.</li>
+                <li><strong>3</strong> three wide blades. Lines up with three-wing, claw, and elliptical blades.</li>
+                <li><strong>4</strong> four exposed blades. Burst trap more than a pick.</li>
+                <li><strong>5</strong> balance correction. Helps a lopsided blade; can hurt an already-stable Ball kit.</li>
+                <li><strong>6</strong> circular six-side. Mild stamina and LAD.</li>
+                <li><strong>7</strong> heaviest ratchet. Mass and posture, not printed attack. Best on heavy blades.</li>
+                <li><strong>9</strong> compact and burst-safe. Three larger blades can line up with hooked wings.</li>
+            </ul>
+            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet. Taper, High Needle, and Elevate are not in the garage.</p>
+            <ul>
+                <li><strong>Rush / Low Rush</strong> — controlled attack. Some hit, leftover stamina. Low Rush spends more clock for more speed.</li>
+                <li><strong>Flat / Low Flat</strong> — raw smash and X-Dash. Stamina falls off fast. Low Flat is the highest attack tip.</li>
+                <li><strong>Kick</strong> — counter-leaning smash with more hold than Flat.</li>
+                <li><strong>Quake</strong> — jumping smash. Huge knock, almost no clock.</li>
+                <li><strong>Point</strong> — upright mix. Tilt makes it wander and hit.</li>
+                <li><strong>Level</strong> — centered at high RPM, then it opens as spin dies.</li>
+                <li><strong>Hexa</strong> — plant tip, extra burst lock. Round stamina + 1-60 Hexa is the exception that works.</li>
+                <li><strong>Ball / Orb</strong> — center pin stamina. Orb wanders a little more.</li>
+                <li><strong>Needle</strong> — tiny tip. Clock is great, stability is not.</li>
+                <li><strong>Wedge</strong> — semi-mobile defense. Stamina first, then it sits.</li>
+            </ul>
             <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is two or three sentences about what the Beys are trying to do, not a stat lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-stats">
             <h2>Stats, for real</h2>
             <p>Here is the thing people get wrong. The seven combo stats are potential, not a tax you pay every time two discs kiss. A graze barely spends that budget. A real smash — the kind that actually winds up and plants — can spend most of it. If the gap is huge, that smash is devastating. If you are 70 versus 70, you are in a skill fight. Same intensity as 94 versus 94. The higher pair just makes the contacts a little denser. 99 versus 60 should feel like a mismatch on a hit that counts, not a one-graze delete. A ridiculous 500 versus a normal Silver still hits a ceiling. Unfair, not a bye.</p>
-            <p>Battle uses each stat against the opponent's matching number, not against 99. POWER is the six battle stats added up — Burst is left out. OVR is the kit overall: how well this blade, ratchet, and bit actually belong together. Both stay on the plate. Burst is on the card and does nothing in battle right now.</p>
+            <p>Battle uses each stat against the opponent's matching number, not against 99. POWER is the six battle stats added up — Burst is left out. OVR is the kit overall: how well this blade, ratchet, and bit actually belong together. Both stay on the plate. Burst is on the card and does nothing in battle right now. Ratchet and bit bonuses shrink as a stat is already high — a Bronze Attack blade gets more from 1-60 than a Gold smash blade does. Flat and Low Flat are the raw smash bits; Rush keeps more stamina and does not max a Gold's Attack.</p>
             <p>The pairings, because this used to be muddy:</p>
             <ul>
                 <li><strong>Attack answers Defense.</strong> Attack is how hard a real contact melts their remaining spin. Defense soaks that RPM loss. Attack does not shove them into a pocket. That is Knockback's job.</li>
@@ -1445,7 +1698,7 @@ function renderHowTo(){
         <section class="menu-card howto-card" id="ht-launch">
             <h2>The launch screen</h2>
             <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
-            <p><strong>Angle.</strong> Flat is neutral. Slight and Hard add a short oval and a little more hit, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
+            <p><strong>Angle.</strong> Flat is neutral. Slight lasts 2.5s: +1 Attack, +1 Knockback, −1 Defense, −1 Mobility. Hard lasts 3.3s at +2 / −2 on the same pair. Both add a short oval, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
             <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
             <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
             <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
@@ -1784,7 +2037,13 @@ function partEffectPreviewHTML(kind,part,ctx){
         const from=bladeCardStats(blade);
         const to=applyRatchetToBladeStats(blade,part);
         const power=comboPowerPoints(to);
-        return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE</p>${comboRatingBadgesHTML({power},to)}${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
+        const role=ratchetRoleDelta(part);
+        const onBlade=statDeltaMap(from,to);
+        return `<div class="part-effect">
+          ${kitContextHTML({kicker:"RATCHET",lean:ratchetIdentLine(part),trade:statTradeLine(role)})}
+          ${kitContextHTML({kicker:"ON THIS BLADE",trade:statTradeLine(onBlade)})}
+          ${comboRatingBadgesHTML({power},to)}${comboStatGroupsHTML(to,onBlade)}
+        </div>`;
     }
     const ratchet=ctx?.ratchet||Game.player?.ratchet;
     if(!ratchet) return "";
@@ -1792,7 +2051,13 @@ function partEffectPreviewHTML(kind,part,ctx){
     const combo=typeof calculateComboStats==="function"?calculateComboStats(blade,ratchet,part):null;
     const to=combo?.stats||from;
     const ratings=combo?comboRatingBadgesHTML(combo,to):comboRatingBadgesHTML({power:comboPowerPoints(to)},to);
-    return `<div class="part-effect"><p class="part-effect-kicker">ON BLADE · RATCHET</p>${ratings}${comboStatGroupsHTML(to,statDeltaMap(from,to))}</div>`;
+    const onKit=statDeltaMap(from,to);
+    const role=getBitDeltaV58(part);
+    return `<div class="part-effect">
+      ${kitContextHTML({kicker:"BIT",lean:bitIdentLine(part),trade:statTradeLine(role)})}
+      ${kitContextHTML({kicker:"ON BLADE · RATCHET",trade:statTradeLine(onKit)})}
+      ${ratings}${comboStatGroupsHTML(to,onKit)}
+    </div>`;
 }
 function bladeSpritePath(blade){
     const path=blade && typeof blade.sprite==="string" ? blade.sprite.trim() : "";
@@ -1878,6 +2143,7 @@ function createBladeCard(blade){
                 <div class="blade-meta"><span>${blade.type}</span><span>${blade.weight}g</span><span>${blade.spin==="R"?"RIGHT SPIN":blade.spin||"RIGHT SPIN"}</span></div>
             </div>
             ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(blade):""}
+            <p class="kit-lean">${bladeKitLean(blade)}</p>
             ${comboStatGroupsHTML(bladeCardStats(blade))}
         </div>
         <div class="select-hint">SELECT BLADE <span>›</span></div>`;
@@ -1927,15 +2193,7 @@ function ratchetCard(r){
     const burstRisk=p.burst<.35?"HIGH":p.burst<.60?"MEDIUM":"LOW";
     const exposure=p.exposure>.65?"HIGH":p.exposure>.45?"MEDIUM":"LOW";
     const mass=p.weight>=6.8?"HEAVY":p.weight>=6.4?"MEDIUM":"LIGHT";
-    const desc={
-        1:"Asymmetric smash wing. Adds attack and knockback, spends stamina and defense. Two orientations.",
-        3:"Three wide blades. Lines up with three-sided blades like Dran Sword, Aero Pegasus, and Knight Shield.",
-        4:"Four exposed blades. Worst burst resistance in the garage — a trap more than a pick.",
-        5:"Balance correction. Helps a lopsided blade; can kill precession on an already-stable Ball kit.",
-        6:"Circular six-side. Mild stamina and LAD, not a free upgrade.",
-        7:"Heaviest ratchet. Mass and posture, not printed attack. Best on Aero Pegasus, Leon Crest, and other heavy kits.",
-        9:"Compact and burst-safe. Phoenix Wing can line the three larger blades up with its launcher hooks."
-    }[r.number]||"Physical Ratchet geometry changes height, contact and Burst behavior.";
+    const desc=ratchetIdentLine(r);
     return createPartCard({title:r.name,subtitle:`${shape} · ${heightNote}`,
         accentClass:`ratchet-card ratchet-${r.number}`,
         stats:[["MASS",mass],["BURST",burstRisk],["EXPOSE",exposure],["ROLE",
@@ -1982,29 +2240,12 @@ function bitCard(bit){
     const sta=bp.stamina>.90?"VERY HIGH":bp.stamina>.75?"HIGH":bp.stamina>.55?"MEDIUM":"LOW";
     const mob=bp.mobility>.82?"HIGH":bp.mobility>.62?"MEDIUM":"LOW";
     const stability=bp.stability>.80?"HIGH":bp.stability>.55?"MEDIUM":"LOW";
-    const descriptions={
-        "Point":"Stays controlled while upright; meaningful in-game tilt makes it move outward and attack.",
-        "Level":"Stable and centered at high RPM; as RPM falls, natural tilt and wobble make it progressively more mobile.",
-        "Hexa":"Hexagonal tip helps the Bey right itself and increases defensive stability.",
-        "Rush":"Controlled attack: less raw power than Flat, but better stamina and X-Line consistency.",
-        "Low Rush":"Lower, smoother Rush: more stamina than Rush with slightly less impact.",
-        "Flat":"High-friction attack Bit built for aggressive movement and powerful Xtreme Dashes.",
-        "Low Flat":"Lower, wider Flat: maximum aggression and X-Line speed at a stamina cost.",
-        "Kick":"Balance/counter Bit with better stamina, stability and control than pure attack Bits.",
-        "Taper":"Controlled balance Bit that trades some attack for mobility and stamina.",
-        "Wedge":"Semi-mobile Defense Bit with strong stamina, then a more stationary late battle.",
-        "Needle":"Very stationary and stamina-efficient, but its tiny tip can wobble and destabilize.",
-        "High Needle":"More mobile than Needle, with strong stamina but even more exposure to destabilization.",
-        "Ball":"High-stamina center Bit. Short ring, but a real smash can move it.",
-        "Orb":"High-stamina Bit with slightly more movement and less pure stability than Ball.",
-        "Quake":"Jumping attack Bit: high impact and knockback, but poor stamina and balance."
-    };
     return createPartCard({title:bit.name,subtitle:`${bit.type.toUpperCase()} BIT`,
         accentClass:`bit-card bit-${typeClass}`,
         stats:[["MOVE",mob],["STA",sta],["STABLE",stability],
             ["CONTROL",bp.control>.85?"HIGH":bp.control>.65?"MEDIUM":"LOW"]],
         extra:`<span class="bit-type-pill">${bit.type}</span>`,
-        description:descriptions[bit.name]||"Distinct physical behavior and tradeoffs.",
+        description:bitIdentLine(bit),
         sprite:bitSpriteFile(bit),
         footer:partEffectPreviewHTML("bit",bit),
         onClick:()=>{
@@ -2239,7 +2480,7 @@ function getRatchetGeometryFitV56(blade,ratchet){
     let fit=.50;
     if(n===1){
         if(type==="Attack") fit+=.18;
-        else if(blade?.name==="Wizard Rod") fit+=.14;
+        else if(type==="Stamina" && g.symmetry==="round") fit+=.14;
         else if(g.symmetry==="round") fit+=.02;
         else fit-=.02;
     }else if(n===3){
@@ -2285,30 +2526,37 @@ function calculateOverallScoreV58(blade,ratchet,bit,stats){
     else role=bal*.22+a*.16+sta*.16+df*.16+kb*.14+mob*.16;
 
     let score=bladeOvr*.55+role*.45;
-    const name=blade.name||"";
-    if(name==="Phoenix Wing" && n===1 && h===60 && (bitName==="Rush"||bitName==="Low Rush")) score+=3.6;
-    else if(name==="Phoenix Wing" && n===9 && h===60) score+=2.2;
-    else if(name==="Phoenix Wing" && n===3 && h===60) score+=1.8;
-    if(name==="Aero Pegasus" && n===7 && h===60) score+=4.2;
-    else if(name==="Aero Pegasus" && n===3 && h===60) score+=2.8;
-    else if(name==="Aero Pegasus" && n===1 && h===60) score+=0.8;
-    if(name==="Wizard Rod" && n===1 && h===60 && bitName==="Hexa") score+=3.8;
-    else if(name==="Wizard Rod" && n===9 && (bitName==="Ball"||bitName==="Orb"||bitName==="Hexa")) score+=2.2;
-    if(name==="Dran Sword" && n===3 && h===60) score+=2.6;
-    else if(name==="Dran Sword" && n===1 && h===60) score+=0.7;
-    if(name==="Shark Scale" && n===1 && h===60 && (bitName==="Rush"||bitName==="Low Rush")) score+=2.6;
-    if(blade.rogueBoss && n===1 && h===60 && bitName==="Ball") score+=2.2;
-    if(name==="Shark Edge" && n===1 && h===60) score+=1.6;
-    if(name==="Viper Tail" && n===5 && h===60) score+=1.8;
-    if(name==="Leon Crest" && n===7 && h===60) score+=2.0;
-    if(name==="Knight Shield" && n===3 && h===60) score+=1.6;
-    if(name==="Tyranno Beat" && n===4) score-=1.5;
+    const attackBit=["Flat","Low Flat","Rush","Low Rush","Kick","Quake"].includes(bitName);
+    const controlAttack=["Rush","Low Rush"].includes(bitName);
+    const rawAttack=["Flat","Low Flat","Quake"].includes(bitName);
+    const tankBit=["Ball","Orb","Hexa","Needle","Wedge"].includes(bitName);
 
-    if(n===4) score-=3.2;
-    if(h===80) score-=1.6;
-    if(h===80 && (bitName==="Ball"||bitName==="Orb")) score-=2.2;
-    if(n===5 && g.symmetry==="round" && (bitName==="Ball"||bitName==="Orb")) score-=2.4;
     if(h===60) score+=0.35;
+    if(h===80) score-=1.6;
+    if(h===80 && tankBit) score-=2.0;
+    if(n===4) score-=3.2;
+
+    if(type==="Attack" && n===1 && h===60 && controlAttack) score+=1.8;
+    else if(type==="Attack" && n===1 && h===60 && rawAttack) score+=0.8;
+    else if(type==="Attack" && n===1 && h===60) score+=0.5;
+    if(g.symmetry==="three" && n===3 && h===60) score+=2.5;
+    if(g.hooks && n===9 && h===60) score+=1.8;
+    if(g.wantsWeight && n===7 && h===60) score+=2.6;
+    if(g.symmetry==="round" && (n===9||n===6) && tankBit) score+=1.8;
+    if(g.symmetry==="round" && n===1 && bitName==="Hexa") score+=2.4;
+    if(g.massBias==="forward" && n===1 && h===60 && attackBit) score+=1.6;
+    if(g.massBias==="forward" && n===5 && h===60) score+=1.5;
+    if(g.symmetry==="claw" && n===3 && h===60) score+=1.3;
+    if(g.symmetry==="elliptical" && n===3 && h===60) score+=1.2;
+    if(g.symmetry==="oval" && (n===6||n===9) && tankBit) score+=1.2;
+    if(g.symmetry==="multi" && n===5 && h===60) score+=1.0;
+    if(n===5 && g.symmetry==="round" && (bitName==="Ball"||bitName==="Orb")) score-=2.4;
+    if(type==="Stamina" && attackBit) score-=1.2;
+    if(type==="Defense" && rawAttack) score-=1.4;
+    if(type==="Attack" && tankBit) score-=0.8;
+
+    if(type==="Attack" && n===1 && h===60 && bitName==="Ball") score+=1.4;
+    if(blade.rogueBoss && n===1 && h===60 && bitName==="Ball") score+=0.8;
 
     const explicit=Number(blade.compatibility?.bits?.[String(bitName).replace(/ /g,"")]);
     const bitFit=Number.isFinite(explicit)?explicit:getBitCompatibility(blade,bit);
@@ -2334,13 +2582,16 @@ function calculateComboStats(blade,ratchet,bit){
         burst:Number(bladeData.card.burst)||70
     };
     const stats=applyComboModifiers(base,bladeData,ratchet,bit);
+    const deltaFromBlade=statDeltaMap(base,stats);
     const ratchetFit=getRatchetGeometryFitV56(bladeData,ratchet);
     const heightFit=getHeightFitV56(bladeData,ratchet.height);
     const explicitBitFit=getBitCompatibility(bladeData,bit)/100;
     const power=comboPowerPoints(stats);
     const ovr=calculateOverallScoreV58(bladeData,ratchet,bit,stats);
     return {
-        stats,power,ovr,meta:ovr,
+        stats,power,ovr,meta:ovr,deltaFromBlade,
+        kitLean:comboKitLean(bladeData,ratchet,bit),
+        kitTrade:statTradeLine(deltaFromBlade),
         compatibility:Math.round((explicitBitFit*.55+heightFit*.25+ratchetFit*.20)*100),
         physical:{ratchetFit,heightFit,bitFit:explicitBitFit,bladeWeight:Number(bladeData.weight)||35,
             bitMode:(bit.name==="Point"||bit.name==="Level")?"Physical behavior":"fixed"}
@@ -2401,7 +2652,12 @@ function createComboSummaryCard(side,combo){
     const tier=tierClass(combo.plateTier||combo.blade?.tier);
     const bossMark=combo.bossMark||"";
     const enhanced=!!combo.enhanced;
-    const statBlock=comboStatGroupsHTML(stats,combo.statDelta||{});
+    const kitLean=combo.kitLean||comboKitLean(combo.blade,combo.ratchet,combo.bit);
+    const kitTrade=combo.kitTrade||(combo.blade?statTradeLine(statDeltaMap(bladeCardStats(combo.blade),stats)):"");
+    const kitDelta=combo.statDelta&&COMBO_STAT_KEYS.some(k=>(Number(combo.statDelta[k])||0)!==0)
+        ? combo.statDelta
+        : (combo.deltaFromBlade||statDeltaMap(bladeCardStats(combo.blade),stats));
+    const statBlock=comboStatGroupsHTML(stats,kitDelta);
     const mod=combo.rogueMod;
     return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
@@ -2412,6 +2668,7 @@ function createComboSummaryCard(side,combo){
         <h2>${combo.blade.name}</h2>
         <p class="vs-parts">${combo.ratchet.name} · ${combo.bit.name}${ratchetArt?`<img class="vs-bit-sprite" src="${ratchetArt}" alt="">`:""}${bitArt?`<img class="vs-bit-sprite" src="${bitArt}" alt="">`:""}</p>
         ${comboRatingBadgesHTML({power,ovr,meta:ovr},stats)}
+        ${kitContextHTML({kicker:"THIS KIT",lean:kitLean,trade:kitTrade})}
         ${typeof SpinWarsAbilities!=="undefined"?SpinWarsAbilities.abilityChipHTML(combo.blade):""}
         ${statBlock}
         ${mod?`<div class="vs-mod-box"><small>MODIFIER</small><b>${mod.name}</b><p>${mod.blurb}</p></div>`:""}
@@ -2442,9 +2699,9 @@ function showComboCard(){
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       ${vsCall}
       <section class="vs-board">
-        ${createComboSummaryCard("player",{...Game.player,stats:playerCombo.stats,power:playerCombo.power,ovr:playerCombo.ovr,meta:playerCombo.ovr,statDelta:playerCombo.delta,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
+        ${createComboSummaryCard("player",{...Game.player,...playerCombo,stats:playerCombo.stats,power:playerCombo.power,ovr:playerCombo.ovr,meta:playerCombo.ovr,statDelta:playerPlate?.delta||playerCombo.deltaFromBlade,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
-        ${createComboSummaryCard("cpu",{...Game.cpu,stats:cpuCombo.stats,power:cpuCombo.power,ovr:cpuCombo.ovr,meta:cpuCombo.ovr,statDelta:cpuCombo.delta,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
+        ${createComboSummaryCard("cpu",{...Game.cpu,...cpuCombo,stats:cpuCombo.stats,power:cpuCombo.power,ovr:cpuCombo.ovr,meta:cpuCombo.ovr,statDelta:cpuPlate?.delta||cpuCombo.deltaFromBlade,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>
       <button class="rip-btn" id="battleButton" type="button">${playLabel}</button>
     </main>`;
@@ -3252,14 +3509,14 @@ function paintTiltChip(s){
         el.style.opacity="";
         return;
     }
-    const n=(s.launchTiltKind||"")==="Hard Tilt"?2:1;
+    const copy=tiltStatCopy(s.launchTiltKind);
     el.hidden=false;
     el.style.opacity=String(Math.max(0.38,leftFrac));
     const plus=el.querySelector(".tilt-plus");
     const minus=el.querySelector(".tilt-minus");
     const ring=el.querySelector(".tilt-chip-fill");
-    if(plus) plus.textContent=`+${n}`;
-    if(minus) minus.textContent=`−${n}`;
+    if(plus) plus.textContent=copy.plus;
+    if(minus) minus.textContent=copy.minus;
     if(ring){
         const c=2*Math.PI*14;
         ring.style.strokeDasharray=String(c);
@@ -3546,9 +3803,23 @@ function tiltBiasFromAngle(angle){
 }
 
 function tiltDurationFromAngle(angle){
-    if(angle==="Hard Tilt") return 5.5;
-    if(angle==="Slight Tilt") return 4.2;
+    if(angle==="Hard Tilt") return 3.3;
+    if(angle==="Slight Tilt") return 2.5;
     return 0;
+}
+
+function tiltStatAmounts(angle){
+    if(angle==="Hard Tilt") return {hit:2,hold:2};
+    if(angle==="Slight Tilt") return {hit:1,hold:1};
+    return {hit:0,hold:0};
+}
+function tiltStatCopy(angle){
+    const n=tiltStatAmounts(angle);
+    if(!(n.hit||n.hold)) return {plus:"",minus:""};
+    return {
+        plus:`+${n.hit} ATK · +${n.hit} KB`,
+        minus:`−${n.hold} DEF · −${n.hold} MOB`
+    };
 }
 
 function tiltTimeLeft(s){
@@ -3580,8 +3851,8 @@ function tickLaunchTilt(s,dt){
 }
 
 function tiltAngleBlurb(angle){
-    if(angle==="Hard Tilt") return "Oval · more hit, less hold · harder rail hook";
-    if(angle==="Slight Tilt") return "Short oval · a little hit · rail can creep";
+    if(angle==="Hard Tilt") return "+2 ATK/KB · −2 DEF/MOB · 3.3s · harder rail hook";
+    if(angle==="Slight Tilt") return "+1 ATK/KB · −1 DEF/MOB · 2.5s · rail can creep";
     return "Neutral orbit. No tilt bias.";
 }
 
@@ -6160,8 +6431,9 @@ function getBattleStatPoints(s,key,fallback=70){
         ? SpinWarsRogue.liveBonus(s,key)
         : 0;
     const tilt=launchTiltFade(s);
-    const tiltDelta=(key==="attack"||key==="knockback")?tilt*2
-        :(key==="defense"||key==="mobility")?-tilt*2
+    const amounts=tiltStatAmounts(s?.launchTiltKind);
+    const tiltDelta=(key==="attack"||key==="knockback")?tilt*amounts.hit
+        :(key==="defense"||key==="mobility")?-tilt*amounts.hold
         :0;
     const total=(Number.isFinite(value)?value:fallback)+live+tiltDelta;
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive()){
@@ -6170,7 +6442,7 @@ function getBattleStatPoints(s,key,fallback=70){
     if(!Number.isFinite(value)){
         return Math.max(50,Math.min(99,fallback));
     }
-    return Math.max(50,Math.min(99,value));
+    return Math.max(50,Math.min(102,total));
 }
 
 function battleFoe(s){

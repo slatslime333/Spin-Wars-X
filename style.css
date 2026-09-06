@@ -1248,8 +1248,39 @@ footer{
 .part-effect .vs-rating{
   padding:4px 6px;
 }
-.part-effect .vs-rating b{font-size:22px}
-.part-effect .vs-rating.power b{font-size:20px}
+.part-effect-trade,
+.kit-lean{
+  margin:0 0 6px;
+  color:#d7c49a;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+  line-height:1.35;
+}
+.kit-lean{
+  color:#9da8b3;
+  font-weight:600;
+}
+.part-effect-trade{color:#e6c56a}
+.blade-card .kit-lean{
+  margin:8px 10px 0;
+  padding:0 2px;
+}
+.part-select-card .kit-lean,
+.part-select-card .part-effect-trade,
+.part-select-card .part-description{
+  font-size:10px;
+  line-height:1.35;
+}
+.sandbox-pick-card .kit-lean,
+.sandbox-pick-card .part-effect-trade{
+  font-size:10px;
+  text-align:left;
+  font-weight:600;
+}
+.vs-copy .kit-lean,
+.vs-copy .part-effect-trade{margin-top:4px}
+.vs-copy .part-effect-kicker{margin-top:8px}
 .part-select-card .vs-stat-groups,
 .part-select-card .rr-stat-groups{margin-top:0}
 .part-select-card .rr-stat-group,
@@ -1845,19 +1876,24 @@ footer{
   flex-direction:column;
   gap:1px;
   font-style:normal;
+  max-width:118px;
 }
 .tilt-plus{
   color:#7dff9f;
-  font-size:12px;
+  font-size:9px;
   font-weight:800;
   letter-spacing:.02em;
+  line-height:1.15;
+  white-space:nowrap;
 }
 .tilt-minus{
   color:#ff8aa0;
-  font-size:12px;
+  font-size:9px;
   font-weight:800;
   font-style:normal;
   letter-spacing:.02em;
+  line-height:1.15;
+  white-space:nowrap;
 }
 .rip-btn.compact{min-height:46px;font-size:22px;flex:1.85}
 
