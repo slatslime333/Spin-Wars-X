@@ -4587,7 +4587,7 @@ function closeDevMatch(matchWinner,playerScore,cpuScore,finishType){
                 onContinue:()=>{
                     if(matchWinner==="cpu"){
                         SpinWarsScoreboard.showRunSummary({
-                            onHome:()=>{SpinWarsRogue.endRun("lost");renderMainMenu();}
+                            onHome:()=>{SpinWarsRogue.goHomeAfterRun("lost");}
                         });
                         return;
                     }
@@ -4809,7 +4809,7 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
                         onContinue:()=>{
                             if(matchWinner==="cpu"){
                                 SpinWarsScoreboard.showRunSummary({
-                                    onHome:()=>{SpinWarsRogue.endRun("lost");renderMainMenu();}
+                                    onHome:()=>{SpinWarsRogue.goHomeAfterRun("lost");}
                                 });
                                 return;
                             }
