@@ -232,6 +232,16 @@ function cpuCompetence(match){
     const t=String(run()?.startingTier||"");
     if(match<=1) return 0;
     let p=0.9;
+    if(isRunLoop()){
+        // Starter kits stay messy longer so early nights are grindable.
+        if(match===2) p=0.18;
+        else if(match===3) p=0.32;
+        else if(match===4) p=0.48;
+        else if(match===5) p=0.62;
+        else if(match<=9) p=0.78;
+        else p=0.94;
+        return Math.random()<p?1:0;
+    }
     if(match===2) p=t==="Gold"?0.45:t==="Bronze"?0.22:0.35;
     else if(match===3) p=t==="Gold"?0.80:t==="Bronze"?0.40:0.60;
     else if(match===4) p=t==="Gold"?1:t==="Bronze"?0.70:0.90;
@@ -475,13 +485,13 @@ function bronzeBand(){
 
 function makeStartScale(blade,ratchet,bit){
     const scale=emptyBonuses();
-    if(isRunLoop()) return scale;
     const tier=String(blade?.tier||"");
     if(tier==="Bronze"||!blade) return scale;
     const band=bronzeBand();
     const mine=comboBase(blade,ratchet,bit);
     // Silver/Gold sit a step above Bronze, not a full-tier jump.
     // Keep the shape: only pull highs down, leave dump stats dump.
+    // Same Bronze-form start in Rogue Run and Tier Rogue.
     const lead=tier==="Gold"?2.2:1.0;
     STATS.forEach(k=>{
         const target=(Number(band[k])||70)+lead;
@@ -551,7 +561,25 @@ function cpuStackPlan(){
     return {powerN,toyN,padN};
 }
 
+function runCpuNightMix(match,boss){
+    // Rogue Run climb: farm early, squeeze late. Blade sticker is not the door.
+    const m=Math.max(1,Number(match)||1);
+    if(boss){
+        if(m<=10) return {easy:0.22,even:0.55,hard:0.23};
+        if(m<=20) return {easy:0.16,even:0.52,hard:0.32};
+        return {easy:0.10,even:0.48,hard:0.42};
+    }
+    if(m<=3) return {easy:0.48,even:0.42,hard:0.10};
+    if(m<=6) return {easy:0.40,even:0.48,hard:0.12};
+    if(m<=9) return {easy:0.34,even:0.50,hard:0.16};
+    if(m<=14) return {easy:0.28,even:0.52,hard:0.20};
+    if(m<=19) return {easy:0.22,even:0.52,hard:0.26};
+    if(m<=25) return {easy:0.16,even:0.50,hard:0.34};
+    return {easy:0.12,even:0.46,hard:0.42};
+}
+
 function cpuNightMix(tier,match,boss){
+    if(isRunLoop()) return runCpuNightMix(match,boss);
     const t=String(tier||"");
     const m=Math.max(1,Number(match)||1);
     if(boss){
@@ -591,7 +619,14 @@ function cpuStackLead(){
     const night=r?.cpuNight||"even";
     if(m<=2) return 0;
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
-    if(t==="Bronze"){
+    if(isRunLoop()){
+        // Extra CPU cards track the night, not whether you unlocked a Gold blade.
+        if(m<=5){ even=0.78; plus1=0.20; plus2=0.02; plus3=0; }
+        else if(m<=10){ even=0.62; plus1=0.30; plus2=0.08; plus3=0; }
+        else if(m<=20){ even=0.42; plus1=0.40; plus2=0.16; plus3=0.02; }
+        else if(m<=25){ even=0.28; plus1=0.42; plus2=0.24; plus3=0.06; }
+        else { even=0.18; plus1=0.40; plus2=0.30; plus3=0.12; }
+    }else if(t==="Bronze"){
         if(m<=5){ even=0.70; plus1=0.26; plus2=0.04; plus3=0; }
         else if(m<=12){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
         else { even=0.68; plus1=0.26; plus2=0.06; plus3=0; }
@@ -1029,6 +1064,27 @@ function cpuPowerTarget(playerPow,match,boss){
     const night=r.cpuNight||cpuNightRoll();
     r.cpuNight=night;
     let band;
+    if(isRunLoop()){
+        // Track the player so better parts ease the climb; early nights stay soft.
+        if(boss){
+            if(isSharkNight(match)) band=1.06;
+            else if(isMiniNight(match) && match>Math.ceil(finalMatch()/2)) band=1.04;
+            else band=1.025;
+            if(night==="easy") band-=0.02;
+            if(night==="hard") band+=0.015;
+        }else if(night==="easy") band=0.90+Math.random()*0.04;
+        else if(night==="even") band=0.94+Math.random()*0.04;
+        else band=0.98+Math.random()*0.03;
+        if(!boss){
+            if(match<=5) band=Math.min(band, night==="hard"?0.98:0.96);
+            else if(match<=10) band=Math.min(band, night==="hard"?1.01:0.99);
+            else if(match<=20) band=Math.min(band, night==="hard"?1.03:1.01);
+            else if(match<=25) band=clamp(band,0.96,1.04);
+            else band=clamp(band,0.98,1.06);
+            band=clamp(band,0.88,1.06);
+        }
+        return playerPow*band;
+    }
     if(boss){
         if(isSharkNight(match)) band=1.08;
         else if(isMiniNight(match) && match>Math.ceil(finalMatch()/2)) band=1.055;
@@ -1132,7 +1188,9 @@ function lockSharkKit(){
 }
 
 function rarityRoll(match,tier){
-    const t=String(tier||"");
+    // Rogue Run shops stay generous so grinding feels like progress.
+    // Form evolve still comes from nextFormCard / pity — not from Gold door stinginess.
+    const t=isRunLoop()?"Bronze":String(tier||"");
     let common=62,uncommon=24,rare=9,legendary=4,evolve=1;
     if(t==="Bronze"){rare+=4;legendary+=1.5;evolve+=1.2;}
     if(t==="Gold"){common+=12;uncommon+=2;rare-=3;legendary-=1;evolve+=0.6;}
@@ -1811,7 +1869,7 @@ function createRun(blade,ratchet,bit,opts){
         hubsWithoutForm:0,
         blade,ratchet:parts.ratchet,bit:parts.bit,
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
-        startScale:loop==="run"?emptyBonuses():makeStartScale(blade,parts.ratchet,parts.bit),
+        startScale:makeStartScale(blade,parts.ratchet,parts.bit),
         bonuses:emptyBonuses(),
         activeModifier:null,
         history:[],
@@ -2337,7 +2395,7 @@ function hydrate(data){
         Game.rogue.currentRogueTier="Bronze";
     }
     if(!raw.startScale){
-        Game.rogue.startScale=Game.rogue.loop==="run"?emptyBonuses():makeStartScale(
+        Game.rogue.startScale=makeStartScale(
             Game.rogue.starterBlade,
             Game.rogue.starterRatchet,
             Game.rogue.starterBit
