@@ -733,6 +733,7 @@ function ensureRunShape(r){
     r.matchBuffs=Object.assign({burst2:0,burst2Stat:null,dashHaste:false}, r.matchBuffs||{});
     r.abilityBonus=Number(r.abilityBonus)||0;
     r.blessed=!!r.blessed;
+    r.earnBoost=!!r.earnBoost;
     r.hellsChainPct=Number(r.hellsChainPct)||0;
     r.hellsChainLastAt=Number(r.hellsChainLastAt)||0;
     return r;
@@ -790,6 +791,14 @@ function makeBlessedCard(){
         body:"After every game get +2 in a random stat. Permanent."
     };
 }
+function makeEarnBoostCard(){
+    return {
+        id:"earn-boost-"+Math.random().toString(16).slice(2),
+        rarity:"uncommon",kind:"earn-boost",shopId:"earnBoost",
+        title:"PAYDAY",kicker:"UNCOMMON",
+        body:"+35% money and EXP from every night for the rest of this run. One and done."
+    };
+}
 function makePlus1Plus1Card(){
     const a=pick(STATS);
     const b=pick(STATS.filter(s=>s!==a))||a;
@@ -813,6 +822,7 @@ function shopBlocked(id){
     if(id==="burst2") return (Number(r.matchBuffs?.burst2)||0)>0;
     if(CONSUMABLE_KEYS.includes(id)) return (Number(r.consumables?.[id])||0)>0;
     if(id==="blessed") return !!r.blessed;
+    if(id==="earnBoost") return !!r.earnBoost;
     if(id==="dashHaste") return !!r.matchBuffs?.dashHaste;
     if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1;
     return false;
@@ -835,6 +845,7 @@ function makeOfferCard(rarity,blade,modifierId,opts){
             .map(makeConsumableCard);
         const trades=TRADEOFFS.map(([a,aa,b,ba])=>makeStatCard("uncommon",a,aa,b,ba));
         const pool=cons.concat(trades);
+        if(isRunLoop() && !shopBlocked("earnBoost")) pool.push(makeEarnBoostCard());
         return pool.length?pick(pool):makePlus2Minus1Card();
     }
     if(rarity==="rare"){
@@ -1422,6 +1433,13 @@ function applyBlessedCard(card){
     r.blessed=true;
     return {before,after:{...playerEffective()},card};
 }
+function applyEarnBoostCard(card){
+    const r=run();
+    ensureRunShape(r);
+    const before={...playerEffective()};
+    r.earnBoost=true;
+    return {before,after:{...playerEffective()},card};
+}
 function applyDashHasteCard(card){
     const r=run();
     ensureRunShape(r);
@@ -1480,6 +1498,7 @@ function applyDebugCard(card){
     if(card.kind==="ability-swap") return "ability-swap";
     if(card.kind==="consumable") applyConsumableCard(card);
     if(card.kind==="blessed") applyBlessedCard(card);
+    if(card.kind==="earn-boost") applyEarnBoostCard(card);
     if(card.kind==="dash-haste") applyDashHasteCard(card);
     if(card.kind==="ability-charge") applyAbilityChargeCard(card);
     return "ok";
@@ -1492,6 +1511,7 @@ function allCatalog(){
     list.push(makeBurst2Card());
     CONSUMABLE_KEYS.forEach(id=>list.push(makeConsumableCard(id)));
     TRADEOFFS.forEach(([a,aa,b,ba])=>list.push(makeStatCard("uncommon",a,aa,b,ba)));
+    if(isRunLoop()) list.push(makeEarnBoostCard());
     list.push(makeDashHasteCard());
     list.push(makeAbilityChargeCard());
     list.push(makePlus1Plus1Card());
@@ -1531,6 +1551,7 @@ function commentaryFor(result){
     if(card.kind==="ability-swap") return `${name} takes ${result.abilityName||"a new kit"}. The old one is gone.`;
     if(card.kind==="consumable") return `${name} pockets ${card.title}. ${card.games||CONSUMABLE_META[card.consumable]?.games||1} games.`;
     if(card.kind==="blessed") return `${name} is Blessed. After every match a random stat climbs +2.`;
+    if(card.kind==="earn-boost") return `${name} locked in Payday. Money and EXP pay 35% more for the rest of the run.`;
     if(card.kind==="dash-haste") return `${name} dashes 15% sooner this game.`;
     if(card.kind==="ability-charge") return `${name} carries an extra ability charge for the rest of the run.`;
     return "Build updated.";
@@ -1683,6 +1704,9 @@ function upgradeStack(side){
         if(r.blessed){
             boxes.push({kicker:"PERMANENT",title:"BLESSED",rarity:"legendary"});
         }
+        if(r.earnBoost){
+            boxes.push({kicker:"PERMANENT",title:"PAYDAY +35%",rarity:"uncommon"});
+        }
         if((Number(r.abilityBonus)||0)>0){
             boxes.push({kicker:"PERMANENT",title:`ABILITY +${r.abilityBonus}`,rarity:"rare"});
         }
@@ -1758,6 +1782,7 @@ function toggleDev(){
         r.matchBuffs={burst2:0,burst2Stat:null,dashHaste:false};
         r.abilityBonus=0;
         r.blessed=false;
+        r.earnBoost=false;
         r.hellsChainPct=0;
         renderDevList();
         refreshAfterDebug();
@@ -1890,6 +1915,7 @@ function createRun(blade,ratchet,bit,opts){
         matchBuffs:{burst2:0,burst2Stat:null,dashHaste:false},
         abilityBonus:0,
         blessed:false,
+        earnBoost:false,
         hellsChainPct:0,
         hellsChainLastAt:0,
         perfectLaunchMatches:0,
@@ -2153,6 +2179,7 @@ function buildSave(){
             },
             abilityBonus:Number(r.abilityBonus)||0,
             blessed:!!r.blessed,
+            earnBoost:!!r.earnBoost,
             hellsChainPct:Number(r.hellsChainPct)||0,
             perfectLaunchMatches:Number(r.perfectLaunchMatches)||0,
             flavorCall:r.flavorCall||null,
@@ -2382,6 +2409,7 @@ function hydrate(data){
         },
         abilityBonus:Number(raw.abilityBonus)||0,
         blessed:!!raw.blessed,
+        earnBoost:!!raw.earnBoost,
         hellsChainPct:Number(raw.hellsChainPct)||0,
         hellsChainLastAt:0,
         perfectLaunchMatches:Number(raw.perfectLaunchMatches)||0,
@@ -2722,7 +2750,7 @@ function grantRandomUpgrade(){
         const rolled=makeOfferCard(rarityRoll(r.matchIndex,r.startingTier),r.blade,r.activeModifier?.id);
         if(!rolled) continue;
         if(rolled.kind==="reforge"||rolled.kind==="ability-swap") continue;
-        if(rolled.kind==="consumable"||rolled.kind==="blessed"||rolled.kind==="dash-haste"||rolled.kind==="ability-charge") continue;
+        if(rolled.kind==="consumable"||rolled.kind==="blessed"||rolled.kind==="earn-boost"||rolled.kind==="dash-haste"||rolled.kind==="ability-charge") continue;
         if(rolled.shopId==="burst2") continue;
         if(rolled.kind==="evolve"){
             const need=nextFormCard();
@@ -3269,6 +3297,7 @@ function chooseOffer(index){
     else if(card.kind==="evolve") result=applyEvolveCard(card);
     else if(card.kind==="consumable") result=applyConsumableCard(card);
     else if(card.kind==="blessed") result=applyBlessedCard(card);
+    else if(card.kind==="earn-boost") result=applyEarnBoostCard(card);
     else if(card.kind==="dash-haste") result=applyDashHasteCard(card);
     else if(card.kind==="ability-charge") result=applyAbilityChargeCard(card);
     else result=applyEvolveCard(card);
@@ -3406,7 +3435,7 @@ function showUpgradeResult(){
     if(card.kind==="consumable"){
         body=`<p class="rogue-mod-line">${card.title} · ${card.games||CONSUMABLE_META[card.consumable]?.games||1} GAMES</p><p>${card.body||""}</p>`+body;
     }
-    if(card.kind==="blessed"||card.kind==="dash-haste"||card.kind==="ability-charge"){
+    if(card.kind==="blessed"||card.kind==="earn-boost"||card.kind==="dash-haste"||card.kind==="ability-charge"){
         body=`<p class="rogue-mod-line">${card.title}</p><p>${card.body||""}</p>`+body;
     }
     const app=document.getElementById("app");
