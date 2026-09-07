@@ -22,7 +22,7 @@ const TRACK=[
     {n:5,kind:"ratchet",name:"1-80"},
     {n:6,kind:"blade",id:"arrow_wizard"},
     {n:7,kind:"ratchet",name:"6-80"},
-    {n:8,kind:"blade",id:"leon_claw"},
+    {n:8,kind:"blade",id:"leon_crest"},
     {n:9,kind:"ratchet",name:"7-80"},
     {n:10,kind:"bit",name:"Low Flat"},
     {n:11,kind:"ratchet",name:"9-80"},
@@ -36,7 +36,7 @@ const TRACK=[
     {n:19,kind:"ratchet",name:"4-60"},
     {n:20,kind:"bit",name:"Kick"},
     {n:21,kind:"bundle",parts:[{kind:"ratchet",name:"7-70"},{kind:"ratchet",name:"1-70"}]},
-    {n:22,kind:"blade",id:"leon_crest"},
+    {n:22,kind:"blade",id:"leon_claw"},
     {n:23,kind:"bit",name:"Low Rush"},
     {n:24,kind:"blade",id:"dran_sword"},
     {n:25,kind:"ratchet",name:"7-60"},
@@ -94,17 +94,17 @@ function levelNeed(level){
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?10:5;
-    const base=win?(12+m):(6+Math.floor(m/2));
-    return base+(opts.shark&&win?48:0);
+    if(opts.endless) return win?12:6;
+    const base=win?(14+m):(7+Math.floor(m/2));
+    return base+(opts.shark&&win?55:0);
 }
 
 function nightExp(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?8:4;
-    const base=win?(15+m):(6+Math.floor(m/2));
-    return base+(opts.shark&&win?36:0);
+    if(opts.endless) return win?10:5;
+    const base=win?(17+m):(7+Math.floor(m/2));
+    return base+(opts.shark&&win?42:0);
 }
 
 function cpuLane(match){
