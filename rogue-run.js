@@ -843,8 +843,9 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p><strong>EXP</strong> only levels the account. <strong>Money</strong> only buys Track rows. They never swap jobs.</p>
             <p>Garage equips what you own. Track is the full unlock order — locked rows still show name, level, and price. PLAY snapshots the hub Bey. A night is first to 7, shop cards after a win, same as Tier Rogue.</p>
-            <p>Minis at 10 and 20. Shark Scale at 30. Then endless. Mid-run reforges stay on that night only and add a small +1 chip. They do not rewrite the Garage.</p>
-            <p>Nights 26–29 can roll any face. The fight power is the night, not the sticker tier. PC: Space dashes, M pops the kit. Those hints only print on a pointer desktop.</p>
+            <p>Silver and Gold blades open in Bronze form — same personality, highs pulled toward Bronze with a small lead. Evolve through the night the same way as Tier Rogue. Gold never Enhances. Form cards stop in endless.</p>
+            <p>Difficulty is the climb, not the blade sticker. Early nights stay farmable on starter kits so you can earn EXP and money. Better parts make later nights easier. Minis at 10 and 20. Shark Scale at 30. Then endless.</p>
+            <p>Mid-run reforges stay on that night only and add a small +1 chip. They do not rewrite the Garage. Nights 26–29 can roll any face. PC: Space dashes, M pops the kit. Those hints only print on a pointer desktop.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showHub()));
