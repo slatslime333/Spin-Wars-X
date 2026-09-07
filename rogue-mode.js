@@ -3071,7 +3071,7 @@ function showResults(){
         ? `<p class="rogue-result-copy">Take the fallen Bey for the rest of the night, or keep the one that beat it.</p>
         <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
         <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
-        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":"BACK TO TITLE"}</button>`;
+        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":(isRunLoop()?"ROGUE RUN":"BACK TO TITLE")}</button>`;
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
@@ -3084,12 +3084,7 @@ function showResults(){
     const goHub=()=>{openShopOrScenario();};
     document.getElementById("rogueResultsGo")?.addEventListener("click",()=>{
         if(!win){
-            const home=()=>{
-                endRun("lost");
-                if(global.SpinWarsRogueRun && (Game.rogue?.loop==="run"||Game.mode==="rogue-run")){
-                    SpinWarsRogueRun.afterRunHome("lost");
-                }else renderMainMenu();
-            };
+            const home=()=>goHomeAfterRun("lost");
             if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
                 SpinWarsScoreboard.showRunSummary({onHome:home});
                 return;
@@ -3113,11 +3108,7 @@ function showRunWin(){
     Game.screen="rogueWin";
     if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.showRunSummary){
         SpinWarsScoreboard.showRunSummary({
-            onHome:()=>{
-                endRun("won");
-                if(isRunLoop() && global.SpinWarsRogueRun) SpinWarsRogueRun.afterRunHome("won");
-                else renderMainMenu();
-            }
+            onHome:()=>goHomeAfterRun("won")
         });
         persist();
         return;
@@ -3129,14 +3120,20 @@ function showRunWin(){
         <p class="win-name">${r.blade.name}</p>
         <p class="win-score">6 — 0 RUN</p>
         <p class="rogue-result-copy">The Bey you started is not the Bey that finished.</p>
-        <button class="rip-btn" id="rogueWinHome" type="button">TITLE</button>
+        <button class="rip-btn" id="rogueWinHome" type="button">${isRunLoop()?"ROGUE RUN":"TITLE"}</button>
     </main>`;
-    document.getElementById("rogueWinHome").onclick=()=>{
-        endRun("won");
-        if(isRunLoop() && global.SpinWarsRogueRun) SpinWarsRogueRun.afterRunHome("won");
-        else renderMainMenu();
-    };
+    document.getElementById("rogueWinHome").onclick=()=>goHomeAfterRun("won");
     persist();
+}
+
+function goHomeAfterRun(status){
+    const runLoop=isRunLoop()||Game.rogue?.loop==="run"||Game.mode==="rogue-run";
+    endRun(status);
+    if(runLoop && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.afterRunHome==="function"){
+        SpinWarsRogueRun.afterRunHome(status);
+        return;
+    }
+    showLanding();
 }
 
 function endRun(status){
@@ -3453,6 +3450,7 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     };
     Game.battle=Game.battle||{};
     Game.battle.score={player:playerScore,cpu:cpuScore};
+    if(winner!=="player") r.runStatus="lost";
     persist();
     if(isRunLoop() && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.onNightOver==="function"){
         SpinWarsRogueRun.onNightOver(winner==="player", r.matchIndex, isSharkNight(r.matchIndex));
@@ -3595,7 +3593,7 @@ function flavorCallLine(){
 global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
-    mountDevButton,endRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
+    mountDevButton,endRun,goHomeAfterRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,

@@ -252,8 +252,15 @@ function persistLive(){
     const R=global.SpinWarsRogue;
     if(!R||typeof R.buildSave!=="function") return false;
     if(!Game.rogue||Game.rogue.loop!=="run") return false;
+    if(Game.rogue.runStatus==="lost"||Game.rogue.runStatus==="won"){
+        clearLive();
+        return false;
+    }
     const data=R.buildSave();
-    if(!data||!data.rogue) return false;
+    if(!data||!data.rogue){
+        if(Game.rogue.runStatus==="lost"||Game.rogue.runStatus==="won") clearLive();
+        return false;
+    }
     data.rogue.loop="run";
     data.rogue.runChip=Game.rogue.runChip||{};
     let json="";
@@ -277,6 +284,11 @@ function loadLive(){
 function peekLive(){
     const data=loadLive();
     if(!data) return null;
+    const st=data.rogue?.runStatus;
+    if(st==="lost"||st==="won"){
+        clearLive();
+        return null;
+    }
     return {
         match:data.rogue.matchIndex,
         blade:data.rogue.bladeName,
@@ -644,6 +656,12 @@ function resumeLive(){
         showHub();
         return false;
     }
+    const st=data.rogue?.runStatus;
+    if(st==="lost"||st==="won"){
+        clearLive();
+        showHub();
+        return false;
+    }
     data.rogue.loop="run";
     return R.hydrateAndResume(data);
 }
@@ -952,6 +970,7 @@ function devAct(id){
 function afterRunHome(status){
     archiveAndClear(status);
     Game.rogue=null;
+    Game.mode="rogue-run";
     showHub();
 }
 

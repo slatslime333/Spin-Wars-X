@@ -525,7 +525,7 @@
                 <li>X-Rail Rides <b>${r.xrailRides||0}</b></li>
                 <li>Boss Bonuses <b>${pts(r.bossBonus)}</b></li>
             </ul>
-            <button class="rip-btn" id="sbRunHome" type="button">TITLE</button>
+            <button class="rip-btn" id="sbRunHome" type="button">${opts.homeLabel||((global.Game?.rogue?.loop==="run"||global.Game?.mode==="rogue-run")?"ROGUE RUN":"TITLE")}</button>
         </main>`;
         document.getElementById("sbRunHome")?.addEventListener("click",()=>{
             if(typeof opts.onHome==="function") opts.onHome();
