@@ -492,6 +492,7 @@ function makeStartScale(blade,ratchet,bit){
     // Silver/Gold sit a step above Bronze, not a full-tier jump.
     // Keep the shape: only pull highs down, leave dump stats dump.
     // Same Bronze-form start in Rogue Run and Tier Rogue.
+    // Recompute from the live ratchet/bit so garage swaps still move the bronze-form kit.
     const lead=tier==="Gold"?2.2:1.0;
     STATS.forEach(k=>{
         const target=(Number(band[k])||70)+lead;
@@ -499,6 +500,29 @@ function makeStartScale(blade,ratchet,bit){
         if(have>target) scale[k]=round((target-have)*0.93);
     });
     return scale;
+}
+
+/** Hub/garage preview: full combo for Bronze; Silver/Gold use live parts then bronze-form scale. */
+function previewRunCombo(blade,ratchet,bit){
+    if(!blade||!ratchet||!bit||typeof calculateComboStats!=="function") return null;
+    const raw=calculateComboStats(blade,ratchet,bit);
+    if(!raw) return null;
+    const scale=makeStartScale(blade,ratchet,bit);
+    const stats=mergeStats(raw.stats,scale);
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):raw.power;
+    const ovr=typeof calculateOverallScoreV58==="function"
+        ? calculateOverallScoreV58(blade,ratchet,bit,stats)
+        : raw.ovr;
+    const card=typeof bladeCardStats==="function"?bladeCardStats(blade):null;
+    return {
+        ...raw,
+        stats,
+        power,
+        ovr,
+        meta:ovr,
+        startScale:scale,
+        deltaFromBlade:card&&typeof statDeltaMap==="function"?statDeltaMap(card,stats):(raw.deltaFromBlade||null)
+    };
 }
 
 function playerEffective(){
@@ -3696,7 +3720,8 @@ global.SpinWarsRogue={
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
-    luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
+    luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint,
+    makeStartScale,previewRunCombo
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
