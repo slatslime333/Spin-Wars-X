@@ -7467,8 +7467,9 @@ function newPhysicsCollision(dt){
         cKnockRaw*=1.24;
         pKnockRaw*=0.82;
     }else if(!pAttackBit && !cAttackBit){
-        pKnockRaw*=1.55;
-        cKnockRaw*=1.55;
+        // Tank vs tank: a touch more shove so free-space pockets stay reachable under the 0.086 cap.
+        pKnockRaw*=1.62;
+        cKnockRaw*=1.62;
     }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
