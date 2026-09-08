@@ -562,7 +562,7 @@
         return true;
     }
 
-    function applyShove(target,dx,dy,mag){
+    function applyShove(target,dx,dy,mag,opts){
         const len=Math.hypot(dx,dy)||1;
         const m=Math.min(KNOCK_CAP, mag);
         target.vx+= (dx/len)*m;
@@ -570,6 +570,12 @@
         target.lastImpactForce=m;
         target.lastImpactAt=nowMs();
         target.impactMomentumState=Math.max(target.impactMomentumState||0, clamp(m/0.090,0.14,0.62));
+        if(opts?.fromAbility && opts.attackerSide){
+            const victimSide=target.side==="cpu"||target===bey("cpu")?"cpu":"player";
+            if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.markAbilityKnock){
+                SpinWarsScoreboard.markAbilityKnock(opts.attackerSide, victimSide);
+            }
+        }
     }
 
     function onClashKnock(p,c,knocks){
@@ -681,7 +687,8 @@
         const mag=Math.min(KNOCK_CAP, 0.086*avg);
         const ox=-(atk.swordFrom?.x||1);
         const oy=-(atk.swordFrom?.y||0);
-        applyShove(def, ox, oy, mag);
+        const atkSide=atk.side==="cpu"||atk===bey("cpu")?"cpu":"player";
+        applyShove(def, ox, oy, mag,{fromAbility:true,attackerSide:atkSide});
         applyShove(atk, atk.swordFrom?.x||1, atk.swordFrom?.y||0, mag*0.4);
         atk.abilityHold=false;
         def.abilityHold=false;
@@ -791,14 +798,21 @@
             const span=(Number(s.hurricaneSpanMs)||HURRICANE_MS)/1000;
             const slice=Math.min(s.hurricaneGainLeft||0, (s.hurricaneGain||0)*(dt/span));
             s.hurricaneGainLeft=Math.max(0,(s.hurricaneGainLeft||0)-slice);
-            s.rpm=clamp(s.rpm+slice,0,1);
+            if(slice>0){
+                s.rpm=clamp(s.rpm+slice,0,1);
+                const owner=s===p?"player":"cpu";
+                if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.addAbilityRestore){
+                    SpinWarsScoreboard.addAbilityRestore(owner, slice*100);
+                }
+            }
             const foe=s===p?c:p;
             if(!foe) return;
             const d=Math.hypot(s.x-foe.x,s.y-foe.y);
             if(d<STORM_R && d>1e-4){
                 const nx=(foe.x-s.x)/d, ny=(foe.y-s.y)/d;
+                const owner=s===p?"player":"cpu";
                 if(!foe.stormHit){
-                    applyShove(foe,nx,ny,0.042);
+                    applyShove(foe,nx,ny,0.042,{fromAbility:true,attackerSide:owner});
                     foe.stormHit=true;
                 }
                 foe.vx+=nx*0.00072;
@@ -853,7 +867,7 @@
                     const ny=d>1e-4?(foe.y-k.y)/d:0;
                     const sp=Math.hypot(foe.vx,foe.vy);
                     if(sp>1e-6){ foe.vx*=0.18; foe.vy*=0.18; }
-                    applyShove(foe,nx,ny,0.032);
+                    applyShove(foe,nx,ny,0.032,{fromAbility:true,attackerSide:s===p?"player":"cpu"});
                 }
             });
         });
@@ -968,7 +982,7 @@
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
             popHit(foe,dmg);
-            applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.70);
+            applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.70,{fromAbility:true,attackerSide:pg.side});
             popup("PEGASUS HIT");
         }else{
             s.rpm=clamp(s.rpm-0.15,0,1);
