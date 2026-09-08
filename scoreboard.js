@@ -175,10 +175,13 @@
         }
     }
     function addAbilityDamage(dealer,amount){
-        if(amount<=0) return;
+        ensureMatch();
+        const hud=Math.max(0,Number(amount)||0);
+        if(hud<=0) return;
         const s=sideOf(dealer);
-        s.abilityDamage=(Number(s.abilityDamage)||0)+amount;
-        noteEvent(dealer,`${commas(amount)} Ability Damage`);
+        if(!s) return;
+        s.abilityDamage=(Number(s.abilityDamage)||0)+hud;
+        noteEvent(dealer,`${commas(hud)} Ability Damage`);
     }
     function addAbilityRestore(side,amount){
         ensureMatch();
@@ -651,7 +654,7 @@
     global.SpinWarsScoreboard={
         SCORE, beginMatch, beginPoint, beginRun,
         observe, onDash, onFinish,
-        addAbilityRestore, markAbilityKnock, rpmPts, abilityPts,
+        addAbilityRestore, addAbilityDamage, markAbilityKnock, rpmPts, abilityPts,
         showMatchSummary, showRunSummary,
         packMatch, tally, baseScore, breakdown, gameQuality, exportRun, importRun, runFinal
     };

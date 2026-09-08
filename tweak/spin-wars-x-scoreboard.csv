@@ -9,7 +9,7 @@ SCORE,rpm-b1p,RPM band 1 per,HUD RPM per point in band 1 (0–250).,RPM_BAND1_PE
 SCORE,rpm-b2,RPM band 2 end,Band 2 covers damage from band1 to this.,RPM_BAND2_TO,500,hud rpm,,
 SCORE,rpm-b2p,RPM band 2 per,HUD RPM per point in band 2 (250–500). Denser than band 1.,RPM_BAND2_PER,4,hud rpm per pt,,
 SCORE,rpm-b3p,RPM band 3 per,HUD RPM per point above 500 toward the ~700 ceiling. Densest band.,RPM_BAND3_PER,3,hud rpm per pt,,700 damage ≈ 178 pts.
-SCORE,ability,Ability,Ability damage uses RPM bands. Restore uses ABILITY_RESTORE_PER. Ability-caused Over/Xtreme add pocket bonuses.,ABILITY_SCORE,,,,Damage kits + Hurricane restore + ability Over/Xtreme.
+SCORE,ability,Ability,Ability damage (kits + Iron Skin blocked clash RPM) uses RPM bands. Restore uses ABILITY_RESTORE_PER. Ability-caused Over/Xtreme add pocket bonuses.,ABILITY_SCORE,,,,Damage kits + Iron Skin absorb + Hurricane restore + ability Over/Xtreme.
 SCORE,ab-restore,Ability restore per,HUD restore RPM per ability point (Hurricane +10 → 5 pts at 2).,ABILITY_RESTORE_PER,2,hud rpm per pt,,
 SCORE,ab-over,Ability Over pocket,Bonus on the Ability line when an ability knock pockets Over.,ABILITY_POCKET_OVER,120,pts,,
 SCORE,ab-xtreme,Ability Xtreme pocket,Bonus on the Ability line when an ability knock pockets Xtreme.,ABILITY_POCKET_XTREME,180,pts,,
