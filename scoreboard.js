@@ -10,12 +10,12 @@
         XTREME_FINISH:500,
         BIG_IMPACT:50,
         BIG_IMPACT_MIN_HUD:8,
-        /* Progressive RPM → pts. Early damage pays less dense; high totals pay denser. */
-        RPM_BAND1_TO:500,
-        RPM_BAND1_PER:7,
-        RPM_BAND2_TO:1200,
-        RPM_BAND2_PER:5,
-        RPM_BAND3_PER:4,
+        /* Progressive RPM → pts. Scale sits around max ~700 HUD (100×7 rounds). */
+        RPM_BAND1_TO:250,
+        RPM_BAND1_PER:5,
+        RPM_BAND2_TO:500,
+        RPM_BAND2_PER:4,
+        RPM_BAND3_PER:3,
         HUD_RPM_SCALE:100,
         ABILITY_RESTORE_PER:2,
         ABILITY_POCKET_OVER:120,
@@ -677,7 +677,7 @@
                 }
                 beginMatch();
                 Object.assign(state.match.player,{
-                    rpmDamage:1240,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
+                    rpmDamage:520,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
                     dashes:7,xrailRides:5,abilityDamage:0,abilityRestore:20,abilityPockets:1,abilityPocketPts:180,
                     peakRpm:0.97,
                     bestMul:SCORE.MUL_EXCEPTIONAL,
@@ -689,7 +689,7 @@
                     ]
                 });
                 Object.assign(state.match.cpu,{
-                    rpmDamage:860,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
+                    rpmDamage:380,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
                     dashes:4,xrailRides:2,abilityDamage:40,abilityRestore:0,abilityPockets:0,abilityPocketPts:0,
                     peakRpm:0.88,
                     bestMul:SCORE.MUL_STRONG,

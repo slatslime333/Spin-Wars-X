@@ -982,7 +982,7 @@
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
             popHit(foe,dmg);
-            applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.70,{fromAbility:true,attackerSide:pg.side});
+            applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.92,{fromAbility:true,attackerSide:pg.side});
             popup("PEGASUS HIT");
         }else{
             s.rpm=clamp(s.rpm-0.15,0,1);
