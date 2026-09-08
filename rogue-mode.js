@@ -2863,9 +2863,16 @@ function scenarioCopy(){
             title:"THE COIN FLIP",
             kicker:"SIDELINE",
             body:"A stranger parks a coin on the table and grins. \"Heads or tails. Your call.\"",
+            shuffleChoices:true,
             choices:[
-                {id:"heads",label:"HEADS"},
-                {id:"tails",label:"TAILS"},
+                {id:"heads",label:"HEADS",odds:[
+                    {p:"50%",text:"+5% random stat"},
+                    {p:"50%",text:"−5% random stat"}
+                ]},
+                {id:"tails",label:"TAILS",odds:[
+                    {p:"50%",text:"+5% random stat"},
+                    {p:"50%",text:"−5% random stat"}
+                ]},
                 {id:"kick",label:"KICK ROCKS"}
             ]
         },
@@ -3004,13 +3011,16 @@ function resolveScenario(id,choice){
     }
     if(id==="coin-flip"){
         if(choice==="kick") return {body:"You tell them to kick rocks. The coin stays on the table."};
+        const call=choice==="tails"?"tails":"heads";
+        const flip=Math.random()<0.5?"heads":"tails";
+        const face=flip==="heads"?"Heads":"Tails";
         const stat=pick(STATS);
-        if(choice==="heads"){
+        if(call===flip){
             const d=applyPercentBonus(stat,0.05);
-            return {body:`Heads. ${you} takes ${pctLabel(stat,d,"+")}.`};
+            return {body:`${face}. ${you} called it — ${pctLabel(stat,d,"+")}.`};
         }
         const d=applyPercentBonus(stat,-0.05);
-        return {body:`Tails. ${you} drops ${pctLabel(stat,d,"−")}.`};
+        return {body:`${face}. Miss. ${you} drops ${pctLabel(stat,d,"−")}.`};
     }
     if(id==="shop-secret"){
         r.shopGuarantee="rare-or-legendary";
@@ -3106,7 +3116,9 @@ function showScenario(id){
     const pack=scenarioCopy()[id]||scenarioCopy()["coupon"];
     Game.screen="rogueScenario";
     const app=document.getElementById("app");
-    const choices=pack.choices||[];
+    const rawChoices=pack.choices||[];
+    // Coin Flip always shuffles HEADS / TAILS / KICK so the layout never telegraphs the call.
+    const choices=pack.shuffleChoices?shuffle(rawChoices):rawChoices;
     const btns=choices.length
         ? choices.map(c=>`<div class="rogue-scenario-choice">
             <button class="menu-btn ${c.id==="kick"||c.id==="leave"||c.id==="deny"||c.id==="long"?"silver":"gold"}" type="button" data-scene-choice="${c.id}">${c.label}</button>
