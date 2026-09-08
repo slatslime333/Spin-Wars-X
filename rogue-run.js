@@ -210,8 +210,41 @@ function loadoutParts(){
 
 function comboOfLoadout(){
     const p=loadoutParts();
-    if(!p.blade||!p.ratchet||!p.bit||typeof calculateComboStats!=="function") return null;
+    if(!p.blade||!p.ratchet||!p.bit) return null;
+    // Garage/hub: Bronze keeps full combo; Silver/Gold use bronze-form scale from live ratchet/bit.
+    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.previewRunCombo==="function"){
+        return SpinWarsRogue.previewRunCombo(p.blade,p.ratchet,p.bit);
+    }
+    if(typeof calculateComboStats!=="function") return null;
     return calculateComboStats(p.blade,p.ratchet,p.bit);
+}
+
+function bladeStickerCombo(blade){
+    if(!blade||typeof bladeCardStats!=="function") return null;
+    const stats=bladeCardStats(blade);
+    const ovr=Number(blade.card?.ovr);
+    return {
+        stats,
+        power:typeof comboPowerPoints==="function"?comboPowerPoints(stats):null,
+        ovr:Number.isFinite(ovr)?ovr:null,
+        meta:Number.isFinite(ovr)?ovr:null
+    };
+}
+
+/** Track inspect: blade-only → sticker card; otherwise normal (full) combo from row parts + garage fill. */
+function trackInspectCombo(parts){
+    const bladePart=parts.find(p=>p.kind==="blade");
+    const ratPart=parts.find(p=>p.kind==="ratchet");
+    const bitPart=parts.find(p=>p.kind==="bit");
+    if(bladePart && !ratPart && !bitPart){
+        return bladeStickerCombo(bladeById(bladePart.id));
+    }
+    const lo=loadoutParts();
+    const blade=bladePart?bladeById(bladePart.id):lo.blade;
+    const ratchet=ratPart?ratchetByName(ratPart.name):lo.ratchet;
+    const bit=bitPart?bitByName(bitPart.name):lo.bit;
+    if(!blade||!ratchet||!bit||typeof calculateComboStats!=="function") return null;
+    return calculateComboStats(blade,ratchet,bit);
 }
 
 function statBarRow(label,value,delta){
@@ -467,6 +500,10 @@ function loadoutCard(){
     if(!parts.blade){
         return `<section class="menu-card rr-loadout empty"><p>Pick a starter blade to open the locker.</p></section>`;
     }
+    const tier=String(parts.blade.tier||"");
+    const formNote=tier==="Silver"||tier==="Gold"
+        ? `<small class="rr-form-note">BRONZE FORM · ratchet/bit still apply</small>`
+        : "";
     return `<section class="menu-card rr-loadout">
         <div class="rr-loadout-arts">
             <div class="rr-loadout-art">${bladeArt?`<img src="${bladeArt}" alt="">`:"<span></span>"}</div>
@@ -474,11 +511,12 @@ function loadoutCard(){
             <div class="rr-loadout-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
         </div>
         <div class="rr-loadout-copy">
-            <span class="eyebrow">${String(parts.blade.tier||"").toUpperCase()}</span>
+            <span class="eyebrow">${tier.toUpperCase()}${tier==="Silver"||tier==="Gold"?" · BRONZE FORM":""}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
+            ${formNote}
             ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
-            ${statGroupsHTML(combo?.stats||{})}
+            ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
         </div>
     </section>`;
 }
@@ -691,7 +729,7 @@ function showGarage(){
             <div>
                 <span class="eyebrow">GARAGE</span>
                 <h1>EQUIP A KIT</h1>
-                <p>${live?"A night is live. This loadout is for the next run — the current night keeps its Bey.":"Tap a part you own. The hub Bey is what PLAY uses."}</p>
+                <p>${live?"A night is live. This loadout is for the next run — the current night keeps its Bey.":"Tap a part you own. Bronze keeps full stats. Silver/Gold open in Bronze form — ratchet and bit still reshape that kit."}</p>
             </div>
         </div>
         ${hudStrip()}
@@ -737,13 +775,8 @@ function showTrack(focusN){
     const focus=rows.find(r=>r.n===Number(focusN))||rows.find(r=>!rowOwned(r,acc)&&acc.level>=r.level)||rows[0];
     const parts=resolveRowParts(focus,acc);
     const previewBlade=parts.find(p=>p.kind==="blade");
-    const preview=previewBlade?bladeById(previewBlade.id):loadoutParts().blade;
-    const combo=preview&&loadoutParts().ratchet&&loadoutParts().bit&&typeof calculateComboStats==="function"
-        ? calculateComboStats(preview,loadoutParts().ratchet,loadoutParts().bit)
-        : comboOfLoadout();
-    // Track blade inspect: OVR is the blade sticker (card.ovr), not kit-scaled overall.
-    const cardOvr=previewBlade&&preview?Number(preview.card?.ovr):NaN;
-    const ratingCombo=combo&&Number.isFinite(cardOvr)?{...combo,ovr:cardOvr,meta:cardOvr}:combo;
+    const bladeOnly=!!previewBlade && !parts.some(p=>p.kind==="ratchet"||p.kind==="bit");
+    const combo=trackInspectCombo(parts);
     const arts=parts.map(p=>{
         const src=partSprite(p);
         return src?`<img src="${src}" alt="${partLabel(p)}">`:`<span></span>`;
@@ -764,11 +797,11 @@ function showTrack(focusN){
         <section class="menu-card rr-track-inspect">
             <div class="rr-loadout-arts">${arts}</div>
             <div>
-                <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}</span>
+                <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}${bladeOnly?" · CARD":""}</span>
                 <b>${parts.map(partLabel).join(" · ")}</b>
-                <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money</small>
-                ${ratingCombo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(ratingCombo,ratingCombo.stats):""}
-                ${statGroupsHTML(combo?.stats||{})}
+                <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money${bladeOnly?" · sticker stats":""}</small>
+                ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
+                ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
                 <button class="rip-btn" id="rrBuy" type="button" ${canBuy?"":"disabled"}>${rowOwned(focus,acc)?"OWNED":acc.level<focus.level?`NEED LV ${focus.level}`:acc.money<focus.price?"NEED MONEY":"BUY"}</button>
             </div>
         </section>
