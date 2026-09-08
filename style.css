@@ -3502,9 +3502,6 @@ button:focus-visible{
   padding:0;
 }
 .pegasus-aim[hidden]{display:none!important}
-.fx-aim circle{
-  filter:drop-shadow(0 0 1.6px #7ef0ff) drop-shadow(0 0 4.2px #3ad0ff);
-}
 .pegasus-aim p{
   position:absolute;
   left:50%;
