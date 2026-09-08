@@ -7462,23 +7462,27 @@ function newPhysicsCollision(dt){
     );
     if(pHitLikeAttack && !cHitLikeAttack){
         pKnockRaw*=1.24;
-        cKnockRaw*=0.82;
+        // Non-Attack still answers — slightly less penalty than before.
+        cKnockRaw*=0.88;
     }else if(cHitLikeAttack && !pHitLikeAttack){
         cKnockRaw*=1.24;
-        pKnockRaw*=0.82;
+        pKnockRaw*=0.88;
     }else if(!pAttackBit && !cAttackBit){
         // Tank vs tank: a touch more shove so free-space pockets stay reachable under the 0.086 cap.
         pKnockRaw*=1.62;
         cKnockRaw*=1.62;
     }
+    // Non-Attack bits deal a slight bit more shove in general (Ball/Orb/Hexa/etc.), still under cap.
+    if(!pAttackBit) pKnockRaw*=1.06;
+    if(!cAttackBit) cKnockRaw*=1.06;
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
       Over/Xtreme are a bit more reachable. Attack bits get a tad more
-      (1.20 vs 1.11). Cap still owns the ceiling.
+      (1.20 vs 1.13). Cap still owns the ceiling.
       Non-Attack bits already use the Attack clash role for that swing.
     */
-    if(pRailSwing) pKnockRaw*=pAttackBit?1.20:1.11;
-    if(cRailSwing) cKnockRaw*=cAttackBit?1.20:1.11;
+    if(pRailSwing) pKnockRaw*=pAttackBit?1.20:1.13;
+    if(cRailSwing) cKnockRaw*=cAttackBit?1.20:1.13;
     let pKnockback=pKnockRaw*0.82;
     let cKnockback=cKnockRaw*0.82;
     if(typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.isActive() && typeof SpinWarsRogue.applyPsyshockKnock==="function"){
