@@ -540,27 +540,18 @@
 
     function chainHTML(hl,nm){
         const who=hl.side==="cpu"?(nm.cpu||"CPU"):(nm.player||"YOU");
-        const steps=Array.isArray(hl.steps)?hl.steps:[];
-        if(!steps.length && !hl.chain){
+        const mul=Number(hl.mul||SCORE.MUL_NORMAL);
+        const line=hl.chain || (Array.isArray(hl.steps)&&hl.steps.length
+            ? hl.steps.map(s=>s.label).join(" → ")
+            : "");
+        if(!line){
             return `<section class="sb-chain sb-chain-quiet">
-                <p class="sb-kicker">BEST FINISH CHAIN</p>
-                <p class="sb-chain-empty">No linked sequence this match</p>
-                <p class="sb-mul-label">Multiplier on base score</p>
-                <p class="sb-mul">×${SCORE.MUL_NORMAL.toFixed(2)}</p>
+                <div class="sb-chain-head"><span>NO CHAIN</span><b>×${SCORE.MUL_NORMAL.toFixed(2)}</b></div>
             </section>`;
         }
-        const list=steps.length
-            ? `<ol class="sb-chain-steps">${steps.map((step,i)=>`<li>
-                    <span class="sb-step-n">${i+1}</span>
-                    <span class="sb-step-copy"><b>${step.label}</b><small>${step.detail||""}</small></span>
-               </li>`).join("")}</ol>`
-            : `<p class="sb-chain-line">${hl.chain}</p>`;
         return `<section class="sb-chain">
-            <p class="sb-kicker">BEST FINISH CHAIN · ${who}</p>
-            <p class="sb-chain-lead">One point stacked these in order. The best stack sets the match multiplier.</p>
-            ${list}
-            <p class="sb-mul-label">Multiplier on that Bey's base score</p>
-            <p class="sb-mul">×${Number(hl.mul||SCORE.MUL_NORMAL).toFixed(2)}</p>
+            <div class="sb-chain-head"><span>${who}</span><b>×${mul.toFixed(2)}</b></div>
+            <p class="sb-chain-line">${line}</p>
         </section>`;
     }
 
