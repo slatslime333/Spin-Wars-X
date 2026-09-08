@@ -631,6 +631,9 @@
             cKnock=0;
             pKnock=Math.min(KNOCK_CAP, Math.max(pKnock, reflected));
             cSmashCap=true;
+            if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.markAbilityKnock){
+                SpinWarsScoreboard.markAbilityKnock("player","cpu");
+            }
         }
         if(cIron){
             const reflected=Math.min(KNOCK_CAP, pKnock*1.20);
@@ -638,6 +641,9 @@
             pKnock=0;
             cKnock=Math.min(KNOCK_CAP, Math.max(cKnock, reflected));
             pSmashCap=true;
+            if(typeof global.SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.markAbilityKnock){
+                SpinWarsScoreboard.markAbilityKnock("cpu","player");
+            }
         }
 
         p.abilityIgnoreRpm=pIgnore;

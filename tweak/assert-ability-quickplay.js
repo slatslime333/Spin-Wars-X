@@ -6,18 +6,18 @@ const abilities = fs.readFileSync(path.join(root, "abilities.js"), "utf8");
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const csv = fs.readFileSync(path.join(root, "tweak/spin-wars-x-balance.csv"), "utf8");
 const checks = [
-  [/const IRON_MS=3000/, abilities, "Iron Skin 3s"],
+  [/const IRON_MS=2500/, abilities, "Iron Skin 2.5s"],
   [/const FREE_SPIN_CHANCE=0\.15/, abilities, "Free Spin 15%"],
   [/pExtraRpm=0\.010\+Math\.random\(\)\*0\.030/, abilities, "Double Edge player 1–4"],
   [/cExtraRpm=0\.010\+Math\.random\(\)\*0\.030/, abilities, "Double Edge cpu 1–4"],
   [/1–4 extra RPM/, abilities, "Double Edge blurb"],
   [/Each clash: 15% chance/, abilities, "Free Spin blurb"],
-  [/2 uses a match\. 3s\. Clash RPM/, abilities, "Iron Skin blurb"],
+  [/2 uses a match\. 2\.5s\. Clash RPM/, abilities, "Iron Skin blurb"],
   [/function syncMatchCharges/, abilities, "syncMatchCharges exists"],
   [/function matchChargeKey/, abilities, "matchChargeKey exists"],
   [/SpinWarsAbilities\.resetMatch\(\)/, app, "Quick Match resets charges"],
   [/syncMatchCharges/, app, "combo/VS sync charges"],
-  [/IRON_MS,3000/, csv, "CSV Iron Skin 3s"],
+  [/IRON_MS,2500/, csv, "CSV Iron Skin 2.5s"],
   [/free_spin_chance,0\.15/, csv, "CSV Free Spin 15%"],
   [/double_edge_plus_rpm,0\.010–0\.040/, csv, "CSV Double Edge 1–4"]
 ];

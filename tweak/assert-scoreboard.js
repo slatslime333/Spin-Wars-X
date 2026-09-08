@@ -66,15 +66,14 @@ if (SB.gameQuality("player", 7, 0, { final: 1800 }) !== "Perfect") throw new Err
 if (SB.gameQuality("cpu", 0, 7, { final: 80 }) !== "Horrible") throw new Error("quality horrible");
 
 SB.beginMatch();
+SB.addAbilityDamage("player", 12);
 SB.addAbilityRestore("player", 10);
 SB.markAbilityKnock("player", "cpu");
 SB.onFinish("player", "Xtreme", { rpm: 0.5 });
 const packed = SB.packMatch();
+if (packed.player.abilityDamage < 12) throw new Error("ability damage tracked");
 if (packed.player.abilityRestore < 10) throw new Error("restore tracked");
 if (packed.player.abilityPockets !== 1) throw new Error("ability pocket credited");
-if (!packed.highlight.steps || !packed.highlight.steps.length) {
-    /* no chain steps without big/rail — ok */
-}
 
 const csv = fs.readFileSync(path.join(__dirname, "spin-wars-x-scoreboard.csv"), "utf8");
 if (/XRAIL_SPIN|X-Rail → Spin|X-Rail Dashes|decisive/i.test(csv) && /XRAIL_SPIN/.test(csv)) {

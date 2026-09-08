@@ -16,7 +16,7 @@ ABILITY,hurricane,Hurricane,Wind radius (−15% from 0.84).,STORM_R,0.714,stadiu
 ABILITY,hurricane,Hurricane,Move speed while up. 1.00 = normal.,abilitySpeedMul,1.12,multiplier,
 ABILITY,hurricane,Hurricane,Fixed RPM restored over the 3s. HUD shows +10.,HURRICANE_GAIN,0.10,rpm 0–1,,10 on the bar. Not a percent of current RPM.
 ABILITY,hurricane,Hurricane,First-enter shove.,storm_first_shove,0.042,knock,,About half of 0.086.
-ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 3s chrome. Clash RPM on you = 0. Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,3000,milliseconds,
+ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 2.5s chrome. Clash RPM on you = 0 (blocked hit scores as Ability). Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,2500,milliseconds,
 ABILITY,iron-skin,Iron Skin,Reflect multiplier on their knock.,iron_reflect,1.20,multiplier,
 ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 35% less knock.,free_spin_chance,0.15,probability,,15%.
 ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.65,multiplier,,35% less knock.

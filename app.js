@@ -7873,6 +7873,9 @@ function newPhysicsCollision(dt){
 
     let pHitRpm=pToCDamage;
     let cHitRpm=cToPDamage;
+    /* Iron Skin zeros clash RPM on the chrome Bey — credit that blocked hit as Ability. */
+    const pBlocked=p.abilityIgnoreRpm?cHitRpm:0;
+    const cBlocked=c.abilityIgnoreRpm?pHitRpm:0;
     if(c.abilityIgnoreRpm) pHitRpm=0;
     if(p.abilityIgnoreRpm) cHitRpm=0;
     pHitRpm*=(c.abilityRpmMul||1);
@@ -7981,8 +7984,17 @@ function newPhysicsCollision(dt){
         cpuRpmLoss:__cRpmLoss+__cExtraRpmLoss,
         time:performance.now(),
         kb:(pKnockback+cKnockback)*0.5,
-        fromAbility:false
+        fromAbility:false,
+        playerAbilityBlock:pBlocked,
+        cpuAbilityBlock:cBlocked
     };
+
+    if(typeof SpinWarsScoreboard!=="undefined" && SpinWarsScoreboard.addAbilityDamage){
+        const pBlockHud=Math.max(0,Math.round((Number(pBlocked)||0)*100));
+        const cBlockHud=Math.max(0,Math.round((Number(cBlocked)||0)*100));
+        if(pBlockHud>0) SpinWarsScoreboard.addAbilityDamage("player",pBlockHud);
+        if(cBlockHud>0) SpinWarsScoreboard.addAbilityDamage("cpu",cBlockHud);
+    }
 
     p.lastKnockback=pKnockback;
     c.lastKnockback=cKnockback;
