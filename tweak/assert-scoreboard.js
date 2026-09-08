@@ -25,22 +25,20 @@ function expectRpm(dmg){
 }
 
 if (SB.rpmPts(1240) !== expectRpm(1240)) throw new Error("rpmPts progressive");
-if (SB.rpmPts(1240) <= Math.floor(1240 / 10)) throw new Error("rpmPts should beat old flat /10");
-if (SB.rpmPts(200) !== Math.floor(200 / 7)) throw new Error("low band");
-if (SB.rpmPts(800) <= SB.rpmPts(400) * 2) {
-    /* denser later band: 800 should beat 2x of 400 rate-wise in absolute pts vs old flat */
-}
-const lowRate = SB.rpmPts(400) / 400;
-const highRate = (SB.rpmPts(1600) - SB.rpmPts(1200)) / 400;
+if (SB.rpmPts(700) !== expectRpm(700)) throw new Error("rpmPts at max match damage");
+if (SB.rpmPts(700) <= Math.floor(700 / 10)) throw new Error("700 dmg should beat old flat /10");
+if (SB.rpmPts(200) !== Math.floor(200 / 5)) throw new Error("low band");
+const lowRate = SB.rpmPts(200) / 200;
+const highRate = (SB.rpmPts(700) - SB.rpmPts(500)) / 200;
 if (!(highRate > lowRate)) throw new Error("high damage band should be denser");
 
 const side = {
-    rpmDamage: 1240, abilityDamage: 180, abilityRestore: 20, abilityPockets: 1, abilityPocketPts: 180,
+    rpmDamage: 520, abilityDamage: 180, abilityRestore: 20, abilityPockets: 1, abilityPocketPts: 180,
     hits: 20, bigImpacts: 4, spin: 1, over: 0, xtreme: 1,
     dashes: 7, xrailRides: 5, peakRpm: 0.97
 };
 const base = SB.baseScore(side);
-const expectBase = expectRpm(1240) + expectRpm(180) + Math.floor(20 / S.ABILITY_RESTORE_PER) + 180 + 4 * 50 + 200 + 500;
+const expectBase = expectRpm(520) + expectRpm(180) + Math.floor(20 / S.ABILITY_RESTORE_PER) + 180 + 4 * 50 + 200 + 500;
 if (base !== expectBase) throw new Error("baseScore " + base + " != " + expectBase);
 const t = SB.tally(side);
 if (t.final !== Math.round(expectBase * 1)) throw new Error("final " + t.final);
@@ -59,7 +57,8 @@ if (rows.find(r => r.key === "xdash" || r.key === "xspin" || r.key === "xover" |
     throw new Error("removed x-rail finish / dash rows must stay gone");
 }
 if (S.SPIN_FINISH !== 200 || S.OVER_FINISH !== 350 || S.XTREME_FINISH !== 500) throw new Error("finish pts");
-if (S.BIG_IMPACT !== 50 || S.RPM_BAND1_PER !== 7) throw new Error("damage pts");
+if (S.BIG_IMPACT !== 50 || S.RPM_BAND1_PER !== 5 || S.RPM_BAND1_TO !== 250) throw new Error("damage pts");
+if (S.RPM_BAND2_TO !== 500 || S.RPM_BAND3_PER !== 3) throw new Error("rpm bands around 700");
 if (S.BIG_IMPACT_MIN_HUD !== 8) throw new Error("big impact min");
 if (S.ABILITY_POCKET_OVER !== 120 || S.ABILITY_POCKET_XTREME !== 180) throw new Error("ability pocket");
 if (S.ABILITY_RESTORE_PER !== 2) throw new Error("ability restore per");
@@ -84,5 +83,5 @@ if (/XRAIL_SPIN|X-Rail → Spin|X-Rail Dashes|decisive/i.test(csv) && /XRAIL_SPI
 if (!/xrailRides/.test(csv) || !/ABILITY_POCKET/.test(csv) || !/RPM_BAND1/.test(csv) || !/gameQuality/.test(csv)) {
     throw new Error("csv missing new scoreboard rows");
 }
-console.log("ok base", base, "final", t2.final, "rpm1240", SB.rpmPts(1240));
+console.log("ok base", base, "final", t2.final, "rpm700", SB.rpmPts(700), "rpm520", SB.rpmPts(520));
 console.log("all scoreboard asserts passed");

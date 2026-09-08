@@ -966,7 +966,7 @@ const BIT_STAT_DELTA={
     Hexa:{attack:-2,knockback:-1,defense:2,balance:3,stamina:2,mobility:-3,burst:3},
     Ball:{attack:-4,knockback:-3,defense:2,balance:3,stamina:6,mobility:-5,burst:0},
     Orb:{attack:-3,knockback:-2,defense:2,balance:2,stamina:5,mobility:-4,burst:0},
-    Needle:{attack:-4,knockback:-3,defense:0,balance:-2,stamina:5,mobility:-6,burst:-1},
+    Needle:{attack:-4,knockback:-3,defense:-4,balance:-5,stamina:5,mobility:-6,burst:-1},
     "High Needle":{attack:-4,knockback:-3,defense:0,balance:-2,stamina:6,mobility:-5,burst:-1},
     Wedge:{attack:-3,knockback:-1,defense:1,balance:0,stamina:4,mobility:1,burst:0}
 };
@@ -1218,7 +1218,7 @@ needle:{
 
     type:"Defense",
 
-    card:{attack:58,knockback:55,defense:58,mobility:36,balance:58,stamina:91,burst:72},
+    card:{attack:58,knockback:55,defense:52,mobility:36,balance:50,stamina:91,burst:72},
 
     behavior:{speed:38,aggression:20,control:94,staminaRetention:86}
 
@@ -2387,7 +2387,7 @@ function calculateComboStats(blade,ratchet,bit){
  V57 RESEARCH / SYSTEM LOCK
  - 0 Ratchets removed from selectable pool.
  - Elevate, Taper, and High Needle removed from selectable Bit pool.
- - Needle/HN: high stamina potential, low real stability; no free Defense/Balance.
+ - Needle/HN: high stamina potential, low real stability; Needle cuts Defense and Balance harder.
  - Wedge: semi-mobile, high stamina, less stable than Ball.
  - Point: Physical behavior stable/aggressive behavior.
  - Level: aggressive early behavior can transition conservative.
