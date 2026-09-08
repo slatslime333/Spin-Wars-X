@@ -741,6 +741,9 @@ function showTrack(focusN){
     const combo=preview&&loadoutParts().ratchet&&loadoutParts().bit&&typeof calculateComboStats==="function"
         ? calculateComboStats(preview,loadoutParts().ratchet,loadoutParts().bit)
         : comboOfLoadout();
+    // Track blade inspect: OVR is the blade sticker (card.ovr), not kit-scaled overall.
+    const cardOvr=previewBlade&&preview?Number(preview.card?.ovr):NaN;
+    const ratingCombo=combo&&Number.isFinite(cardOvr)?{...combo,ovr:cardOvr,meta:cardOvr}:combo;
     const arts=parts.map(p=>{
         const src=partSprite(p);
         return src?`<img src="${src}" alt="${partLabel(p)}">`:`<span></span>`;
@@ -764,7 +767,7 @@ function showTrack(focusN){
                 <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}</span>
                 <b>${parts.map(partLabel).join(" · ")}</b>
                 <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money</small>
-                ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
+                ${ratingCombo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(ratingCombo,ratingCombo.stats):""}
                 ${statGroupsHTML(combo?.stats||{})}
                 <button class="rip-btn" id="rrBuy" type="button" ${canBuy?"":"disabled"}>${rowOwned(focus,acc)?"OWNED":acc.level<focus.level?`NEED LV ${focus.level}`:acc.money<focus.price?"NEED MONEY":"BUY"}</button>
             </div>
