@@ -70,7 +70,7 @@
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   font-family:Staatliches,Impact,sans-serif;
   font-weight:400;line-height:.74;letter-spacing:.02em;
-  filter:drop-shadow(0 4px 0 #000) drop-shadow(0 14px 28px rgba(0,0,0,.55));
+  filter:none;
 }
 .swx-wordmark-row{display:flex;align-items:flex-end;justify-content:center}
 .swx-wordmark-spin,
@@ -90,16 +90,16 @@
   font-style:normal;font-size:clamp(28px,7vw,46px);
   color:#04140a;background:var(--green);
   transform:rotate(-14deg) skewX(-8deg);
+  text-shadow:none;
+  filter:none;
   box-shadow:
     0 0 0 2px #04140a,
+    0 8px 18px rgba(0,0,0,.35),
     0 0 22px rgba(26,209,90,.45),
     inset 0 -4px 0 rgba(0,0,0,.25);
   animation:swxXidle 3.4s ease-in-out infinite;
 }
-.swx-xmark:before{
-  content:"";position:absolute;inset:2px;border:1px solid rgba(255,255,255,.28);
-  pointer-events:none;
-}
+.swx-xmark:before{content:none;display:none}
 .swx-xmark:after{content:none;display:none}
 @keyframes swxXidle{
   0%,100%{filter:brightness(1);transform:rotate(-14deg) skewX(-8deg)}
