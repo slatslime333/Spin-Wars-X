@@ -166,9 +166,15 @@ function activeGoldIds(){
     });
 }
 
-function draftBladePool(){
-    const ids=new Set([...permanentBladeIds(),...activeGoldIds()]);
-    return [...ids].map(id=>({id,blade:bladeById(id)})).filter(x=>x.blade);
+function draftBladePool(opts){
+    opts=opts||{};
+    // Collection draft never includes Gold rentals — only owned Bronze / Silver.
+    // Gold kits are forced only when the player commits a rental on the gold screen.
+    if(opts.includeGold){
+        const ids=new Set([...permanentBladeIds(),...activeGoldIds()]);
+        return [...ids].map(id=>({id,blade:bladeById(id)})).filter(x=>x.blade);
+    }
+    return permanentBladeIds().map(id=>({id,blade:bladeById(id)})).filter(x=>x.blade);
 }
 
 function copiesOf(id){return Number(bladeEntry(account(),id).copies)||0;}
@@ -619,7 +625,12 @@ function beginBuild(build,useAwakening,extra){
     extra=extra||{};
     if(!build||!global.SpinWarsRogue?.beginFromLoadout) return false;
     const cost=cfg().RUN_COST||40;
-    if(account().money>=cost) trySpend(cost);
+    // Entry is charged on Start Run confirm; only charge here if that was skipped.
+    if(!Game._rlEntryPaid){
+        if(account().money>=cost) trySpend(cost);
+    }
+    Game._rlEntryPaid=false;
+    Game._rlEntryCharged=false;
     let blade=build.blade;
     let ratchet=build.ratchet;
     let bit=build.bit;
@@ -1234,6 +1245,43 @@ function showPackTheater(out){
 function showStartFlow(){
     ensureAccountReady();
     Game._rlRunOpts={tempPart:null,modifierId:null};
+    Game._rlEntryPaid=false;
+    showStartConfirm();
+}
+
+function showStartConfirm(){
+    Game.screen="rogueLiteStartConfirm";
+    const cost=cfg().RUN_COST||40;
+    const money=Number(account().money)||0;
+    const broke=money<cost;
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-confirm rl-flow-screen">
+        ${mark("START RUN",broke?"ENTRY WAIVED":`ENTRY $${cost}`)}
+        <p class="rl-lede">Pay ${broke?"nothing (broke waiver)":`$${cost}`} to lock this run. After you confirm you cannot return to reroll kits or undo the entry.</p>
+        <div class="rl-awaken-actions">
+            <button class="rip-btn" id="rlStartYes" type="button">${broke?"START — NO CHARGE":`PAY $${cost} · START`}</button>
+            <button class="menu-btn silver" id="rlStartNo" type="button">BACK</button>
+        </div>
+        <p class="rl-lede rl-lede-tight">$${money} on hand.</p>
+    </main>`;
+    document.getElementById("rlStartNo").onclick=()=>showHub();
+    document.getElementById("rlStartYes").onclick=()=>{
+        let charged=false;
+        if(!broke){
+            if(!trySpend(cost)){
+                showHub();
+                return;
+            }
+            charged=true;
+        }
+        Game._rlEntryPaid=true;
+        Game._rlEntryCharged=charged;
+        enterRunDraftFlow();
+    };
+}
+
+function enterRunDraftFlow(){
     const golds=activeGoldIds();
     if(golds.length){
         showGoldCommit(golds);
@@ -1242,13 +1290,23 @@ function showStartFlow(){
     showBuildDraft(null);
 }
 
+function refundEntryIfPaid(){
+    if(!Game._rlEntryPaid) return;
+    if(Game._rlEntryCharged){
+        const cost=cfg().RUN_COST||40;
+        addMoney(cost);
+    }
+    Game._rlEntryPaid=false;
+    Game._rlEntryCharged=false;
+}
+
 function showGoldCommit(golds){
     Game.screen="rogueLiteGoldCommit";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-gold rl-flow-screen">
         ${mark("GOLD RENTAL","OPTIONAL")}
-        <p class="rl-lede rl-lede-tight">Commit a Gold to force three kits on that Bey — or draft from your pool.</p>
+        <p class="rl-lede rl-lede-tight">Commit a Gold to force three kits on that Bey — or draft only from your Silver and Bronze.</p>
         <div class="rl-pick-list">
             ${golds.map(id=>{
                 const b=bladeById(id);
@@ -1266,9 +1324,9 @@ function showGoldCommit(golds){
                 </button>`;
             }).join("")}
         </div>
-        <button class="rip-btn" id="rlSkipGold" type="button">DRAFT FROM COLLECTION</button>
+        <button class="rip-btn" id="rlSkipGold" type="button">DRAFT SILVER · BRONZE</button>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    // Entry already paid — no hub back / free reroll.
     document.getElementById("rlSkipGold").onclick=()=>showBuildDraft(null);
     document.querySelectorAll("[data-gold]").forEach(btn=>{
         btn.onclick=()=>showBuildDraft(btn.getAttribute("data-gold"));
@@ -1319,9 +1377,13 @@ function showBuildDraft(goldId){
     Game.screen="rogueLiteDraft";
     const app=document.getElementById("app");
     if(!builds.length){
+        refundEntryIfPaid();
         app.innerHTML=`<div class="background stadium"></div>
-        <main class="home"><p class="rl-lede">No blades in your pool. Open packs first.</p>
-        <button class="rip-btn" id="rlBackHub" type="button">HUB</button></main>`;
+        <main class="home rl-flow-screen">
+            ${mark("NO KITS","DRAFT")}
+            <p class="rl-lede">${goldId?"That Gold kit could not be built.":"No Silver or Bronze blades in your collection. Open packs first."}${!goldId?" Entry refunded.":""}</p>
+            <button class="rip-btn" id="rlBackHub" type="button">HUB</button>
+        </main>`;
         document.getElementById("rlBackHub").onclick=()=>showHub();
         return;
     }
@@ -1329,15 +1391,16 @@ function showBuildDraft(goldId){
     const temps=(account().runTempParts||[]).length;
     const mods=(account().runTempMods||[]).length;
     const sideNote=[temps?`${temps} temp part${temps>1?"s":""}`:"",mods?`${mods} mod${mods>1?"s":""}`:""].filter(Boolean).join(" · ");
+    const poolNote=goldId?"":" Silver and Bronze only.";
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-draft rl-flow-screen">
-        ${mark("CHOOSE YOUR BUILD",`ENTRY $${cost}`)}
-        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled. Higher OVERALL earns less money this run; lower OVERALL pays a bit more.${sideNote?` Then optional ${sideNote}.`:""}${account().money<cost?" Entry waived while broke.":""}</p>
+        ${mark("CHOOSE YOUR BUILD",Game._rlEntryPaid?"ENTRY LOCKED":`ENTRY $${cost}`)}
+        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Higher OVERALL earns less money this run; lower OVERALL pays a bit more.${sideNote?` Then optional ${sideNote}.`:""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    // Paid entry — no hub back / free combo reroll.
     document.querySelectorAll("[data-build]").forEach(btn=>{
         btn.onclick=()=>onBuildPicked(Number(btn.getAttribute("data-build")));
     });
