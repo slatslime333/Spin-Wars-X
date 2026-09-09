@@ -4191,6 +4191,39 @@ button:focus-visible{
   .rl-build-row{grid-template-columns:1fr}
 }
 
+.rl-bey-sheet,.rl-bey-detail{
+  width:min(420px,92vw);
+  margin:0 auto 18px;
+  padding:14px;
+  display:flex;flex-direction:column;gap:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,#1a1622,#0c0a10);
+}
+.rl-bey-sheet.tier-bronze,.rl-bey-detail.tier-bronze{
+  border-color:#c07a4a;
+  background:linear-gradient(180deg,#3a2418,#140c08);
+}
+.rl-bey-sheet.tier-silver,.rl-bey-detail.tier-silver{
+  border-color:#c5ced8;
+  background:linear-gradient(180deg,#2a323c,#0c1014);
+}
+.rl-bey-sheet.tier-gold,.rl-bey-detail.tier-gold{
+  border-color:#e8c04a;
+  background:linear-gradient(180deg,#3a3010,#141006);
+}
+.rl-bey-sheet .rl-bey-art,.rl-bey-detail .rl-bey-art{
+  max-width:220px;margin:0 auto;width:100%;
+}
+.rl-collection-actions,.rl-collection-nav{
+  display:flex;flex-direction:column;gap:8px;
+}
+.rl-collection-nav{flex-direction:row}
+.rl-collection-nav .menu-btn{flex:1}
+.rl-bey-ratings{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;
+}
+.rl-detail-dup{opacity:.75;text-align:center}
+
 /* —— Rogue Lite pack theater —— */
 .rl-market-h{
   width:min(960px,94vw);margin:18px auto 8px;
@@ -4209,14 +4242,17 @@ button:focus-visible{
 @keyframes rlFoil{to{background-position:220% 220%}}
 
 .rogue-lite-open{
-  display:flex;flex-direction:column;align-items:center;min-height:100dvh;
-  padding:24px 12px 40px;gap:14px;
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100dvh;max-height:100dvh;
+  padding:16px 10px 24px;gap:10px;
+  box-sizing:border-box;overflow:auto;
 }
 .rl-open-title{
   font-family:Staatliches,Impact,sans-serif;letter-spacing:.1em;font-size:22px;margin:0;
+  flex:0 0 auto;
 }
 .rl-open-stage{
-  width:min(420px,92vw);min-height:360px;
+  width:min(420px,94vw);min-height:0;flex:1 1 auto;
   display:grid;place-items:center;position:relative;
 }
 .rl-pack-shell{
@@ -4266,12 +4302,14 @@ button:focus-visible{
 }
 .rl-card-rail{
   display:flex;flex-wrap:wrap;gap:12px;justify-content:center;
-  width:min(920px,96vw);min-height:280px;align-content:center;
+  width:min(920px,96vw);min-height:0;max-height:min(70dvh,560px);
+  align-content:center;overflow:auto;padding:4px;
 }
 .rl-trade-card{
   width:min(168px,42vw);aspect-ratio:5/7;
   position:relative;perspective:800px;
   opacity:0;transform:translateY(24px) scale(.86);
+  max-height:min(62dvh,440px);
 }
 .rl-trade-card.deal{opacity:1;transform:none;transition:opacity .28s ease, transform .35s cubic-bezier(.2,.8,.2,1)}
 .rl-tc-back,.rl-tc-face{
@@ -4287,19 +4325,45 @@ button:focus-visible{
   font-family:Staatliches,Impact,sans-serif;letter-spacing:.16em;
 }
 .rl-tc-face{
-  display:flex;flex-direction:column;padding:10px;gap:4px;
+  display:flex;flex-direction:column;padding:8px;gap:3px;
   background:linear-gradient(180deg,#221c2a,#0e0b14);
   transform:rotateY(180deg);
+  overflow:hidden;
 }
 .rl-trade-card.flip .rl-tc-back{transform:rotateY(180deg);transition:transform .45s ease}
 .rl-trade-card.flip .rl-tc-face{transform:rotateY(0);transition:transform .45s ease}
-.rl-trade-card.tier-bronze .rl-tc-face{border-color:#c07a4a;box-shadow:0 0 0 1px rgba(192,122,74,.35)}
-.rl-trade-card.tier-silver .rl-tc-face{border-color:#c5ced8;box-shadow:0 0 0 1px rgba(197,206,216,.35)}
+.rl-trade-card.tier-bronze .rl-tc-face{
+  border-color:#c07a4a;box-shadow:0 0 0 1px rgba(192,122,74,.35);
+  background:linear-gradient(180deg,#4a2e1c,#160c08);
+}
+.rl-trade-card.tier-bronze .rl-tc-back{
+  background:
+    repeating-linear-gradient(135deg,rgba(255,200,140,.06) 0 6px,transparent 6px 12px),
+    linear-gradient(180deg,#5a3218,#1a0c06);
+  color:#f0c090;
+}
+.rl-trade-card.tier-silver .rl-tc-face{
+  border-color:#c5ced8;box-shadow:0 0 0 1px rgba(197,206,216,.35);
+  background:linear-gradient(180deg,#343c48,#0c1016);
+}
+.rl-trade-card.tier-silver .rl-tc-back{
+  background:
+    repeating-linear-gradient(135deg,rgba(220,230,240,.07) 0 6px,transparent 6px 12px),
+    linear-gradient(180deg,#4a5564,#12161c);
+  color:#d8e2ec;
+}
 .rl-trade-card.tier-gold .rl-tc-face,.rl-trade-card.tier-part .rl-tc-face{
-  border-color:#e8c04a;box-shadow:0 0 0 1px rgba(232,192,74,.4)
+  border-color:#e8c04a;box-shadow:0 0 0 1px rgba(232,192,74,.4);
+  background:linear-gradient(180deg,#4a3a12,#161004);
+}
+.rl-trade-card.tier-gold .rl-tc-back,.rl-trade-card.tier-part .rl-tc-back{
+  background:
+    repeating-linear-gradient(135deg,rgba(255,220,120,.08) 0 6px,transparent 6px 12px),
+    linear-gradient(180deg,#6a5010,#1a1204);
+  color:#ffe6a0;
 }
 .rl-tc-art{
-  flex:1;display:grid;place-items:center;min-height:0;
+  flex:1 1 auto;display:grid;place-items:center;min-height:0;
   background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.1),transparent 65%);
 }
 .rl-tc-art img{max-width:92%;max-height:92%;object-fit:contain}
@@ -4314,8 +4378,46 @@ button:focus-visible{
   display:grid;grid-template-columns:1fr 1fr;gap:2px;
   font-size:10px;opacity:.85;margin-top:auto;
 }
+.rl-tc-stats-full{
+  grid-template-columns:1fr 1fr;
+  font-size:9px;line-height:1.25;gap:1px 4px;
+  margin-top:2px;
+}
+.rl-tc-face > b{
+  font-family:Staatliches,Impact,sans-serif;letter-spacing:.04em;
+  font-size:14px;line-height:1.1;
+}
+.rl-tc-face > .eyebrow{font-size:9px;opacity:.85}
 .rl-tc-blurb{font-size:10px;line-height:1.35;opacity:.8;margin:0}
-.rl-open-hint{opacity:.8;margin:0;min-height:1.2em}
+.rl-open-hint{opacity:.8;margin:0;min-height:1.2em;flex:0 0 auto}
+.rl-open-hint + .rip-btn{flex:0 0 auto;width:min(280px,90vw)}
+@media (max-width:720px){
+  .rogue-lite-open{padding:10px 8px 16px;gap:8px}
+  .rl-open-title{font-size:18px}
+  .rl-pack-shell{width:min(200px,62vw)}
+  .rl-card-rail{
+    width:100%;
+    max-height:min(64dvh,520px);
+    flex-wrap:nowrap;
+    justify-content:flex-start;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    padding:8px 12px;
+    gap:10px;
+  }
+  .rl-trade-card{
+    flex:0 0 auto;
+    width:auto;
+    height:min(56dvh,400px);
+    max-height:min(56dvh,400px);
+    aspect-ratio:5/7;
+    scroll-snap-align:center;
+  }
+  .rl-tc-stats-full{font-size:8px}
+  .rl-tc-art{flex:1 1 42%}
+}
 .rl-mod-list{
   display:grid;gap:8px;width:min(560px,94vw);margin:0 auto 14px;
   max-height:min(52vh,420px);overflow:auto;

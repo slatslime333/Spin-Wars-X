@@ -283,18 +283,9 @@ function sellDuplicate(id){
     return {ok:true,money:pay,copies:e.copies};
 }
 
-function extendGold(id){
-    const acc=account();
-    const g=acc.goldRentals[id];
-    if(!g) return {ok:false,why:"missing"};
-    const cost=typeof cfg().goldExtendCost==="function"
-        ? cfg().goldExtendCost(g.extendCount||0)
-        : 90;
-    if(!trySpend(cost)) return {ok:false,why:"money",cost};
-    g.runsLeft=(Number(g.runsLeft)||0)+1;
-    g.extendCount=(Number(g.extendCount)||0)+1;
-    persistAccount();
-    return {ok:true,runsLeft:g.runsLeft,cost};
+function extendGold(){
+    /* Paid Gold extend removed — rentals last their pack runs only. */
+    return {ok:false,why:"removed"};
 }
 
 function consumeGoldRun(id){
@@ -768,7 +759,7 @@ function showHelp(){
         </section>
         <section class="menu-card">
             <h2>Gold</h2>
-            <p>Gold blades are rentals. Pack Gold starts with ${cfg().GOLD_DEFAULT_RUNS||2} runs. Extend costs money. Shark Scale stays a boss — not a pack drop.</p>
+            <p>Gold blades are rentals. Pack Gold starts with ${cfg().GOLD_DEFAULT_RUNS||2} runs — they expire when those runs are spent. Shark Scale stays a boss — not a pack drop.</p>
         </section>
         <section class="menu-card">
             <h2>Difficulty</h2>
@@ -779,67 +770,180 @@ function showHelp(){
     mountDev();
 }
 
-function showCollection(){
+function showCollection(tierFilter){
     ensureAccountReady();
     Game.screen="rogueLiteCollection";
-    const ids=ownedBladeIds();
-    const golds=activeGoldIds();
+    Game._rlCollectionTier=tierFilter||null;
     const app=document.getElementById("app");
-    const cards=ids.map(id=>{
-        const b=bladeById(id);
-        if(!b) return "";
-        const prog=awakeningProgress(id);
-        const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
-        const tier=String(b.tier||"");
-        const gold=tier==="Gold"?account().goldRentals[id]:null;
-        const aw=highestClaimedAwakening(id);
-        return `<article class="rl-bey-card tier-${tier.toLowerCase()}">
+    if(!tierFilter){
+        const counts={Bronze:0,Silver:0,Gold:0};
+        ownedBladeIds().forEach(id=>{
+            const t=String(bladeById(id)?.tier||"");
+            if(counts[t]!=null) counts[t]+=1;
+        });
+        app.innerHTML=`<div class="background stadium"></div>
+        <main class="home rogue-lite-collection">
+            ${mark("COLLECTION","PICK A TIER")}
+            ${hudStrip()}
+            <p class="rl-lede">Browse by tier. Open a Bey for full stats and ability.</p>
+            <nav class="rl-doors rl-collection-doors" aria-label="Collection tiers">
+                <button class="home-door play" type="button" data-tier="Bronze">
+                    <span class="home-door-kicker">TIER</span>
+                    <b>BRONZE</b>
+                    <small class="swx-state">${counts.Bronze} owned</small>
+                </button>
+                <button class="home-door play" type="button" data-tier="Silver">
+                    <span class="home-door-kicker">TIER</span>
+                    <b>SILVER</b>
+                    <small class="swx-state">${counts.Silver} owned</small>
+                </button>
+                <button class="home-door play" type="button" data-tier="Gold">
+                    <span class="home-door-kicker">RENTALS</span>
+                    <b>GOLD</b>
+                    <small class="swx-state">${counts.Gold} owned</small>
+                </button>
+            </nav>
+        </main>`;
+        document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+        document.querySelectorAll("[data-tier]").forEach(btn=>{
+            btn.onclick=()=>showCollectionList(btn.getAttribute("data-tier"));
+        });
+        mountDev();
+        return;
+    }
+    showCollectionList(tierFilter);
+}
+
+function collectionIdsForTier(tier){
+    return ownedBladeIds().filter(id=>String(bladeById(id)?.tier||"")===String(tier));
+}
+
+function showCollectionList(tier){
+    ensureAccountReady();
+    Game.screen="rogueLiteCollectionList";
+    Game._rlCollectionTier=tier;
+    const ids=collectionIdsForTier(tier);
+    const page=Math.max(0,Math.min(ids.length?ids.length-1:0,Number(Game._rlCollectionPage)||0));
+    Game._rlCollectionPage=page;
+    const app=document.getElementById("app");
+    if(!ids.length){
+        app.innerHTML=`<div class="background stadium"></div>
+        <main class="home rogue-lite-collection">
+            ${mark("COLLECTION",String(tier).toUpperCase())}
+            ${hudStrip()}
+            <p class="rl-empty">No ${tier} blades yet.</p>
+        </main>`;
+        document.querySelector(".home")?.appendChild(createBackButton(()=>showCollection()));
+        mountDev();
+        return;
+    }
+    const id=ids[page];
+    const b=bladeById(id);
+    const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+    const prog=awakeningProgress(id);
+    const aw=highestClaimedAwakening(id);
+    const gold=String(b.tier)==="Gold"?account().goldRentals[id]:null;
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-collection">
+        ${mark("COLLECTION",`${String(tier).toUpperCase()} · ${page+1} / ${ids.length}`)}
+        ${hudStrip()}
+        <article class="rl-bey-sheet tier-${String(tier).toLowerCase()}">
             <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
             <div class="rl-bey-copy">
-                <span class="eyebrow">${tier.toUpperCase()}${aw?` · AWAKENING ${aw}`:""}</span>
+                <span class="eyebrow">${String(tier).toUpperCase()}${aw?` · AWAKENING ${aw}`:""}</span>
                 <b>${b.name}</b>
                 <small>Duplicates ${prog.copies} / ${prog.max}</small>
                 ${gold?`<small class="rl-gold-left">${gold.runsLeft} RUNS LEFT</small>`:""}
-                <div class="rl-aw-row">
-                    ${[1,2,3].map(lv=>{
-                        const L=prog.levels[lv];
-                        if(L.claimed) return `<span class="rl-aw on">LV${lv} READY</span>`;
-                        if(L.unlocked) return `<button type="button" class="rl-aw claim" data-aw="${id}:${lv}">CLAIM LV${lv}</button>`;
-                        return `<span class="rl-aw">LV${lv} · ${L.need}</span>`;
-                    }).join("")}
-                </div>
-                ${tier!=="Gold"&&prog.copies>1
-                    ?`<button type="button" class="menu-btn silver rl-sell" data-sell="${id}">SELL DUP · $${cfg().SELL?.[tier]||0}</button>`
-                    :""}
-                ${gold?`<button type="button" class="menu-btn silver rl-extend" data-ext="${id}">EXTEND +1 · $${typeof cfg().goldExtendCost==="function"?cfg().goldExtendCost(gold.extendCount||0):90}</button>`:""}
             </div>
-        </article>`;
-    }).join("")||`<p class="rl-empty">No blades yet.</p>`;
+            <div class="rl-collection-actions">
+                <button type="button" class="rip-btn" id="rlViewBey">VIEW STATS</button>
+                ${String(tier)!=="Gold"&&prog.copies>1
+                    ?`<button type="button" class="menu-btn silver" id="rlSellBey">SELL DUP · $${cfg().SELL?.[tier]||0}</button>`
+                    :""}
+            </div>
+            <div class="rl-collection-nav">
+                <button type="button" class="menu-btn silver" id="rlColPrev" ${page<=0?"disabled":""}>← PREV</button>
+                <button type="button" class="menu-btn silver" id="rlColNext" ${page>=ids.length-1?"disabled":""}>NEXT →</button>
+            </div>
+        </article>
+    </main>`;
+    document.querySelector(".home")?.appendChild(createBackButton(()=>{
+        Game._rlCollectionPage=0;
+        showCollection();
+    }));
+    document.getElementById("rlViewBey").onclick=()=>showCollectionDetail(id);
+    document.getElementById("rlSellBey")?.addEventListener("click",()=>{
+        sellDuplicate(id);
+        Game._rlCollectionPage=Math.min(Game._rlCollectionPage,Math.max(0,collectionIdsForTier(tier).length-1));
+        showCollectionList(tier);
+    });
+    document.getElementById("rlColPrev").onclick=()=>{
+        Game._rlCollectionPage=Math.max(0,page-1);
+        showCollectionList(tier);
+    };
+    document.getElementById("rlColNext").onclick=()=>{
+        Game._rlCollectionPage=Math.min(ids.length-1,page+1);
+        showCollectionList(tier);
+    };
+    mountDev();
+}
+
+function showCollectionDetail(id){
+    ensureAccountReady();
+    Game.screen="rogueLiteCollectionDetail";
+    const b=bladeById(id);
+    if(!b){ showCollection(); return; }
+    const tier=String(b.tier||"Bronze");
+    const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+    const stats=typeof bladeCardStats==="function"?bladeCardStats(b):(b.card||{});
+    const prog=awakeningProgress(id);
+    const aw=highestClaimedAwakening(id);
+    const gold=tier==="Gold"?account().goldRentals[id]:null;
+    const ability=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.abilityChipHTML
+        ? SpinWarsAbilities.abilityChipHTML(b)
+        : "";
+    const statHtml=typeof comboStatGroupsHTML==="function"
+        ? comboStatGroupsHTML(stats)
+        : `<div class="rl-tc-stats rl-tc-stats-full">
+            <span>ATK ${stats.attack??"—"}</span><span>KB ${stats.knockback??"—"}</span>
+            <span>DEF ${stats.defense??"—"}</span><span>MOB ${stats.mobility??"—"}</span>
+            <span>BAL ${stats.balance??"—"}</span><span>STA ${stats.stamina??"—"}</span>
+            <span>BST ${stats.burst??"—"}</span>
+        </div>`;
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):null;
+    const ovr=stats.ovr ?? b.card?.ovr ?? "—";
+    const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-collection">
-        ${mark("COLLECTION","")}
+        ${mark(b.name,tier.toUpperCase())}
         ${hudStrip()}
-        <div class="rl-bey-grid">${cards}</div>
-        ${golds.length?"":""}
+        <article class="rl-bey-detail tier-${tier.toLowerCase()}">
+            <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
+            <div class="rl-bey-ratings">
+                <span class="ovr-badge power"><small>POWER</small><b>${power??"—"}</b></span>
+                <span class="ovr-badge"><small>OVR</small><b>${ovr}</b></span>
+                ${aw?`<span class="rl-aw on">AWAKENING ${aw}</span>`:""}
+                ${gold?`<span class="rl-gold-left">${gold.runsLeft} RUNS LEFT</span>`:""}
+            </div>
+            ${ability}
+            ${statHtml}
+            <div class="rl-aw-row">
+                ${[1,2,3].map(lv=>{
+                    const L=prog.levels[lv];
+                    if(L.claimed) return `<span class="rl-aw on">LV${lv} READY</span>`;
+                    if(L.unlocked) return `<button type="button" class="rl-aw claim" data-aw="${id}:${lv}">CLAIM LV${lv}</button>`;
+                    return `<span class="rl-aw">LV${lv} · ${L.need}</span>`;
+                }).join("")}
+            </div>
+            <small class="rl-detail-dup">Duplicates ${prog.copies} / ${prog.max}</small>
+        </article>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showCollectionList(tier)));
     document.querySelectorAll("[data-aw]").forEach(btn=>{
         btn.onclick=()=>{
-            const [id,lv]=String(btn.getAttribute("data-aw")||"").split(":");
-            claimAwakening(id,Number(lv));
-            showCollection();
-        };
-    });
-    document.querySelectorAll("[data-sell]").forEach(btn=>{
-        btn.onclick=()=>{
-            sellDuplicate(btn.getAttribute("data-sell"));
-            showCollection();
-        };
-    });
-    document.querySelectorAll("[data-ext]").forEach(btn=>{
-        btn.onclick=()=>{
-            extendGold(btn.getAttribute("data-ext"));
-            showCollection();
+            const [bid,lv]=String(btn.getAttribute("data-aw")||"").split(":");
+            claimAwakening(bid,Number(lv));
+            showCollectionDetail(bid);
         };
     });
     mountDev();
@@ -906,18 +1010,25 @@ function tradingBeyCardHTML(g,idx){
     if(g.kind==="duplicate"||g.duplicate) stamp=`DUP ${prog.copies}/${prog.max}`;
     if(g.kind==="gold-new") stamp=`${g.runsLeft} RUNS`;
     if(g.kind==="gold-extend") stamp=`+1 RUN · ${g.runsLeft}`;
-    const stats=card?`<div class="rl-tc-stats">
+    const kitId=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.kitId
+        ? SpinWarsAbilities.kitId(b)
+        : null;
+    const ability=kitId&&SpinWarsAbilities.kitMeta
+        ? (SpinWarsAbilities.kitMeta(kitId)?.name||"")
+        : "";
+    const stats=card?`<div class="rl-tc-stats rl-tc-stats-full">
         <span>ATK ${card.attack??"—"}</span><span>KB ${card.knockback??"—"}</span>
-        <span>DEF ${card.defense??"—"}</span><span>STA ${card.stamina??"—"}</span>
-    </div>`:"";
+        <span>DEF ${card.defense??"—"}</span><span>MOB ${card.mobility??"—"}</span>
+        <span>BAL ${card.balance??"—"}</span><span>STA ${card.stamina??"—"}</span>
+        <span>BST ${card.burst??"—"}</span><span>OVR ${ovr}</span>
+    </div>`:`<small class="rl-tc-ovr">OVR ${ovr}</small>`;
     return `<article class="rl-trade-card tier-${tier.toLowerCase()}" data-card-i="${idx}" aria-hidden="true">
         <div class="rl-tc-back" aria-hidden="true"><span>${tier}</span></div>
         <div class="rl-tc-face">
             <span class="rl-tc-stamp">${stamp}</span>
             <div class="rl-tc-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
-            <span class="eyebrow">${tier}</span>
+            <span class="eyebrow">${tier}${ability?` · ${ability}`:""}</span>
             <b>${b.name}</b>
-            <small class="rl-tc-ovr">OVR ${ovr}</small>
             ${stats}
         </div>
     </article>`;
@@ -1357,6 +1468,13 @@ function refreshLiteScreen(){
     if(s==="rogueLiteHub") showHub();
     else if(s==="rogueLiteMarket") showMarket();
     else if(s==="rogueLiteCollection") showCollection();
+    else if(s==="rogueLiteCollectionList") showCollectionList(Game._rlCollectionTier||"Bronze");
+    else if(s==="rogueLiteCollectionDetail"){
+        const ids=collectionIdsForTier(Game._rlCollectionTier||"Bronze");
+        const id=ids[Math.max(0,Number(Game._rlCollectionPage)||0)];
+        if(id) showCollectionDetail(id);
+        else showCollection();
+    }
     else if(s==="rogueLiteHelp") showHelp();
     else showHub();
 }
