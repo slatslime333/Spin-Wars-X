@@ -666,10 +666,26 @@ function beginBuild(build,useAwakening,extra){
 function bowl(){
     return typeof homeBowlHTML==="function"?homeBowlHTML():`<div class="home-bowl" aria-hidden="true"></div>`;
 }
-function mark(title,tag){
+function brandMark(tag,opts){
+    opts=opts||{};
     return typeof homeMarkHTML==="function"
-        ? homeMarkHTML({tag:tag||""})
-        : `<header class="home-mark"><b>${title}</b></header>`;
+        ? homeMarkHTML({tag:tag||"",compact:!!opts.compact,kicker:opts.kicker||"X STADIUM"})
+        : `<header class="home-mark"><b>SPIN WARS X</b></header>`;
+}
+/** Compact screen title — pick/collection flows (not the full wordmark). */
+function mark(title,tag){
+    return `<header class="rl-flow-head">
+        <div class="rl-inv-title">
+            ${tag?`<span class="eyebrow">${tag}</span>`:""}
+            <b>${title}</b>
+        </div>
+    </header>`;
+}
+function bladeAbilityLabel(blade){
+    const kitId=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.kitId
+        ? SpinWarsAbilities.kitId(blade):null;
+    if(kitId&&SpinWarsAbilities.kitMeta) return SpinWarsAbilities.kitMeta(kitId)?.name||"";
+    return "";
 }
 
 function hudStrip(){
@@ -700,7 +716,7 @@ function showHub(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-hub">
         ${bowl()}
-        ${mark("ROGUE","PACK · BUILD · NIGHT")}
+        ${brandMark("PACK · BUILD · NIGHT")}
         ${hudStrip()}
         <p class="rl-lede">Random builds from your blades. Packs grow the pool. Awakening is optional when a ready Bey is drafted.</p>
         <nav class="rl-doors" aria-label="Rogue hub">
@@ -815,14 +831,11 @@ function inventoryCardHTML(id){
     const prog=awakeningProgress(id);
     const aw=highestClaimedAwakening(id);
     const gold=tier==="Gold"?account().goldRentals[id]:null;
-    const kitId=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.kitId
-        ? SpinWarsAbilities.kitId(b):null;
-    const ability=kitId&&SpinWarsAbilities.kitMeta
-        ? (SpinWarsAbilities.kitMeta(kitId)?.name||""):"";
+    const ability=bladeAbilityLabel(b);
     return `<button type="button" class="rl-inv-card tier-${tier.toLowerCase()}" data-inv="${id}">
         <div class="rl-inv-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
         <div class="rl-inv-copy">
-            <span class="eyebrow">${tier.toUpperCase()}${ability?` · ${ability}`:""}${aw?` · AW${aw}`:""}</span>
+            <span class="rl-inv-chip">${tier.toUpperCase()}${ability?` · ${ability}`:""}${aw?` · AW${aw}`:""}</span>
             <b>${b.name}</b>
             <small class="rl-inv-meta">Dup ${prog.copies}/${prog.max}${gold?` · ${gold.runsLeft} runs`:""}</small>
             ${beyRatingsHTML(b)}
@@ -831,17 +844,57 @@ function inventoryCardHTML(id){
     </button>`;
 }
 
+function inventoryPartCardHTML(p,idx){
+    const isBit=p.kind==="bit";
+    const art=isBit
+        ?(typeof bitSpritePath==="function"?bitSpritePath(bitByName(p.name)||{name:p.name}):"")
+        :(typeof ratchetSpritePath==="function"?ratchetSpritePath(ratchetByName(p.name)||{name:p.name}):"");
+    return `<article class="rl-inv-card rl-inv-part" data-temp-part="${idx}">
+        <div class="rl-inv-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
+        <div class="rl-inv-copy">
+            <span class="rl-inv-chip">${isBit?"BIT":"RATCHET"} · TEMP</span>
+            <b>${p.name}</b>
+            <small class="rl-inv-meta">Ready for next run</small>
+        </div>
+    </article>`;
+}
+
+function inventoryModCardHTML(m,idx){
+    return `<article class="rl-inv-card rl-inv-mod" data-temp-mod="${idx}">
+        <div class="rl-inv-art rl-inv-mod-glyph">◈</div>
+        <div class="rl-inv-copy">
+            <span class="rl-inv-chip">${m.tag||"MOD"} · TEMP</span>
+            <b>${m.name||m.id}</b>
+            <small class="rl-inv-meta">${m.blurb||"Rolled modifier"}</small>
+        </div>
+    </article>`;
+}
+
 function showCollection(){
     ensureAccountReady();
     Game.screen="rogueLiteCollection";
     const filter=Game._rlCollectionFilter||"all";
     const ids=invFilterIds(filter);
+    const temps=account().runTempParts||[];
+    const mods=account().runTempMods||[];
     const app=document.getElementById("app");
     const options=["all","Bronze","Silver","Gold"].map(v=>{
         const label=v==="all"?"ALL":v.toUpperCase();
         return `<option value="${v}" ${filter===v?"selected":""}>${label}</option>`;
     }).join("");
     const cards=ids.map(inventoryCardHTML).join("")||`<p class="rl-empty">No blades in this filter.</p>`;
+    const partSec=temps.length
+        ? `<section class="rl-inv-sec">
+            <h2 class="rl-inv-sec-h">TEMP PARTS · ${temps.length}</h2>
+            <div class="rl-inv-grid rl-inv-grid-parts">${temps.map(inventoryPartCardHTML).join("")}</div>
+           </section>`
+        : "";
+    const modSec=mods.length
+        ? `<section class="rl-inv-sec">
+            <h2 class="rl-inv-sec-h">MODIFIERS · ${mods.length}</h2>
+            <div class="rl-inv-grid rl-inv-grid-mods">${mods.map(inventoryModCardHTML).join("")}</div>
+           </section>`
+        : "";
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-collection rl-inv-screen">
         <header class="rl-inv-head">
@@ -855,7 +908,14 @@ function showCollection(){
             </label>
         </header>
         ${hudStrip()}
-        <div class="rl-inv-grid">${cards}</div>
+        <div class="rl-inv-scroll">
+            ${partSec}
+            ${modSec}
+            <section class="rl-inv-sec">
+                <h2 class="rl-inv-sec-h">BLADES · ${ids.length}</h2>
+                <div class="rl-inv-grid">${cards}</div>
+            </section>
+        </div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
     document.getElementById("rlInvFilter").onchange=(e)=>{
@@ -984,18 +1044,13 @@ function tradingBeyCardHTML(g,idx){
     if(g.kind==="duplicate"||g.duplicate) stamp=`DUP ${prog.copies}/${prog.max}`;
     if(g.kind==="gold-new") stamp=`${g.runsLeft} RUNS`;
     if(g.kind==="gold-extend") stamp=`+1 RUN · ${g.runsLeft}`;
-    const kitId=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.kitId
-        ? SpinWarsAbilities.kitId(b)
-        : null;
-    const ability=kitId&&SpinWarsAbilities.kitMeta
-        ? (SpinWarsAbilities.kitMeta(kitId)?.name||"")
-        : "";
+    const ability=bladeAbilityLabel(b);
     return `<article class="rl-trade-card rl-trade-bey tier-${tier.toLowerCase()}" data-card-i="${idx}" aria-hidden="true">
         <div class="rl-tc-back" aria-hidden="true"><span>${tier}</span></div>
         <div class="rl-tc-face">
             <span class="rl-tc-stamp">${stamp}</span>
             <div class="rl-tc-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
-            <span class="eyebrow">${tier}${ability?` · ${ability}`:""}</span>
+            <span class="rl-inv-chip">${tier}${ability?` · ${ability}`:""}</span>
             <b>${b.name}</b>
             ${beyRatingsHTML(b)}
             <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
@@ -1078,8 +1133,10 @@ function showPackTheater(out){
     let revealed=0;
     const snapToCard=(card)=>{
         if(!card||!rail) return;
-        const left=card.offsetLeft-(rail.clientWidth-card.clientWidth)/2;
-        rail.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+        requestAnimationFrame(()=>{
+            const left=card.offsetLeft-(rail.clientWidth-card.clientWidth)/2;
+            rail.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+        });
     };
     const revealNext=()=>{
         const card=rail.querySelector(`[data-card-i="${revealed}"]`);
@@ -1092,7 +1149,7 @@ function showPackTheater(out){
         card.classList.add("deal","flip");
         revealed+=1;
         snapToCard(card);
-        hint.textContent=revealed<n?`Card ${revealed} of ${n} — tap for next`:`Card ${revealed} of ${n}`;
+        hint.textContent=revealed<n?`Card ${revealed} of ${n} — tap anywhere for next`:`Card ${revealed} of ${n}`;
         if(revealed>=n){
             done.hidden=false;
         }
@@ -1113,9 +1170,14 @@ function showPackTheater(out){
             revealNext();
         },520);
     };
-    shell.onclick=startReveal;
-    rail.onclick=()=>{ if(opened&&revealed<n) revealNext(); };
-    done.onclick=()=>showMarket();
+    const onAdvance=(e)=>{
+        if(e.target.closest && e.target.closest("#rlOpenDone,.back-btn,#rlDevBtn,.rogue-dev-panel")) return;
+        if(!opened) startReveal();
+        else if(revealed<n) revealNext();
+    };
+    shell.onclick=(e)=>{ e.stopPropagation(); startReveal(); };
+    main.onclick=onAdvance;
+    done.onclick=(e)=>{ e.stopPropagation(); showMarket(); };
     mountDev();
 }
 
@@ -1134,17 +1196,23 @@ function showGoldCommit(golds){
     Game.screen="rogueLiteGoldCommit";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-gold">
-        ${mark("GOLD","OPTIONAL")}
-        <p class="rl-lede">Commit a Gold rental to force three random kits on that Bey — or draft from your whole pool.</p>
-        <div class="rl-bey-grid">
+    <main class="home rogue-lite-gold rl-flow-screen">
+        ${mark("GOLD RENTAL","OPTIONAL")}
+        <p class="rl-lede rl-lede-tight">Commit a Gold to force three kits on that Bey — or draft from your pool.</p>
+        <div class="rl-pick-list">
             ${golds.map(id=>{
                 const b=bladeById(id);
                 const g=account().goldRentals[id];
                 const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
-                return `<button type="button" class="rl-bey-card tier-gold rl-gold-pick" data-gold="${id}">
-                    <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:""}</div>
-                    <div class="rl-bey-copy"><b>${b.name}</b><small>${g.runsLeft} RUNS LEFT</small></div>
+                const ability=bladeAbilityLabel(b);
+                return `<button type="button" class="rl-pick-row tier-gold" data-gold="${id}">
+                    <div class="rl-pick-art">${art?`<img src="${art}" alt="">`:""}</div>
+                    <div class="rl-pick-copy">
+                        <span class="rl-inv-chip">GOLD${ability?` · ${ability}`:""}</span>
+                        <b>${b.name}</b>
+                        <small class="rl-inv-meta">${g.runsLeft} RUNS LEFT</small>
+                        ${beyRatingsHTML(b)}
+                    </div>
                 </button>`;
             }).join("")}
         </div>
@@ -1163,8 +1231,14 @@ function buildCardHTML(build,idx){
     const ratArt=typeof ratchetSpritePath==="function"?ratchetSpritePath(build.ratchet):"";
     const bitArt=typeof bitSpritePath==="function"?bitSpritePath(build.bit):"";
     const tier=String(build.blade.tier||"");
+    const ability=bladeAbilityLabel(build.blade);
     const badges=c&&typeof comboRatingBadgesHTML==="function"
         ? comboRatingBadgesHTML(c,c.stats)
+            .replace(">POWER<",">POWER PTS<")
+            .replace(">OVR<",">OVERALL<")
+        : "";
+    const bars=c&&typeof comboStatGroupsHTML==="function"
+        ? `<div class="rl-inv-stats">${comboStatGroupsHTML(c.stats||c)}</div>`
         : "";
     const aw=build.awakeningAvailable
         ? `<span class="rl-aw-badge">AWAKENING ${build.awakeningLevel}</span>`
@@ -1176,10 +1250,11 @@ function buildCardHTML(build,idx){
             <div class="rl-part-art">${ratArt?`<img src="${ratArt}" alt="">`:""}</div>
             <div class="rl-part-art">${bitArt?`<img src="${bitArt}" alt="">`:""}</div>
         </div>
-        <span class="eyebrow">BUILD ${String.fromCharCode(65+idx)} · ${tier.toUpperCase()}</span>
+        <span class="rl-inv-chip">BUILD ${String.fromCharCode(65+idx)} · ${tier.toUpperCase()}${ability?` · ${ability}`:""}</span>
         <b>${build.blade.name}</b>
         <small>${build.ratchet.name} · ${build.bit.name}</small>
         ${badges}
+        ${bars}
     </button>`;
 }
 
@@ -1196,10 +1271,13 @@ function showBuildDraft(goldId){
         return;
     }
     const cost=cfg().RUN_COST||40;
+    const temps=(account().runTempParts||[]).length;
+    const mods=(account().runTempMods||[]).length;
+    const sideNote=[temps?`${temps} temp part${temps>1?"s":""}`:"",mods?`${mods} mod${mods>1?"s":""}`:""].filter(Boolean).join(" · ");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-draft">
+    <main class="home rogue-lite-draft rl-flow-screen">
         ${mark("CHOOSE YOUR BUILD",`ENTRY $${cost}`)}
-        <p class="rl-lede">Ratchet and bit are rolled. Pick one kit. That is your only choice.${account().money<cost?" Entry waived while broke.":""}</p>
+        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${sideNote?` Then optional ${sideNote}.`:""}${account().money<cost?" Entry waived while broke.":""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>
@@ -1228,7 +1306,7 @@ function showAwakeningPrompt(build,level){
     Game.screen="rogueLiteAwaken";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-awaken">
+    <main class="home rogue-lite-awaken rl-flow-screen">
         ${mark("AWAKENING",`LV.${level}`)}
         <p class="rl-lede"><b>${build.blade.name}</b> has Awakening ready. Use it for this run only? Declining keeps it for later.</p>
         <div class="rl-awaken-actions">
@@ -1257,17 +1335,20 @@ function showTempPartPick(build,useAwakening){
     const temps=account().runTempParts||[];
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-temp">
+    <main class="home rogue-lite-temp rl-flow-screen">
         ${mark("TEMP PART","OPTIONAL")}
-        <p class="rl-lede">Slot one temporary part into <b>${build.blade.name}</b> for this run, or skip.</p>
-        <div class="rl-bey-grid">
+        <p class="rl-lede rl-lede-tight">Slot one temporary part into <b>${build.blade.name}</b>, or skip.</p>
+        <div class="rl-pick-list">
             ${temps.map((p,i)=>{
                 const art=p.kind==="bit"
                     ?(typeof bitSpritePath==="function"?bitSpritePath(bitByName(p.name)||{name:p.name}):"")
                     :(typeof ratchetSpritePath==="function"?ratchetSpritePath(ratchetByName(p.name)||{name:p.name}):"");
-                return `<button type="button" class="rl-bey-card rl-temp-pick" data-temp="${i}">
-                    <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:""}</div>
-                    <div class="rl-bey-copy"><span class="eyebrow">${p.kind}</span><b>${p.name}</b></div>
+                return `<button type="button" class="rl-pick-row" data-temp="${i}">
+                    <div class="rl-pick-art">${art?`<img src="${art}" alt="">`:""}</div>
+                    <div class="rl-pick-copy">
+                        <span class="rl-inv-chip">${String(p.kind||"PART").toUpperCase()} · TEMP</span>
+                        <b>${p.name}</b>
+                    </div>
                 </button>`;
             }).join("")}
         </div>
@@ -1296,14 +1377,17 @@ function showModifierPick(build,useAwakening,tempPart){
     const owned=(account().runTempMods||[]).slice();
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-mod">
+    <main class="home rogue-lite-mod rl-flow-screen">
         ${mark("MODIFIER",`${owned.length} READY`)}
-        <p class="rl-lede">Pick one rolled mod for this run, or skip to keep them.</p>
-        <div class="rl-mod-list">
-            ${owned.map((m,i)=>`<button type="button" class="rl-mod-card" data-mod-i="${i}" data-mod="${m.id}">
-                <b>${m.name||m.id}</b>
-                <small>${m.tag||""}</small>
-                <p>${m.blurb||""}</p>
+        <p class="rl-lede rl-lede-tight">Pick one rolled mod for this run, or skip to keep them.</p>
+        <div class="rl-pick-list rl-mod-list">
+            ${owned.map((m,i)=>`<button type="button" class="rl-pick-row rl-mod-card" data-mod-i="${i}" data-mod="${m.id}">
+                <div class="rl-pick-art rl-inv-mod-glyph">◈</div>
+                <div class="rl-pick-copy">
+                    <span class="rl-inv-chip">${m.tag||"MOD"}</span>
+                    <b>${m.name||m.id}</b>
+                    <small class="rl-inv-meta">${m.blurb||""}</small>
+                </div>
             </button>`).join("")}
         </div>
         <button class="menu-btn silver" id="rlModSkip" type="button">NO MODIFIER</button>
