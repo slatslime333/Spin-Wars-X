@@ -833,8 +833,8 @@ function tradingBeyCardHTML(g,idx){
     const b=g.blade;
     const tier=String(b.tier||"Bronze");
     const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
-    const card=typeof bladeCardStats==="function"?bladeCardStats(b):null;
-    const ovr=card?.ovr??"—";
+    const card=typeof bladeCardStats==="function"?bladeCardStats(b):(b.card||null);
+    const ovr=card?.ovr ?? b.card?.ovr ?? "—";
     const prog=awakeningProgress(g.id);
     let stamp="NEW";
     if(g.kind==="duplicate"||g.duplicate) stamp=`DUP ${prog.copies}/${prog.max}`;
