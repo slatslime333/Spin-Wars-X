@@ -770,121 +770,101 @@ function showHelp(){
     mountDev();
 }
 
-function showCollection(tierFilter){
-    ensureAccountReady();
-    Game.screen="rogueLiteCollection";
-    Game._rlCollectionTier=tierFilter||null;
-    const app=document.getElementById("app");
-    if(!tierFilter){
-        const counts={Bronze:0,Silver:0,Gold:0};
-        ownedBladeIds().forEach(id=>{
-            const t=String(bladeById(id)?.tier||"");
-            if(counts[t]!=null) counts[t]+=1;
-        });
-        app.innerHTML=`<div class="background stadium"></div>
-        <main class="home rogue-lite-collection">
-            ${mark("COLLECTION","PICK A TIER")}
-            ${hudStrip()}
-            <p class="rl-lede">Browse by tier. Open a Bey for full stats and ability.</p>
-            <nav class="rl-doors rl-collection-doors" aria-label="Collection tiers">
-                <button class="home-door play" type="button" data-tier="Bronze">
-                    <span class="home-door-kicker">TIER</span>
-                    <b>BRONZE</b>
-                    <small class="swx-state">${counts.Bronze} owned</small>
-                </button>
-                <button class="home-door play" type="button" data-tier="Silver">
-                    <span class="home-door-kicker">TIER</span>
-                    <b>SILVER</b>
-                    <small class="swx-state">${counts.Silver} owned</small>
-                </button>
-                <button class="home-door play" type="button" data-tier="Gold">
-                    <span class="home-door-kicker">RENTALS</span>
-                    <b>GOLD</b>
-                    <small class="swx-state">${counts.Gold} owned</small>
-                </button>
-            </nav>
-        </main>`;
-        document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
-        document.querySelectorAll("[data-tier]").forEach(btn=>{
-            btn.onclick=()=>showCollectionList(btn.getAttribute("data-tier"));
-        });
-        mountDev();
-        return;
-    }
-    showCollectionList(tierFilter);
+function invFilterIds(filter){
+    const f=String(filter||"all");
+    return ownedBladeIds().filter(id=>{
+        const t=String(bladeById(id)?.tier||"");
+        if(f==="all") return true;
+        return t===f;
+    }).sort((a,b)=>{
+        const ta=String(bladeById(a)?.tier||"");
+        const tb=String(bladeById(b)?.tier||"");
+        const rank={Gold:0,Silver:1,Bronze:2};
+        const ra=rank[ta]??9, rb=rank[tb]??9;
+        if(ra!==rb) return ra-rb;
+        return String(bladeById(a)?.name||"").localeCompare(String(bladeById(b)?.name||""));
+    });
 }
 
-function collectionIdsForTier(tier){
-    return ownedBladeIds().filter(id=>String(bladeById(id)?.tier||"")===String(tier));
+function beyRatingsHTML(blade){
+    const stats=typeof bladeCardStats==="function"?bladeCardStats(blade):(blade?.card||{});
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):null;
+    const ovr=stats.ovr ?? blade?.card?.ovr ?? "—";
+    if(typeof comboRatingBadgesHTML==="function"){
+        return comboRatingBadgesHTML({power,ovr},stats)
+            .replace(">POWER<",">POWER PTS<")
+            .replace(">OVR<",">OVERALL<");
+    }
+    return `<div class="vs-ratings">
+      <div class="vs-rating power"><small>POWER PTS</small><b>${power??"—"}</b></div>
+      <div class="vs-rating meta"><small>OVERALL</small><b>${ovr}</b></div>
+    </div>`;
 }
 
-function showCollectionList(tier){
-    ensureAccountReady();
-    Game.screen="rogueLiteCollectionList";
-    Game._rlCollectionTier=tier;
-    const ids=collectionIdsForTier(tier);
-    const page=Math.max(0,Math.min(ids.length?ids.length-1:0,Number(Game._rlCollectionPage)||0));
-    Game._rlCollectionPage=page;
-    const app=document.getElementById("app");
-    if(!ids.length){
-        app.innerHTML=`<div class="background stadium"></div>
-        <main class="home rogue-lite-collection">
-            ${mark("COLLECTION",String(tier).toUpperCase())}
-            ${hudStrip()}
-            <p class="rl-empty">No ${tier} blades yet.</p>
-        </main>`;
-        document.querySelector(".home")?.appendChild(createBackButton(()=>showCollection()));
-        mountDev();
-        return;
-    }
-    const id=ids[page];
+function beyStatBarsHTML(blade){
+    const stats=typeof bladeCardStats==="function"?bladeCardStats(blade):(blade?.card||{});
+    if(typeof comboStatGroupsHTML==="function") return comboStatGroupsHTML(stats);
+    return "";
+}
+
+function inventoryCardHTML(id){
     const b=bladeById(id);
+    if(!b) return "";
+    const tier=String(b.tier||"Bronze");
     const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
     const prog=awakeningProgress(id);
     const aw=highestClaimedAwakening(id);
-    const gold=String(b.tier)==="Gold"?account().goldRentals[id]:null;
+    const gold=tier==="Gold"?account().goldRentals[id]:null;
+    const kitId=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.kitId
+        ? SpinWarsAbilities.kitId(b):null;
+    const ability=kitId&&SpinWarsAbilities.kitMeta
+        ? (SpinWarsAbilities.kitMeta(kitId)?.name||""):"";
+    return `<button type="button" class="rl-inv-card tier-${tier.toLowerCase()}" data-inv="${id}">
+        <div class="rl-inv-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
+        <div class="rl-inv-copy">
+            <span class="eyebrow">${tier.toUpperCase()}${ability?` · ${ability}`:""}${aw?` · AW${aw}`:""}</span>
+            <b>${b.name}</b>
+            <small class="rl-inv-meta">Dup ${prog.copies}/${prog.max}${gold?` · ${gold.runsLeft} runs`:""}</small>
+            ${beyRatingsHTML(b)}
+            <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
+        </div>
+    </button>`;
+}
+
+function showCollection(){
+    ensureAccountReady();
+    Game.screen="rogueLiteCollection";
+    const filter=Game._rlCollectionFilter||"all";
+    const ids=invFilterIds(filter);
+    const app=document.getElementById("app");
+    const options=["all","Bronze","Silver","Gold"].map(v=>{
+        const label=v==="all"?"ALL":v.toUpperCase();
+        return `<option value="${v}" ${filter===v?"selected":""}>${label}</option>`;
+    }).join("");
+    const cards=ids.map(inventoryCardHTML).join("")||`<p class="rl-empty">No blades in this filter.</p>`;
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-collection">
-        ${mark("COLLECTION",`${String(tier).toUpperCase()} · ${page+1} / ${ids.length}`)}
+    <main class="home rogue-lite-collection rl-inv-screen">
+        <header class="rl-inv-head">
+            <div class="rl-inv-title">
+                <span class="eyebrow">INVENTORY</span>
+                <b>COLLECTION</b>
+            </div>
+            <label class="rl-inv-filter">
+                <span>FILTER</span>
+                <select id="rlInvFilter">${options}</select>
+            </label>
+        </header>
         ${hudStrip()}
-        <article class="rl-bey-sheet tier-${String(tier).toLowerCase()}">
-            <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
-            <div class="rl-bey-copy">
-                <span class="eyebrow">${String(tier).toUpperCase()}${aw?` · AWAKENING ${aw}`:""}</span>
-                <b>${b.name}</b>
-                <small>Duplicates ${prog.copies} / ${prog.max}</small>
-                ${gold?`<small class="rl-gold-left">${gold.runsLeft} RUNS LEFT</small>`:""}
-            </div>
-            <div class="rl-collection-actions">
-                <button type="button" class="rip-btn" id="rlViewBey">VIEW STATS</button>
-                ${String(tier)!=="Gold"&&prog.copies>1
-                    ?`<button type="button" class="menu-btn silver" id="rlSellBey">SELL DUP · $${cfg().SELL?.[tier]||0}</button>`
-                    :""}
-            </div>
-            <div class="rl-collection-nav">
-                <button type="button" class="menu-btn silver" id="rlColPrev" ${page<=0?"disabled":""}>← PREV</button>
-                <button type="button" class="menu-btn silver" id="rlColNext" ${page>=ids.length-1?"disabled":""}>NEXT →</button>
-            </div>
-        </article>
+        <div class="rl-inv-grid">${cards}</div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>{
-        Game._rlCollectionPage=0;
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    document.getElementById("rlInvFilter").onchange=(e)=>{
+        Game._rlCollectionFilter=e.target.value||"all";
         showCollection();
-    }));
-    document.getElementById("rlViewBey").onclick=()=>showCollectionDetail(id);
-    document.getElementById("rlSellBey")?.addEventListener("click",()=>{
-        sellDuplicate(id);
-        Game._rlCollectionPage=Math.min(Game._rlCollectionPage,Math.max(0,collectionIdsForTier(tier).length-1));
-        showCollectionList(tier);
+    };
+    document.querySelectorAll("[data-inv]").forEach(btn=>{
+        btn.onclick=()=>showCollectionDetail(btn.getAttribute("data-inv"));
     });
-    document.getElementById("rlColPrev").onclick=()=>{
-        Game._rlCollectionPage=Math.max(0,page-1);
-        showCollectionList(tier);
-    };
-    document.getElementById("rlColNext").onclick=()=>{
-        Game._rlCollectionPage=Math.min(ids.length-1,page+1);
-        showCollectionList(tier);
-    };
     mountDev();
 }
 
@@ -895,38 +875,27 @@ function showCollectionDetail(id){
     if(!b){ showCollection(); return; }
     const tier=String(b.tier||"Bronze");
     const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
-    const stats=typeof bladeCardStats==="function"?bladeCardStats(b):(b.card||{});
     const prog=awakeningProgress(id);
     const aw=highestClaimedAwakening(id);
     const gold=tier==="Gold"?account().goldRentals[id]:null;
     const ability=typeof SpinWarsAbilities!=="undefined"&&SpinWarsAbilities.abilityChipHTML
         ? SpinWarsAbilities.abilityChipHTML(b)
         : "";
-    const statHtml=typeof comboStatGroupsHTML==="function"
-        ? comboStatGroupsHTML(stats)
-        : `<div class="rl-tc-stats rl-tc-stats-full">
-            <span>ATK ${stats.attack??"—"}</span><span>KB ${stats.knockback??"—"}</span>
-            <span>DEF ${stats.defense??"—"}</span><span>MOB ${stats.mobility??"—"}</span>
-            <span>BAL ${stats.balance??"—"}</span><span>STA ${stats.stamina??"—"}</span>
-            <span>BST ${stats.burst??"—"}</span>
-        </div>`;
-    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):null;
-    const ovr=stats.ovr ?? b.card?.ovr ?? "—";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-collection">
-        ${mark(b.name,tier.toUpperCase())}
+    <main class="home rogue-lite-collection rl-inv-screen">
+        <header class="rl-inv-head">
+            <div class="rl-inv-title">
+                <span class="eyebrow">${tier.toUpperCase()}</span>
+                <b>${b.name}</b>
+            </div>
+        </header>
         ${hudStrip()}
         <article class="rl-bey-detail tier-${tier.toLowerCase()}">
             <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
-            <div class="rl-bey-ratings">
-                <span class="ovr-badge power"><small>POWER</small><b>${power??"—"}</b></span>
-                <span class="ovr-badge"><small>OVR</small><b>${ovr}</b></span>
-                ${aw?`<span class="rl-aw on">AWAKENING ${aw}</span>`:""}
-                ${gold?`<span class="rl-gold-left">${gold.runsLeft} RUNS LEFT</span>`:""}
-            </div>
+            ${beyRatingsHTML(b)}
             ${ability}
-            ${statHtml}
+            <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
             <div class="rl-aw-row">
                 ${[1,2,3].map(lv=>{
                     const L=prog.levels[lv];
@@ -935,10 +904,17 @@ function showCollectionDetail(id){
                     return `<span class="rl-aw">LV${lv} · ${L.need}</span>`;
                 }).join("")}
             </div>
-            <small class="rl-detail-dup">Duplicates ${prog.copies} / ${prog.max}</small>
+            <small class="rl-detail-dup">Duplicates ${prog.copies} / ${prog.max}${gold?` · ${gold.runsLeft} RUNS LEFT`:""}</small>
+            ${tier!=="Gold"&&prog.copies>1
+                ?`<button type="button" class="menu-btn silver" id="rlSellBey">SELL DUP · $${cfg().SELL?.[tier]||0}</button>`
+                :""}
         </article>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showCollectionList(tier)));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showCollection()));
+    document.getElementById("rlSellBey")?.addEventListener("click",()=>{
+        sellDuplicate(id);
+        showCollectionDetail(id);
+    });
     document.querySelectorAll("[data-aw]").forEach(btn=>{
         btn.onclick=()=>{
             const [bid,lv]=String(btn.getAttribute("data-aw")||"").split(":");
@@ -1003,8 +979,6 @@ function tradingBeyCardHTML(g,idx){
     const b=g.blade;
     const tier=String(b.tier||"Bronze");
     const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
-    const card=typeof bladeCardStats==="function"?bladeCardStats(b):(b.card||null);
-    const ovr=card?.ovr ?? b.card?.ovr ?? "—";
     const prog=awakeningProgress(g.id);
     let stamp="NEW";
     if(g.kind==="duplicate"||g.duplicate) stamp=`DUP ${prog.copies}/${prog.max}`;
@@ -1016,20 +990,15 @@ function tradingBeyCardHTML(g,idx){
     const ability=kitId&&SpinWarsAbilities.kitMeta
         ? (SpinWarsAbilities.kitMeta(kitId)?.name||"")
         : "";
-    const stats=card?`<div class="rl-tc-stats rl-tc-stats-full">
-        <span>ATK ${card.attack??"—"}</span><span>KB ${card.knockback??"—"}</span>
-        <span>DEF ${card.defense??"—"}</span><span>MOB ${card.mobility??"—"}</span>
-        <span>BAL ${card.balance??"—"}</span><span>STA ${card.stamina??"—"}</span>
-        <span>BST ${card.burst??"—"}</span><span>OVR ${ovr}</span>
-    </div>`:`<small class="rl-tc-ovr">OVR ${ovr}</small>`;
-    return `<article class="rl-trade-card tier-${tier.toLowerCase()}" data-card-i="${idx}" aria-hidden="true">
+    return `<article class="rl-trade-card rl-trade-bey tier-${tier.toLowerCase()}" data-card-i="${idx}" aria-hidden="true">
         <div class="rl-tc-back" aria-hidden="true"><span>${tier}</span></div>
         <div class="rl-tc-face">
             <span class="rl-tc-stamp">${stamp}</span>
             <div class="rl-tc-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
             <span class="eyebrow">${tier}${ability?` · ${ability}`:""}</span>
             <b>${b.name}</b>
-            ${stats}
+            ${beyRatingsHTML(b)}
+            <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
         </div>
     </article>`;
 }
@@ -1086,7 +1055,7 @@ function showPackTheater(out){
     }
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-open">
+    <main class="home rogue-lite-open" id="rlOpenMain">
         <p class="rl-open-title">${pack.name}</p>
         <div class="rl-open-stage" id="rlOpenStage">
             <button type="button" class="rl-pack-shell tier-${tier}" id="rlPackShell" aria-label="Open pack">
@@ -1100,12 +1069,18 @@ function showPackTheater(out){
         <p class="rl-open-hint" id="rlOpenHint">Tear the pack.</p>
         <button class="rip-btn" id="rlOpenDone" type="button" hidden>DONE</button>
     </main>`;
+    const main=document.getElementById("rlOpenMain");
     const shell=document.getElementById("rlPackShell");
     const rail=document.getElementById("rlCardRail");
     const hint=document.getElementById("rlOpenHint");
     const done=document.getElementById("rlOpenDone");
     let opened=false;
     let revealed=0;
+    const snapToCard=(card)=>{
+        if(!card||!rail) return;
+        const left=card.offsetLeft-(rail.clientWidth-card.clientWidth)/2;
+        rail.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+    };
     const revealNext=()=>{
         const card=rail.querySelector(`[data-card-i="${revealed}"]`);
         if(!card){
@@ -1116,6 +1091,7 @@ function showPackTheater(out){
         card.setAttribute("aria-hidden","false");
         card.classList.add("deal","flip");
         revealed+=1;
+        snapToCard(card);
         hint.textContent=revealed<n?`Card ${revealed} of ${n} — tap for next`:`Card ${revealed} of ${n}`;
         if(revealed>=n){
             done.hidden=false;
@@ -1127,10 +1103,12 @@ function showPackTheater(out){
             return;
         }
         opened=true;
+        main?.classList.add("is-revealing");
         shell.classList.add("ripping");
         hint.textContent="…";
         window.setTimeout(()=>{
             shell.hidden=true;
+            shell.classList.add("rl-pack-gone");
             rail.hidden=false;
             revealNext();
         },520);
@@ -1467,11 +1445,10 @@ function refreshLiteScreen(){
     const s=Game.screen||"";
     if(s==="rogueLiteHub") showHub();
     else if(s==="rogueLiteMarket") showMarket();
-    else if(s==="rogueLiteCollection") showCollection();
-    else if(s==="rogueLiteCollectionList") showCollectionList(Game._rlCollectionTier||"Bronze");
+    else if(s==="rogueLiteCollection"||s==="rogueLiteCollectionList") showCollection();
     else if(s==="rogueLiteCollectionDetail"){
-        const ids=collectionIdsForTier(Game._rlCollectionTier||"Bronze");
-        const id=ids[Math.max(0,Number(Game._rlCollectionPage)||0)];
+        const ids=invFilterIds(Game._rlCollectionFilter||"all");
+        const id=ids[0];
         if(id) showCollectionDetail(id);
         else showCollection();
     }
