@@ -4352,9 +4352,22 @@ button:focus-visible{
   box-sizing:border-box;overflow:hidden;
   justify-content:flex-start !important;
 }
+.rl-open-title{
+  font-family:Staatliches,Impact,sans-serif;letter-spacing:.1em;font-size:20px;margin:0;
+  flex:0 0 auto;text-align:center;width:100%;
+}
+.rl-open-stage{
+  width:min(960px,100%);
+  flex:1 1 auto;
+  min-height:0;
+  display:grid;
+  place-items:center;
+  position:relative;
+  overflow:hidden;
+}
 .rogue-lite-open.is-revealing{
   padding-top:8px;gap:6px;
-  justify-content:flex-start;
+  justify-content:flex-start !important;
 }
 .rogue-lite-open.is-revealing .rl-open-stage{
   flex:0 1 auto;
@@ -4363,6 +4376,7 @@ button:focus-visible{
   max-height:min(78dvh,640px);
   display:block;
   place-items:unset;
+  overflow:visible;
 }
 .rl-pack-shell{
   width:min(240px,70vw);aspect-ratio:5/7;
@@ -4373,10 +4387,16 @@ button:focus-visible{
   padding:18px 14px 22px;color:#fff;
   transform-origin:50% 60%;
   transition:transform .2s ease;
+  margin:0 auto;
+  max-width:100%;
+  z-index:2;
 }
 .rl-pack-shell[hidden],.rl-pack-shell.rl-pack-gone{
   display:none !important;
   pointer-events:none;
+}
+.rl-card-rail[hidden]{
+  display:none !important;
 }
 .rl-pack-shell:hover{transform:translateY(-4px) rotate(-1deg)}
 .rl-pack-shell.tier-bronze{
