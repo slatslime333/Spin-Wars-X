@@ -1399,7 +1399,7 @@ function renderMainMenu(){
         </div>
         <nav class="swx-nav" aria-label="Play">
             <button class="home-door rip swx-hero" data-home="rogue" type="button">
-                <span class="home-door-kicker">NIGHT</span>
+                <span class="home-door-kicker">PACK</span>
                 <b>ROGUE</b>
                 <span class="swx-hero-mark">PRIMARY</span>
             </button>
@@ -1414,7 +1414,8 @@ function renderMainMenu(){
                 </button>
             </div>
             <div class="swx-util">
-                <button class="home-door locked" type="button" aria-disabled="true">
+                <button class="home-door play" data-home="campaign" type="button">
+                    <span class="home-door-kicker">LOCKER</span>
                     <b>CAMPAIGN</b>
                 </button>
                 <button class="home-help" data-home="help" type="button">HOW</button>
@@ -1423,7 +1424,12 @@ function renderMainMenu(){
         <p class="home-ver">ALPHA</p>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>{
-        if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork) SpinWarsRogueRun.showFork();
+        if(typeof SpinWarsRogueLite!=="undefined" && SpinWarsRogueLite.showHub) SpinWarsRogueLite.showHub();
+        else if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
+        else SpinWarsRogue.showLanding();
+    });
+    document.querySelector("[data-home='campaign']")?.addEventListener("click",()=>{
+        if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
         else SpinWarsRogue.showLanding();
     });
     document.querySelector("[data-home='sandbox']")?.addEventListener("click",()=>SpinWarsSandbox.showLanding());
@@ -1469,9 +1475,9 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-modes">
             <h2>The doors</h2>
-            <p><strong>Rogue</strong> opens two doors. <strong>Rogue Run</strong> is the locker: Garage, Track, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). EXP levels the account. Money buys the Track. Silver and Gold blades open in Bronze form and evolve like Tier Rogue — Gold never Enhances. Early nights stay farmable; better parts ease the climb. <strong>Tier Rogue</strong> is the classic night: Bronze / Silver / Gold door, eighteen matches, shop cards, minis at 6 and 12. Both are first to 7. Lose, and that run is over. Continue remembers a live night.</p>
+            <p><strong>Rogue</strong> is the pack night: collect blades, open packs, draft three random kits, pick one, climb 30 matches. Ratchets and bits are not permanent unlocks. Gold blades are temporary rentals. Duplicates feed Awakening. Mid-run shop cards and modifiers still go crazy. Lose, and that run is over. Continue remembers a live night.</p>
             <p><strong>Sandbox</strong> is the lab. Landing doors for Player vs CPU, Player vs Player, and CPU vs CPU. 1 Bey or 2. Full garage, kit presets, launch presets, a session log. Finishes call out a score and keep going. Leave is the only exit. PvP uses two docks (P1 Space / E, P2 Enter / Shift). CPU vs CPU is watch mode. Tap a name in battle for a paused stat sheet — that works in Rogue and Quick Play too.</p>
-            <p><strong>Campaign</strong> is locked. Story is not in yet. That door is a promise, not a bug.</p>
+            <p><strong>Campaign</strong> is the locker climb (former Rogue Run): Garage, Track, money and EXP, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). Still 1v1 for now. Separate save from Rogue packs.</p>
             <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
         </section>
 
@@ -2437,13 +2443,15 @@ function createComboSummaryCard(side,combo){
     const tier=tierClass(combo.plateTier||combo.blade?.tier);
     const bossMark=combo.bossMark||"";
     const enhanced=!!combo.enhanced;
+    const awakeningLevel=Math.max(0,Number(combo.awakeningLevel)||0);
     const kitDelta=combo.statDelta&&COMBO_STAT_KEYS.some(k=>(Number(combo.statDelta[k])||0)!==0)
         ? combo.statDelta
         : (combo.deltaFromBlade||statDeltaMap(bladeCardStats(combo.blade),stats));
     const statBlock=comboStatGroupsHTML(stats,kitDelta);
     const mod=combo.rogueMod;
-    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${bossMark?" boss-"+bossMark:""}">
+    return `<article class="vs-plate ${isPlayer?"you":"them"} ${tier}${enhanced?" enhanced":""}${awakeningLevel?" awakening":""}${bossMark?" boss-"+bossMark:""}">
       ${!isPlayer&&bossMark?`<span class="vs-boss-mark">${bossMark==="final"?"FINAL BOSS":"BOSS"}</span>`:""}
+      ${isPlayer&&awakeningLevel?`<span class="vs-awaken-mark">AWAKENING ${awakeningLevel}</span>`:""}
       <div class="vs-art">${sprite?`<img src="${sprite}" alt="">`:"<span></span>"}</div>
       <div class="vs-copy">
         <span class="vs-who">${combo.who||(isPlayer?"YOU":"CPU")}</span>
@@ -2481,7 +2489,7 @@ function showComboCard(){
     app.innerHTML=`<div class="background"></div><main class="vs-screen">
       ${vsCall}
       <section class="vs-board">
-        ${createComboSummaryCard("player",{...Game.player,...playerCombo,stats:playerCombo.stats,power:playerCombo.power,ovr:playerCombo.ovr,meta:playerCombo.ovr,statDelta:playerPlate?.delta||playerCombo.deltaFromBlade,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced})}
+        ${createComboSummaryCard("player",{...Game.player,...playerCombo,stats:playerCombo.stats,power:playerCombo.power,ovr:playerCombo.ovr,meta:playerCombo.ovr,statDelta:playerPlate?.delta||playerCombo.deltaFromBlade,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced,awakeningLevel:playerPlate?.awakeningLevel||Game.rogue?.awakeningLevel||0})}
         <div class="vs-stamp" aria-hidden="true">VS</div>
         ${createComboSummaryCard("cpu",{...Game.cpu,...cpuCombo,stats:cpuCombo.stats,power:cpuCombo.power,ovr:cpuCombo.ovr,meta:cpuCombo.ovr,statDelta:cpuPlate?.delta||cpuCombo.deltaFromBlade,rogueMod:cpuCombo.mod,rogueStack:cpuPlate?cpuPlate.stackHTML:"",plateTier:cpuPlate?.plateTier,enhanced:cpuPlate?.enhanced,bossMark:cpuPlate?.bossMark,pressure:cpuPlate?.pressure||"",pressureKind:cpuPlate?.pressureKind||""})}
       </section>

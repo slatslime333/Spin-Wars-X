@@ -536,10 +536,10 @@ function showHub(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell rr-hub">
         ${bowl()}
-        ${mark("ROGUE RUN","")}
+        ${mark("CAMPAIGN","")}
         ${hudStrip()}
         ${loadoutCard()}
-        <nav class="home-doors rogue-doors rr-doors" aria-label="Rogue Run">
+        <nav class="home-doors rogue-doors rr-doors" aria-label="Campaign">
             ${live?`<button class="home-door rip swx-hero" id="rrContinue" type="button">
                 <span class="home-door-kicker">SAVE</span>
                 <b>CONTINUE</b>
@@ -590,7 +590,7 @@ function showStarterPick(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell">
         ${bowl()}
-        ${mark("ROGUE RUN","STARTER")}
+        ${mark("CAMPAIGN","STARTER")}
         <div class="rr-starter-row">
             ${ids.map(id=>{
                 const b=bladeById(id);
@@ -845,7 +845,7 @@ function showBoard(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing rogue-run-board">
         ${bowl()}
-        ${mark("ROGUE RUN","RUN SCOREBOARD")}
+        ${mark("CAMPAIGN","RUN SCOREBOARD")}
         <section class="rogue-run-history">${body}</section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
@@ -875,7 +875,7 @@ function showHelp(){
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
-                <span class="eyebrow">ROGUE RUN</span>
+                <span class="eyebrow">CAMPAIGN</span>
                 <h1>HOW THIS LOCKER WORKS</h1>
                 <p>Same stadium as Tier Rogue. Longer night. Your collection is the paycheck.</p>
             </div>
