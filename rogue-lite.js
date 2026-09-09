@@ -1134,8 +1134,12 @@ function showPackTheater(out){
     const snapToCard=(card)=>{
         if(!card||!rail) return;
         requestAnimationFrame(()=>{
-            const left=card.offsetLeft-(rail.clientWidth-card.clientWidth)/2;
-            rail.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+            try{
+                card.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"});
+            }catch(_e){
+                const left=card.offsetLeft-(rail.clientWidth-card.clientWidth)/2;
+                rail.scrollTo({left:Math.max(0,left),behavior:"smooth"});
+            }
         });
     };
     const revealNext=()=>{
