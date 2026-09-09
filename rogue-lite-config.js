@@ -90,6 +90,32 @@ function nightMoney(win,night,opts){
     return base+(opts.shark&&win?60:0);
 }
 
+/** Lite CPU pressure helpers — Phase 3. Collection depth softens early / squeezes late. */
+function liteCollectionBand(ownedCount){
+    const n=Math.max(0,Number(ownedCount)||0);
+    if(n<=5) return -0.035;   // starter pool
+    if(n<=8) return -0.01;
+    if(n<=12) return 0.015;
+    return 0.035;              // deep collection
+}
+
+function liteNightMix(match,boss){
+    const m=Math.max(1,Number(match)||1);
+    if(boss){
+        if(m<=10) return {easy:0.24,even:0.52,hard:0.24};
+        if(m<=20) return {easy:0.14,even:0.50,hard:0.36};
+        return {easy:0.08,even:0.44,hard:0.48};
+    }
+    // Starter-clearable early; late nights punish thin builds harder than Campaign Track.
+    if(m<=3) return {easy:0.52,even:0.40,hard:0.08};
+    if(m<=6) return {easy:0.42,even:0.46,hard:0.12};
+    if(m<=9) return {easy:0.32,even:0.50,hard:0.18};
+    if(m<=14) return {easy:0.24,even:0.50,hard:0.26};
+    if(m<=19) return {easy:0.18,even:0.48,hard:0.34};
+    if(m<=25) return {easy:0.12,even:0.46,hard:0.42};
+    return {easy:0.08,even:0.42,hard:0.50};
+}
+
 function goldExtendCost(extendCount){
     const n=Math.max(0,Number(extendCount)||0);
     return GOLD_EXTEND_BASE+n*GOLD_EXTEND_STEP;
@@ -107,6 +133,7 @@ global.SpinWarsRogueLiteConfig={
     AWAKENING_THRESHOLDS,GOLD_DEFAULT_RUNS,GOLD_EXTEND_BASE,GOLD_EXTEND_STEP,
     SELL,STARTER_GRANT,PACKS,
     nightMoney,goldExtendCost,packList,packById,chance,
+    liteCollectionBand,liteNightMix,
     rules:{
         finalMatch:FINAL_MATCH,
         bossAt:BOSS_AT,

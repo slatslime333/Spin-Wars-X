@@ -895,6 +895,7 @@ function showHelp(){
 
 function mountDev(){
     document.getElementById("rrDevBtn")?.remove();
+    document.getElementById("rlDevBtn")?.remove();
     const btn=document.createElement("button");
     btn.id="rrDevBtn";
     btn.type="button";
@@ -915,8 +916,8 @@ function toggleDev(){
     const panel=document.createElement("aside");
     panel.id="rrDevPanel";
     panel.className="rogue-dev-panel";
-    panel.innerHTML=`<header><b>ROGUE RUN DEV</b><button type="button" id="rrDevClose">✕</button></header>
-        <p class="rogue-dev-copy">Account cheats write the real locker save. Run skips reuse the live night engine.</p>
+    panel.innerHTML=`<header><b>CAMPAIGN DEV</b><button type="button" id="rrDevClose">✕</button></header>
+        <p class="rogue-dev-copy">Account cheats write the Campaign locker save. Run skips reuse the live night engine.</p>
         <p class="rogue-dev-stats">LV ${acc.level} · EXP ${acc.exp} · $${acc.money}</p>
         <div class="rogue-dev-actions">
             <button type="button" class="menu-btn silver" data-rr="exp100">+100 EXP</button>
