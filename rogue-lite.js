@@ -554,7 +554,7 @@ function archiveAndClear(status){
         }
     }catch(_e){}
     clearLive();
-    account().runTempParts=[];
+    // Keep unused temp parts / mod charges across runs.
     persistAccount();
 }
 
@@ -565,16 +565,33 @@ function afterRunHome(status){
     showHub();
 }
 
-function beginBuild(build,useAwakening){
+function beginBuild(build,useAwakening,extra){
+    extra=extra||{};
     if(!build||!global.SpinWarsRogue?.beginFromLoadout) return false;
     const cost=cfg().RUN_COST||40;
     if(account().money>=cost) trySpend(cost);
-    const blade=build.blade;
+    let blade=build.blade;
+    let ratchet=build.ratchet;
+    let bit=build.bit;
     const id=build.bladeId||bladeIdOf(blade);
+    if(extra.tempPart){
+        const p=extra.tempPart;
+        if(p.kind==="bit"){
+            const b=bitByName(p.name);
+            if(b) bit=b;
+        }else if(p.kind==="ratchet"){
+            const r=ratchetByName(p.name)||{name:p.name};
+            ratchet=r;
+        }
+        const acc=account();
+        const ix=(acc.runTempParts||[]).findIndex(x=>x&&x.kind===p.kind&&x.name===p.name);
+        if(ix>=0) acc.runTempParts.splice(ix,1);
+        persistAccount();
+    }
     if(String(blade.tier)==="Gold") consumeGoldRun(id);
     const awLv=useAwakening?highestClaimedAwakening(id):0;
     const opts={loop:"lite",awakeningLevel:awLv,awakeningBonus:awakeningBonuses(blade,awLv)};
-    SpinWarsRogue.beginFromLoadout(blade,build.ratchet,build.bit,opts);
+    SpinWarsRogue.beginFromLoadout(blade,ratchet,bit,opts);
     if(Game.rogue){
         Game.rogue.loop="lite";
         Game.rogue.awakeningLevel=awLv;
@@ -582,8 +599,17 @@ function beginBuild(build,useAwakening){
         if(awLv>0){
             Game.rogue.runChip=Object.assign({},Game.rogue.runChip||{},opts.awakeningBonus);
         }
+        if(extra.modifierId){
+            Game.rogue.activeModifier={id:extra.modifierId};
+            const acc=account();
+            if((Number(acc.modCharges)||0)>0){
+                acc.modCharges-=1;
+                persistAccount();
+            }
+        }
     }
     Game._rlDraft=null;
+    Game._rlRunOpts=null;
     return true;
 }
 
@@ -601,10 +627,11 @@ function hudStrip(){
     const acc=account();
     const owned=ownedBladeIds().length;
     const golds=activeGoldIds().length;
+    const temps=(acc.runTempParts||[]).length;
     return `<section class="rl-hud">
         <div class="rl-hud-money"><small>MONEY</small><b>$${acc.money}</b></div>
         <div class="rl-hud-col"><small>COLLECTION</small><b>${owned}</b></div>
-        <div class="rl-hud-col"><small>GOLD RENTALS</small><b>${golds}</b></div>
+        <div class="rl-hud-col"><small>GOLD / TEMP</small><b>${golds} / ${temps}</b></div>
         <div class="rl-hud-col"><small>MOD CHARGES</small><b>${acc.modCharges||0}</b></div>
     </section>`;
 }
@@ -670,6 +697,10 @@ function showHelp(){
         <section class="menu-card">
             <h2>What this is</h2>
             <p>Rogue is a pack-and-build night. You collect blades, draft three random kits, pick one, then climb 30 matches. Ratchets and bits are never permanent here — only blades (and temp part packs).</p>
+        </section>
+        <section class="menu-card">
+            <h2>Packs</h2>
+            <p>Bey packs grant every revealed blade. Part packs give temporary ratchet/bit cards for a later run start. Modifier packs add charges you can spend when a night begins.</p>
         </section>
         <section class="menu-card">
             <h2>Awakening</h2>
@@ -752,58 +783,185 @@ function showMarket(){
     ensureAccountReady();
     Game.screen="rogueLiteMarket";
     const packs=(typeof cfg().packList==="function"?cfg().packList():Object.values(cfg().PACKS||{}));
-    const app=document.getElementById("app");
+    const beys=packs.filter(p=>p.family==="bey");
+    const parts=packs.filter(p=>p.family==="part");
+    const mods=packs.filter(p=>p.family==="mod");
     const money=account().money;
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-market">
-        ${mark("MARKETPLACE","PHASE 1 STUB")}
-        ${hudStrip()}
-        <p class="rl-lede">Pack theater lands in Phase 2. Purchases grant immediately for now.</p>
+    const temps=account().runTempParts||[];
+    const app=document.getElementById("app");
+    const section=(title,list)=>`<section class="rl-market-sec">
+        <h2 class="rl-market-h">${title}</h2>
         <div class="rl-pack-grid">
-            ${packs.map(p=>{
+            ${list.map(p=>{
                 const can=money>=p.price;
                 return `<article class="rl-pack-card tier-${String(p.tier||"").toLowerCase()}">
-                    <span class="eyebrow">${p.family.toUpperCase()} · ${p.tier}</span>
+                    <div class="rl-pack-foil" aria-hidden="true"></div>
+                    <span class="eyebrow">${p.tier}</span>
                     <b>${p.name}</b>
                     <p>${p.blurb}</p>
                     <button type="button" class="rip-btn rl-buy" data-pack="${p.id}" ${can?"":"disabled"}>$${p.price}</button>
                 </article>`;
             }).join("")}
         </div>
-        <p class="rl-flash" id="rlFlash" hidden></p>
+    </section>`;
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-market">
+        ${mark("MARKETPLACE","OPEN PACKS")}
+        ${hudStrip()}
+        <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready for your next run.`:""}</p>
+        ${section("BEY PACKS",beys)}
+        ${section("PART PACKS",parts)}
+        ${section("MODIFIERS",mods)}
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
     document.querySelectorAll("[data-pack]").forEach(btn=>{
-        btn.onclick=()=>{
-            const out=openPack(btn.getAttribute("data-pack"));
-            const flash=document.getElementById("rlFlash");
-            if(!out.ok){
-                if(flash){flash.hidden=false;flash.textContent=out.why==="money"?"Not enough money.":"Pack failed.";}
-                return;
-            }
-            if(out.granted){
-                const names=out.granted.map(g=>{
-                    const tag=g.duplicate?"DUP":(g.kind||"NEW");
-                    return `${g.blade.name} (${tag})`;
-                }).join(" · ");
-                if(flash){flash.hidden=false;flash.textContent=`Opened ${out.pack.name}: ${names}`;}
-            }else if(out.parts){
-                if(flash){flash.hidden=false;flash.textContent=`Temp parts: ${out.parts.map(p=>p.name).join(", ")}`;}
-            }else if(out.charges!=null){
-                if(flash){flash.hidden=false;flash.textContent=`Modifier charges: ${out.charges}`;}
-            }
-            showMarket();
-            const again=document.getElementById("rlFlash");
-            if(again&&flash&&!flash.hidden){
-                again.hidden=false;
-                again.textContent=flash.textContent;
-            }
-        };
+        btn.onclick=()=>buyAndOpenPack(btn.getAttribute("data-pack"));
     });
+}
+
+function buyAndOpenPack(packId){
+    const out=openPack(packId);
+    if(!out.ok){
+        showMarket();
+        return;
+    }
+    showPackTheater(out);
+}
+
+function tradingBeyCardHTML(g,idx){
+    const b=g.blade;
+    const tier=String(b.tier||"Bronze");
+    const art=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+    const card=typeof bladeCardStats==="function"?bladeCardStats(b):null;
+    const ovr=card?.ovr??"—";
+    const prog=awakeningProgress(g.id);
+    let stamp="NEW";
+    if(g.kind==="duplicate"||g.duplicate) stamp=`DUP ${prog.copies}/${prog.max}`;
+    if(g.kind==="gold-new") stamp=`${g.runsLeft} RUNS`;
+    if(g.kind==="gold-extend") stamp=`+1 RUN · ${g.runsLeft}`;
+    const stats=card?`<div class="rl-tc-stats">
+        <span>ATK ${card.attack??"—"}</span><span>KB ${card.knockback??"—"}</span>
+        <span>DEF ${card.defense??"—"}</span><span>STA ${card.stamina??"—"}</span>
+    </div>`:"";
+    return `<article class="rl-trade-card tier-${tier.toLowerCase()}" data-card-i="${idx}" aria-hidden="true">
+        <div class="rl-tc-back" aria-hidden="true"><span>${tier}</span></div>
+        <div class="rl-tc-face">
+            <span class="rl-tc-stamp">${stamp}</span>
+            <div class="rl-tc-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
+            <span class="eyebrow">${tier}</span>
+            <b>${b.name}</b>
+            <small class="rl-tc-ovr">OVR ${ovr}</small>
+            ${stats}
+        </div>
+    </article>`;
+}
+
+function tradingPartCardHTML(p,idx){
+    const isBit=p.kind==="bit";
+    const art=isBit
+        ?(typeof bitSpritePath==="function"?bitSpritePath(bitByName(p.name)||{name:p.name}):"")
+        :(typeof ratchetSpritePath==="function"?ratchetSpritePath(ratchetByName(p.name)||{name:p.name}):"");
+    return `<article class="rl-trade-card tier-part" data-card-i="${idx}" aria-hidden="true">
+        <div class="rl-tc-back" aria-hidden="true"><span>PART</span></div>
+        <div class="rl-tc-face">
+            <span class="rl-tc-stamp">TEMP</span>
+            <div class="rl-tc-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
+            <span class="eyebrow">${isBit?"BIT":"RATCHET"}</span>
+            <b>${p.name}</b>
+            <small class="rl-tc-ovr">THIS RUN</small>
+        </div>
+    </article>`;
+}
+
+function tradingModCardHTML(charges,idx){
+    return `<article class="rl-trade-card tier-gold" data-card-i="${idx}" aria-hidden="true">
+        <div class="rl-tc-back" aria-hidden="true"><span>MOD</span></div>
+        <div class="rl-tc-face">
+            <span class="rl-tc-stamp">+2 USES</span>
+            <div class="rl-tc-art rl-tc-mod">◈</div>
+            <span class="eyebrow">MODIFIER</span>
+            <b>RUN CHARGE</b>
+            <small class="rl-tc-ovr">${charges} TOTAL</small>
+            <p class="rl-tc-blurb">Activate a Rogue modifier when a run starts.</p>
+        </div>
+    </article>`;
+}
+
+function showPackTheater(out){
+    Game.screen="rogueLitePackOpen";
+    const pack=out.pack;
+    const tier=String(pack.tier||"Bronze").toLowerCase();
+    let cardsHTML="";
+    let n=0;
+    if(out.granted&&out.granted.length){
+        cardsHTML=out.granted.map((g,i)=>tradingBeyCardHTML(g,i)).join("");
+        n=out.granted.length;
+    }else if(out.parts&&out.parts.length){
+        cardsHTML=out.parts.map((p,i)=>tradingPartCardHTML(p,i)).join("");
+        n=out.parts.length;
+    }else if(out.charges!=null){
+        cardsHTML=tradingModCardHTML(out.charges,0);
+        n=1;
+    }
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-open">
+        <p class="rl-open-title">${pack.name}</p>
+        <div class="rl-open-stage" id="rlOpenStage">
+            <button type="button" class="rl-pack-shell tier-${tier}" id="rlPackShell" aria-label="Open pack">
+                <span class="rl-pack-band">${pack.tier}</span>
+                <span class="rl-pack-logo">SPIN WARS</span>
+                <span class="rl-pack-x">X</span>
+                <span class="rl-pack-cta">TAP TO OPEN</span>
+            </button>
+            <div class="rl-card-rail" id="rlCardRail" hidden>${cardsHTML}</div>
+        </div>
+        <p class="rl-open-hint" id="rlOpenHint">Tear the pack.</p>
+        <button class="rip-btn" id="rlOpenDone" type="button" hidden>DONE</button>
+    </main>`;
+    const shell=document.getElementById("rlPackShell");
+    const rail=document.getElementById("rlCardRail");
+    const hint=document.getElementById("rlOpenHint");
+    const done=document.getElementById("rlOpenDone");
+    let opened=false;
+    let revealed=0;
+    const revealNext=()=>{
+        const card=rail.querySelector(`[data-card-i="${revealed}"]`);
+        if(!card){
+            done.hidden=false;
+            hint.textContent=n>1?`All ${n} cards revealed.`:"Card revealed.";
+            return;
+        }
+        card.setAttribute("aria-hidden","false");
+        card.classList.add("deal","flip");
+        revealed+=1;
+        hint.textContent=revealed<n?`Card ${revealed} of ${n} — tap for next`:`Card ${revealed} of ${n}`;
+        if(revealed>=n){
+            done.hidden=false;
+        }
+    };
+    const startReveal=()=>{
+        if(opened){
+            if(revealed<n) revealNext();
+            return;
+        }
+        opened=true;
+        shell.classList.add("ripping");
+        hint.textContent="…";
+        window.setTimeout(()=>{
+            shell.hidden=true;
+            rail.hidden=false;
+            revealNext();
+        },520);
+    };
+    shell.onclick=startReveal;
+    rail.onclick=()=>{ if(opened&&revealed<n) revealNext(); };
+    done.onclick=()=>showMarket();
 }
 
 function showStartFlow(){
     ensureAccountReady();
+    Game._rlRunOpts={tempPart:null,modifierId:null};
     const golds=activeGoldIds();
     if(golds.length){
         showGoldCommit(golds);
@@ -896,12 +1054,14 @@ function onBuildPicked(idx){
     const draft=Game._rlDraft;
     const build=draft?.builds?.[idx];
     if(!build) return;
+    Game._rlRunOpts=Game._rlRunOpts||{tempPart:null,modifierId:null};
+    Game._rlRunOpts.build=build;
     const aw=highestClaimedAwakening(build.bladeId);
     if(aw>0){
         showAwakeningPrompt(build,aw);
         return;
     }
-    beginBuild(build,false);
+    continueAfterAwakening(build,false);
 }
 
 function showAwakeningPrompt(build,level){
@@ -916,16 +1076,88 @@ function showAwakeningPrompt(build,level){
             <button class="menu-btn silver" id="rlAwNo" type="button">NOT THIS RUN</button>
         </div>
     </main>`;
-    document.getElementById("rlAwYes").onclick=()=>beginBuild(build,true);
-    document.getElementById("rlAwNo").onclick=()=>beginBuild(build,false);
+    document.getElementById("rlAwYes").onclick=()=>continueAfterAwakening(build,true);
+    document.getElementById("rlAwNo").onclick=()=>continueAfterAwakening(build,false);
+}
+
+function continueAfterAwakening(build,useAwakening){
+    Game._rlRunOpts=Game._rlRunOpts||{};
+    Game._rlRunOpts.build=build;
+    Game._rlRunOpts.useAwakening=!!useAwakening;
+    const temps=account().runTempParts||[];
+    if(temps.length){
+        showTempPartPick(build,useAwakening);
+        return;
+    }
+    continueAfterTemp(build,useAwakening,null);
+}
+
+function showTempPartPick(build,useAwakening){
+    Game.screen="rogueLiteTempPart";
+    const temps=account().runTempParts||[];
+    const app=document.getElementById("app");
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-temp">
+        ${mark("TEMP PART","OPTIONAL")}
+        <p class="rl-lede">Slot one temporary part into <b>${build.blade.name}</b> for this run, or skip.</p>
+        <div class="rl-bey-grid">
+            ${temps.map((p,i)=>{
+                const art=p.kind==="bit"
+                    ?(typeof bitSpritePath==="function"?bitSpritePath(bitByName(p.name)||{name:p.name}):"")
+                    :(typeof ratchetSpritePath==="function"?ratchetSpritePath(ratchetByName(p.name)||{name:p.name}):"");
+                return `<button type="button" class="rl-bey-card rl-temp-pick" data-temp="${i}">
+                    <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:""}</div>
+                    <div class="rl-bey-copy"><span class="eyebrow">${p.kind}</span><b>${p.name}</b></div>
+                </button>`;
+            }).join("")}
+        </div>
+        <button class="menu-btn silver" id="rlTempSkip" type="button">SKIP</button>
+    </main>`;
+    document.getElementById("rlTempSkip").onclick=()=>continueAfterTemp(build,useAwakening,null);
+    document.querySelectorAll("[data-temp]").forEach(btn=>{
+        btn.onclick=()=>{
+            const p=temps[Number(btn.getAttribute("data-temp"))];
+            continueAfterTemp(build,useAwakening,p||null);
+        };
+    });
+}
+
+function continueAfterTemp(build,useAwakening,tempPart){
+    Game._rlRunOpts.tempPart=tempPart||null;
+    if((Number(account().modCharges)||0)>0){
+        showModifierPick(build,useAwakening,tempPart);
+        return;
+    }
+    beginBuild(build,useAwakening,{tempPart,modifierId:null});
+}
+
+function showModifierPick(build,useAwakening,tempPart){
+    Game.screen="rogueLiteModPick";
+    const mods=(typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.MODIFIERS)||[];
+    const charges=account().modCharges||0;
+    const app=document.getElementById("app");
+    const list=mods.length?mods:[{id:"last_stand",name:"LAST STAND",blurb:"Late-fight DEF/KB."}];
+    app.innerHTML=`<div class="background stadium"></div>
+    <main class="home rogue-lite-mod">
+        ${mark("MODIFIER",`${charges} CHARGE${charges===1?"":"S"}`)}
+        <p class="rl-lede">Spend one charge to start with a Rogue modifier. Skip to save it.</p>
+        <div class="rl-mod-list">
+            ${list.map(m=>`<button type="button" class="rl-mod-card" data-mod="${m.id}">
+                <b>${m.name}</b>
+                <small>${m.tag||""}</small>
+                <p>${m.blurb||""}</p>
+            </button>`).join("")}
+        </div>
+        <button class="menu-btn silver" id="rlModSkip" type="button">NO MODIFIER</button>
+    </main>`;
+    document.getElementById("rlModSkip").onclick=()=>beginBuild(build,useAwakening,{tempPart,modifierId:null});
+    document.querySelectorAll("[data-mod]").forEach(btn=>{
+        btn.onclick=()=>beginBuild(build,useAwakening,{tempPart,modifierId:btn.getAttribute("data-mod")});
+    });
 }
 
 function bootFromHome(){
     ensureAccountReady();
-    if(hasLive()){
-        showHub();
-        return;
-    }
     showHub();
 }
 
