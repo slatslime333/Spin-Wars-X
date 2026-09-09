@@ -437,30 +437,8 @@ function bowl(){
 }
 
 function showFork(){
-    Game.mode=null;
-    Game.screen="rogueFork";
-    document.getElementById("rrDevBtn")?.remove();
-    document.getElementById("rrDevPanel")?.remove();
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${bowl()}
-        ${mark("ROGUE","")}
-        <nav class="home-doors rogue-doors" aria-label="Rogue modes">
-            <button class="home-door rip swx-hero" id="rrForkRun" type="button">
-                <span class="home-door-kicker">NIGHT</span>
-                <b>ROGUE RUN</b>
-                <span class="swx-hero-mark">PRIMARY</span>
-            </button>
-            <button class="home-door play" id="rrForkTier" type="button">
-                <span class="home-door-kicker">CLASSIC</span>
-                <b>TIER ROGUE</b>
-            </button>
-        </nav>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
-    document.getElementById("rrForkRun").onclick=()=>showHub();
-    document.getElementById("rrForkTier").onclick=()=>SpinWarsRogue.showLanding();
+    // Old Rogue Run / Tier Rogue fork removed — Campaign opens its hub directly.
+    showHub();
 }
 
 function hudStrip(){
@@ -571,7 +549,7 @@ function showHub(){
         </nav>
         <div id="rrConfirm" hidden></div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
     document.getElementById("rrPlay")?.addEventListener("click",()=>showPlayConfirm(false));
     document.getElementById("rrContinue")?.addEventListener("click",()=>resumeLive());
     document.getElementById("rrNew")?.addEventListener("click",()=>confirmNewRun());
@@ -603,7 +581,7 @@ function showStarterPick(){
             }).join("")}
         </div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
     document.querySelectorAll("[data-starter]").forEach(btn=>{
         btn.onclick=()=>{
             const acc=account();

@@ -2541,26 +2541,8 @@ function bindRunHistoryRows(root){
 }
 
 function showRunHistory(){
-    Game.mode="rogue";
-    Game.quickMatch=false;
-    Game.screen="rogueRunHistory";
-    Game._viewingArchive=false;
-    const past=loadRunArchive();
-    const body=past.length
-        ? past.map(runHistoryRowHTML).join("")
-        : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing rogue-run-board">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:"SCOREBOARD"})}
-        <section class="rogue-run-history" aria-label="Finished runs">
-            ${body}
-        </section>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
-    bindRunHistoryRows();
-    mountDevButton();
+    // Classic Tier Rogue archive UI removed with that mode.
+    showLanding();
 }
 
 function openArchivedRun(id){
@@ -2705,7 +2687,7 @@ function resumeSave(){
 }
 
 function showLanding(){
-    /* Pack Rogue (Lite) must never land on Tier Rogue. */
+    /* Tier Rogue landing removed. Route to Pack Rogue, Campaign, or title. */
     if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
         global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
         SpinWarsRogueLite.showHub();
@@ -2716,57 +2698,11 @@ function showLanding(){
         SpinWarsRogueRun.showHub();
         return;
     }
-    Game.mode="rogue";
-    Game.quickMatch=false;
-    Game.screen="rogueLanding";
-    Game._viewingArchive=false;
-    const save=peekSave();
-    const canContinue=!!save && save.blade;
-    const continueNote=canContinue
-        ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
-        : "No run saved";
-    const past=loadRunArchive();
-    const boardNote=past.length
-        ? `${past.length} finished run${past.length===1?"":"s"}`
-        : "No finished runs yet";
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:""})}
-        <nav class="home-doors rogue-doors" aria-label="Rogue">
-            <button class="home-door rip swx-hero" id="rogueNewGame" type="button">
-                <span class="home-door-kicker">NEW RUN</span>
-                <b>NEW GAME</b>
-            </button>
-            <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span class="home-door-kicker">SAVE</span>
-                <b>CONTINUE</b>
-                <small class="swx-state">${continueNote}</small>
-                ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
-            </button>
-            <button class="home-door rogue" id="rogueScoreboard" type="button">
-                <span class="home-door-kicker">HISTORY</span>
-                <b>SCOREBOARD</b>
-                <small class="swx-state">${boardNote}</small>
-            </button>
-            <button class="home-help" id="rogueHelp" type="button">HOW</button>
-        </nav>
-        <div id="rogueNewConfirm" hidden></div>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>
-        (typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork)
-            ? SpinWarsRogueRun.showFork()
-            : renderMainMenu()
-    ));
-    document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
-    document.getElementById("rogueContinue").onclick=()=>{
-        if(!canContinue) return;
-        resumeSave();
-    };
-    document.getElementById("rogueScoreboard").onclick=()=>showRunHistory();
-    document.getElementById("rogueHelp").onclick=()=>showHelp();
-    mountDevButton();
+    if(global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
+        SpinWarsRogueLite.showHub();
+        return;
+    }
+    if(typeof renderMainMenu==="function") renderMainMenu();
 }
 
 function requestNewGame(){
@@ -2790,54 +2726,17 @@ function requestNewGame(){
 }
 
 function showTierPick(){
-    Game.mode="rogue";
-    Game.screen="rogueTier";
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:""}):""}
-        <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
-            <button class="home-league bronze" type="button" data-tier="Bronze">
-                <span class="home-league-copy"><b>BRONZE</b><small>Shop snowballs</small></span>
-            </button>
-            <button class="home-league silver" type="button" data-tier="Silver">
-                <span class="home-league-copy"><b>SILVER</b><small>Evolve · Enhance</small></span>
-            </button>
-            <button class="home-league gold" type="button" data-tier="Gold">
-                <span class="home-league-copy"><b>GOLD</b><small>Climb the forms</small></span>
-            </button>
-        </nav>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
-    document.querySelectorAll("[data-tier]").forEach(btn=>{
-        btn.onclick=()=>startRogueDraft(btn.dataset.tier);
-    });
-    mountDevButton();
+    // Classic Tier Rogue door pick removed from play — route to Pack Rogue.
+    showLanding();
 }
 
 function startRogueDraft(tier){
-    Game.mode="rogue";
-    const t=String(tier||"Bronze");
-    const blades=playableBlades().filter(b=>b && !b.hidden && String(b.tier)===t);
-    const bladePool=shuffle(blades).slice(0,3);
-    const ratchetPool=shuffle(typeof RATCHETS!=="undefined"?RATCHETS.slice():[]).slice(0,3);
-    const bitPool=shuffle(
-        typeof selectableBits==="function"?selectableBits():[]
-    ).slice(0,3);
-    Game.selection=Game.selection||{};
-    Game.selection.rogueTier=t;
-    Game.selection.bladePool=bladePool;
-    Game.selection.bladePage=0;
-    Game.selection.ratchetPool=ratchetPool;
-    Game.selection.bitPool=bitPool;
-    if(typeof renderBladeDraft==="function") renderBladeDraft();
-    else if(typeof showBladeDraft==="function") showBladeDraft();
-    mountDevButton();
+    // Tier draft no longer reachable from play; keep helper for DEV only.
+    showLanding();
 }
 
 function startBladePick(){
-    showTierPick();
+    showLanding();
 }
 
 function showHelp(){
@@ -2850,27 +2749,12 @@ function showHelp(){
             <div>
                 <span class="eyebrow">ROGUE</span>
                 <h1>HOW A RUN WORKS</h1>
-                <p>Same stadium. One Bey. Eighteen matches, then endless.</p>
+                <p>Use Pack Rogue or Campaign from the title screen.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
-            <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their personality — highs stay highs, dumps stay dumps — but power sits a step above a typical Bronze combo, not crushed to the floor. Evolve / final walk them back toward real stats. Matches 1–3 are a farm window on every door (winnable with play, not a free bye). Bronze starts the weakest and snowballs off a richer shop. Gold starts a step higher in bronze form but the shop stays thin; you grow by evolving. Silver sits in the middle. After the opener, that starter door steers night pressure, CPU stacks, and shop odds together.</p>
-            <p>Bronze cannot evolve. Enhance can start showing after a few wins and the chance climbs if it stays missing — it is not locked to match 5. Silver can evolve, then Enhance, on the same kind of slope. Gold climbs Bronze → Silver → Gold and never Enhances. Form cards stop in endless. BACK on a kit swap keeps your current kit.</p>
-            <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Early nights stay winnable. Bronze eases as the shop snowballs; Gold squeezes later. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
-        </section>
-        <p class="home-leagues-label">UPGRADES</p>
-        <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Commons always cost something.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie (once per point on a spin finish), Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>GROWTH · REFORGE · TOYS</strong><small>Clean +3 or +1 · +1, plus bit/ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. Rare is the clean bump.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too. Gold sees this table less.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>That is the real paycheck. Enhance is +5 / +3. Silver evolves then enhances. Gold climbs to Gold form. Toys do not replace this.</small></article>
-        </div>
-        <section class="menu-card rogue-help-card">
-            <p class="eyebrow">MODIFIERS</p>
-            <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+            <p><strong>Rogue</strong> is the pack-and-build night: collect blades, draft kits, climb 30 matches.</p>
+            <p><strong>Campaign</strong> is the locker climb: Garage, Track, money and EXP, then a 30-night run.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));

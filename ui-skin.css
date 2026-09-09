@@ -76,9 +76,11 @@
 .swx-wordmark-spin,
 .swx-wordmark-wars{
   display:block;font-size:clamp(56px,14vw,96px);
-  background:linear-gradient(180deg,#fff6e4 0%,#f0b429 42%,#c48414 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  -webkit-text-stroke:1px rgba(0,0,0,.35);
+  color:#f6f0e6;
+  background:none;
+  -webkit-text-fill-color:#f6f0e6;
+  -webkit-text-stroke:0;
+  text-shadow:0 2px 0 rgba(0,0,0,.55),0 10px 24px rgba(0,0,0,.4);
 }
 .swx-wordmark-wars{margin-left:2px}
 .swx-xmark{
@@ -98,10 +100,7 @@
   content:"";position:absolute;inset:2px;border:1px solid rgba(255,255,255,.28);
   pointer-events:none;
 }
-.swx-xmark:after{
-  content:"";position:absolute;inset:-7px;border:1px dashed rgba(26,209,90,.28);
-  transform:rotate(14deg);pointer-events:none;
-}
+.swx-xmark:after{content:none;display:none}
 @keyframes swxXidle{
   0%,100%{filter:brightness(1);transform:rotate(-14deg) skewX(-8deg)}
   50%{filter:brightness(1.12);transform:rotate(-12deg) skewX(-8deg) scale(1.03)}
@@ -323,6 +322,10 @@
 }
 .home.lobby .swx-wordmark-spin,
 .home.lobby .swx-wordmark-wars{font-size:clamp(44px,10vw,72px)}
+@media (max-width:420px){
+  .swx-primary{grid-template-columns:1fr}
+  .swx-hero{min-height:108px!important}
+}
 .home.lobby .home-bowl{
   top:38%;
   max-height:34vh;
@@ -330,17 +333,27 @@
 }
 .swx-nav{
   position:relative;z-index:1;
-  width:min(440px,100%);
-  display:flex;flex-direction:column;gap:18px;
+  width:min(480px,100%);
+  display:flex;flex-direction:column;gap:16px;
+}
+.swx-primary{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
 }
 .swx-hero{
-  min-height:124px!important;
-  padding:22px 22px 20px!important;
+  min-height:132px!important;
+  padding:18px 16px 16px!important;
   align-items:flex-start;
   animation:swxHeroIdle 4.2s ease-in-out infinite;
 }
-.swx-hero .home-door-kicker{color:#7dff9f;letter-spacing:.28em}
-.swx-hero b{font-size:clamp(40px,11vw,56px);letter-spacing:.1em}
+.swx-hero .home-door-kicker{color:#7dff9f;letter-spacing:.2em}
+.swx-hero b{font-size:clamp(28px,7vw,40px);letter-spacing:.08em}
+.swx-hero-campaign{
+  border-color:#3a3328!important;
+  animation:none;
+  box-shadow:0 10px 0 #0a0806,0 12px 22px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+.swx-hero-campaign .home-door-kicker{color:#c4a056}
+.swx-hero-campaign b{color:#f6f0e6}
 .swx-hero-mark{
   position:absolute;right:16px;top:14px;
   font-size:10px;font-weight:800;letter-spacing:.2em;color:rgba(216,255,228,.4);
@@ -350,15 +363,22 @@
   50%{box-shadow:0 12px 0 #04140a,0 0 42px rgba(26,209,90,.3),inset 0 1px 0 rgba(180,255,200,.22)}
 }
 .swx-sec{
-  display:grid;grid-template-columns:1fr 1fr;gap:14px;
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
 }
-.swx-sec .home-door{
-  min-height:86px;align-items:center;justify-content:center;text-align:center;padding:16px 10px;
+.swx-sec .home-door,
+.swx-side{
+  min-height:58px!important;
+  align-items:flex-start;justify-content:center;text-align:left;
+  padding:10px 12px!important;
+  opacity:.88;
+  box-shadow:0 4px 0 #050308,0 8px 14px rgba(0,0,0,.22)!important;
 }
-.swx-sec .home-door b{font-size:22px}
-.swx-sec .home-door-kicker{width:100%;text-align:center}
+.swx-sec .home-door b,
+.swx-side b{font-size:16px;letter-spacing:.1em}
+.swx-sec .home-door-kicker,
+.swx-side .home-door-kicker{width:100%;text-align:left;font-size:9px}
 .swx-util{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  display:flex;align-items:center;justify-content:center;gap:12px;
   padding:0 4px;
 }
 .swx-util .home-door{
@@ -368,10 +388,11 @@
 .swx-util .home-door b{font-size:14px;letter-spacing:.16em}
 .swx-util .home-door-kicker,.swx-util .home-door-lock{display:none}
 .home-help{
-  flex:0 0 auto;width:auto;min-height:40px;padding:8px 12px;
+  flex:0 0 auto;width:100%;min-height:40px;padding:10px 12px;
   text-decoration:none;letter-spacing:.18em;font-size:12px;
   border:1px solid rgba(196,160,86,.35);
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  text-align:center;
 }
 .home-doors > .home-help{width:100%;text-align:center}
 .home-ver{

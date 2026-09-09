@@ -704,7 +704,7 @@ const BLADE_ENGINE = {
         weight:35.0,
         sprite:"assets/blades/Wizard arrow.png",
 
-        card:{ovr:74,attack:60,knockback:57,defense:71,mobility:59,balance:84,stamina:85,burst:74},
+        card:{ovr:74,attack:60,knockback:57,defense:71,mobility:59,balance:84,stamina:83,burst:74},
 
         physics:{
             weightClass:"Medium",
@@ -1398,39 +1398,39 @@ function renderMainMenu(){
             ${homeMarkHTML({tag:""})}
         </div>
         <nav class="swx-nav" aria-label="Play">
-            <button class="home-door rip swx-hero" data-home="rogue" type="button">
-                <span class="home-door-kicker">PACK</span>
-                <b>ROGUE</b>
-                <span class="swx-hero-mark">PRIMARY</span>
-            </button>
-            <div class="swx-sec">
-                <button class="home-door play" data-home="quick" type="button">
-                    <span class="home-door-kicker">LEAGUE</span>
-                    <b>QUICK</b>
+            <div class="swx-primary" role="group" aria-label="Main modes">
+                <button class="home-door rip swx-hero" data-home="rogue" type="button">
+                    <span class="home-door-kicker">PACK · BUILD</span>
+                    <b>ROGUE</b>
                 </button>
-                <button class="home-door play" data-home="sandbox" type="button">
+                <button class="home-door rogue swx-hero swx-hero-campaign" data-home="campaign" type="button">
+                    <span class="home-door-kicker">LOCKER · TRACK</span>
+                    <b>CAMPAIGN</b>
+                </button>
+            </div>
+            <div class="swx-sec" role="group" aria-label="Side modes">
+                <button class="home-door play swx-side" data-home="quick" type="button">
+                    <span class="home-door-kicker">LEAGUE</span>
+                    <b>QUICK PLAY</b>
+                </button>
+                <button class="home-door play swx-side" data-home="sandbox" type="button">
                     <span class="home-door-kicker">LAB</span>
                     <b>SANDBOX</b>
                 </button>
             </div>
             <div class="swx-util">
-                <button class="home-door play" data-home="campaign" type="button">
-                    <span class="home-door-kicker">LOCKER</span>
-                    <b>CAMPAIGN</b>
-                </button>
-                <button class="home-help" data-home="help" type="button">HOW</button>
+                <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
             </div>
         </nav>
         <p class="home-ver">ALPHA</p>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>{
         if(typeof SpinWarsRogueLite!=="undefined" && SpinWarsRogueLite.showHub) SpinWarsRogueLite.showHub();
-        else if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
-        else SpinWarsRogue.showLanding();
+        else renderMainMenu();
     });
     document.querySelector("[data-home='campaign']")?.addEventListener("click",()=>{
         if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
-        else SpinWarsRogue.showLanding();
+        else renderMainMenu();
     });
     document.querySelector("[data-home='sandbox']")?.addEventListener("click",()=>SpinWarsSandbox.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
@@ -1477,7 +1477,7 @@ function renderHowTo(){
             <h2>The doors</h2>
             <p><strong>Rogue</strong> is the pack night: collect blades, open packs, draft three random kits, pick one, climb 30 matches. Ratchets and bits are not permanent unlocks. Gold blades are temporary rentals. Duplicates feed Awakening. Mid-run shop cards and modifiers still go crazy. Lose, and that run is over. Continue remembers a live night.</p>
             <p><strong>Sandbox</strong> is the lab. Landing doors for Player vs CPU, Player vs Player, and CPU vs CPU. 1 Bey or 2. Full garage, kit presets, launch presets, a session log. Finishes call out a score and keep going. Leave is the only exit. PvP uses two docks (P1 Space / E, P2 Enter / Shift). CPU vs CPU is watch mode. Tap a name in battle for a paused stat sheet — that works in Rogue and Quick Play too.</p>
-            <p><strong>Campaign</strong> is the locker climb (former Rogue Run): Garage, Track, money and EXP, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). Still 1v1 for now. Separate save from Rogue packs.</p>
+            <p><strong>Campaign</strong> is the locker climb: Garage, Track, money and EXP, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). Still 1v1 for now. Separate save from Rogue packs.</p>
             <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
         </section>
 
@@ -2537,7 +2537,7 @@ function showComboCard(){
                 SpinWarsRogueRun.showHub();
                 return;
             }
-            SpinWarsRogue.showLanding();
+            renderMainMenu();
             return;
         }
         if(Game.quickMatch){ renderLeagueSelect(); return; }
@@ -4161,12 +4161,11 @@ function forfeitLiveMatch(){
         const loop=Game.rogue?.loop;
         const lite=loop==="lite"||Game.mode==="rogue-lite";
         const campaign=loop==="run"||Game.mode==="rogue-run";
-        /* Lite / Campaign never dump onto the old Tier Rogue landing. */
         if((lite||campaign) && typeof SpinWarsRogue.goHomeAfterRun==="function"){
             SpinWarsRogue.goHomeAfterRun("lost");
             return;
         }
-        SpinWarsRogue.showLanding();
+        renderMainMenu();
         return;
     }
     renderMainMenu();
