@@ -693,17 +693,19 @@ function inspect(s){
 }
 /*
   X-Exit into a painted hole: fly the line, then roll.
-  80%+ RPM → 35% self KO. 60–79% → 45%. Below 60% → 70% (tired dump).
+  Attack bits ride often, so this must climb more than a smash without
+  becoming a free pass — especially at high RPM.
+  80%+ RPM → 20% self KO. 60–79% → 30%. Below 60% → 50% (tired dump).
   Recover chance is 1 minus that. Smash after leaving the ring is not this.
 */
 function xExitPocketSelfKoChance(rpm){
  const r=Number(rpm)||0;
- if(r>=0.80) return 0.35;
- if(r>=0.60) return 0.45;
- return 0.70;
+ if(r>=0.80) return 0.20;
+ if(r>=0.60) return 0.30;
+ return 0.50;
 }
 function xExitPocketRecoverChance(rpm){
  return 1-xExitPocketSelfKoChance(rpm);
 }
-global.SpinWarsXRailEngine={version:"6.11-xexit-fly",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture,xExitPocketSelfKoChance,xExitPocketRecoverChance};
+global.SpinWarsXRailEngine={version:"6.12-xexit-climb",geometry:buildGeometry,exitGeometry:exitRampGeometry,nearest,tangentAt,release,engage,bounce,contactSafety,step,inspect,inCommittedFinishMouth,inMouthCorridor,holeAt,buildFinishHoles,pickExitLane,chooseExitHeading,isExitZone,onRailBackside,blockRailCapture,xExitPocketSelfKoChance,xExitPocketRecoverChance};
 })(typeof window!=="undefined"?window:globalThis);
