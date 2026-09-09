@@ -16,7 +16,7 @@ ABILITY,hurricane,Hurricane,Wind radius (−15% from 0.84).,STORM_R,0.714,stadiu
 ABILITY,hurricane,Hurricane,Move speed while up. 1.00 = normal.,abilitySpeedMul,1.12,multiplier,
 ABILITY,hurricane,Hurricane,Fixed RPM restored over the 3s. HUD shows +10.,HURRICANE_GAIN,0.10,rpm 0–1,,10 on the bar. Not a percent of current RPM.
 ABILITY,hurricane,Hurricane,First-enter shove.,storm_first_shove,0.042,knock,,About half of 0.086.
-ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 3s chrome. Clash RPM on you = 0. Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,3000,milliseconds,
+ABILITY,iron-skin,Iron Skin,"Leon Crest, Knight Mail, Knight Shield. 2 uses. 2.5s chrome. Clash RPM on you = 0 (blocked hit scores as Ability). Their knock cancelled. You shove them at 120% of that knock, still capped. Idle drain and holes still kill.",IRON_MS,2500,milliseconds,
 ABILITY,iron-skin,Iron Skin,Reflect multiplier on their knock.,iron_reflect,1.20,multiplier,
 ABILITY,free-spin,Free Spin,Silver Wolf. Always on. Each clash: this chance you take 0 RPM from that hit and 35% less knock.,free_spin_chance,0.15,probability,,15%.
 ABILITY,free-spin,Free Spin,"Knock you take when it procs, as a fraction of normal.",free_spin_knock_mul,0.65,multiplier,,35% less knock.
@@ -30,11 +30,12 @@ ABILITY,earthquake,Earthquake,Max cracks at once.,quake_max,7,count,
 ABILITY,earthquake,Earthquake,RPM chip per crack hit.,quake_chip,0.010–0.030,rpm 0–1,,1–3 on the bar.
 ABILITY,earthquake,Earthquake,Slide left after a crack hit.,quake_slide_keep,0.18,fraction,,Lower = more stop.
 ABILITY,earthquake,Earthquake,Outward shove on a crack hit.,quake_shove,0.032,knock,
-ABILITY,pegasus-blast,Pegasus Blast,"Aero Pegasus. 2 uses. 1.3s lift (you vanish), then 3s aim, then crash. Hit if the glow marker disc (SVG r=13.2 → world 13.2/39) overlaps their Bey disc even a graze. Hit RPM = 8 + 10% of their remaining RPM (8 empty / 18 full) and 70%-cap shove. Miss: you lose 15 RPM.",lift_ms,1300,milliseconds,
+ABILITY,pegasus-blast,Pegasus Blast,"Aero Pegasus. 2 uses. 1.3s lift (you vanish), then 3s aim, then crash. Hit if the glow marker disc (SVG r=13.2 → world 13.2/39) overlaps their Bey disc even a graze. Hit RPM = 8 + 10% of their remaining RPM (8 empty / 18 full) and 92%-cap shove. Miss: you lose 15 RPM.",lift_ms,1300,milliseconds,
 ABILITY,pegasus-blast,Pegasus Blast,Aim window after lift.,aim_ms,3000,milliseconds,
 ABILITY,pegasus-blast,Pegasus Blast,Hit RPM = this + 0.10 × foe remaining RPM.,pegasus_hit_base,0.08,rpm 0–1,,8 on the bar.
 ABILITY,pegasus-blast,Pegasus Blast,Extra hit RPM as a fraction of foe remaining RPM.,pegasus_hit_scale,0.10,fraction,
 ABILITY,pegasus-blast,Pegasus Blast,Miss cost on you.,pegasus_miss,0.15,rpm 0–1,,15 on the bar.
+ABILITY,pegasus-blast,Pegasus Blast,Hit shove as a fraction of the 0.086 knock cap.,pegasus_hit_shove,0.92,fraction,,Was 0.70.
 ABILITY,pegasus-blast,Pegasus Blast,CPU marker starts on a miss offset 0.32–0.60 from the live player (not a far random spawn). Lift tracks that offset. Aim follows it at ~8–16%/frame — hits some blasts, not a lock-on.,cpu_miss_r,0.32–0.60,stadium units,
 ABILITY,flame-trail,Flame Trail,"Phoenix Wing. 2 uses. 2.3s. +15% move. Fire lasts 0.9s behind you. Own trail does not burn you. If they drive through: 0.8 RPM every 0.3s, then after 1s 1.6–2.4 RPM every 0.5s.",FLAME_MS,2300,milliseconds,
 ABILITY,flame-trail,Flame Trail,When burn ticks get worse.,FLAME_PHASE2_MS,1000,milliseconds,

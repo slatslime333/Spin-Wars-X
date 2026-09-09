@@ -10,8 +10,17 @@
         XTREME_FINISH:500,
         BIG_IMPACT:50,
         BIG_IMPACT_MIN_HUD:8,
-        RPM_DAMAGE_PER_POINT:10,
+        /* Progressive RPM → pts. Scale sits around max ~700 HUD (100×7 rounds). */
+        RPM_BAND1_TO:250,
+        RPM_BAND1_PER:5,
+        RPM_BAND2_TO:500,
+        RPM_BAND2_PER:4,
+        RPM_BAND3_PER:3,
         HUD_RPM_SCALE:100,
+        ABILITY_RESTORE_PER:2,
+        ABILITY_POCKET_OVER:120,
+        ABILITY_POCKET_XTREME:180,
+        ABILITY_CREDIT_MS:2000,
         XRAIL_SPIN:75,
         XRAIL_OVER:125,
         XRAIL_XTREME:200,
@@ -40,6 +49,9 @@
             xrailDashes:0,
             xrailRides:0,
             abilityDamage:0,
+            abilityRestore:0,
+            abilityPockets:0,
+            abilityPocketPts:0,
             peakRpm:0,
             biggestImpact:0,
             xrailSpin:0,
@@ -47,6 +59,7 @@
             xrailXtreme:0,
             bestMul:SCORE.MUL_NORMAL,
             bestChain:"",
+            bestChainSteps:[],
             xtremeWithBigRail:0
         };
     }
@@ -66,7 +79,8 @@
         lastEvent:null,
         maxCpuLead:0,
         maxPlayerLead:0,
-        run:null
+        run:null,
+        abilityCredit:{player:0,cpu:0}
     };
 
     function nowMs(){return (typeof performance!=="undefined"&&performance.now)?performance.now():Date.now();}
@@ -98,6 +112,7 @@
         state.lastEvent=null;
         state.maxCpuLead=0;
         state.maxPlayerLead=0;
+        state.abilityCredit={player:0,cpu:0};
     }
     function beginPoint(){
         ensureMatch();
@@ -117,6 +132,8 @@
             xrailDashes:0,
             xrailRides:0,
             abilityDamage:0,
+            abilityRestore:0,
+            abilityPockets:0,
             peakRpm:0,
             biggestImpact:0,
             battleScores:[],
@@ -158,10 +175,36 @@
         }
     }
     function addAbilityDamage(dealer,amount){
-        if(amount<=0) return;
+        ensureMatch();
+        const hud=Math.max(0,Number(amount)||0);
+        if(hud<=0) return;
         const s=sideOf(dealer);
-        s.abilityDamage=(Number(s.abilityDamage)||0)+amount;
-        noteEvent(dealer,`${commas(amount)} Ability Damage`);
+        if(!s) return;
+        s.abilityDamage=(Number(s.abilityDamage)||0)+hud;
+        noteEvent(dealer,`${commas(hud)} Ability Damage`);
+    }
+    function addAbilityRestore(side,amount){
+        ensureMatch();
+        const hud=Math.max(0,Number(amount)||0);
+        if(hud<=0) return;
+        const s=sideOf(side);
+        if(!s) return;
+        s.abilityRestore=(Number(s.abilityRestore)||0)+hud;
+        noteEvent(side,`${commas(hud)} Ability Restore`);
+    }
+    /* Credit the attacker if the victim pockets soon after an ability shove/hit. */
+    function markAbilityKnock(attackerSide,victimSide){
+        ensureMatch();
+        const atk=attackerSide==="cpu"?"cpu":"player";
+        const vic=victimSide==="cpu"?"cpu":"player";
+        if(atk===vic) return;
+        state.abilityCredit[vic]={until:nowMs()+SCORE.ABILITY_CREDIT_MS,from:atk};
+    }
+    function abilityCreditHot(victimSide){
+        const row=state.abilityCredit?.[victimSide];
+        if(!row||typeof row!=="object") return null;
+        if(nowMs()>Number(row.until||0)) return null;
+        return row.from||null;
     }
 
     function onDash(side,bey){
@@ -175,7 +218,6 @@
     function observe(p,c,battle){
         ensureMatch();
         if(!p||!c) return;
-        const t=nowMs();
         const pr=Number(p.rpm)||0;
         const cr=Number(c.rpm)||0;
         if(pr>state.match.player.peakRpm) state.match.player.peakRpm=pr;
@@ -205,8 +247,14 @@
             const pLost=hudRpm(imp.playerRpmLoss);
             const cLost=hudRpm(imp.cpuRpmLoss);
             if(ability){
-                if(cLost>0) addAbilityDamage("player",cLost);
-                if(pLost>0) addAbilityDamage("cpu",pLost);
+                if(cLost>0){
+                    addAbilityDamage("player",cLost);
+                    markAbilityKnock("player","cpu");
+                }
+                if(pLost>0){
+                    addAbilityDamage("cpu",pLost);
+                    markAbilityKnock("cpu","player");
+                }
             }else{
                 if(cLost>0) addDamage("player",cLost,heavy && cLost>=SCORE.BIG_IMPACT_MIN_HUD);
                 if(pLost>0) addDamage("cpu",pLost,heavy && pLost>=SCORE.BIG_IMPACT_MIN_HUD);
@@ -231,6 +279,25 @@
         if(type==="Over") return SCORE.XRAIL_OVER;
         return SCORE.XRAIL_SPIN;
     }
+    function abilityPocketBonus(type){
+        if(type==="Xtreme") return SCORE.ABILITY_POCKET_XTREME;
+        if(type==="Over") return SCORE.ABILITY_POCKET_OVER;
+        return 0;
+    }
+
+    function chainSteps(big,rail,type){
+        const steps=[];
+        if(big) steps.push({label:"Big Impact",detail:"Heavy clash this point"});
+        if(rail) steps.push({label:"X-Rail",detail:"Rode or exited the ring"});
+        steps.push({
+            label:type==="Spin Finish"?"Spin Finish":type,
+            detail:type==="Xtreme"||type==="Over"?"Pocket finish":"Opponent out of spin"
+        });
+        return steps;
+    }
+    function chainTitle(steps){
+        return (steps||[]).map(s=>s.label).join(" → ");
+    }
 
     function onFinish(winnerSide,finishType,winnerBey){
         ensureMatch();
@@ -239,6 +306,17 @@
         if(type==="Xtreme") s.xtreme+=1;
         else if(type==="Over") s.over+=1;
         else s.spin+=1;
+
+        const loserSide=winnerSide==="player"?"cpu":"player";
+        const credited=abilityCreditHot(loserSide);
+        if(credited===winnerSide && (type==="Over"||type==="Xtreme")){
+            const bonus=abilityPocketBonus(type);
+            if(bonus>0){
+                s.abilityPockets=(Number(s.abilityPockets)||0)+1;
+                s.abilityPocketPts=(Number(s.abilityPocketPts)||0)+bonus;
+                noteEvent(winnerSide,`Ability ${type} pocket`);
+            }
+        }
 
         const pt=state.point&&state.point[winnerSide];
         const rail=!!(pt&&pt.rail) || railHot(winnerSide) || !!(winnerBey&&(winnerBey.railEngaged||winnerBey.xrailExitRampActive));
@@ -249,26 +327,29 @@
         }
         const big=!!(pt&&pt.big);
         let mul=SCORE.MUL_NORMAL;
-        let chain="";
+        let steps=[];
         if(big && rail && type==="Xtreme"){
             s.xtremeWithBigRail+=1;
             mul=s.xtremeWithBigRail>=2?SCORE.MUL_ELITE:SCORE.MUL_EXCEPTIONAL;
-            chain="Big Impact → X-Rail → Xtreme Finish";
+            steps=chainSteps(true,true,type);
         }else if(big && rail){
             mul=SCORE.MUL_EXCEPTIONAL;
-            chain=`Big Impact → X-Rail → ${type}`;
+            steps=chainSteps(true,true,type);
         }else if(rail){
             mul=SCORE.MUL_STRONG;
-            chain=`X-Rail → ${type}`;
+            steps=chainSteps(false,true,type);
         }else if(big){
             mul=SCORE.MUL_STRONG;
-            chain=`Big Impact → ${type}`;
+            steps=chainSteps(true,false,type);
         }
+        const chain=chainTitle(steps);
         if(mul>s.bestMul){
             s.bestMul=mul;
             s.bestChain=chain;
+            s.bestChainSteps=steps;
         }else if(mul===s.bestMul && chain && !s.bestChain){
             s.bestChain=chain;
+            s.bestChainSteps=steps;
         }
         noteEvent(winnerSide, type==="Spin Finish"?"Spin Finish":type+" Finish");
         state.lastWinnerRpm=Number(winnerBey?.rpm)||0;
@@ -276,11 +357,29 @@
     }
 
     function rpmPts(damage){
-        return Math.floor(Math.max(0,Number(damage)||0)/SCORE.RPM_DAMAGE_PER_POINT);
+        let rem=Math.max(0,Number(damage)||0);
+        if(rem<=0) return 0;
+        let out=0;
+        const b1=Math.min(rem,SCORE.RPM_BAND1_TO);
+        out+=Math.floor(b1/SCORE.RPM_BAND1_PER);
+        rem-=b1;
+        if(rem<=0) return out;
+        const b2=Math.min(rem,SCORE.RPM_BAND2_TO-SCORE.RPM_BAND1_TO);
+        out+=Math.floor(b2/SCORE.RPM_BAND2_PER);
+        rem-=b2;
+        if(rem<=0) return out;
+        out+=Math.floor(rem/SCORE.RPM_BAND3_PER);
+        return out;
+    }
+    function abilityPts(s){
+        const restore=Math.max(0,Math.round(Number(s.abilityRestore)||0));
+        return rpmPts(s.abilityDamage)
+            + Math.floor(restore/SCORE.ABILITY_RESTORE_PER)
+            + Math.max(0,Number(s.abilityPocketPts)||0);
     }
     function baseScore(s){
         return rpmPts(s.rpmDamage)
-            + rpmPts(s.abilityDamage)
+            + abilityPts(s)
             + s.bigImpacts*SCORE.BIG_IMPACT
             + s.spin*SCORE.SPIN_FINISH
             + s.over*SCORE.OVER_FINISH
@@ -291,17 +390,26 @@
         return Math.round((s.rpmDamage/s.hits)*10)/10;
     }
 
+    function abilityStatLine(s){
+        const dmg=Number(s.abilityDamage)||0;
+        const restore=Number(s.abilityRestore)||0;
+        const pockets=Number(s.abilityPockets)||0;
+        const bits=[];
+        if(dmg>0) bits.push(`${commas(dmg)} dmg`);
+        if(restore>0) bits.push(`${commas(restore)} restore`);
+        if(pockets>0) bits.push(`${pockets} pocket${pockets===1?"":"s"}`);
+        return bits.length?bits.join(" · "):"0";
+    }
+
     function breakdown(s){
-        const ability=Number(s.abilityDamage)||0;
-        const rides=Number(s.xrailRides)||0;
         const rows=[
             {key:"rpm",name:"RPM Damage",stat:`${commas(s.rpmDamage)} damage`,pts:rpmPts(s.rpmDamage),score:true},
-            {key:"ability",name:"Ability Damage",stat:`${commas(ability)} damage`,pts:rpmPts(ability),score:true},
+            {key:"ability",name:"Ability",stat:abilityStatLine(s),pts:abilityPts(s),score:true},
             {key:"big",name:"Big Impacts",stat:String(s.bigImpacts),pts:s.bigImpacts*SCORE.BIG_IMPACT,score:true},
             {key:"spin",name:"Spin Finishes",stat:String(s.spin),pts:s.spin*SCORE.SPIN_FINISH,score:true},
             {key:"over",name:"Over Finishes",stat:String(s.over),pts:s.over*SCORE.OVER_FINISH,score:true},
             {key:"xtreme",name:"Xtreme Finishes",stat:String(s.xtreme),pts:s.xtreme*SCORE.XTREME_FINISH,score:true},
-            {key:"xride",name:"X-Rail Rides",stat:String(rides),pts:0,score:false},
+            {key:"xride",name:"X-Rail Rides",stat:String(Number(s.xrailRides)||0),pts:0,score:false},
             {key:"dash",name:"Dashes Used",stat:String(s.dashes),pts:0,score:false}
         ];
         return rows.filter(r=>!r.hide);
@@ -315,17 +423,17 @@
         return "Horrible";
     }
     function gameQuality(winner,pScore,cScore,pT){
-        const pts=Number(pT?.final)||0;
+        const ptsN=Number(pT?.final)||0;
         const ps=Number(pScore)||0;
         const cs=Number(cScore)||0;
         let q=0;
         if(winner==="player"){
             q=42+(ps-cs)*8;
-            q+=Math.min(28, pts/55);
+            q+=Math.min(28, ptsN/55);
             if(cs===0) q+=6;
         }else{
             q=6+ps*7;
-            q+=Math.min(16, pts/90);
+            q+=Math.min(16, ptsN/90);
         }
         return qualityFromScore(q);
     }
@@ -361,8 +469,8 @@
         const pT=tally(p);
         const cT=tally(c);
         const highlight=pT.mul>=cT.mul
-            ? {side:"player",mul:p.bestMul,chain:p.bestChain}
-            : {side:"cpu",mul:c.bestMul,chain:c.bestChain};
+            ? {side:"player",mul:p.bestMul,chain:p.bestChain,steps:p.bestChainSteps||[]}
+            : {side:"cpu",mul:c.bestMul,chain:c.bestChain,steps:c.bestChainSteps||[]};
         return {player:p,cpu:c,pT,cT,highlight};
     }
 
@@ -382,6 +490,8 @@
         state.run.xrailDashes+=p.xrailDashes;
         state.run.xrailRides=(Number(state.run.xrailRides)||0)+(Number(p.xrailRides)||0);
         state.run.abilityDamage=(Number(state.run.abilityDamage)||0)+(Number(p.abilityDamage)||0);
+        state.run.abilityRestore=(Number(state.run.abilityRestore)||0)+(Number(p.abilityRestore)||0);
+        state.run.abilityPockets=(Number(state.run.abilityPockets)||0)+(Number(p.abilityPockets)||0);
         if(p.peakRpm>state.run.peakRpm) state.run.peakRpm=p.peakRpm;
         if(p.biggestImpact>state.run.biggestImpact) state.run.biggestImpact=p.biggestImpact;
         state.run.battleScores.push(pT.final);
@@ -431,6 +541,23 @@
         </article>`;
     }
 
+    function chainHTML(hl,nm){
+        const who=hl.side==="cpu"?(nm.cpu||"CPU"):(nm.player||"YOU");
+        const mul=Number(hl.mul||SCORE.MUL_NORMAL);
+        const line=hl.chain || (Array.isArray(hl.steps)&&hl.steps.length
+            ? hl.steps.map(s=>s.label).join(" → ")
+            : "");
+        if(!line){
+            return `<section class="sb-chain sb-chain-quiet">
+                <div class="sb-chain-head"><span>NO CHAIN</span><b>×${SCORE.MUL_NORMAL.toFixed(2)}</b></div>
+            </section>`;
+        }
+        return `<section class="sb-chain">
+            <div class="sb-chain-head"><span>${who}</span><b>×${mul.toFixed(2)}</b></div>
+            <p class="sb-chain-line">${line}</p>
+        </section>`;
+    }
+
     function showMatchSummary(opts){
         opts=opts||{};
         const packed=packMatch();
@@ -439,18 +566,7 @@
         const pScore=opts.playerScore||0;
         const cScore=opts.cpuScore||0;
         const tag=victoryLabel(winner,pScore,cScore,state.lastWinnerRpm);
-        const hl=packed.highlight;
-        const chain=hl.chain
-            ? `<section class="sb-chain">
-                <p class="sb-kicker">FINISH CHAIN</p>
-                <p class="sb-chain-line">${hl.chain}</p>
-                <p class="sb-mul">×${hl.mul.toFixed(2)}</p>
-               </section>`
-            : `<section class="sb-chain sb-chain-quiet">
-                <p class="sb-kicker">FINISH CHAIN</p>
-                <p class="sb-chain-line">No scoring sequence</p>
-                <p class="sb-mul">×${SCORE.MUL_NORMAL.toFixed(2)}</p>
-               </section>`;
+        const chain=chainHTML(packed.highlight,n);
         const quality=gameQuality(winner,pScore,cScore,packed.pT);
         const boss=opts.rogue?absorbIntoRun(winner,packed.pT)||0:0;
         if(opts.rogue && typeof global.SpinWarsRogue!=="undefined" && SpinWarsRogue.persist){
@@ -498,7 +614,7 @@
 
     function showRunSummary(opts){
         opts=opts||{};
-        const r=opts.run||state.run||{battleScores:[],battlesWon:0,battles:0,rpmDamage:0,spin:0,over:0,xtreme:0,bigImpacts:0,dashes:0,xrailRides:0,abilityDamage:0,peakRpm:0,bossBonus:0};
+        const r=opts.run||state.run||{battleScores:[],battlesWon:0,battles:0,rpmDamage:0,spin:0,over:0,xtreme:0,bigImpacts:0,dashes:0,xrailRides:0,abilityDamage:0,abilityRestore:0,abilityPockets:0,peakRpm:0,bossBonus:0};
         const battles=(r.battleScores||[]).reduce((a,b)=>a+b,0);
         const final=battles+(Number(r.bossBonus)||0);
         const blade=opts.bladeName||global.Game?.rogue?.blade?.name||global.Game?.player?.blade?.name||"RUN";
@@ -517,6 +633,8 @@
                 <li>Battles Won <b>${r.battlesWon||0}</b></li>
                 <li>Total RPM Damage <b>${commas(r.rpmDamage)}</b></li>
                 <li>Ability Damage <b>${commas(r.abilityDamage)}</b></li>
+                <li>Ability Restore <b>${commas(r.abilityRestore)}</b></li>
+                <li>Ability Pockets <b>${r.abilityPockets||0}</b></li>
                 <li>Spin Finishes <b>${r.spin||0}</b></li>
                 <li>Over Finishes <b>${r.over||0}</b></li>
                 <li>Xtreme Finishes <b>${r.xtreme||0}</b></li>
@@ -536,6 +654,7 @@
     global.SpinWarsScoreboard={
         SCORE, beginMatch, beginPoint, beginRun,
         observe, onDash, onFinish,
+        addAbilityRestore, addAbilityDamage, markAbilityKnock, rpmPts, abilityPts,
         showMatchSummary, showRunSummary,
         packMatch, tally, baseScore, breakdown, gameQuality, exportRun, importRun, runFinal
     };
@@ -552,15 +671,27 @@
                 }
                 beginMatch();
                 Object.assign(state.match.player,{
-                    rpmDamage:1240,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
-                    dashes:7,xrailRides:5,abilityDamage:180,peakRpm:0.97,
+                    rpmDamage:520,hits:29,bigImpacts:4,spin:1,over:0,xtreme:1,
+                    dashes:7,xrailRides:5,abilityDamage:0,abilityRestore:20,abilityPockets:1,abilityPocketPts:180,
+                    peakRpm:0.97,
                     bestMul:SCORE.MUL_EXCEPTIONAL,
-                    bestChain:"Big Impact → X-Rail → Xtreme Finish"
+                    bestChain:"Big Impact → X-Rail → Xtreme",
+                    bestChainSteps:[
+                        {label:"Big Impact",detail:"Heavy clash this point"},
+                        {label:"X-Rail",detail:"Rode or exited the ring"},
+                        {label:"Xtreme",detail:"Pocket finish"}
+                    ]
                 });
                 Object.assign(state.match.cpu,{
-                    rpmDamage:860,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
-                    dashes:4,xrailRides:2,abilityDamage:40,peakRpm:0.88,
-                    bestMul:SCORE.MUL_STRONG,bestChain:"X-Rail → Over"
+                    rpmDamage:380,hits:22,bigImpacts:2,spin:1,over:1,xtreme:0,
+                    dashes:4,xrailRides:2,abilityDamage:40,abilityRestore:0,abilityPockets:0,abilityPocketPts:0,
+                    peakRpm:0.88,
+                    bestMul:SCORE.MUL_STRONG,
+                    bestChain:"X-Rail → Over",
+                    bestChainSteps:[
+                        {label:"X-Rail",detail:"Rode or exited the ring"},
+                        {label:"Over",detail:"Pocket finish"}
+                    ]
                 });
                 state.maxCpuLead=3;
                 showMatchSummary({

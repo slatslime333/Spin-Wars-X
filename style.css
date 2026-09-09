@@ -3648,8 +3648,32 @@ button:focus-visible{
   border-radius:var(--radius);
   text-align:center;
 }
-.sb-chain-line{font-size:16px;margin:4px 0}
-.sb-mul{color:var(--green);font-size:22px;letter-spacing:.08em}
+.sb-chain-quiet{opacity:.78}
+.sb-chain-head{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+}
+.sb-chain-head span{
+  color:var(--muted);
+  letter-spacing:.16em;
+  font-size:11px;
+  text-transform:uppercase;
+}
+.sb-chain-head b{
+  color:var(--green);
+  font-size:24px;
+  letter-spacing:.06em;
+  font-weight:400;
+  font-family:Staatliches,Impact,sans-serif;
+}
+.sb-chain-line{
+  font-size:15px;
+  margin:8px 0 0;
+  letter-spacing:.03em;
+  line-height:1.35;
+}
 .sb-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
