@@ -493,22 +493,108 @@ function bronzeBand(){
     return acc;
 }
 
+/**
+ * Bronze-form start for Silver/Gold blades.
+ * Keeps the kit's personality (Attack stays attacky) but seats power a step
+ * above a typical Bronze combo — never a crushed dump. Evolve / final clear
+ * the startScale toward real stats. Bronze starters get no startScale.
+ */
 function makeStartScale(blade,ratchet,bit){
     const scale=emptyBonuses();
     const tier=String(blade?.tier||"");
     if(tier==="Bronze"||!blade) return scale;
     const band=bronzeBand();
     const mine=comboBase(blade,ratchet,bit);
-    // Silver/Gold sit a step above Bronze, not a full-tier jump.
-    // Keep the shape: only pull highs down, leave dump stats dump.
-    // Same Bronze-form start in Rogue Run and Tier Rogue.
-    // Recompute from the live ratchet/bit so garage swaps still move the bronze-form kit.
-    const lead=tier==="Gold"?2.2:1.0;
-    STATS.forEach(k=>{
-        const target=(Number(band[k])||70)+lead;
-        const have=Number(mine[k])||70;
-        if(have>target) scale[k]=round((target-have)*0.93);
-    });
+    const bandPow=powerOf(band);
+    const minePow=powerOf(mine);
+    // Average-stat lead over the Bronze pack (powerOf is mean of six battle stats).
+    const powerLead=tier==="Gold"?3.6:1.8;
+    const targetPow=bandPow+powerLead;
+    const meanMine=minePow;
+    const meanBand=bandPow;
+    // Keep enough of the blade's shape that highs stay highs and dumps stay dumps.
+    const shapeKeep=tier==="Gold"?0.58:0.50;
+    const seatLead=tier==="Gold"?3.4:1.7;
+
+    if(minePow>targetPow+0.15){
+        const ideal={};
+        STATS.forEach(k=>{
+            const have=Number(mine[k])||70;
+            const personality=have-meanMine;
+            ideal[k]=(Number(band[k])||meanBand)+seatLead+personality*shapeKeep;
+        });
+        let idealPow=powerOf(ideal);
+        const norm=targetPow/Math.max(1,idealPow);
+        STATS.forEach(k=>{
+            const have=Number(mine[k])||70;
+            const want=(Number(ideal[k])||70)*norm;
+            // Only pull highs down — never inflate dumps here (personality).
+            if(want<have) scale[k]=round(want-have);
+        });
+    }
+    // Floor: never land weaker than a typical Bronze + a hair.
+    let scaled=mergeStats(mine,scale);
+    let pow=powerOf(scaled);
+    const floor=bandPow+Math.max(0.6,powerLead*0.45);
+    if(pow<floor){
+        const needSum=(floor-pow)*STATS.length;
+        const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
+        if(totalCut>0){
+            const restore=Math.min(1,needSum/totalCut);
+            STATS.forEach(k=>{
+                if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1-restore));
+            });
+        }
+    }
+
+    // Soft lift when the natural Silver/Gold kit is already near Bronze power —
+    // still bronze-form, but not weaker than the pack seat.
+    scaled=mergeStats(mine,scale);
+    pow=powerOf(scaled);
+    if(pow<targetPow-0.2){
+        const liftSum=(targetPow-pow)*STATS.length;
+        // Prefer lifting the blade's identity highs (personality), not flattening dumps.
+        const ranked=STATS.slice().sort((a,b)=>{
+            const da=(Number(mine[a])||70)-(Number(band[a])||70);
+            const db=(Number(mine[b])||70)-(Number(band[b])||70);
+            return db-da;
+        });
+        let left=liftSum;
+        ranked.forEach((k,i)=>{
+            if(left<=0.05) return;
+            const weight=i<3?0.22:0.12;
+            const give=Math.min(left,liftSum*weight);
+            scale[k]=round((Number(scale[k])||0)+give);
+            left-=give;
+        });
+        if(left>0.05){
+            const share=left/STATS.length;
+            STATS.forEach(k=>{scale[k]=round((Number(scale[k])||0)+share);});
+        }
+    }
+
+    // Soft ceiling so a perfect Gold kit cannot sit like a mid-Gold opener.
+    scaled=mergeStats(mine,scale);
+    pow=powerOf(scaled);
+    const ceiling=targetPow+(tier==="Gold"?2.2:1.4);
+    if(pow>ceiling){
+        const overSum=(pow-ceiling)*STATS.length;
+        const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
+        if(totalCut>0.5){
+            const deepen=Math.min(0.45,overSum/totalCut);
+            STATS.forEach(k=>{
+                if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1+deepen));
+            });
+        }else{
+            const share=overSum/STATS.length;
+            STATS.forEach(k=>{
+                const have=Number(mine[k])||70;
+                if(have>(Number(band[k])||70)+seatLead){
+                    scale[k]=round((Number(scale[k])||0)-share);
+                }
+            });
+        }
+    }
     return scale;
 }
 
@@ -627,20 +713,25 @@ function cpuNightMix(tier,match,boss){
         if(t==="Gold") return {easy:0.12,even:0.48,hard:0.40};
         return {easy:0.16,even:0.50,hard:0.34};
     }
-    if(m<=3) return {easy:0.36,even:0.50,hard:0.14};
+    // Matches 1–3: same farm window on every door — winnable with play, not a bye.
+    if(m<=3) return {easy:0.42,even:0.46,hard:0.12};
+    // After the opener, starter-tier curve takes over.
     if(t==="Bronze"){
-        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
-        if(m<=12) return {easy:0.24,even:0.56,hard:0.20};
-        return {easy:0.30,even:0.55,hard:0.15};
+        // Weaker opener, richer shop — ease as the snowball lands.
+        if(m<=5) return {easy:0.30,even:0.52,hard:0.18};
+        if(m<=12) return {easy:0.26,even:0.54,hard:0.20};
+        return {easy:0.32,even:0.54,hard:0.14};
     }
     if(t==="Gold"){
-        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
-        if(m<=12) return {easy:0.16,even:0.52,hard:0.32};
-        return {easy:0.12,even:0.50,hard:0.38};
+        // Stronger bronze-form seat, thinner shop — late nights squeeze.
+        if(m<=5) return {easy:0.30,even:0.52,hard:0.18};
+        if(m<=12) return {easy:0.16,even:0.50,hard:0.34};
+        return {easy:0.10,even:0.48,hard:0.42};
     }
-    if(m<=5) return {easy:0.20,even:0.50,hard:0.30};
+    // Silver sits between the two doors.
+    if(m<=5) return {easy:0.28,even:0.52,hard:0.20};
     if(m<=12) return {easy:0.20,even:0.52,hard:0.28};
-    return {easy:0.22,even:0.53,hard:0.25};
+    return {easy:0.18,even:0.52,hard:0.30};
 }
 
 function cpuNightRoll(){
@@ -1186,18 +1277,32 @@ function cpuPowerTarget(playerPow,match,boss){
     else if(night==="even") band=0.96+Math.random()*0.04;
     else band=1.00+Math.random()*0.03;
     if(!boss){
+        // Early farm: CPU tracks under the player's bronze-form seat so wins feel earned.
         if(match<=3){
-            if(night==="hard") band=Math.min(band,1.02);
-            else band=Math.min(band,1.00);
-            if(tier==="Gold" && night!=="hard") band=Math.min(band,0.98);
+            if(night==="hard") band=Math.min(band,0.99);
+            else if(night==="easy") band=Math.min(band,0.94);
+            else band=Math.min(band,0.97);
+            if(tier==="Gold") band=Math.min(band, night==="hard"?0.99:0.96);
+            else if(tier==="Bronze") band=Math.min(band, night==="hard"?1.00:0.98);
         }else if(match<=5){
+            if(tier==="Bronze" && night!=="hard") band=Math.min(band,1.00);
+            if(tier==="Gold" && night!=="hard") band=Math.min(band,0.99);
+            if(tier==="Silver" && night!=="hard") band=Math.min(band,1.00);
+        }else if(match<=12){
+            // Mid climb: starter door starts to matter.
             if(tier==="Bronze" && night!=="hard") band=Math.min(band,1.01);
-            if(tier==="Gold" && night!=="hard") band=Math.min(band,1.00);
+            if(tier==="Gold" && night==="hard") band=clamp(band,1.01,1.06);
+            if(tier==="Gold" && night==="even") band=Math.min(Math.max(band,0.99),1.04);
         }
         if(tier==="Bronze" && match>=13){
             if(night==="easy") band=Math.min(band,0.96);
             else if(night==="even") band=Math.min(band,0.99);
             else band=Math.min(band,1.04);
+        }
+        if(tier==="Gold" && match>=13){
+            if(night==="easy") band=clamp(band,0.98,1.03);
+            else if(night==="even") band=clamp(band,1.01,1.06);
+            else band=clamp(band,1.04,1.08);
         }
         band=clamp(band,0.90,1.08);
     }
@@ -2747,7 +2852,7 @@ function showHelp(){
         <section class="menu-card rogue-help-card">
             <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
             <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. The first few matches are easier on every door so you can farm a win and a shop — not a free bye. Bronze starts weak and snowballs upgrades. Gold starts a step higher but the shop stays thin; you grow by evolving toward full Gold form. Silver sits in the middle.</p>
+            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their personality — highs stay highs, dumps stay dumps — but power sits a step above a typical Bronze combo, not crushed to the floor. Evolve / final walk them back toward real stats. Matches 1–3 are a farm window on every door (winnable with play, not a free bye). Bronze starts the weakest and snowballs off a richer shop. Gold starts a step higher in bronze form but the shop stays thin; you grow by evolving. Silver sits in the middle. After the opener, that starter door steers night pressure, CPU stacks, and shop odds together.</p>
             <p>Bronze cannot evolve. Enhance can start showing after a few wins and the chance climbs if it stays missing — it is not locked to match 5. Silver can evolve, then Enhance, on the same kind of slope. Gold climbs Bronze → Silver → Gold and never Enhances. Form cards stop in endless. BACK on a kit swap keeps your current kit.</p>
             <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Early nights stay winnable. Bronze eases as the shop snowballs; Gold squeezes later. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
         </section>
