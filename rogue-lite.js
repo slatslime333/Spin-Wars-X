@@ -63,6 +63,7 @@ function defaultAccount(){
         collection:emptyCollection(),
         goldRentals:{},
         modCharges:0,
+        runTempMods:[],
         runTempParts:[],
         boughtPacks:0
     };
@@ -84,8 +85,23 @@ function normalizeAccount(raw){
     acc.collection=acc.collection||emptyCollection();
     acc.goldRentals=acc.goldRentals||{};
     acc.money=Math.max(0,Number(acc.money)||0);
-    acc.modCharges=Math.max(0,Number(acc.modCharges)||0);
     acc.runTempParts=Array.isArray(acc.runTempParts)?acc.runTempParts:[];
+    acc.runTempMods=Array.isArray(acc.runTempMods)?acc.runTempMods.filter(m=>m&&m.id):[];
+    /* Legacy pick-any charges → rolled mods from the pool (one each). */
+    const legacy=Math.max(0,Number(acc.modCharges)||0);
+    if(legacy>0){
+        const used=acc.runTempMods.map(m=>m.id);
+        for(let i=0;i<legacy;i++){
+            const rolled=rollTempMod(used);
+            if(rolled){
+                acc.runTempMods.push(rolled);
+                used.push(rolled.id);
+            }
+        }
+        acc.modCharges=0;
+    }else{
+        acc.modCharges=0;
+    }
     acc.starterGranted=!!acc.starterGranted;
     Object.keys(acc.collection).forEach(id=>bladeEntry(acc,id));
     return acc;
@@ -94,7 +110,12 @@ function normalizeAccount(raw){
 function loadAccount(){
     try{
         const raw=JSON.parse(localStorage.getItem(ACCOUNT_KEY)||"null");
-        if(raw&&raw.v===1) return normalizeAccount(raw);
+        if(raw&&raw.v===1){
+            const hadCharges=Math.max(0,Number(raw.modCharges)||0)>0;
+            const acc=normalizeAccount(raw);
+            if(hadCharges) saveAccount(acc);
+            return acc;
+        }
     }catch(_e){}
     return normalizeAccount(null);
 }
@@ -383,14 +404,42 @@ function openPartPack(packId){
     return {ok:true,pack,parts};
 }
 
+function modifierPool(){
+    return (typeof SpinWarsRogue!=="undefined"&&Array.isArray(SpinWarsRogue.MODIFIERS))
+        ? SpinWarsRogue.MODIFIERS
+        : [];
+}
+
+/** One random mod from the live pool. Prefer unused ids within a pack open. */
+function rollTempMod(excludeIds){
+    const all=modifierPool();
+    if(!all.length) return null;
+    const ban=new Set(excludeIds||[]);
+    const fresh=all.filter(m=>m&&m.id&&!ban.has(m.id));
+    const src=fresh.length?fresh:all;
+    const m=pick(src);
+    if(!m||!m.id) return null;
+    return {id:m.id,name:m.name,tag:m.tag||"",blurb:m.blurb||""};
+}
+
 function openModPack(){
     const pack=cfg().PACKS?.mod_pack;
     if(!pack) return {ok:false,why:"pack"};
     if(!trySpend(pack.price)) return {ok:false,why:"money"};
+    const count=2;
+    const mods=[];
+    const used=[];
+    for(let i=0;i<count;i++){
+        const m=rollTempMod(used);
+        if(m){
+            mods.push(m);
+            used.push(m.id);
+        }
+    }
     const acc=account();
-    acc.modCharges=(Number(acc.modCharges)||0)+2;
+    acc.runTempMods=(acc.runTempMods||[]).concat(mods);
     persistAccount();
-    return {ok:true,pack,charges:acc.modCharges};
+    return {ok:true,pack,mods};
 }
 
 function openPack(packId){
@@ -555,7 +604,7 @@ function archiveAndClear(status){
         }
     }catch(_e){}
     clearLive();
-    // Keep unused temp parts / mod charges across runs.
+    // Keep unused temp parts / rolled mods across runs.
     persistAccount();
 }
 
@@ -591,16 +640,23 @@ function beginBuild(build,useAwakening,extra){
     }
     if(String(blade.tier)==="Gold") consumeGoldRun(id);
     const awLv=useAwakening?highestClaimedAwakening(id):0;
+    let modId=extra.modifierId||null;
+    if(modId){
+        const acc=account();
+        const ix=(acc.runTempMods||[]).findIndex(m=>m&&m.id===modId);
+        if(ix>=0){
+            acc.runTempMods.splice(ix,1);
+            persistAccount();
+        }else{
+            modId=null;
+        }
+    }
     const opts={
         loop:"lite",
         awakeningLevel:awLv,
         awakeningBonus:awakeningBonuses(blade,awLv),
-        modifierId:extra.modifierId||null
+        modifierId:modId
     };
-    if(extra.modifierId && (Number(account().modCharges)||0)>0){
-        account().modCharges-=1;
-        persistAccount();
-    }
     SpinWarsRogue.beginFromLoadout(blade,ratchet,bit,opts);
     if(Game.rogue){
         Game.rogue.loop="lite";
@@ -630,11 +686,12 @@ function hudStrip(){
     const owned=ownedBladeIds().length;
     const golds=activeGoldIds().length;
     const temps=(acc.runTempParts||[]).length;
+    const mods=(acc.runTempMods||[]).length;
     return `<section class="rl-hud">
         <div class="rl-hud-money"><small>MONEY</small><b>$${acc.money}</b></div>
         <div class="rl-hud-col"><small>COLLECTION</small><b>${owned}</b></div>
         <div class="rl-hud-col"><small>GOLD / TEMP</small><b>${golds} / ${temps}</b></div>
-        <div class="rl-hud-col"><small>MOD CHARGES</small><b>${acc.modCharges||0}</b></div>
+        <div class="rl-hud-col"><small>MODS</small><b>${mods}</b></div>
     </section>`;
 }
 
@@ -703,7 +760,7 @@ function showHelp(){
         </section>
         <section class="menu-card">
             <h2>Packs</h2>
-            <p>Bey packs grant every revealed blade. Part packs give temporary ratchet/bit cards for a later run start. Modifier packs add charges you can spend when a night begins.</p>
+            <p>Bey packs grant every revealed blade. Part packs give temporary ratchet/bit cards for a later run start. Modifier packs roll random mods from the Rogue pool — you keep those cards and pick one when a night begins.</p>
         </section>
         <section class="menu-card">
             <h2>Awakening</h2>
@@ -817,7 +874,7 @@ function showMarket(){
     <main class="home rogue-lite-market">
         ${mark("MARKETPLACE","OPEN PACKS")}
         ${hudStrip()}
-        <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready for your next run.`:""}</p>
+        <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
         ${section("BEY PACKS",beys)}
         ${section("PART PACKS",parts)}
         ${section("MODIFIERS",mods)}
@@ -883,16 +940,19 @@ function tradingPartCardHTML(p,idx){
     </article>`;
 }
 
-function tradingModCardHTML(charges,idx){
+function tradingModCardHTML(mod,idx){
+    const name=mod?.name||"MODIFIER";
+    const tag=mod?.tag||"TEMP";
+    const blurb=mod?.blurb||"Rolled from the Rogue modifier pool.";
     return `<article class="rl-trade-card tier-gold" data-card-i="${idx}" aria-hidden="true">
         <div class="rl-tc-back" aria-hidden="true"><span>MOD</span></div>
         <div class="rl-tc-face">
-            <span class="rl-tc-stamp">+2 USES</span>
+            <span class="rl-tc-stamp">TEMP</span>
             <div class="rl-tc-art rl-tc-mod">◈</div>
-            <span class="eyebrow">MODIFIER</span>
-            <b>RUN CHARGE</b>
-            <small class="rl-tc-ovr">${charges} TOTAL</small>
-            <p class="rl-tc-blurb">Activate a Rogue modifier when a run starts.</p>
+            <span class="eyebrow">${tag}</span>
+            <b>${name}</b>
+            <small class="rl-tc-ovr">RUN START</small>
+            <p class="rl-tc-blurb">${blurb}</p>
         </div>
     </article>`;
 }
@@ -909,9 +969,9 @@ function showPackTheater(out){
     }else if(out.parts&&out.parts.length){
         cardsHTML=out.parts.map((p,i)=>tradingPartCardHTML(p,i)).join("");
         n=out.parts.length;
-    }else if(out.charges!=null){
-        cardsHTML=tradingModCardHTML(out.charges,0);
-        n=1;
+    }else if(out.mods&&out.mods.length){
+        cardsHTML=out.mods.map((m,i)=>tradingModCardHTML(m,i)).join("");
+        n=out.mods.length;
     }
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
@@ -1135,7 +1195,7 @@ function showTempPartPick(build,useAwakening){
 
 function continueAfterTemp(build,useAwakening,tempPart){
     Game._rlRunOpts.tempPart=tempPart||null;
-    if((Number(account().modCharges)||0)>0){
+    if((account().runTempMods||[]).length>0){
         showModifierPick(build,useAwakening,tempPart);
         return;
     }
@@ -1144,17 +1204,15 @@ function continueAfterTemp(build,useAwakening,tempPart){
 
 function showModifierPick(build,useAwakening,tempPart){
     Game.screen="rogueLiteModPick";
-    const mods=(typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.MODIFIERS)||[];
-    const charges=account().modCharges||0;
+    const owned=(account().runTempMods||[]).slice();
     const app=document.getElementById("app");
-    const list=mods.length?mods:[{id:"last_stand",name:"LAST STAND",blurb:"Late-fight DEF/KB."}];
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-mod">
-        ${mark("MODIFIER",`${charges} CHARGE${charges===1?"":"S"}`)}
-        <p class="rl-lede">Spend one charge to start with a Rogue modifier. Skip to save it.</p>
+        ${mark("MODIFIER",`${owned.length} READY`)}
+        <p class="rl-lede">Pick one rolled mod for this run, or skip to keep them.</p>
         <div class="rl-mod-list">
-            ${list.map(m=>`<button type="button" class="rl-mod-card" data-mod="${m.id}">
-                <b>${m.name}</b>
+            ${owned.map((m,i)=>`<button type="button" class="rl-mod-card" data-mod-i="${i}" data-mod="${m.id}">
+                <b>${m.name||m.id}</b>
                 <small>${m.tag||""}</small>
                 <p>${m.blurb||""}</p>
             </button>`).join("")}
@@ -1198,7 +1256,7 @@ function toggleDev(){
     panel.className="rogue-dev-panel";
     panel.innerHTML=`<header><b>ROGUE LITE DEV</b><button type="button" id="rlDevClose">✕</button></header>
         <p class="rogue-dev-copy">Cheats write the Rogue Lite account only — Campaign Track stays untouched.</p>
-        <p class="rogue-dev-stats">$${acc.money} · ${owned} blades · ${acc.modCharges||0} mods · ${(acc.runTempParts||[]).length} temps</p>
+        <p class="rogue-dev-stats">$${acc.money} · ${owned} blades · ${(acc.runTempMods||[]).length} mods · ${(acc.runTempParts||[]).length} temps</p>
         <div class="rogue-dev-actions">
             <button type="button" class="menu-btn silver" data-rl="mon100">+100 MONEY</button>
             <button type="button" class="menu-btn silver" data-rl="mon500">+500 MONEY</button>
@@ -1209,10 +1267,11 @@ function toggleDev(){
             <button type="button" class="menu-btn gold" data-rl="allBS">OWN ALL B/S</button>
             <button type="button" class="menu-btn silver" data-rl="dup5">+5 DUPES (FIRST)</button>
             <button type="button" class="menu-btn silver" data-rl="claimAw">CLAIM AWAKENING</button>
-            <button type="button" class="menu-btn silver" data-rl="mod">+2 MOD CHARGES</button>
+            <button type="button" class="menu-btn silver" data-rl="mod">+2 RANDOM MODS</button>
             <button type="button" class="menu-btn silver" data-rl="parts">+TEMP PARTS</button>
             <button type="button" class="menu-btn silver" data-rl="packB">OPEN BRONZE PACK</button>
             <button type="button" class="menu-btn gold" data-rl="packPrem">OPEN PREMIUM GOLD</button>
+            <button type="button" class="menu-btn gold" data-rl="packMod">OPEN MOD PACK</button>
             <button type="button" class="menu-btn silver" data-rl="n10">SKIP TO 10</button>
             <button type="button" class="menu-btn silver" data-rl="n20">SKIP TO 20</button>
             <button type="button" class="menu-btn silver" data-rl="n29">SKIP TO 29</button>
@@ -1323,7 +1382,16 @@ function devAct(id,opts){
         const bid=ownedBladeIds()[0];
         if(bid){for(let i=0;i<5;i++) grantBlade(bid);}
     }else if(id==="claimAw") claimAllReady();
-    else if(id==="mod"){acc.modCharges=(Number(acc.modCharges)||0)+2;persistAccount();}
+    else if(id==="mod"){
+        const used=(acc.runTempMods||[]).map(m=>m.id);
+        const add=[];
+        for(let i=0;i<2;i++){
+            const m=rollTempMod(used);
+            if(m){ add.push(m); used.push(m.id); }
+        }
+        acc.runTempMods=(acc.runTempMods||[]).concat(add);
+        persistAccount();
+    }
     else if(id==="parts"){
         acc.runTempParts=(acc.runTempParts||[]).concat([
             rollTempPart("Silver"),
@@ -1339,6 +1407,11 @@ function devAct(id,opts){
         acc.money=Math.max(acc.money,(cfg().PACKS?.bey_gold_premium?.price||780));
         persistAccount();
         const out=openPack("bey_gold_premium");
+        if(out.ok){showPackTheater(out);return;}
+    }else if(id==="packMod"){
+        acc.money=Math.max(acc.money,(cfg().PACKS?.mod_pack?.price||340));
+        persistAccount();
+        const out=openPack("mod_pack");
         if(out.ok){showPackTheater(out);return;}
     }else if(id==="awake"){awakenLiveBey();return;}
     else if(id==="clearaw"){clearLiveAwakening();return;}
