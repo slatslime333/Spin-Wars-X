@@ -613,7 +613,13 @@ function runCpuNightMix(match,boss){
 }
 
 function cpuNightMix(tier,match,boss){
-    if(isRunLoop()) return runCpuNightMix(match,boss);
+    if(isLiteLoop()){
+        if(typeof SpinWarsRogueLiteConfig?.liteNightMix==="function"){
+            return SpinWarsRogueLiteConfig.liteNightMix(match,boss);
+        }
+        return runCpuNightMix(match,boss);
+    }
+    if(isCampaignLoop()) return runCpuNightMix(match,boss);
     const t=String(tier||"");
     const m=Math.max(1,Number(match)||1);
     if(boss){
@@ -653,7 +659,14 @@ function cpuStackLead(){
     const night=r?.cpuNight||"even";
     if(m<=2) return 0;
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
-    if(isRunLoop()){
+    if(isLiteLoop()){
+        // Extra cards climb with the night; starter nights stay light.
+        if(m<=5){ even=0.82; plus1=0.16; plus2=0.02; plus3=0; }
+        else if(m<=10){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
+        else if(m<=20){ even=0.36; plus1=0.40; plus2=0.20; plus3=0.04; }
+        else if(m<=25){ even=0.22; plus1=0.40; plus2=0.28; plus3=0.10; }
+        else { even=0.12; plus1=0.36; plus2=0.34; plus3=0.18; }
+    }else if(isCampaignLoop()){
         // Extra CPU cards track the night, not whether you unlocked a Gold blade.
         if(m<=5){ even=0.78; plus1=0.20; plus2=0.02; plus3=0; }
         else if(m<=10){ even=0.62; plus1=0.30; plus2=0.08; plus3=0; }
@@ -1109,7 +1122,40 @@ function cpuPowerTarget(playerPow,match,boss){
     const night=r.cpuNight||cpuNightRoll();
     r.cpuNight=night;
     let band;
-    if(isRunLoop()){
+    if(isLiteLoop()){
+        // Blade-only Rogue: soft early so starter kits clear; late squeeze + collection depth.
+        let owned=5;
+        try{
+            if(global.SpinWarsRogueLite?.account){
+                const col=SpinWarsRogueLite.account().collection||{};
+                owned=Object.keys(col).filter(id=>(Number(col[id]?.copies)||0)>0).length;
+            }
+        }catch(_e){}
+        const depth=typeof SpinWarsRogueLiteConfig?.liteCollectionBand==="function"
+            ? SpinWarsRogueLiteConfig.liteCollectionBand(owned)
+            : 0;
+        if(boss){
+            if(isSharkNight(match)) band=1.07;
+            else if(isMiniNight(match) && match>Math.ceil(finalMatch()/2)) band=1.05;
+            else band=1.03;
+            if(night==="easy") band-=0.02;
+            if(night==="hard") band+=0.02;
+        }else if(night==="easy") band=0.88+Math.random()*0.04;
+        else if(night==="even") band=0.93+Math.random()*0.04;
+        else band=0.98+Math.random()*0.035;
+        if(!boss){
+            if(match<=5) band=Math.min(band, night==="hard"?0.97:0.94);
+            else if(match<=10) band=Math.min(band, night==="hard"?1.00:0.98);
+            else if(match<=20) band=Math.min(band, night==="hard"?1.04:1.01);
+            else if(match<=25) band=clamp(band,0.97,1.06);
+            else band=clamp(band,1.00,1.09);
+            band=clamp(band+depth,0.86,1.10);
+        }else{
+            band=clamp(band+depth*0.5,0.95,1.12);
+        }
+        return playerPow*band;
+    }
+    if(isCampaignLoop()){
         // Track the player so better parts ease the climb; early nights stay soft.
         if(boss){
             if(isSharkNight(match)) band=1.06;
@@ -1785,8 +1831,15 @@ function toggleDev(){
         return;
     }
     const panel=el(`<aside id="rogueDevPanel" class="rogue-dev-panel">
-        <header><b>ROGUE DEV</b><button type="button" id="rogueDevClose">✕</button></header>
+        <header><b>${isLiteLoop()?"ROGUE LITE DEV":(isCampaignLoop()?"CAMPAIGN DEV":"ROGUE DEV")}</b><button type="button" id="rogueDevClose">✕</button></header>
         <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
+        ${isLiteLoop()?`<p class="rogue-dev-stats">Lite account · $${Number(global.SpinWarsRogueLite?.account?.()?.money)||0} · mods ${Number(global.SpinWarsRogueLite?.account?.()?.modCharges)||0}</p>
+        <div class="rogue-dev-actions" id="rogueDevLiteActs">
+            <button type="button" class="menu-btn silver" data-rldev="mon500">+500 MONEY</button>
+            <button type="button" class="menu-btn silver" data-rldev="mod">+2 MOD</button>
+            <button type="button" class="menu-btn silver" data-rldev="awake">AWAKEN LIVE BEY</button>
+            <button type="button" class="menu-btn gold" data-rldev="clearaw">CLEAR AWAKENING</button>
+        </div>`:""}
         <div class="rogue-dev-list" id="rogueDevList"></div>
         <details class="rogue-dev-scene">
             <summary>SCENE SKIP</summary>
@@ -1812,6 +1865,16 @@ function toggleDev(){
         document.body.classList.remove("rogue-dev-open");
     };
     document.getElementById("rogueDevClose").onclick=closeDev;
+    panel.querySelectorAll("[data-rldev]").forEach(btn=>{
+        btn.onclick=()=>{
+            const id=btn.getAttribute("data-rldev");
+            if(typeof SpinWarsRogueLite?.devAct==="function"){
+                SpinWarsRogueLite.devAct(id,{live:true});
+                closeDev();
+                if(id==="awake"||id==="clearaw") refreshAfterDebug();
+            }
+        };
+    });
     document.getElementById("rogueDevClear").onclick=()=>{
         const r=run();
         if(!r) return;
@@ -1819,6 +1882,9 @@ function toggleDev(){
         r.activeModifier=null;
         r.history=[];
         r.enhanced=false;
+        r.awakeningLevel=0;
+        r.awakeningBonus=emptyBonuses();
+        r.runChip=emptyBonuses();
         r.currentRogueTier="Bronze";
         r.startScale=makeStartScale(r.starterBlade||r.blade,r.starterRatchet||r.ratchet,r.starterBit||r.bit);
         r.consumables=emptyConsumables();

@@ -468,15 +468,16 @@ function awakeningBonuses(blade,level){
     const role=String(blade?.type||"Balance");
     const b={attack:0,knockback:0,defense:0,mobility:0,balance:0,stamina:0,burst:0};
     if(lv<=0) return b;
-    const amp=lv===1?1:lv===2?2:3;
+    // Phase 3: slightly stronger role identity so Awakening feels worth claiming.
+    const amp=lv===1?1:lv===2?2:3.5;
     if(role==="Attack"){
-        b.knockback=2*amp;b.attack=1*amp;b.mobility=1*amp;
+        b.knockback=Math.round(2.5*amp);b.attack=Math.round(1.5*amp);b.mobility=Math.round(1.2*amp);
     }else if(role==="Defense"){
-        b.defense=2*amp;b.balance=2*amp;b.stamina=1*amp;
+        b.defense=Math.round(2.5*amp);b.balance=Math.round(2.2*amp);b.stamina=Math.round(1.2*amp);
     }else if(role==="Stamina"){
-        b.stamina=2*amp;b.balance=2*amp;b.defense=1*amp;
+        b.stamina=Math.round(2.5*amp);b.balance=Math.round(2.2*amp);b.defense=Math.round(1.2*amp);
     }else{
-        b.attack=1*amp;b.defense=1*amp;b.stamina=1*amp;b.balance=1*amp;
+        b.attack=Math.round(1.2*amp);b.defense=Math.round(1.2*amp);b.stamina=Math.round(1.2*amp);b.balance=Math.round(1.2*amp);b.knockback=Math.round(amp);
     }
     return b;
 }
@@ -687,6 +688,7 @@ function showHub(){
     document.getElementById("rlMarket")?.addEventListener("click",()=>showMarket());
     document.getElementById("rlCollection")?.addEventListener("click",()=>showCollection());
     document.getElementById("rlHelp")?.addEventListener("click",()=>showHelp());
+    mountDev();
 }
 
 function showHelp(){
@@ -711,8 +713,13 @@ function showHelp(){
             <h2>Gold</h2>
             <p>Gold blades are rentals. Pack Gold starts with ${cfg().GOLD_DEFAULT_RUNS||2} runs. Extend costs money. Shark Scale stays a boss — not a pack drop.</p>
         </section>
+        <section class="menu-card">
+            <h2>Difficulty</h2>
+            <p>Nights 1–5 stay farmable on a starter kit. Later matches and bosses squeeze harder. A deeper blade collection raises CPU pressure — Awakening, Gold, temp parts, and modifiers are how you answer it.</p>
+        </section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    mountDev();
 }
 
 function showCollection(){
@@ -778,6 +785,7 @@ function showCollection(){
             showCollection();
         };
     });
+    mountDev();
 }
 
 function showMarket(){
@@ -818,6 +826,7 @@ function showMarket(){
     document.querySelectorAll("[data-pack]").forEach(btn=>{
         btn.onclick=()=>buyAndOpenPack(btn.getAttribute("data-pack"));
     });
+    mountDev();
 }
 
 function buyAndOpenPack(packId){
@@ -958,6 +967,7 @@ function showPackTheater(out){
     shell.onclick=startReveal;
     rail.onclick=()=>{ if(opened&&revealed<n) revealNext(); };
     done.onclick=()=>showMarket();
+    mountDev();
 }
 
 function showStartFlow(){
@@ -1162,13 +1172,206 @@ function bootFromHome(){
     showHub();
 }
 
+function mountDev(){
+    document.getElementById("rlDevBtn")?.remove();
+    document.getElementById("rogueDevBtn")?.remove();
+    const btn=document.createElement("button");
+    btn.id="rlDevBtn";
+    btn.type="button";
+    btn.className="rogue-dev-btn";
+    btn.textContent="DEV";
+    btn.onclick=()=>toggleDev();
+    document.body.appendChild(btn);
+}
+
+function toggleDev(){
+    const existing=document.getElementById("rlDevPanel");
+    if(existing){
+        existing.remove();
+        document.body.classList.remove("rogue-dev-open");
+        return;
+    }
+    const acc=account();
+    const owned=ownedBladeIds().length;
+    const panel=document.createElement("aside");
+    panel.id="rlDevPanel";
+    panel.className="rogue-dev-panel";
+    panel.innerHTML=`<header><b>ROGUE LITE DEV</b><button type="button" id="rlDevClose">✕</button></header>
+        <p class="rogue-dev-copy">Cheats write the Rogue Lite account only — Campaign Track stays untouched.</p>
+        <p class="rogue-dev-stats">$${acc.money} · ${owned} blades · ${acc.modCharges||0} mods · ${(acc.runTempParts||[]).length} temps</p>
+        <div class="rogue-dev-actions">
+            <button type="button" class="menu-btn silver" data-rl="mon100">+100 MONEY</button>
+            <button type="button" class="menu-btn silver" data-rl="mon500">+500 MONEY</button>
+            <button type="button" class="menu-btn gold" data-rl="maxmon">MAX MONEY</button>
+            <button type="button" class="menu-btn silver" data-rl="grantB">+RANDOM BRONZE</button>
+            <button type="button" class="menu-btn silver" data-rl="grantS">+RANDOM SILVER</button>
+            <button type="button" class="menu-btn gold" data-rl="grantG">+RANDOM GOLD</button>
+            <button type="button" class="menu-btn gold" data-rl="allBS">OWN ALL B/S</button>
+            <button type="button" class="menu-btn silver" data-rl="dup5">+5 DUPES (FIRST)</button>
+            <button type="button" class="menu-btn silver" data-rl="claimAw">CLAIM AWAKENING</button>
+            <button type="button" class="menu-btn silver" data-rl="mod">+2 MOD CHARGES</button>
+            <button type="button" class="menu-btn silver" data-rl="parts">+TEMP PARTS</button>
+            <button type="button" class="menu-btn silver" data-rl="packB">OPEN BRONZE PACK</button>
+            <button type="button" class="menu-btn gold" data-rl="packPrem">OPEN PREMIUM GOLD</button>
+            <button type="button" class="menu-btn silver" data-rl="n10">SKIP TO 10</button>
+            <button type="button" class="menu-btn silver" data-rl="n20">SKIP TO 20</button>
+            <button type="button" class="menu-btn silver" data-rl="n29">SKIP TO 29</button>
+            <button type="button" class="menu-btn gold" data-rl="shark">FINAL BOSS</button>
+            <button type="button" class="menu-btn gold" data-rl="win">WIN NIGHT</button>
+            <button type="button" class="menu-btn silver" data-rl="reset">RESET ACCOUNT</button>
+        </div>`;
+    document.body.appendChild(panel);
+    document.body.classList.add("rogue-dev-open");
+    const close=()=>{panel.remove();document.body.classList.remove("rogue-dev-open");};
+    document.getElementById("rlDevClose").onclick=close;
+    panel.querySelectorAll("[data-rl]").forEach(btn=>{
+        btn.onclick=()=>{devAct(btn.getAttribute("data-rl"));close();};
+    });
+}
+
+function ensureLiteLiveForJump(){
+    if(Game.rogue&&Game.rogue.loop==="lite") return true;
+    const pool=draftBladePool();
+    if(!pool.length||!global.SpinWarsRogue?.beginFromLoadout) return false;
+    const card=makeBuildCard(pool[0].id);
+    if(!card) return false;
+    beginBuild(card,false,{});
+    return !!(Game.rogue&&Game.rogue.loop==="lite");
+}
+
+function grantAllBronzeSilver(){
+    playablePool("Bronze").forEach(x=>{
+        const e=bladeEntry(account(),x.id);
+        if(e.copies<1) grantBlade(x.id);
+    });
+    playablePool("Silver").forEach(x=>{
+        const e=bladeEntry(account(),x.id);
+        if(e.copies<1) grantBlade(x.id);
+    });
+}
+
+function fillFirstAwakening(){
+    const id=ownedBladeIds()[0];
+    if(!id) return;
+    const e=bladeEntry(account(),id);
+    e.copies=Math.max(e.copies,15);
+    e.awakening={1:true,2:true,3:true};
+    persistAccount();
+}
+
+function claimAllReady(){
+    ownedBladeIds().forEach(id=>{
+        const prog=awakeningProgress(id);
+        [1,2,3].forEach(lv=>{
+            if(prog.levels[lv].unlocked) claimAwakening(id,lv);
+        });
+    });
+}
+
+function awakenLiveBey(){
+    const r=Game.rogue;
+    if(!r||r.loop!=="lite"||!r.blade) return;
+    const id=bladeIdOf(r.blade);
+    if(!id) return;
+    const e=bladeEntry(account(),id);
+    e.copies=Math.max(e.copies,15);
+    e.awakening={1:true,2:true,3:true};
+    persistAccount();
+    const lv=3;
+    r.awakeningLevel=lv;
+    r.awakeningBonus=awakeningBonuses(r.blade,lv);
+    r.runChip=Object.assign({},r.runChip||{},r.awakeningBonus);
+}
+
+function clearLiveAwakening(){
+    const r=Game.rogue;
+    if(!r||r.loop!=="lite") return;
+    r.awakeningLevel=0;
+    r.awakeningBonus={attack:0,knockback:0,defense:0,mobility:0,balance:0,stamina:0,burst:0};
+    // strip prior awakening from runChip by rebuilding from empty + keep non-awake? simplest: zero runChip awakening keys
+    r.runChip=r.runChip||{};
+    STATS.forEach(k=>{r.runChip[k]=0;});
+}
+
+function refreshLiteScreen(){
+    const s=Game.screen||"";
+    if(s==="rogueLiteHub") showHub();
+    else if(s==="rogueLiteMarket") showMarket();
+    else if(s==="rogueLiteCollection") showCollection();
+    else if(s==="rogueLiteHelp") showHelp();
+    else showHub();
+}
+
+function devAct(id,opts){
+    opts=opts||{};
+    ensureAccountReady();
+    const acc=account();
+    if(id==="mon100") addMoney(100);
+    else if(id==="mon500") addMoney(500);
+    else if(id==="maxmon"){acc.money=9999;persistAccount();}
+    else if(id==="grantB"){
+        const p=playablePool("Bronze");
+        if(p.length) grantBlade(pick(p).id);
+    }else if(id==="grantS"){
+        const p=playablePool("Silver");
+        if(p.length) grantBlade(pick(p).id);
+    }else if(id==="grantG"){
+        const p=playablePool("Gold");
+        if(p.length) grantBlade(pick(p).id);
+    }else if(id==="allBS") grantAllBronzeSilver();
+    else if(id==="dup5"){
+        const bid=ownedBladeIds()[0];
+        if(bid){for(let i=0;i<5;i++) grantBlade(bid);}
+    }else if(id==="claimAw") claimAllReady();
+    else if(id==="mod"){acc.modCharges=(Number(acc.modCharges)||0)+2;persistAccount();}
+    else if(id==="parts"){
+        acc.runTempParts=(acc.runTempParts||[]).concat([
+            rollTempPart("Silver"),
+            rollTempPart("Gold")
+        ].filter(Boolean));
+        persistAccount();
+    }else if(id==="packB"){
+        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_bronze?.price||120));
+        persistAccount();
+        const out=openPack("bey_bronze");
+        if(out.ok){showPackTheater(out);return;}
+    }else if(id==="packPrem"){
+        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_gold_premium?.price||780));
+        persistAccount();
+        const out=openPack("bey_gold_premium");
+        if(out.ok){showPackTheater(out);return;}
+    }else if(id==="awake"){awakenLiveBey();return;}
+    else if(id==="clearaw"){clearLiveAwakening();return;}
+    else if(id==="reset"){
+        clearLive();
+        Game.rogueLiteAccount=normalizeAccount(null);
+        persistAccount();
+        ensureAccountReady();
+        showHub();
+        return;
+    }else if(id==="n10"||id==="n20"||id==="n29"){
+        const n=id==="n10"?10:id==="n20"?20:29;
+        if(ensureLiteLiveForJump()) SpinWarsRogue.jumpToMatch(n);
+        return;
+    }else if(id==="shark"){
+        if(ensureLiteLiveForJump()) SpinWarsRogue.jumpToFinalBoss();
+        return;
+    }else if(id==="win"){
+        if(Game.rogue&&Game.rogue.loop==="lite"&&typeof SpinWarsRogue.onMatchOver==="function"){
+            SpinWarsRogue.onMatchOver("player",7,0,"dev");
+        }
+        return;
+    }
+    if(!opts.live) refreshLiteScreen();
+}
+
 global.SpinWarsRogueLite={
     showHub:bootFromHome,
     showMarket,showCollection,showHelp,
     persistLive,hasLive,peekLive,resumeLive,clearLive,
     onNightOver,afterRunHome,archiveAndClear,
     account,ensureAccountReady,openPack,grantBlade,
-    awakeningProgress,highestClaimedAwakening,
+    awakeningProgress,highestClaimedAwakening,devAct,mountDev,
     rules:rules(),
     FINAL_MATCH:30,
     BOSS_AT:{10:"mini",20:"mini",30:"final"},
