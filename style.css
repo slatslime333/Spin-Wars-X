@@ -4198,6 +4198,8 @@ button:focus-visible{
   display:flex;flex-direction:column;gap:10px;
   border:1px solid rgba(255,255,255,.14);
   background:linear-gradient(180deg,#1a1622,#0c0a10);
+  max-height:min(72dvh,640px);
+  overflow:auto;
 }
 .rl-bey-sheet.tier-bronze,.rl-bey-detail.tier-bronze{
   border-color:#c07a4a;
@@ -4410,8 +4412,8 @@ button:focus-visible{
   .rl-trade-card{
     flex:0 0 auto;
     width:auto;
-    height:min(56dvh,400px);
-    max-height:min(56dvh,400px);
+    height:min(52dvh,380px);
+    max-height:min(52dvh,380px);
     aspect-ratio:5/7;
     scroll-snap-align:center;
   }
