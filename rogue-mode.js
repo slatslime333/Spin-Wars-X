@@ -2596,6 +2596,17 @@ function resumeSave(){
 }
 
 function showLanding(){
+    /* Pack Rogue (Lite) must never land on Tier Rogue. */
+    if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
+        global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
+        SpinWarsRogueLite.showHub();
+        return;
+    }
+    if((Game.rogue?.loop==="run"||Game.mode==="rogue-run") &&
+        global.SpinWarsRogueRun && typeof SpinWarsRogueRun.showHub==="function"){
+        SpinWarsRogueRun.showHub();
+        return;
+    }
     Game.mode="rogue";
     Game.quickMatch=false;
     Game.screen="rogueLanding";

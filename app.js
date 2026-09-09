@@ -2522,10 +2522,27 @@ function showComboCard(){
     }
 
     const menu=document.querySelector(".vs-screen");
-    if(menu) menu.appendChild(createBackButton(()=>
-        Game.mode==="rogue"?SpinWarsRogue.showLanding():
-        Game.quickMatch?renderLeagueSelect():showBitDraft()
-    ));
+    if(menu) menu.appendChild(createBackButton(()=>{
+        if(Game.mode==="rogue"||Game.mode==="rogue-lite"||Game.mode==="rogue-run"){
+            if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.persist==="function"){
+                SpinWarsRogue.persist();
+            }
+            if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
+                typeof SpinWarsRogueLite!=="undefined" && SpinWarsRogueLite.showHub){
+                SpinWarsRogueLite.showHub();
+                return;
+            }
+            if((Game.rogue?.loop==="run"||Game.mode==="rogue-run") &&
+                typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub){
+                SpinWarsRogueRun.showHub();
+                return;
+            }
+            SpinWarsRogue.showLanding();
+            return;
+        }
+        if(Game.quickMatch){ renderLeagueSelect(); return; }
+        showBitDraft();
+    }));
     if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue.persist==="function") SpinWarsRogue.persist();
 }
@@ -4139,7 +4156,16 @@ function forfeitLiveMatch(){
         SpinWarsSandbox.leave();
         return;
     }
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+    if((Game.mode==="rogue"||Game.mode==="rogue-lite"||Game.mode==="rogue-run") &&
+        typeof SpinWarsRogue!=="undefined"){
+        const loop=Game.rogue?.loop;
+        const lite=loop==="lite"||Game.mode==="rogue-lite";
+        const campaign=loop==="run"||Game.mode==="rogue-run";
+        /* Lite / Campaign never dump onto the old Tier Rogue landing. */
+        if((lite||campaign) && typeof SpinWarsRogue.goHomeAfterRun==="function"){
+            SpinWarsRogue.goHomeAfterRun("lost");
+            return;
+        }
         SpinWarsRogue.showLanding();
         return;
     }
