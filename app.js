@@ -299,7 +299,7 @@ const BLADE_ENGINE = {
         weight:37.0,
         sprite:"assets/blades/Wizardrod.png",
 
-        card:{ovr:98,attack:62,knockback:66,defense:95,mobility:64,balance:98,stamina:99,burst:94},
+        card:{ovr:98,attack:70,knockback:70,defense:95,mobility:64,balance:98,stamina:99,burst:94},
 
         physics:{
             weightClass:"Heavy",
