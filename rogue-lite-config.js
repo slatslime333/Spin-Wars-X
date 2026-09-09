@@ -75,7 +75,7 @@ const PACKS={
     },
     mod_pack:{
         id:"mod_pack",family:"mod",tier:"Gold",name:"MODIFIER PACK",
-        price:340,blurb:"Temp modifier charges for run start. Limited uses."
+        price:340,blurb:"2 random run mods from the Rogue pool. Pick one at run start."
     }
 };
 
