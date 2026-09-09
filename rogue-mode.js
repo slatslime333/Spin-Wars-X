@@ -1833,7 +1833,7 @@ function toggleDev(){
     const panel=el(`<aside id="rogueDevPanel" class="rogue-dev-panel">
         <header><b>${isLiteLoop()?"ROGUE LITE DEV":(isCampaignLoop()?"CAMPAIGN DEV":"ROGUE DEV")}</b><button type="button" id="rogueDevClose">✕</button></header>
         <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
-        ${isLiteLoop()?`<p class="rogue-dev-stats">Lite account · $${Number(global.SpinWarsRogueLite?.account?.()?.money)||0} · mods ${Number(global.SpinWarsRogueLite?.account?.()?.modCharges)||0}</p>
+        ${isLiteLoop()?`<p class="rogue-dev-stats">Lite account · $${Number(global.SpinWarsRogueLite?.account?.()?.money)||0} · mods ${(global.SpinWarsRogueLite?.account?.()?.runTempMods||[]).length}</p>
         <div class="rogue-dev-actions" id="rogueDevLiteActs">
             <button type="button" class="menu-btn silver" data-rldev="mon500">+500 MONEY</button>
             <button type="button" class="menu-btn silver" data-rldev="mod">+2 MOD</button>
@@ -2596,6 +2596,17 @@ function resumeSave(){
 }
 
 function showLanding(){
+    /* Pack Rogue (Lite) must never land on Tier Rogue. */
+    if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
+        global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
+        SpinWarsRogueLite.showHub();
+        return;
+    }
+    if((Game.rogue?.loop==="run"||Game.mode==="rogue-run") &&
+        global.SpinWarsRogueRun && typeof SpinWarsRogueRun.showHub==="function"){
+        SpinWarsRogueRun.showHub();
+        return;
+    }
     Game.mode="rogue";
     Game.quickMatch=false;
     Game.screen="rogueLanding";

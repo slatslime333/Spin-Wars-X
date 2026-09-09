@@ -1529,7 +1529,7 @@ function renderHowTo(){
             <h2>X-Rail and X-Exit</h2>
             <p>The gold ring on the upper stadium is the X-Rail. You hook it from the inner face with remaining counter-clockwise bite and speed, not with peak RPM on a card. Near-misses can still ride. You cannot capture from the back of the rail or while you are already in a painted hole. Failed hooks bounce softer and keep a little CCW, so a high-RPM Attack can wind on instead of skating straight off. Tired wide laps bounce more often — low remaining RPM raises the bar so they do not ride out a dead match.</p>
             <p>Ride speed is the speed you arrived with, plus a light RPM drive. Exit speed is that carried rail speed. A rail-break ejector shoves toward stadium middle, not out through a pocket.</p>
-            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Beys do not brake themselves off a pocket. If that line hits Over or Xtreme, it rolls: 35% self-KO at 80%+ RPM, 45% from 60–79%, more often when tired. A smash after they left the ring is still a smash. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
+            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Beys do not brake themselves off a pocket. If that line hits Over or Xtreme, it rolls: 20% self-KO at 80%+ RPM, 30% from 60–79%, 50% when tired. A smash after they left the ring is still a smash. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
             <p>Swinging off that exit into a clash is a real hit. You get a slight knock boost. The swinging Bey dumps leftover follow-through so they bounce instead of riding through into a pocket. Non-Attack bits on that swing hit with Attack-bit weight for that contact. Riding the rail is not that swing.</p>
         </section>
 
@@ -2522,10 +2522,27 @@ function showComboCard(){
     }
 
     const menu=document.querySelector(".vs-screen");
-    if(menu) menu.appendChild(createBackButton(()=>
-        Game.mode==="rogue"?SpinWarsRogue.showLanding():
-        Game.quickMatch?renderLeagueSelect():showBitDraft()
-    ));
+    if(menu) menu.appendChild(createBackButton(()=>{
+        if(Game.mode==="rogue"||Game.mode==="rogue-lite"||Game.mode==="rogue-run"){
+            if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.persist==="function"){
+                SpinWarsRogue.persist();
+            }
+            if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
+                typeof SpinWarsRogueLite!=="undefined" && SpinWarsRogueLite.showHub){
+                SpinWarsRogueLite.showHub();
+                return;
+            }
+            if((Game.rogue?.loop==="run"||Game.mode==="rogue-run") &&
+                typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub){
+                SpinWarsRogueRun.showHub();
+                return;
+            }
+            SpinWarsRogue.showLanding();
+            return;
+        }
+        if(Game.quickMatch){ renderLeagueSelect(); return; }
+        showBitDraft();
+    }));
     if(Game.mode==="rogue") SpinWarsRogue.decorateVs(menu);
     if(Game.mode==="rogue" && typeof SpinWarsRogue.persist==="function") SpinWarsRogue.persist();
 }
@@ -4139,7 +4156,16 @@ function forfeitLiveMatch(){
         SpinWarsSandbox.leave();
         return;
     }
-    if(Game.mode==="rogue" && typeof SpinWarsRogue!=="undefined"){
+    if((Game.mode==="rogue"||Game.mode==="rogue-lite"||Game.mode==="rogue-run") &&
+        typeof SpinWarsRogue!=="undefined"){
+        const loop=Game.rogue?.loop;
+        const lite=loop==="lite"||Game.mode==="rogue-lite";
+        const campaign=loop==="run"||Game.mode==="rogue-run";
+        /* Lite / Campaign never dump onto the old Tier Rogue landing. */
+        if((lite||campaign) && typeof SpinWarsRogue.goHomeAfterRun==="function"){
+            SpinWarsRogue.goHomeAfterRun("lost");
+            return;
+        }
         SpinWarsRogue.showLanding();
         return;
     }
@@ -4995,7 +5021,7 @@ function finishRecoveryChance(s,zone,knockForce,source,align){
             const roll=typeof SpinWarsXRailEngine!=="undefined" &&
                 typeof SpinWarsXRailEngine.xExitPocketRecoverChance==="function"
                 ? SpinWarsXRailEngine.xExitPocketRecoverChance(rpm)
-                : (rpm>=0.80?0.65:rpm>=0.60?0.55:0.30);
+                : (rpm>=0.80?0.80:rpm>=0.60?0.70:0.50);
             return newBattleClamp(roll, 0.05, 0.95);
         }
     }
