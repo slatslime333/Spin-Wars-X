@@ -210,8 +210,41 @@ function loadoutParts(){
 
 function comboOfLoadout(){
     const p=loadoutParts();
-    if(!p.blade||!p.ratchet||!p.bit||typeof calculateComboStats!=="function") return null;
+    if(!p.blade||!p.ratchet||!p.bit) return null;
+    // Garage/hub: Bronze keeps full combo; Silver/Gold use bronze-form scale from live ratchet/bit.
+    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.previewRunCombo==="function"){
+        return SpinWarsRogue.previewRunCombo(p.blade,p.ratchet,p.bit);
+    }
+    if(typeof calculateComboStats!=="function") return null;
     return calculateComboStats(p.blade,p.ratchet,p.bit);
+}
+
+function bladeStickerCombo(blade){
+    if(!blade||typeof bladeCardStats!=="function") return null;
+    const stats=bladeCardStats(blade);
+    const ovr=Number(blade.card?.ovr);
+    return {
+        stats,
+        power:typeof comboPowerPoints==="function"?comboPowerPoints(stats):null,
+        ovr:Number.isFinite(ovr)?ovr:null,
+        meta:Number.isFinite(ovr)?ovr:null
+    };
+}
+
+/** Track inspect: blade-only → sticker card; otherwise normal (full) combo from row parts + garage fill. */
+function trackInspectCombo(parts){
+    const bladePart=parts.find(p=>p.kind==="blade");
+    const ratPart=parts.find(p=>p.kind==="ratchet");
+    const bitPart=parts.find(p=>p.kind==="bit");
+    if(bladePart && !ratPart && !bitPart){
+        return bladeStickerCombo(bladeById(bladePart.id));
+    }
+    const lo=loadoutParts();
+    const blade=bladePart?bladeById(bladePart.id):lo.blade;
+    const ratchet=ratPart?ratchetByName(ratPart.name):lo.ratchet;
+    const bit=bitPart?bitByName(bitPart.name):lo.bit;
+    if(!blade||!ratchet||!bit||typeof calculateComboStats!=="function") return null;
+    return calculateComboStats(blade,ratchet,bit);
 }
 
 function statBarRow(label,value,delta){
@@ -467,6 +500,10 @@ function loadoutCard(){
     if(!parts.blade){
         return `<section class="menu-card rr-loadout empty"><p>Pick a starter blade to open the locker.</p></section>`;
     }
+    const tier=String(parts.blade.tier||"");
+    const formNote=tier==="Silver"||tier==="Gold"
+        ? `<small class="rr-form-note">BRONZE FORM · ratchet/bit still apply</small>`
+        : "";
     return `<section class="menu-card rr-loadout">
         <div class="rr-loadout-arts">
             <div class="rr-loadout-art">${bladeArt?`<img src="${bladeArt}" alt="">`:"<span></span>"}</div>
@@ -474,11 +511,12 @@ function loadoutCard(){
             <div class="rr-loadout-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
         </div>
         <div class="rr-loadout-copy">
-            <span class="eyebrow">${String(parts.blade.tier||"").toUpperCase()}</span>
+            <span class="eyebrow">${tier.toUpperCase()}${tier==="Silver"||tier==="Gold"?" · BRONZE FORM":""}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
+            ${formNote}
             ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
-            ${statGroupsHTML(combo?.stats||{})}
+            ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
         </div>
     </section>`;
 }
@@ -498,10 +536,10 @@ function showHub(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell rr-hub">
         ${bowl()}
-        ${mark("ROGUE RUN","")}
+        ${mark("CAMPAIGN","")}
         ${hudStrip()}
         ${loadoutCard()}
-        <nav class="home-doors rogue-doors rr-doors" aria-label="Rogue Run">
+        <nav class="home-doors rogue-doors rr-doors" aria-label="Campaign">
             ${live?`<button class="home-door rip swx-hero" id="rrContinue" type="button">
                 <span class="home-door-kicker">SAVE</span>
                 <b>CONTINUE</b>
@@ -552,7 +590,7 @@ function showStarterPick(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell">
         ${bowl()}
-        ${mark("ROGUE RUN","STARTER")}
+        ${mark("CAMPAIGN","STARTER")}
         <div class="rr-starter-row">
             ${ids.map(id=>{
                 const b=bladeById(id);
@@ -691,7 +729,7 @@ function showGarage(){
             <div>
                 <span class="eyebrow">GARAGE</span>
                 <h1>EQUIP A KIT</h1>
-                <p>${live?"A night is live. This loadout is for the next run — the current night keeps its Bey.":"Tap a part you own. The hub Bey is what PLAY uses."}</p>
+                <p>${live?"A night is live. This loadout is for the next run — the current night keeps its Bey.":"Tap a part you own. Bronze keeps full stats. Silver/Gold open in Bronze form — ratchet and bit still reshape that kit."}</p>
             </div>
         </div>
         ${hudStrip()}
@@ -737,10 +775,8 @@ function showTrack(focusN){
     const focus=rows.find(r=>r.n===Number(focusN))||rows.find(r=>!rowOwned(r,acc)&&acc.level>=r.level)||rows[0];
     const parts=resolveRowParts(focus,acc);
     const previewBlade=parts.find(p=>p.kind==="blade");
-    const preview=previewBlade?bladeById(previewBlade.id):loadoutParts().blade;
-    const combo=preview&&loadoutParts().ratchet&&loadoutParts().bit&&typeof calculateComboStats==="function"
-        ? calculateComboStats(preview,loadoutParts().ratchet,loadoutParts().bit)
-        : comboOfLoadout();
+    const bladeOnly=!!previewBlade && !parts.some(p=>p.kind==="ratchet"||p.kind==="bit");
+    const combo=trackInspectCombo(parts);
     const arts=parts.map(p=>{
         const src=partSprite(p);
         return src?`<img src="${src}" alt="${partLabel(p)}">`:`<span></span>`;
@@ -761,11 +797,11 @@ function showTrack(focusN){
         <section class="menu-card rr-track-inspect">
             <div class="rr-loadout-arts">${arts}</div>
             <div>
-                <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}</span>
+                <span class="eyebrow">${rowOwned(focus,acc)?"OWNED":acc.level>=focus.level?"FOR SALE":"LOCKED"}${bladeOnly?" · CARD":""}</span>
                 <b>${parts.map(partLabel).join(" · ")}</b>
-                <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money</small>
+                <small>Row ${focus.n} · LV ${focus.level} · ${focus.price} money${bladeOnly?" · sticker stats":""}</small>
                 ${combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):""}
-                ${statGroupsHTML(combo?.stats||{})}
+                ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
                 <button class="rip-btn" id="rrBuy" type="button" ${canBuy?"":"disabled"}>${rowOwned(focus,acc)?"OWNED":acc.level<focus.level?`NEED LV ${focus.level}`:acc.money<focus.price?"NEED MONEY":"BUY"}</button>
             </div>
         </section>
@@ -809,7 +845,7 @@ function showBoard(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing rogue-run-board">
         ${bowl()}
-        ${mark("ROGUE RUN","RUN SCOREBOARD")}
+        ${mark("CAMPAIGN","RUN SCOREBOARD")}
         <section class="rogue-run-history">${body}</section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
@@ -839,7 +875,7 @@ function showHelp(){
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
-                <span class="eyebrow">ROGUE RUN</span>
+                <span class="eyebrow">CAMPAIGN</span>
                 <h1>HOW THIS LOCKER WORKS</h1>
                 <p>Same stadium as Tier Rogue. Longer night. Your collection is the paycheck.</p>
             </div>
@@ -859,6 +895,7 @@ function showHelp(){
 
 function mountDev(){
     document.getElementById("rrDevBtn")?.remove();
+    document.getElementById("rlDevBtn")?.remove();
     const btn=document.createElement("button");
     btn.id="rrDevBtn";
     btn.type="button";
@@ -879,8 +916,8 @@ function toggleDev(){
     const panel=document.createElement("aside");
     panel.id="rrDevPanel";
     panel.className="rogue-dev-panel";
-    panel.innerHTML=`<header><b>ROGUE RUN DEV</b><button type="button" id="rrDevClose">✕</button></header>
-        <p class="rogue-dev-copy">Account cheats write the real locker save. Run skips reuse the live night engine.</p>
+    panel.innerHTML=`<header><b>CAMPAIGN DEV</b><button type="button" id="rrDevClose">✕</button></header>
+        <p class="rogue-dev-copy">Account cheats write the Campaign locker save. Run skips reuse the live night engine.</p>
         <p class="rogue-dev-stats">LV ${acc.level} · EXP ${acc.exp} · $${acc.money}</p>
         <div class="rogue-dev-actions">
             <button type="button" class="menu-btn silver" data-rr="exp100">+100 EXP</button>

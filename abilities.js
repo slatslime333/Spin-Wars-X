@@ -22,6 +22,8 @@
     const FLAME_PHASE2_MS=1000;
     const PEGASUS_LIFT_MS=1300;
     const PEGASUS_AIM_MS=3000;
+    // Hit shove as a fraction of clash knock cap (was 0.70).
+    const PEGASUS_SHOVE_FRAC=0.92;
     const KITS={
         "Dran Sword":"ancient-sword",
         "Viper Tail":"ancient-sword",
@@ -67,7 +69,7 @@
         },
         "pegasus-blast":{
             name:"Pegasus Blast", active:true,
-            blurb:"2 uses a match. 1.3s lift, then 3s to aim. Hit if the glow marker even grazes them: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 70%-cap shove. Miss: you lose 15 RPM."
+            blurb:"2 uses a match. 1.3s lift, then 3s to aim. Hit if the glow marker even grazes them: they lose 8 RPM plus 10% of the RPM they still have (8 at empty, 18 at full) and a 80%-cap shove. Miss: you lose 15 RPM."
         },
         "flame-trail":{
             name:"Flame Trail", active:true,
@@ -296,6 +298,8 @@
         state.flame={player:[],cpu:[]};
         state.pegasus=null;
         hidePegasusStick();
+        document.getElementById("abilityFxLive")?.replaceChildren();
+        state._fxHtml=null;
         state.popUntil=0;
         state.cpuLastAbility=0;
         state.cpuThink=0;
@@ -309,7 +313,10 @@
         state.channel=null;
         state.flame={player:[],cpu:[]};
         state.pegasus=null;
-        [p,c].forEach(s=>{
+        hidePegasusStick();
+        document.getElementById("abilityFxLive")?.replaceChildren();
+        state._fxHtml=null;
+        [p,c].forEach((s,i)=>{
             if(!s) return;
             s.abilityHold=false;
             s.abilityHidden=false;
@@ -330,8 +337,8 @@
             s.hurricaneGain=0;
             s.stormHit=false;
             s.dashBurst=null;
+            setBeyVisible(i===0?"player":"cpu",true);
         });
-        hidePegasusStick();
     }
 
     function dashFill(side){
@@ -526,6 +533,7 @@
         s.abilityHold=true;
         s.abilityHidden=true;
         s.vx=0; s.vy=0;
+        setBeyVisible(side,false);
         beginChannel(side,PEGASUS_LIFT_MS+PEGASUS_AIM_MS,"pegasus-blast");
         let aim,drift,cpuMiss,cpuTrack;
         if(side==="cpu" && foe){
@@ -709,10 +717,13 @@
         const pegLive=!!state.pegasus;
         [p,c].forEach(s=>{
             if(!s) return;
-            const pegHere=pegLive && state.pegasus.side===(s===p?"player":"cpu");
+            const side=s===p?"player":"cpu";
+            const pegHere=pegLive && state.pegasus.side===side;
             if(!swordLive && !pegHere){
+                const wasHidden=!!s.abilityHidden;
                 s.abilityHold=false;
                 s.abilityHidden=false;
+                if(wasHidden) setBeyVisible(side,true);
                 if((s.swordFreezeUntil||0)<nowMs()) s.swordFreezeUntil=0;
             }
         });
@@ -976,6 +987,7 @@
         hidePegasusStick();
         s.abilityHidden=false;
         s.abilityHold=false;
+        setBeyVisible(pg.side,true);
         const ax=Number(pg.aim?.x);
         const ay=Number(pg.aim?.y);
         s.x=Number.isFinite(ax)?clamp(ax,-0.78,0.78):s.x;
@@ -988,7 +1000,7 @@
             const dmg=0.08+0.10*foe.rpm;
             foe.rpm=clamp(foe.rpm-dmg,0,1);
             popHit(foe,dmg);
-            applyShove(foe, foe.x-s.x, foe.y-s.y, 0.086*0.92,{fromAbility:true,attackerSide:pg.side});
+            applyShove(foe, foe.x-s.x, foe.y-s.y, KNOCK_CAP*PEGASUS_SHOVE_FRAC,{fromAbility:true,attackerSide:pg.side});
             popup("PEGASUS HIT");
         }else{
             s.rpm=clamp(s.rpm-0.15,0,1);
@@ -999,6 +1011,7 @@
         s.impactScale=1.35;
         state.pegasus=null;
         state.channel=null;
+        document.getElementById("abilityFxLive")?.replaceChildren();
     }
 
     function showPegasusStick(pg){
@@ -1233,10 +1246,61 @@
         if(S.sideIsCpu("player")) runAi("player",p,c);
     }
 
+    function setBeyVisible(side, visible){
+        const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
+        const cir=document.getElementById(side==="player"?"newPlayerBey":"newCpuBey");
+        if(spr){
+            spr.style.display=visible?"":"none";
+            if(visible) spr.setAttribute("opacity","1");
+        }
+        if(cir) cir.style.display=visible?"":"none";
+    }
+
+    function paintPegasusAimLive(){
+        const live=document.getElementById("abilityFxLive");
+        if(!live) return;
+        if(state.pegasus?.phase!=="aim"){
+            if(live.childNodes.length) live.replaceChildren();
+            return;
+        }
+        const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
+        let g=document.getElementById("fxPegasusAim");
+        if(!g){
+            const NS="http://www.w3.org/2000/svg";
+            g=document.createElementNS(NS,"g");
+            g.id="fxPegasusAim";
+            g.setAttribute("class","fx-aim");
+            // Soft glow via cheap filled/stroked circles — no CSS filters (those lag on mobile).
+            const soft=document.createElementNS(NS,"circle");
+            soft.setAttribute("class","fx-aim-soft");
+            soft.setAttribute("r","14.2");
+            soft.setAttribute("fill","#7ef0ff");
+            soft.setAttribute("fill-opacity","0.10");
+            const ring=document.createElementNS(NS,"circle");
+            ring.setAttribute("class","fx-aim-ring");
+            ring.setAttribute("r","11.8");
+            ring.setAttribute("fill","none");
+            ring.setAttribute("stroke","#7ef0ff");
+            ring.setAttribute("stroke-width","2.1");
+            const halo=document.createElementNS(NS,"circle");
+            halo.setAttribute("class","fx-aim-halo");
+            halo.setAttribute("r","13.4");
+            halo.setAttribute("fill","none");
+            halo.setAttribute("stroke","#3ad0ff");
+            halo.setAttribute("stroke-width","1.15");
+            halo.setAttribute("stroke-opacity","0.5");
+            g.append(soft,halo,ring);
+            live.appendChild(g);
+        }
+        const x=v.x.toFixed(2), y=v.y.toFixed(2);
+        g.childNodes.forEach(node=>{
+            if(node.setAttribute){ node.setAttribute("cx",x); node.setAttribute("cy",y); }
+        });
+    }
+
     function paintFx(p,c,t){
         const g=document.getElementById("abilityFx");
         if(!g) return;
-        const NS=true;
         let html="";
         const ring=(s,r,cls,sw)=>{
             if(!s) return "";
@@ -1335,41 +1399,33 @@
             if(s.ninjaFlick!=null && s.abilityHold){
                 const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
                 if(spr) spr.setAttribute("opacity", String(s.ninjaFlick));
-            }else{
+            }else if(!s.abilityHidden){
                 const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
-                if(spr && !s.abilityHidden) spr.setAttribute("opacity","1");
+                if(spr && spr.getAttribute("opacity")!=="1") spr.setAttribute("opacity","1");
             }
             if(s.abilityHidden){
-                const spr=document.getElementById(side==="player"?"newPlayerBeySprite":"newCpuBeySprite");
-                const cir=document.getElementById(side==="player"?"newPlayerBey":"newCpuBey");
-                if(spr) spr.style.display="none";
-                if(cir) cir.style.display="none";
+                // Visibility is toggled once on lift/crash — paint only the cheap UFO stand-in.
                 html+=`<g class="fx-ufo">
-                    <ellipse cx="${pt.x}" cy="${pt.y-9}" rx="7.2" ry="2.4" fill="#8fd0ff" fill-opacity="0.85"/>
-                    <ellipse cx="${pt.x}" cy="${pt.y-10.2}" rx="3.2" ry="1.4" fill="#e8f7ff"/>
-                    <path d="M${pt.x-5} ${pt.y-7} L${pt.x} ${pt.y+3} L${pt.x+5} ${pt.y-7}" fill="#b8e8ff" fill-opacity="0.35"/>
+                    <ellipse cx="${pt.x.toFixed(1)}" cy="${(pt.y-9).toFixed(1)}" rx="7.2" ry="2.4" fill="#8fd0ff" fill-opacity="0.85"/>
+                    <ellipse cx="${pt.x.toFixed(1)}" cy="${(pt.y-10.2).toFixed(1)}" rx="3.2" ry="1.4" fill="#e8f7ff"/>
                 </g>`;
             }
             if(s.quakePulse && s.quakePulse!==1){
                 s.impactScale=s.quakePulse;
             }
         });
-        if(state.pegasus?.phase==="aim"){
-            const v=worldToSvg(state.pegasus.aim.x,state.pegasus.aim.y);
-            html+=`<g class="fx-aim">
-                <circle cx="${v.x}" cy="${v.y}" r="13.2" fill="#7ef0ff" fill-opacity="0.12"/>
-                <circle cx="${v.x}" cy="${v.y}" r="11.8" fill="none" stroke="#7ef0ff" stroke-width="2.1"/>
-            </g>`;
-        }
         if(state.pegasusCrash && state.pegasusCrash>t){
-            const v=worldToSvg(p.x,p.y);
             const focus=state.pegasusSide==="cpu"?c:p;
             const w=worldToSvg(focus.x,focus.y);
             html+=`<g class="fx-bolt">
                 <path d="M${w.x+2} ${w.y-10} L${w.x-2} ${w.y-2} L${w.x+1} ${w.y-2} L${w.x-3} ${w.y+8}" fill="#fff8a8" stroke="#ffe566" stroke-width="0.4"/>
             </g>`;
         }
-        g.innerHTML=html;
+        if(html!==state._fxHtml){
+            state._fxHtml=html;
+            g.innerHTML=html;
+        }
+        paintPegasusAimLive();
     }
 
     function dockHTML(side,ids){
@@ -1490,6 +1546,7 @@
 
     function fxMarkup(){
         return `<g id="abilityFx" pointer-events="none"></g>
+            <g id="abilityFxLive" pointer-events="none"></g>
             <text id="abilityCallout" x="50" y="22" text-anchor="middle" font-size="5.4" font-weight="900" fill="#ffe08a" stroke="#120c04" stroke-width="0.45" opacity="0"></text>`;
     }
 

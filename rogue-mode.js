@@ -14,10 +14,20 @@ const FINAL_MATCH=18;
 const MAX_MATCHES=FINAL_MATCH;
 const BOSS_AT={6:"mini",12:"mini",18:"final"};
 
-function isRunLoop(){return !!(run()&&run().loop==="run");}
+function isLiteLoop(){return !!(run()&&run().loop==="lite");}
+function isCampaignLoop(){return !!(run()&&run().loop==="run");}
+/** Long 30-night calendar: Campaign (run) or Rogue Lite. */
+function isRunLoop(){return isCampaignLoop()||isLiteLoop();}
+function longLoopApi(){
+    if(isLiteLoop()) return global.SpinWarsRogueLite||null;
+    if(isCampaignLoop()) return global.SpinWarsRogueRun||null;
+    return null;
+}
 function runRules(){
-    const RR=global.SpinWarsRogueRun;
-    if(isRunLoop()&&RR&&RR.rules) return RR.rules;
+    const api=longLoopApi();
+    if(api&&api.rules) return api.rules;
+    if(isLiteLoop()&&global.SpinWarsRogueLiteConfig?.rules) return SpinWarsRogueLiteConfig.rules;
+    if(isCampaignLoop()&&global.SpinWarsRogueRun?.rules) return SpinWarsRogueRun.rules;
     return {finalMatch:FINAL_MATCH,bossAt:BOSS_AT,label:"ROGUE"};
 }
 function finalMatch(){return Number(runRules().finalMatch)||FINAL_MATCH;}
@@ -492,6 +502,7 @@ function makeStartScale(blade,ratchet,bit){
     // Silver/Gold sit a step above Bronze, not a full-tier jump.
     // Keep the shape: only pull highs down, leave dump stats dump.
     // Same Bronze-form start in Rogue Run and Tier Rogue.
+    // Recompute from the live ratchet/bit so garage swaps still move the bronze-form kit.
     const lead=tier==="Gold"?2.2:1.0;
     STATS.forEach(k=>{
         const target=(Number(band[k])||70)+lead;
@@ -499,6 +510,29 @@ function makeStartScale(blade,ratchet,bit){
         if(have>target) scale[k]=round((target-have)*0.93);
     });
     return scale;
+}
+
+/** Hub/garage preview: full combo for Bronze; Silver/Gold use live parts then bronze-form scale. */
+function previewRunCombo(blade,ratchet,bit){
+    if(!blade||!ratchet||!bit||typeof calculateComboStats!=="function") return null;
+    const raw=calculateComboStats(blade,ratchet,bit);
+    if(!raw) return null;
+    const scale=makeStartScale(blade,ratchet,bit);
+    const stats=mergeStats(raw.stats,scale);
+    const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):raw.power;
+    const ovr=typeof calculateOverallScoreV58==="function"
+        ? calculateOverallScoreV58(blade,ratchet,bit,stats)
+        : raw.ovr;
+    const card=typeof bladeCardStats==="function"?bladeCardStats(blade):null;
+    return {
+        ...raw,
+        stats,
+        power,
+        ovr,
+        meta:ovr,
+        startScale:scale,
+        deltaFromBlade:card&&typeof statDeltaMap==="function"?statDeltaMap(card,stats):(raw.deltaFromBlade||null)
+    };
 }
 
 function playerEffective(){
@@ -579,7 +613,13 @@ function runCpuNightMix(match,boss){
 }
 
 function cpuNightMix(tier,match,boss){
-    if(isRunLoop()) return runCpuNightMix(match,boss);
+    if(isLiteLoop()){
+        if(typeof SpinWarsRogueLiteConfig?.liteNightMix==="function"){
+            return SpinWarsRogueLiteConfig.liteNightMix(match,boss);
+        }
+        return runCpuNightMix(match,boss);
+    }
+    if(isCampaignLoop()) return runCpuNightMix(match,boss);
     const t=String(tier||"");
     const m=Math.max(1,Number(match)||1);
     if(boss){
@@ -619,7 +659,14 @@ function cpuStackLead(){
     const night=r?.cpuNight||"even";
     if(m<=2) return 0;
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
-    if(isRunLoop()){
+    if(isLiteLoop()){
+        // Extra cards climb with the night; starter nights stay light.
+        if(m<=5){ even=0.82; plus1=0.16; plus2=0.02; plus3=0; }
+        else if(m<=10){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
+        else if(m<=20){ even=0.36; plus1=0.40; plus2=0.20; plus3=0.04; }
+        else if(m<=25){ even=0.22; plus1=0.40; plus2=0.28; plus3=0.10; }
+        else { even=0.12; plus1=0.36; plus2=0.34; plus3=0.18; }
+    }else if(isCampaignLoop()){
         // Extra CPU cards track the night, not whether you unlocked a Gold blade.
         if(m<=5){ even=0.78; plus1=0.20; plus2=0.02; plus3=0; }
         else if(m<=10){ even=0.62; plus1=0.30; plus2=0.08; plus3=0; }
@@ -1075,7 +1122,40 @@ function cpuPowerTarget(playerPow,match,boss){
     const night=r.cpuNight||cpuNightRoll();
     r.cpuNight=night;
     let band;
-    if(isRunLoop()){
+    if(isLiteLoop()){
+        // Blade-only Rogue: soft early so starter kits clear; late squeeze + collection depth.
+        let owned=5;
+        try{
+            if(global.SpinWarsRogueLite?.account){
+                const col=SpinWarsRogueLite.account().collection||{};
+                owned=Object.keys(col).filter(id=>(Number(col[id]?.copies)||0)>0).length;
+            }
+        }catch(_e){}
+        const depth=typeof SpinWarsRogueLiteConfig?.liteCollectionBand==="function"
+            ? SpinWarsRogueLiteConfig.liteCollectionBand(owned)
+            : 0;
+        if(boss){
+            if(isSharkNight(match)) band=1.07;
+            else if(isMiniNight(match) && match>Math.ceil(finalMatch()/2)) band=1.05;
+            else band=1.03;
+            if(night==="easy") band-=0.02;
+            if(night==="hard") band+=0.02;
+        }else if(night==="easy") band=0.88+Math.random()*0.04;
+        else if(night==="even") band=0.93+Math.random()*0.04;
+        else band=0.98+Math.random()*0.035;
+        if(!boss){
+            if(match<=5) band=Math.min(band, night==="hard"?0.97:0.94);
+            else if(match<=10) band=Math.min(band, night==="hard"?1.00:0.98);
+            else if(match<=20) band=Math.min(band, night==="hard"?1.04:1.01);
+            else if(match<=25) band=clamp(band,0.97,1.06);
+            else band=clamp(band,1.00,1.09);
+            band=clamp(band+depth,0.86,1.10);
+        }else{
+            band=clamp(band+depth*0.5,0.95,1.12);
+        }
+        return playerPow*band;
+    }
+    if(isCampaignLoop()){
         // Track the player so better parts ease the climb; early nights stay soft.
         if(boss){
             if(isSharkNight(match)) band=1.06;
@@ -1147,8 +1227,16 @@ function sharkScaleBlade(){
         Object.values(BLADE_ENGINE||{}).find(b=>b.name==="Shark Scale")||null;
 }
 function cpuLane(match){
-    if(isRunLoop() && global.SpinWarsRogueRunConfig && typeof SpinWarsRogueRunConfig.cpuLane==="function"){
+    if(isCampaignLoop() && global.SpinWarsRogueRunConfig && typeof SpinWarsRogueRunConfig.cpuLane==="function"){
         return SpinWarsRogueRunConfig.cpuLane(match);
+    }
+    if(isLiteLoop()){
+        const m=Math.max(1,Number(match)||1);
+        if(m>=30) return "final";
+        if(m<=9) return "Bronze";
+        if(m<=19) return "Silver";
+        if(m<=25) return "Gold";
+        return "mix";
     }
     if(isSharkNight(match)) return "final";
     if(match<=5) return "Bronze";
@@ -1617,9 +1705,11 @@ function plateDecor(side){
     const stack=upgradeStack(side);
     const mark=side==="cpu"?(r.finalBoss||isSharkNight(r.matchIndex)?"final":(isMiniNight(r.matchIndex)?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
+    const awakeningLevel=side==="cpu"?0:Math.max(0,Number(r.awakeningLevel)||0);
     return {
         stats,power,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
+        awakeningLevel,
         plateTier,
         bossMark:mark||"",
         pressure:side==="cpu"?fightPressureLine():"",
@@ -1741,8 +1831,15 @@ function toggleDev(){
         return;
     }
     const panel=el(`<aside id="rogueDevPanel" class="rogue-dev-panel">
-        <header><b>ROGUE DEV</b><button type="button" id="rogueDevClose">✕</button></header>
+        <header><b>${isLiteLoop()?"ROGUE LITE DEV":(isCampaignLoop()?"CAMPAIGN DEV":"ROGUE DEV")}</b><button type="button" id="rogueDevClose">✕</button></header>
         <p class="rogue-dev-copy">${run()?"Add or strip upgrades on the current Bey. Live battle reads these stats.":"Pick a starting Bey first, then every upgrade and modifier is addable here."}</p>
+        ${isLiteLoop()?`<p class="rogue-dev-stats">Lite account · $${Number(global.SpinWarsRogueLite?.account?.()?.money)||0} · mods ${Number(global.SpinWarsRogueLite?.account?.()?.modCharges)||0}</p>
+        <div class="rogue-dev-actions" id="rogueDevLiteActs">
+            <button type="button" class="menu-btn silver" data-rldev="mon500">+500 MONEY</button>
+            <button type="button" class="menu-btn silver" data-rldev="mod">+2 MOD</button>
+            <button type="button" class="menu-btn silver" data-rldev="awake">AWAKEN LIVE BEY</button>
+            <button type="button" class="menu-btn gold" data-rldev="clearaw">CLEAR AWAKENING</button>
+        </div>`:""}
         <div class="rogue-dev-list" id="rogueDevList"></div>
         <details class="rogue-dev-scene">
             <summary>SCENE SKIP</summary>
@@ -1768,6 +1865,16 @@ function toggleDev(){
         document.body.classList.remove("rogue-dev-open");
     };
     document.getElementById("rogueDevClose").onclick=closeDev;
+    panel.querySelectorAll("[data-rldev]").forEach(btn=>{
+        btn.onclick=()=>{
+            const id=btn.getAttribute("data-rldev");
+            if(typeof SpinWarsRogueLite?.devAct==="function"){
+                SpinWarsRogueLite.devAct(id,{live:true});
+                closeDev();
+                if(id==="awake"||id==="clearaw") refreshAfterDebug();
+            }
+        };
+    });
     document.getElementById("rogueDevClear").onclick=()=>{
         const r=run();
         if(!r) return;
@@ -1775,6 +1882,9 @@ function toggleDev(){
         r.activeModifier=null;
         r.history=[];
         r.enhanced=false;
+        r.awakeningLevel=0;
+        r.awakeningBonus=emptyBonuses();
+        r.runChip=emptyBonuses();
         r.currentRogueTier="Bronze";
         r.startScale=makeStartScale(r.starterBlade||r.blade,r.starterRatchet||r.ratchet,r.starterBit||r.bit);
         r.consumables=emptyConsumables();
@@ -1877,26 +1987,32 @@ function stopLiveBattle(){
 function createRun(blade,ratchet,bit,opts){
     opts=opts||{};
     const parts=(ratchet&&bit)?{ratchet,bit}:starterParts(blade);
-    const loop=opts.loop==="run"?"run":"tier";
-    const startTier=loop==="run"
+    const loop=opts.loop==="lite"?"lite":(opts.loop==="run"?"run":"tier");
+    const startTier=(loop==="run"||loop==="lite")
         ? String(blade.tier||"Bronze")
         : String(Game.selection?.rogueTier||blade.tier||"Silver");
+    const awLv=Math.max(0,Number(opts.awakeningLevel)||0);
+    const awBonus=opts.awakeningBonus&&typeof opts.awakeningBonus==="object"
+        ? {...emptyBonuses(),...opts.awakeningBonus}
+        : emptyBonuses();
     Game.mode="rogue";
     Game.rogue={
         loop,
-        runChip:emptyBonuses(),
+        runChip:awLv>0?{...awBonus}:emptyBonuses(),
         runStatus:"running",
         matchIndex:1,
         startingBeyId:blade.name,
         startingTier:startTier,
         currentRogueTier:"Bronze",
         enhanced:false,
+        awakeningLevel:awLv,
+        awakeningBonus:awBonus,
         hubsWithoutForm:0,
         blade,ratchet:parts.ratchet,bit:parts.bit,
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
         startScale:makeStartScale(blade,parts.ratchet,parts.bit),
         bonuses:emptyBonuses(),
-        activeModifier:null,
+        activeModifier:opts.modifierId?{id:String(opts.modifierId)}:null,
         history:[],
         offers:[],
         lastResult:null,
@@ -2164,6 +2280,8 @@ function buildSave(){
             cpuHistory:(r.cpuHistory||[]).map(packCard),
             cpuModifier:packModifier(r.cpuModifier),
             enhanced:!!r.enhanced,
+            awakeningLevel:Math.max(0,Number(r.awakeningLevel)||0),
+            awakeningBonus:{...emptyBonuses(),...(r.awakeningBonus||{})},
             claimedShark:!!r.claimedShark,
             cpuNight:r.cpuNight||null,
             hubsWithoutForm:Number(r.hubsWithoutForm)||0,
@@ -2213,8 +2331,9 @@ function readCookie(){
 }
 function persist(){
     if(Game._viewingArchive) return false;
-    if(isRunLoop() && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.persistLive==="function"){
-        return SpinWarsRogueRun.persistLive();
+    const api=longLoopApi();
+    if(api && typeof api.persistLive==="function"){
+        return api.persistLive();
     }
     const data=buildSave();
     if(!data) return false;
@@ -2370,6 +2489,8 @@ function hydrate(data){
         startingTier:raw.startingTier||blade.tier||"Silver",
         currentRogueTier:raw.currentRogueTier||"Bronze",
         enhanced:!!raw.enhanced,
+        awakeningLevel:Math.max(0,Number(raw.awakeningLevel)||0),
+        awakeningBonus:{...emptyBonuses(),...(raw.awakeningBonus||{})},
         claimedShark:!!raw.claimedShark,
         cpuNight:raw.cpuNight||null,
         hubsWithoutForm:Number(raw.hubsWithoutForm)||0,
@@ -2688,7 +2809,8 @@ function decorateVs(root){
     const back=root.querySelector(".back-btn");
     if(back) back.onclick=()=>{
         persist();
-        if(isRunLoop() && global.SpinWarsRogueRun) SpinWarsRogueRun.showHub();
+        const api=longLoopApi();
+        if(api && typeof api.showHub==="function") api.showHub();
         else showLanding();
     };
     const btn=document.getElementById("battleButton");
@@ -2863,9 +2985,16 @@ function scenarioCopy(){
             title:"THE COIN FLIP",
             kicker:"SIDELINE",
             body:"A stranger parks a coin on the table and grins. \"Heads or tails. Your call.\"",
+            shuffleChoices:true,
             choices:[
-                {id:"heads",label:"HEADS"},
-                {id:"tails",label:"TAILS"},
+                {id:"heads",label:"HEADS",odds:[
+                    {p:"50%",text:"+5% random stat"},
+                    {p:"50%",text:"−5% random stat"}
+                ]},
+                {id:"tails",label:"TAILS",odds:[
+                    {p:"50%",text:"+5% random stat"},
+                    {p:"50%",text:"−5% random stat"}
+                ]},
                 {id:"kick",label:"KICK ROCKS"}
             ]
         },
@@ -3004,13 +3133,16 @@ function resolveScenario(id,choice){
     }
     if(id==="coin-flip"){
         if(choice==="kick") return {body:"You tell them to kick rocks. The coin stays on the table."};
+        const call=choice==="tails"?"tails":"heads";
+        const flip=Math.random()<0.5?"heads":"tails";
+        const face=flip==="heads"?"Heads":"Tails";
         const stat=pick(STATS);
-        if(choice==="heads"){
+        if(call===flip){
             const d=applyPercentBonus(stat,0.05);
-            return {body:`Heads. ${you} takes ${pctLabel(stat,d,"+")}.`};
+            return {body:`${face}. ${you} called it — ${pctLabel(stat,d,"+")}.`};
         }
         const d=applyPercentBonus(stat,-0.05);
-        return {body:`Tails. ${you} drops ${pctLabel(stat,d,"−")}.`};
+        return {body:`${face}. Miss. ${you} drops ${pctLabel(stat,d,"−")}.`};
     }
     if(id==="shop-secret"){
         r.shopGuarantee="rare-or-legendary";
@@ -3106,7 +3238,9 @@ function showScenario(id){
     const pack=scenarioCopy()[id]||scenarioCopy()["coupon"];
     Game.screen="rogueScenario";
     const app=document.getElementById("app");
-    const choices=pack.choices||[];
+    const rawChoices=pack.choices||[];
+    // Coin Flip always shuffles HEADS / TAILS / KICK so the layout never telegraphs the call.
+    const choices=pack.shuffleChoices?shuffle(rawChoices):rawChoices;
     const btns=choices.length
         ? choices.map(c=>`<div class="rogue-scenario-choice">
             <button class="menu-btn ${c.id==="kick"||c.id==="leave"||c.id==="deny"||c.id==="long"?"silver":"gold"}" type="button" data-scene-choice="${c.id}">${c.label}</button>
@@ -3157,13 +3291,13 @@ function showResults(){
         ? `<p class="rogue-result-copy">Take the fallen Bey for the rest of the night, or keep the one that beat it.</p>
         <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
         <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
-        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":(isRunLoop()?"ROGUE RUN":"BACK TO TITLE")}</button>`;
+        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":(isLiteLoop()?"ROGUE":(isCampaignLoop()?"CAMPAIGN":"BACK TO TITLE"))}</button>`;
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(isSharkNight(r.matchIndex)?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
-        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span><b>+${r.lastPayout.exp} EXP</b><b>+${r.lastPayout.money} MONEY</b></p>`:""}
+        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b></p>`:""}
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
@@ -3206,16 +3340,22 @@ function showRunWin(){
         <p class="win-name">${r.blade.name}</p>
         <p class="win-score">6 — 0 RUN</p>
         <p class="rogue-result-copy">The Bey you started is not the Bey that finished.</p>
-        <button class="rip-btn" id="rogueWinHome" type="button">${isRunLoop()?"ROGUE RUN":"TITLE"}</button>
+        <button class="rip-btn" id="rogueWinHome" type="button">${isLiteLoop()?"ROGUE":(isCampaignLoop()?"CAMPAIGN":"TITLE")}</button>
     </main>`;
     document.getElementById("rogueWinHome").onclick=()=>goHomeAfterRun("won");
     persist();
 }
 
 function goHomeAfterRun(status){
-    const runLoop=isRunLoop()||Game.rogue?.loop==="run"||Game.mode==="rogue-run";
+    const loop=Game.rogue?.loop;
+    const lite=loop==="lite"||Game.mode==="rogue-lite";
+    const campaign=loop==="run"||Game.mode==="rogue-run";
     endRun(status);
-    if(runLoop && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.afterRunHome==="function"){
+    if(lite && global.SpinWarsRogueLite && typeof SpinWarsRogueLite.afterRunHome==="function"){
+        SpinWarsRogueLite.afterRunHome(status);
+        return;
+    }
+    if(campaign && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.afterRunHome==="function"){
         SpinWarsRogueRun.afterRunHome(status);
         return;
     }
@@ -3539,8 +3679,9 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     Game.battle.score={player:playerScore,cpu:cpuScore};
     if(winner!=="player") r.runStatus="lost";
     persist();
-    if(isRunLoop() && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.onNightOver==="function"){
-        SpinWarsRogueRun.onNightOver(winner==="player", r.matchIndex, isSharkNight(r.matchIndex));
+    const payApi=longLoopApi();
+    if(payApi && typeof payApi.onNightOver==="function"){
+        payApi.onNightOver(winner==="player", r.matchIndex, isSharkNight(r.matchIndex));
     }
     if(opts&&opts.silent) return true;
     setTimeout(()=>showResults(),200);
@@ -3682,9 +3823,10 @@ global.SpinWarsRogue={
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,goHomeAfterRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
-    beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
+    beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isLiteLoop,isCampaignLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
-    luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint
+    luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint,
+    makeStartScale,previewRunCombo,pickCommittedParts
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
