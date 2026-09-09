@@ -791,11 +791,13 @@ function beyRatingsHTML(blade){
     const power=typeof comboPowerPoints==="function"?comboPowerPoints(stats):null;
     const ovr=stats.ovr ?? blade?.card?.ovr ?? "—";
     if(typeof comboRatingBadgesHTML==="function"){
-        return comboRatingBadgesHTML({power,ovr},stats);
+        return comboRatingBadgesHTML({power,ovr},stats)
+            .replace(">POWER<",">POWER PTS<")
+            .replace(">OVR<",">OVERALL<");
     }
     return `<div class="vs-ratings">
-      <div class="vs-rating power"><small>POWER</small><b>${power??"—"}</b></div>
-      <div class="vs-rating meta"><small>OVR</small><b>${ovr}</b></div>
+      <div class="vs-rating power"><small>POWER PTS</small><b>${power??"—"}</b></div>
+      <div class="vs-rating meta"><small>OVERALL</small><b>${ovr}</b></div>
     </div>`;
 }
 
