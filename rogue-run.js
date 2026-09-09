@@ -590,7 +590,7 @@ function showStarterPick(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell">
         ${bowl()}
-        ${mark("ROGUE RUN","STARTER")}
+        ${mark("CAMPAIGN","STARTER")}
         <div class="rr-starter-row">
             ${ids.map(id=>{
                 const b=bladeById(id);
@@ -845,7 +845,7 @@ function showBoard(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-landing rogue-run-board">
         ${bowl()}
-        ${mark("ROGUE RUN","RUN SCOREBOARD")}
+        ${mark("CAMPAIGN","RUN SCOREBOARD")}
         <section class="rogue-run-history">${body}</section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
@@ -875,7 +875,7 @@ function showHelp(){
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
-                <span class="eyebrow">ROGUE RUN</span>
+                <span class="eyebrow">CAMPAIGN</span>
                 <h1>HOW THIS LOCKER WORKS</h1>
                 <p>Same stadium as Tier Rogue. Longer night. Your collection is the paycheck.</p>
             </div>

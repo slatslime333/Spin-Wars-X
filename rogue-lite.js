@@ -567,6 +567,8 @@ function afterRunHome(status){
 
 function beginBuild(build,useAwakening){
     if(!build||!global.SpinWarsRogue?.beginFromLoadout) return false;
+    const cost=cfg().RUN_COST||40;
+    if(account().money>=cost) trySpend(cost);
     const blade=build.blade;
     const id=build.bladeId||bladeIdOf(blade);
     if(String(blade.tier)==="Gold") consumeGoldRun(id);
@@ -581,6 +583,7 @@ function beginBuild(build,useAwakening){
             Game.rogue.runChip=Object.assign({},Game.rogue.runChip||{},opts.awakeningBonus);
         }
     }
+    Game._rlDraft=null;
     return true;
 }
 
@@ -863,10 +866,6 @@ function buildCardHTML(build,idx){
 }
 
 function showBuildDraft(goldId){
-    const cost=cfg().RUN_COST||40;
-    const acc=account();
-    if(acc.money>=cost) trySpend(cost);
-    // If broke, still allow — soft entry.
     const builds=rollThreeBuilds(goldId);
     Game._rlDraft={builds,goldId};
     Game.screen="rogueLiteDraft";
@@ -878,18 +877,16 @@ function showBuildDraft(goldId){
         document.getElementById("rlBackHub").onclick=()=>showHub();
         return;
     }
+    const cost=cfg().RUN_COST||40;
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-draft">
-        ${mark("CHOOSE YOUR BUILD","")}
-        <p class="rl-lede">Ratchet and bit are rolled. Pick one kit. That is your only choice.</p>
+        ${mark("CHOOSE YOUR BUILD",`ENTRY $${cost}`)}
+        <p class="rl-lede">Ratchet and bit are rolled. Pick one kit. That is your only choice.${account().money<cost?" Entry waived while broke.":""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>{
-        // Refund soft: only if we charged
-        showHub();
-    }));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
     document.querySelectorAll("[data-build]").forEach(btn=>{
         btn.onclick=()=>onBuildPicked(Number(btn.getAttribute("data-build")));
     });
