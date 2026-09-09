@@ -1946,7 +1946,7 @@ function createRun(blade,ratchet,bit,opts){
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
         startScale:makeStartScale(blade,parts.ratchet,parts.bit),
         bonuses:emptyBonuses(),
-        activeModifier:null,
+        activeModifier:opts.modifierId?{id:String(opts.modifierId)}:null,
         history:[],
         offers:[],
         lastResult:null,
