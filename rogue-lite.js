@@ -1106,6 +1106,7 @@ function showPackTheater(out){
         hint.textContent="…";
         window.setTimeout(()=>{
             shell.hidden=true;
+            shell.classList.add("rl-pack-gone");
             rail.hidden=false;
             revealNext();
         },520);

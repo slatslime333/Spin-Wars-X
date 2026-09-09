@@ -4230,8 +4230,10 @@ button:focus-visible{
 .rl-inv-screen{
   display:flex;flex-direction:column;
   min-height:100dvh;max-height:100dvh;
-  padding:10px 10px 56px;box-sizing:border-box;
+  padding:10px 10px 56px !important;gap:8px !important;
+  box-sizing:border-box;
   overflow:hidden;
+  justify-content:flex-start !important;
 }
 .rl-inv-head{
   display:flex;align-items:flex-end;justify-content:space-between;
@@ -4346,25 +4348,21 @@ button:focus-visible{
 .rogue-lite-open{
   display:flex;flex-direction:column;align-items:center;
   min-height:100dvh;max-height:100dvh;
-  padding:12px 10px 20px;gap:8px;
+  padding:10px 8px 16px !important;gap:8px !important;
   box-sizing:border-box;overflow:hidden;
-  justify-content:flex-start;
+  justify-content:flex-start !important;
 }
 .rogue-lite-open.is-revealing{
   padding-top:8px;gap:6px;
-}
-.rl-open-title{
-  font-family:Staatliches,Impact,sans-serif;letter-spacing:.1em;font-size:20px;margin:0;
-  flex:0 0 auto;
-}
-.rl-open-stage{
-  width:min(960px,100%);min-height:0;flex:1 1 auto;
-  display:grid;place-items:center;position:relative;
+  justify-content:flex-start;
 }
 .rogue-lite-open.is-revealing .rl-open-stage{
-  flex:1 1 auto;
-  align-items:start;
-  place-items:start center;
+  flex:0 1 auto;
+  width:100%;
+  height:auto;
+  max-height:min(78dvh,640px);
+  display:block;
+  place-items:unset;
 }
 .rl-pack-shell{
   width:min(240px,70vw);aspect-ratio:5/7;
@@ -4375,6 +4373,10 @@ button:focus-visible{
   padding:18px 14px 22px;color:#fff;
   transform-origin:50% 60%;
   transition:transform .2s ease;
+}
+.rl-pack-shell[hidden],.rl-pack-shell.rl-pack-gone{
+  display:none !important;
+  pointer-events:none;
 }
 .rl-pack-shell:hover{transform:translateY(-4px) rotate(-1deg)}
 .rl-pack-shell.tier-bronze{
