@@ -90,6 +90,31 @@ function nightMoney(win,night,opts){
     return base+(opts.shark&&win?60:0);
 }
 
+/**
+ * Lite-only night pay from starter kit OVERALL (locked at run commit).
+ * Tuned to pack prices: Bronze 120 / Silver 260 / Gold 420 / Premium Gold 780.
+ * Full 30-win clear base ≈ 1005 before this mult (then optional earnBoost ×1.35).
+ *   low OVR (~62–68) → ×1.22 ≈ $1226 (Premium Gold + leftover)
+ *   mid  (~78)       → ×1.03 ≈ $1038 (near base)
+ *   high (~94)       → ×0.61 ≈ $614  (Gold pack yes, Premium not a farm)
+ */
+function _lerp(a,b,va,vb,x){
+    if(b===a) return va;
+    const t=Math.max(0,Math.min(1,(x-a)/(b-a)));
+    return va+(vb-va)*t;
+}
+function payMultForOvr(ovr){
+    const x=Math.max(55,Math.min(99,Number(ovr)||75));
+    let m;
+    if(x<=68) m=1.22;
+    else if(x<=74) m=_lerp(68,74,1.22,1.10,x);
+    else if(x<=80) m=_lerp(74,80,1.10,1.00,x);
+    else if(x<=86) m=_lerp(80,86,1.00,0.82,x);
+    else if(x<=92) m=_lerp(86,92,0.82,0.64,x);
+    else m=_lerp(92,99,0.64,0.54,x);
+    return Math.round(m*100)/100;
+}
+
 /** Lite CPU pressure helpers — Phase 3. Collection depth softens early / squeezes late. */
 function liteCollectionBand(ownedCount){
     const n=Math.max(0,Number(ownedCount)||0);
@@ -132,7 +157,7 @@ global.SpinWarsRogueLiteConfig={
     STARTING_MONEY,RUN_COST,
     AWAKENING_THRESHOLDS,GOLD_DEFAULT_RUNS,GOLD_EXTEND_BASE,GOLD_EXTEND_STEP,
     SELL,STARTER_GRANT,PACKS,
-    nightMoney,goldExtendCost,packList,packById,chance,
+    nightMoney,payMultForOvr,goldExtendCost,packList,packById,chance,
     liteCollectionBand,liteNightMix,
     rules:{
         finalMatch:FINAL_MATCH,

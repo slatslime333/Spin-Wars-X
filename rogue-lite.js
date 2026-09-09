@@ -566,17 +566,26 @@ function onNightOver(win,matchIndex,isShark){
     const r=Game.rogue;
     if(!r||r.loop!=="lite") return;
     const endless=(Number(matchIndex)||1)>(cfg().FINAL_MATCH||30);
-    const money=typeof cfg().nightMoney==="function"
+    const base=typeof cfg().nightMoney==="function"
         ? cfg().nightMoney(win,matchIndex,{shark:!!isShark,endless})
         : (win?20:8);
-    let pay=money;
+    const payMult=Math.max(0.4,Math.min(1.4,Number(r.starterPayMult)||1));
+    let pay=Math.round(base*payMult);
     if(r?.earnBoost) pay=Math.round(pay*1.35);
     addMoney(pay);
-    r.lastPayout={exp:0,money:pay,match:Number(matchIndex)||0,boosted:!!r.earnBoost};
+    r.lastPayout={
+        exp:0,
+        money:pay,
+        base,
+        payMult,
+        payOvr:Number(r.starterPayOvr)||0,
+        match:Number(matchIndex)||0,
+        boosted:!!r.earnBoost
+    };
     r.runEarn=r.runEarn||{exp:0,money:0};
     r.runEarn.money=(Number(r.runEarn.money)||0)+pay;
     persistLive();
-    return {money,exp:0};
+    return {money:pay,exp:0};
 }
 
 function archiveAndClear(status){
@@ -656,10 +665,43 @@ function beginBuild(build,useAwakening,extra){
         if(awLv>0){
             Game.rogue.runChip=Object.assign({},Game.rogue.runChip||{},opts.awakeningBonus);
         }
+        lockStarterPay(blade,ratchet,bit,awLv>0?opts.awakeningBonus:null);
     }
     Game._rlDraft=null;
     Game._rlRunOpts=null;
     return true;
+}
+
+/** Lock Lite night-pay mult from committed starter OVERALL (temp parts + awakening). */
+function lockStarterPay(blade,ratchet,bit,awakeningBonus){
+    const r=Game.rogue;
+    if(!r||r.loop!=="lite") return;
+    let stats=null;
+    let ovr=0;
+    const preview=typeof SpinWarsRogue!=="undefined"&&SpinWarsRogue.previewRunCombo
+        ? SpinWarsRogue.previewRunCombo(blade,ratchet,bit)
+        : null;
+    if(preview?.stats){
+        stats={...preview.stats};
+        ovr=Math.round(Number(preview.ovr)||0);
+    }else if(typeof calculateComboStats==="function"){
+        const raw=calculateComboStats(blade,ratchet,bit);
+        stats=raw?.stats?{...raw.stats}:null;
+        ovr=Math.round(Number(raw?.ovr)||0);
+    }
+    if(stats&&awakeningBonus){
+        ["attack","knockback","defense","mobility","balance","stamina","burst"].forEach(k=>{
+            const add=Number(awakeningBonus[k])||0;
+            if(add) stats[k]=Math.round((Number(stats[k])||0)+add);
+        });
+        if(typeof calculateOverallScoreV58==="function"){
+            ovr=Math.round(calculateOverallScoreV58(blade,ratchet,bit,stats));
+        }
+    }
+    if(!ovr) ovr=75;
+    const mult=typeof cfg().payMultForOvr==="function"?cfg().payMultForOvr(ovr):1;
+    r.starterPayOvr=ovr;
+    r.starterPayMult=mult;
 }
 
 /* ---------- UI ---------- */
@@ -776,6 +818,10 @@ function showHelp(){
         <section class="menu-card">
             <h2>Gold</h2>
             <p>Gold blades are rentals. Pack Gold starts with ${cfg().GOLD_DEFAULT_RUNS||2} runs — they expire when those runs are spent. Shark Scale stays a boss — not a pack drop.</p>
+        </section>
+        <section class="menu-card">
+            <h2>Night pay</h2>
+            <p>Money from each match scales off the starter kit’s OVERALL when you commit the run — not mid-run shops. Stronger kits earn less; weaker kits earn a little more so pack grinding stays worth it. Pack prices stay fixed (Bronze ~$120, Gold ~$420, Premium Gold ~$780).</p>
         </section>
         <section class="menu-card">
             <h2>Difficulty</h2>
@@ -1247,6 +1293,10 @@ function buildCardHTML(build,idx){
     const aw=build.awakeningAvailable
         ? `<span class="rl-aw-badge">AWAKENING ${build.awakeningLevel}</span>`
         : "";
+    const ovr=Math.round(Number(c?.ovr)||0);
+    const payMult=typeof cfg().payMultForOvr==="function"?cfg().payMultForOvr(ovr):1;
+    const payTone=payMult>=1.08?"hi":payMult<=0.85?"lo":"mid";
+    const payChip=`<span class="rl-pay-chip ${payTone}">RUN PAY ×${payMult.toFixed(2)}</span>`;
     return `<button type="button" class="rl-build-card tier-${tier.toLowerCase()}" data-build="${idx}">
         ${aw}
         <div class="rl-build-arts">
@@ -1258,6 +1308,7 @@ function buildCardHTML(build,idx){
         <b>${build.blade.name}</b>
         <small>${build.ratchet.name} · ${build.bit.name}</small>
         ${badges}
+        ${payChip}
         ${bars}
     </button>`;
 }
@@ -1281,7 +1332,7 @@ function showBuildDraft(goldId){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-draft rl-flow-screen">
         ${mark("CHOOSE YOUR BUILD",`ENTRY $${cost}`)}
-        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${sideNote?` Then optional ${sideNote}.`:""}${account().money<cost?" Entry waived while broke.":""}</p>
+        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled. Higher OVERALL earns less money this run; lower OVERALL pays a bit more.${sideNote?` Then optional ${sideNote}.`:""}${account().money<cost?" Entry waived while broke.":""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>

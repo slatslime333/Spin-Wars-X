@@ -2408,6 +2408,8 @@ function buildSave(){
             flavorCall:r.flavorCall||null,
             runEarn:{exp:Number(r.runEarn?.exp)||0,money:Number(r.runEarn?.money)||0},
             lastPayout:r.lastPayout||null,
+            starterPayOvr:Number(r.starterPayOvr)||0,
+            starterPayMult:Number(r.starterPayMult)||0,
             _paidMatch:Number(r._paidMatch)||0,
             scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
         }
@@ -2642,6 +2644,8 @@ function hydrate(data){
         flavorCall:raw.flavorCall||null,
         runEarn:{exp:Number(raw.runEarn?.exp)||0,money:Number(raw.runEarn?.money)||0},
         lastPayout:raw.lastPayout||null,
+        starterPayOvr:Number(raw.starterPayOvr)||0,
+        starterPayMult:(Number(raw.starterPayMult)>0?Number(raw.starterPayMult):1),
         _paidMatch:Number(raw._paidMatch)||0,
         _scenarioDone:false
     };
@@ -3413,7 +3417,7 @@ function showResults(){
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(isSharkNight(r.matchIndex)?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
-        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b></p>`:""}
+        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b>${isLiteLoop()&&r.lastPayout.payMult!=null&&Number(r.lastPayout.payMult)!==1?`<small class="sb-pay-mult">RUN PAY ×${Number(r.lastPayout.payMult).toFixed(2)}</small>`:""}</p>`:""}
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
