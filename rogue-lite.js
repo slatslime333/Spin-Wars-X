@@ -590,7 +590,16 @@ function beginBuild(build,useAwakening,extra){
     }
     if(String(blade.tier)==="Gold") consumeGoldRun(id);
     const awLv=useAwakening?highestClaimedAwakening(id):0;
-    const opts={loop:"lite",awakeningLevel:awLv,awakeningBonus:awakeningBonuses(blade,awLv)};
+    const opts={
+        loop:"lite",
+        awakeningLevel:awLv,
+        awakeningBonus:awakeningBonuses(blade,awLv),
+        modifierId:extra.modifierId||null
+    };
+    if(extra.modifierId && (Number(account().modCharges)||0)>0){
+        account().modCharges-=1;
+        persistAccount();
+    }
     SpinWarsRogue.beginFromLoadout(blade,ratchet,bit,opts);
     if(Game.rogue){
         Game.rogue.loop="lite";
@@ -598,14 +607,6 @@ function beginBuild(build,useAwakening,extra){
         Game.rogue.awakeningBonus=opts.awakeningBonus;
         if(awLv>0){
             Game.rogue.runChip=Object.assign({},Game.rogue.runChip||{},opts.awakeningBonus);
-        }
-        if(extra.modifierId){
-            Game.rogue.activeModifier={id:extra.modifierId};
-            const acc=account();
-            if((Number(acc.modCharges)||0)>0){
-                acc.modCharges-=1;
-                persistAccount();
-            }
         }
     }
     Game._rlDraft=null;
