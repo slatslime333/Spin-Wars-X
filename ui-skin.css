@@ -331,6 +331,8 @@
   max-height:34vh;
   height:min(300px,42vw);
 }
+/* Bowl X ghosted through the wordmark badge — keep rail/floor, hide the letter. */
+.home.lobby .home-bowl-x{display:none}
 .swx-nav{
   position:relative;z-index:1;
   width:min(480px,100%);
