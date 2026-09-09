@@ -536,10 +536,10 @@ function showHub(){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rr-shell rr-hub">
         ${bowl()}
-        ${mark("ROGUE RUN","")}
+        ${mark("CAMPAIGN","")}
         ${hudStrip()}
         ${loadoutCard()}
-        <nav class="home-doors rogue-doors rr-doors" aria-label="Rogue Run">
+        <nav class="home-doors rogue-doors rr-doors" aria-label="Campaign">
             ${live?`<button class="home-door rip swx-hero" id="rrContinue" type="button">
                 <span class="home-door-kicker">SAVE</span>
                 <b>CONTINUE</b>

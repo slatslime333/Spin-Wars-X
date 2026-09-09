@@ -14,10 +14,20 @@ const FINAL_MATCH=18;
 const MAX_MATCHES=FINAL_MATCH;
 const BOSS_AT={6:"mini",12:"mini",18:"final"};
 
-function isRunLoop(){return !!(run()&&run().loop==="run");}
+function isLiteLoop(){return !!(run()&&run().loop==="lite");}
+function isCampaignLoop(){return !!(run()&&run().loop==="run");}
+/** Long 30-night calendar: Campaign (run) or Rogue Lite. */
+function isRunLoop(){return isCampaignLoop()||isLiteLoop();}
+function longLoopApi(){
+    if(isLiteLoop()) return global.SpinWarsRogueLite||null;
+    if(isCampaignLoop()) return global.SpinWarsRogueRun||null;
+    return null;
+}
 function runRules(){
-    const RR=global.SpinWarsRogueRun;
-    if(isRunLoop()&&RR&&RR.rules) return RR.rules;
+    const api=longLoopApi();
+    if(api&&api.rules) return api.rules;
+    if(isLiteLoop()&&global.SpinWarsRogueLiteConfig?.rules) return SpinWarsRogueLiteConfig.rules;
+    if(isCampaignLoop()&&global.SpinWarsRogueRun?.rules) return SpinWarsRogueRun.rules;
     return {finalMatch:FINAL_MATCH,bossAt:BOSS_AT,label:"ROGUE"};
 }
 function finalMatch(){return Number(runRules().finalMatch)||FINAL_MATCH;}
@@ -1171,8 +1181,16 @@ function sharkScaleBlade(){
         Object.values(BLADE_ENGINE||{}).find(b=>b.name==="Shark Scale")||null;
 }
 function cpuLane(match){
-    if(isRunLoop() && global.SpinWarsRogueRunConfig && typeof SpinWarsRogueRunConfig.cpuLane==="function"){
+    if(isCampaignLoop() && global.SpinWarsRogueRunConfig && typeof SpinWarsRogueRunConfig.cpuLane==="function"){
         return SpinWarsRogueRunConfig.cpuLane(match);
+    }
+    if(isLiteLoop()){
+        const m=Math.max(1,Number(match)||1);
+        if(m>=30) return "final";
+        if(m<=9) return "Bronze";
+        if(m<=19) return "Silver";
+        if(m<=25) return "Gold";
+        return "mix";
     }
     if(isSharkNight(match)) return "final";
     if(match<=5) return "Bronze";
@@ -1641,9 +1659,11 @@ function plateDecor(side){
     const stack=upgradeStack(side);
     const mark=side==="cpu"?(r.finalBoss||isSharkNight(r.matchIndex)?"final":(isMiniNight(r.matchIndex)?"mini":"")):"";
     const plateTier=side==="cpu"?(r.cpuBlade?.tier||blade?.tier):(r.currentRogueTier||"Bronze");
+    const awakeningLevel=side==="cpu"?0:Math.max(0,Number(r.awakeningLevel)||0);
     return {
         stats,power,ovr,meta:ovr,delta,mod,stack,stackHTML:upgradeStackHTML(stack),
         enhanced:side==="cpu"?!!r.cpuEnhanced:!!r.enhanced,
+        awakeningLevel,
         plateTier,
         bossMark:mark||"",
         pressure:side==="cpu"?fightPressureLine():"",
@@ -1901,20 +1921,26 @@ function stopLiveBattle(){
 function createRun(blade,ratchet,bit,opts){
     opts=opts||{};
     const parts=(ratchet&&bit)?{ratchet,bit}:starterParts(blade);
-    const loop=opts.loop==="run"?"run":"tier";
-    const startTier=loop==="run"
+    const loop=opts.loop==="lite"?"lite":(opts.loop==="run"?"run":"tier");
+    const startTier=(loop==="run"||loop==="lite")
         ? String(blade.tier||"Bronze")
         : String(Game.selection?.rogueTier||blade.tier||"Silver");
+    const awLv=Math.max(0,Number(opts.awakeningLevel)||0);
+    const awBonus=opts.awakeningBonus&&typeof opts.awakeningBonus==="object"
+        ? {...emptyBonuses(),...opts.awakeningBonus}
+        : emptyBonuses();
     Game.mode="rogue";
     Game.rogue={
         loop,
-        runChip:emptyBonuses(),
+        runChip:awLv>0?{...awBonus}:emptyBonuses(),
         runStatus:"running",
         matchIndex:1,
         startingBeyId:blade.name,
         startingTier:startTier,
         currentRogueTier:"Bronze",
         enhanced:false,
+        awakeningLevel:awLv,
+        awakeningBonus:awBonus,
         hubsWithoutForm:0,
         blade,ratchet:parts.ratchet,bit:parts.bit,
         starterBlade:blade,starterRatchet:parts.ratchet,starterBit:parts.bit,
@@ -2188,6 +2214,8 @@ function buildSave(){
             cpuHistory:(r.cpuHistory||[]).map(packCard),
             cpuModifier:packModifier(r.cpuModifier),
             enhanced:!!r.enhanced,
+            awakeningLevel:Math.max(0,Number(r.awakeningLevel)||0),
+            awakeningBonus:{...emptyBonuses(),...(r.awakeningBonus||{})},
             claimedShark:!!r.claimedShark,
             cpuNight:r.cpuNight||null,
             hubsWithoutForm:Number(r.hubsWithoutForm)||0,
@@ -2237,8 +2265,9 @@ function readCookie(){
 }
 function persist(){
     if(Game._viewingArchive) return false;
-    if(isRunLoop() && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.persistLive==="function"){
-        return SpinWarsRogueRun.persistLive();
+    const api=longLoopApi();
+    if(api && typeof api.persistLive==="function"){
+        return api.persistLive();
     }
     const data=buildSave();
     if(!data) return false;
@@ -2394,6 +2423,8 @@ function hydrate(data){
         startingTier:raw.startingTier||blade.tier||"Silver",
         currentRogueTier:raw.currentRogueTier||"Bronze",
         enhanced:!!raw.enhanced,
+        awakeningLevel:Math.max(0,Number(raw.awakeningLevel)||0),
+        awakeningBonus:{...emptyBonuses(),...(raw.awakeningBonus||{})},
         claimedShark:!!raw.claimedShark,
         cpuNight:raw.cpuNight||null,
         hubsWithoutForm:Number(raw.hubsWithoutForm)||0,
@@ -2712,7 +2743,8 @@ function decorateVs(root){
     const back=root.querySelector(".back-btn");
     if(back) back.onclick=()=>{
         persist();
-        if(isRunLoop() && global.SpinWarsRogueRun) SpinWarsRogueRun.showHub();
+        const api=longLoopApi();
+        if(api && typeof api.showHub==="function") api.showHub();
         else showLanding();
     };
     const btn=document.getElementById("battleButton");
@@ -3193,13 +3225,13 @@ function showResults(){
         ? `<p class="rogue-result-copy">Take the fallen Bey for the rest of the night, or keep the one that beat it.</p>
         <button class="rip-btn" id="rogueClaimShark" type="button">CLAIM SHARK SCALE</button>
         <button class="menu-btn silver" id="rogueKeepBey" type="button">KEEP ${r.blade.name}</button>`
-        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":(isRunLoop()?"ROGUE RUN":"BACK TO TITLE")}</button>`;
+        : `<button class="rip-btn" id="rogueResultsGo" type="button">${win?"OPEN HUB":(isLiteLoop()?"ROGUE":(isCampaignLoop()?"CAMPAIGN":"BACK TO TITLE"))}</button>`;
     app.innerHTML=`<div class="background"></div>
     <main class="home rogue-results">
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(isSharkNight(r.matchIndex)?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
-        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span><b>+${r.lastPayout.exp} EXP</b><b>+${r.lastPayout.money} MONEY</b></p>`:""}
+        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b></p>`:""}
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
@@ -3242,16 +3274,22 @@ function showRunWin(){
         <p class="win-name">${r.blade.name}</p>
         <p class="win-score">6 — 0 RUN</p>
         <p class="rogue-result-copy">The Bey you started is not the Bey that finished.</p>
-        <button class="rip-btn" id="rogueWinHome" type="button">${isRunLoop()?"ROGUE RUN":"TITLE"}</button>
+        <button class="rip-btn" id="rogueWinHome" type="button">${isLiteLoop()?"ROGUE":(isCampaignLoop()?"CAMPAIGN":"TITLE")}</button>
     </main>`;
     document.getElementById("rogueWinHome").onclick=()=>goHomeAfterRun("won");
     persist();
 }
 
 function goHomeAfterRun(status){
-    const runLoop=isRunLoop()||Game.rogue?.loop==="run"||Game.mode==="rogue-run";
+    const loop=Game.rogue?.loop;
+    const lite=loop==="lite"||Game.mode==="rogue-lite";
+    const campaign=loop==="run"||Game.mode==="rogue-run";
     endRun(status);
-    if(runLoop && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.afterRunHome==="function"){
+    if(lite && global.SpinWarsRogueLite && typeof SpinWarsRogueLite.afterRunHome==="function"){
+        SpinWarsRogueLite.afterRunHome(status);
+        return;
+    }
+    if(campaign && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.afterRunHome==="function"){
         SpinWarsRogueRun.afterRunHome(status);
         return;
     }
@@ -3575,8 +3613,9 @@ function onMatchOver(winner,playerScore,cpuScore,finishType,opts){
     Game.battle.score={player:playerScore,cpu:cpuScore};
     if(winner!=="player") r.runStatus="lost";
     persist();
-    if(isRunLoop() && global.SpinWarsRogueRun && typeof SpinWarsRogueRun.onNightOver==="function"){
-        SpinWarsRogueRun.onNightOver(winner==="player", r.matchIndex, isSharkNight(r.matchIndex));
+    const payApi=longLoopApi();
+    if(payApi && typeof payApi.onNightOver==="function"){
+        payApi.onNightOver(winner==="player", r.matchIndex, isSharkNight(r.matchIndex));
     }
     if(opts&&opts.silent) return true;
     setTimeout(()=>showResults(),200);
@@ -3718,10 +3757,10 @@ global.SpinWarsRogue={
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,goHomeAfterRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
     playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
-    beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
+    beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isLiteLoop,isCampaignLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint,
-    makeStartScale,previewRunCombo
+    makeStartScale,previewRunCombo,pickCommittedParts
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{
