@@ -909,12 +909,12 @@ function showCollection(){
         </header>
         ${hudStrip()}
         <div class="rl-inv-scroll">
+            ${partSec}
+            ${modSec}
             <section class="rl-inv-sec">
                 <h2 class="rl-inv-sec-h">BLADES · ${ids.length}</h2>
                 <div class="rl-inv-grid">${cards}</div>
             </section>
-            ${partSec}
-            ${modSec}
         </div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
@@ -1127,7 +1127,6 @@ function showPackTheater(out){
     const main=document.getElementById("rlOpenMain");
     const shell=document.getElementById("rlPackShell");
     const rail=document.getElementById("rlCardRail");
-    const stage=document.getElementById("rlOpenStage");
     const hint=document.getElementById("rlOpenHint");
     const done=document.getElementById("rlOpenDone");
     let opened=false;
@@ -1213,7 +1212,6 @@ function showGoldCommit(golds){
                         <b>${b.name}</b>
                         <small class="rl-inv-meta">${g.runsLeft} RUNS LEFT</small>
                         ${beyRatingsHTML(b)}
-                        <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
                     </div>
                 </button>`;
             }).join("")}

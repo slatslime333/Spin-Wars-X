@@ -4172,7 +4172,7 @@ button:focus-visible{
 }
 .rl-pick-row{
   display:grid;
-  grid-template-columns:72px minmax(0,1fr);
+  grid-template-columns:64px minmax(0,1fr);
   gap:10px;
   align-items:center;
   text-align:left;
@@ -4189,7 +4189,7 @@ button:focus-visible{
   background:linear-gradient(180deg,#3a3010,#141006);
 }
 .rl-pick-art{
-  width:72px;height:72px;
+  width:64px;height:64px;
   display:grid;place-items:center;
   background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.08),transparent 65%);
   border-radius:8px;
@@ -4252,6 +4252,8 @@ button:focus-visible{
 .rl-build-arts{display:grid;grid-template-columns:1.4fr .7fr .7fr;gap:6px;margin-bottom:6px}
 .rl-build-card{
   padding:8px;display:flex;flex-direction:column;gap:3px;min-width:0;
+  height:fit-content;
+  align-self:flex-start;
 }
 .rl-build-card > b{
   font-family:Staatliches,Impact,sans-serif;letter-spacing:.04em;font-size:15px;line-height:1.1;
@@ -4418,7 +4420,7 @@ button:focus-visible{
 }
 .rl-inv-part,.rl-inv-mod{cursor:default}
 .rl-inv-art{
-  width:100%;aspect-ratio:1;max-height:78px;
+  width:100%;aspect-ratio:1;max-height:56px;
   display:grid;place-items:center;
   background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.08),transparent 65%);
 }
