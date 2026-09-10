@@ -266,12 +266,12 @@ function grantStarterCollection(){
     return granted;
 }
 
-/** Gold-shell pack used only for the first-time starter reveal. */
+/** Silver-shell pack used only for the first-time starter reveal. */
 function starterWelcomePackMeta(){
     return {
         id:"starter_welcome",
         family:"bey",
-        tier:"Gold",
+        tier:"Silver",
         name:"STARTER BEY PACK",
         price:0,
         blurb:"2 Bronze · 2 Silver from the pool."
@@ -854,7 +854,7 @@ function showHelp(){
         </section>
         <section class="menu-card">
             <h2>First pack</h2>
-            <p>Your first Rogue open tears a starter Bey pack: 2 random Bronze and 2 random Silver from the live pool. After that, packs are bought in the Marketplace.</p>
+            <p>Your first Rogue open tears a Silver starter Bey pack: 2 random Bronze and 2 random Silver from the live pool. After that, packs are bought in the Marketplace.</p>
         </section>
         <section class="menu-card">
             <h2>Packs</h2>
