@@ -89,7 +89,9 @@ button:disabled{opacity:.35!important;cursor:not-allowed!important;transform:non
 
 #app{width:100%;min-height:100vh}
 html:has(.battle-shell),
-body:has(.battle-shell){
+body:has(.battle-shell),
+html:has(.swx-shell),
+body:has(.swx-shell){
   min-height:0;
   height:100dvh;
   max-height:100dvh;
@@ -97,7 +99,8 @@ body:has(.battle-shell){
   overscroll-behavior:none;
   touch-action:manipulation;
 }
-#app:has(.battle-shell){
+#app:has(.battle-shell),
+#app:has(.swx-shell){
   min-height:0;
   height:100dvh;
   max-height:100dvh;
@@ -431,10 +434,10 @@ footer{
   text-align:left;
   color:var(--text);
   cursor:pointer;
-  border:1px solid #2c2620;
-  border-radius:14px;
+  border:1.5px solid #2c2620;
+  border-radius:0;
   background:#141018;
-  box-shadow:0 8px 20px rgba(0,0,0,.28);
+  box-shadow:0 8px 0 #050308,0 12px 0 rgba(0,0,0,.28);
   transition:transform .12s ease,filter .12s ease,border-color .12s ease;
 }
 .home-door:hover{

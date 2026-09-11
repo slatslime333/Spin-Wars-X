@@ -799,33 +799,30 @@ function showHub(){
     const peek=live?peekLive():null;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-hub">
+    <main class="home rogue-lite-hub swx-shell">
         ${bowl()}
         ${brandMark("PACK · BUILD · NIGHT")}
         ${hudStrip()}
         <nav class="rl-doors" aria-label="Rogue hub">
-            ${live?`<button class="home-door rip swx-hero" id="rlContinue" type="button">
-                <span class="home-door-kicker">LIVE</span>
-                <b>CONTINUE</b>
-                <small class="swx-state">Match ${peek?.match||"?"} · ${peek?.blade||""}</small>
-            </button>`:""}
-            <button class="home-door rip ${live?"":"swx-hero"}" id="rlStart" type="button">
-                <span class="home-door-kicker">ENTRY $${cost}</span>
-                <b>START RUN</b>
-                <small class="swx-state">${canAfford?`$${acc.money} on hand`:`Broke — still playable`}</small>
-            </button>
-            <button class="home-door play" id="rlMarket" type="button">
-                <span class="home-door-kicker">SPEND</span>
-                <b>MARKETPLACE</b>
-            </button>
-            <button class="home-door play" id="rlCollection" type="button">
-                <span class="home-door-kicker">OWNED</span>
-                <b>COLLECTION</b>
-            </button>
-            <button class="home-door play" id="rlHelp" type="button">
-                <span class="home-door-kicker">HOW</span>
-                <b>ROGUE HELP</b>
-            </button>
+            ${live?homeDoorHTML({
+                id:"rlContinue",
+                classes:"rip swx-hero",
+                glyph:"continue",
+                kicker:"LIVE",
+                title:"CONTINUE",
+                state:`Match ${peek?.match||"?"} · ${peek?.blade||""}`
+            }):""}
+            ${homeDoorHTML({
+                id:"rlStart",
+                classes:`rip ${live?"":"swx-hero"}`,
+                glyph:"start",
+                kicker:`ENTRY $${cost}`,
+                title:"START RUN",
+                state:canAfford?`$${acc.money} on hand`:`Broke — still playable`
+            })}
+            ${homeDoorHTML({id:"rlMarket",classes:"play",glyph:"market",kicker:"SPEND",title:"MARKETPLACE"})}
+            ${homeDoorHTML({id:"rlCollection",classes:"play",glyph:"collection",kicker:"OWNED",title:"COLLECTION"})}
+            ${homeDoorHTML({id:"rlHelp",classes:"play",glyph:"help",kicker:"HOW",title:"ROGUE HELP"})}
         </nav>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
@@ -843,7 +840,7 @@ function showHelp(){
     Game.screen="rogueLiteHelp";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-help">
+    <main class="home rogue-lite-help swx-shell">
         ${bowl()}
         ${mark("ROGUE","HELP")}
         <section class="menu-card">
@@ -973,7 +970,7 @@ function showCollection(){
            </section>`
         : "";
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-collection rl-inv-screen">
+    <main class="home rogue-lite-collection rl-inv-screen swx-shell">
         ${bowl()}
         <header class="rl-inv-head">
             <div class="rl-inv-title">
@@ -986,7 +983,7 @@ function showCollection(){
             </label>
         </header>
         ${hudStrip()}
-        <div class="rl-inv-scroll">
+        <div class="rl-inv-scroll swx-shell-scroll">
             ${partSec}
             ${modSec}
             <section class="rl-inv-sec">
@@ -1021,7 +1018,7 @@ function showCollectionDetail(id){
         : "";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-collection rl-inv-screen">
+    <main class="home rogue-lite-collection rl-inv-screen swx-shell">
         ${bowl()}
         <header class="rl-inv-head">
             <div class="rl-inv-title">
@@ -1064,6 +1061,91 @@ function showCollectionDetail(id){
     mountDev();
 }
 
+/** Shop-card preview pool — Bey packs cycle blades in that tier. */
+function packPreviewSlides(pack){
+    const family=String(pack?.family||"");
+    const tier=String(pack?.tier||"Bronze");
+    if(family==="bey"){
+        const pool=shuffle(playablePool(tier).slice());
+        const slides=pool.map(entry=>{
+            const b=entry.blade||entry;
+            const src=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
+            if(!src) return "";
+            return `<span class="rl-pack-slide" data-name="${String(b.name||"").replace(/"/g,"&quot;")}">
+                <img src="${src}" alt="">
+            </span>`;
+        }).filter(Boolean);
+        return slides.length?slides.join(""):`<span class="rl-pack-slide is-on rl-pack-slide-empty"><i></i></span>`;
+    }
+    if(family==="part"){
+        const bits=(typeof selectableBits==="function"?selectableBits():Object.values(bits()))
+            .filter(b=>b&&!b.hidden)
+            .slice(0,8);
+        const rats=(ratchets()||[]).filter(r=>r&&Number(r.height)===60).slice(0,6);
+        const slides=[];
+        bits.forEach(b=>{
+            const src=typeof bitSpritePath==="function"?bitSpritePath(b):"";
+            if(src) slides.push(`<span class="rl-pack-slide" data-name="${String(b.name||"").replace(/"/g,"&quot;")}"><img src="${src}" alt=""></span>`);
+        });
+        rats.forEach(r=>{
+            const src=typeof ratchetSpritePath==="function"?ratchetSpritePath(r):"";
+            if(src) slides.push(`<span class="rl-pack-slide" data-name="${String(r.name||"").replace(/"/g,"&quot;")}"><img src="${src}" alt=""></span>`);
+        });
+        return slides.length?slides.join(""):`<span class="rl-pack-slide is-on rl-pack-slide-empty"><i></i></span>`;
+    }
+    /* Mod packs — geometric mark, still sharp. */
+    return `<span class="rl-pack-slide is-on rl-pack-slide-mod"><i>◈</i></span>`;
+}
+
+function packCardHTML(pack,money){
+    const tier=String(pack.tier||"Bronze");
+    const can=money>=pack.price;
+    const family=String(pack.family||"bey");
+    const poolN=family==="bey"?playablePool(tier).length:0;
+    const poolLabel=family==="bey"
+        ? `${poolN} IN ${tier.toUpperCase()} POOL`
+        : family==="part" ? `${tier.toUpperCase()} PARTS` : "RUN MODS";
+    return `<article class="rl-pack-card swx-plate tier-${tier.toLowerCase()}" data-pack-card data-family="${family}">
+        <div class="rl-pack-stage" aria-hidden="true">
+            <div class="rl-pack-carousel">${packPreviewSlides(pack)}</div>
+            <div class="rl-pack-foil"></div>
+            <span class="rl-pack-pool">${poolLabel}</span>
+        </div>
+        <div class="rl-pack-body">
+            <span class="eyebrow">${tier}</span>
+            <b>${pack.name}</b>
+            <p>${pack.blurb}</p>
+            <button type="button" class="rip-btn rl-buy" data-pack="${pack.id}" ${can?"":"disabled"}>$${pack.price}</button>
+        </div>
+    </article>`;
+}
+
+function bindPackCarousels(root){
+    const reduced=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    (root||document).querySelectorAll("[data-pack-card]").forEach((card,idx)=>{
+        const slides=[...card.querySelectorAll(".rl-pack-slide")];
+        if(!slides.length) return;
+        slides.forEach(s=>s.classList.remove("is-on","is-out"));
+        let i=idx % slides.length;
+        slides[i].classList.add("is-on");
+        if(slides.length<2 || reduced) return;
+        const period=3000+((idx*410)%1400);
+        const tick=()=>{
+            if(!card.isConnected){clearInterval(timer);return;}
+            const cur=slides[i];
+            const next=slides[(i+1)%slides.length];
+            cur.classList.remove("is-on");
+            cur.classList.add("is-out");
+            next.classList.remove("is-out");
+            next.classList.add("is-on");
+            window.setTimeout(()=>cur.classList.remove("is-out"),520);
+            i=(i+1)%slides.length;
+        };
+        const timer=window.setInterval(tick,period);
+        card._packCarousel=timer;
+    });
+}
+
 function showMarket(){
     ensureAccountReady();
     Game.screen="rogueLiteMarket";
@@ -1077,32 +1159,26 @@ function showMarket(){
     const section=(title,list)=>`<section class="rl-market-sec">
         <h2 class="rl-market-h">${title}</h2>
         <div class="rl-pack-grid">
-            ${list.map(p=>{
-                const can=money>=p.price;
-                return `<article class="rl-pack-card tier-${String(p.tier||"").toLowerCase()}">
-                    <div class="rl-pack-foil" aria-hidden="true"></div>
-                    <span class="eyebrow">${p.tier}</span>
-                    <b>${p.name}</b>
-                    <p>${p.blurb}</p>
-                    <button type="button" class="rip-btn rl-buy" data-pack="${p.id}" ${can?"":"disabled"}>$${p.price}</button>
-                </article>`;
-            }).join("")}
+            ${list.map(p=>packCardHTML(p,money)).join("")}
         </div>
     </section>`;
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-market">
+    <main class="home rogue-lite-market swx-shell">
         ${bowl()}
         ${mark("MARKETPLACE","OPEN PACKS")}
         ${hudStrip()}
-        <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
-        ${section("BEY PACKS",beys)}
-        ${section("PART PACKS",parts)}
-        ${section("MODIFIERS",mods)}
+        <div class="swx-shell-scroll rl-market-scroll">
+            <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
+            ${section("BEY PACKS",beys)}
+            ${section("PART PACKS",parts)}
+            ${section("MODIFIERS",mods)}
+        </div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
     document.querySelectorAll("[data-pack]").forEach(btn=>{
         btn.onclick=()=>buyAndOpenPack(btn.getAttribute("data-pack"));
     });
+    bindPackCarousels(document.querySelector(".rogue-lite-market"));
     mountDev();
 }
 
@@ -1287,7 +1363,7 @@ function showStartConfirm(){
     const broke=money<cost;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-confirm rl-flow-screen">
+    <main class="home rogue-lite-confirm rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("START RUN",broke?"ENTRY WAIVED":`ENTRY $${cost}`)}
         <p class="rl-lede">Pay ${broke?"nothing (broke waiver)":`$${cost}`} to lock this run. After you confirm you cannot return to reroll kits or undo the entry.</p>
@@ -1336,7 +1412,7 @@ function showGoldCommit(golds){
     Game.screen="rogueLiteGoldCommit";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-gold rl-flow-screen">
+    <main class="home rogue-lite-gold rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("GOLD RENTAL","OPTIONAL")}
         <p class="rl-lede rl-lede-tight">Commit a Gold to force three kits on that Bey — or draft only from your Silver and Bronze.</p>
@@ -1444,7 +1520,7 @@ function showBuildDraft(goldId){
     if(!builds.length){
         refundEntryIfPaid();
         app.innerHTML=`<div class="background stadium"></div>
-        <main class="home rl-flow-screen">
+        <main class="home rl-flow-screen swx-shell">
         ${bowl()}
             ${mark("NO KITS","DRAFT")}
             <p class="rl-lede">${goldId?"That Gold kit could not be built.":"No Silver or Bronze blades in your collection. Open packs first."}${!goldId?" Entry refunded.":""}</p>
@@ -1459,7 +1535,7 @@ function showBuildDraft(goldId){
     const sideNote=[temps?`${temps} temp part${temps>1?"s":""}`:"",mods?`${mods} mod${mods>1?"s":""}`:""].filter(Boolean).join(" · ");
     const poolNote=goldId?"":" Silver and Bronze only.";
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-draft rl-flow-screen">
+    <main class="home rogue-lite-draft rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("CHOOSE YOUR BUILD",Game._rlEntryPaid?"ENTRY LOCKED":`ENTRY $${cost}`)}
         <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Cards show full combo; ROGUE STAT SCALE previews Bronze-form run stats. RUN PAY uses that run-start OVERALL. ${sideNote?` Then optional ${sideNote}.`:""}</p>
@@ -1502,7 +1578,7 @@ function showAwakeningPrompt(build,level){
     Game.screen="rogueLiteAwaken";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-awaken rl-flow-screen">
+    <main class="home rogue-lite-awaken rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("AWAKENING",`LV.${level}`)}
         <p class="rl-lede"><b>${build.blade.name}</b> has Awakening ready. Use it for this run only? Declining keeps it for later.</p>
@@ -1532,7 +1608,7 @@ function showTempPartPick(build,useAwakening){
     const temps=account().runTempParts||[];
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-temp rl-flow-screen">
+    <main class="home rogue-lite-temp rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("TEMP PART","OPTIONAL")}
         <p class="rl-lede rl-lede-tight">Slot one temporary part into <b>${build.blade.name}</b>, or skip.</p>
@@ -1575,7 +1651,7 @@ function showModifierPick(build,useAwakening,tempPart){
     const owned=(account().runTempMods||[]).slice();
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-mod rl-flow-screen">
+    <main class="home rogue-lite-mod rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("MODIFIER",`${owned.length} READY`)}
         <p class="rl-lede rl-lede-tight">Pick one rolled mod for this run, or skip to keep them.</p>

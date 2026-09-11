@@ -1372,6 +1372,58 @@ function homeBowlHTML(){
     </div>`;
 }
 
+/** Inline door glyphs — geometric, theme-matched (Part 1 graphic doors). */
+const SWX_DOOR_GLYPH={
+    rogue:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h8l2-3h6v14H4V8z" stroke="currentColor" stroke-width="1.8"/><path d="M8 12h4M8 15h7" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    campaign:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h10l4 4v12H5V4z" stroke="currentColor" stroke-width="1.8"/><path d="M15 4v4h4M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    quick:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg>`,
+    sandbox:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3h8l2 6H6l2-6zM7 9l-2 11h14L17 9" stroke="currentColor" stroke-width="1.8"/><path d="M10 13h4" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    continue:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 5l12 7-12 7V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="miter"/></svg>`,
+    start:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h16M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="miter"/></svg>`,
+    market:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16l-1.5 11H5.5L4 8z" stroke="currentColor" stroke-width="1.8"/><path d="M9 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    collection:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    help:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.5a2.5 2.5 0 114.2 1.8C12.8 12.2 12 12.8 12 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/><path d="M12 17.5h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg>`,
+    /* Part 2 — Campaign / Sandbox / league glyphs */
+    play:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 5l14 7-14 7V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="miter"/></svg>`,
+    garage:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10l9-6 9 6v10H3V10z" stroke="currentColor" stroke-width="1.8"/><path d="M9 20v-6h6v6" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    track:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18V6h4l3 8 3-8h4v12" stroke="currentColor" stroke-width="1.8"/><path d="M4 14h16" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    board:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14v16H5V4z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    reset:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a7 7 0 119 9.9" stroke="currentColor" stroke-width="1.8"/><path d="M6 3v5h5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    pve:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="8" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="12" r="4" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2.5 2"/></svg>`,
+    pvp:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="7" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M11 12h2" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    watch:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    lab:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6v6l4 10H5l4-10V3z" stroke="currentColor" stroke-width="1.8"/><path d="M9 9h6" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    league:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v3a5 5 0 01-5 5 5 5 0 01-5-5V4z" stroke="currentColor" stroke-width="1.8"/><path d="M12 12v3M8 20h8M6 7H4v1a3 3 0 003 3M18 7h2v1a3 3 0 01-3 3" stroke="currentColor" stroke-width="1.8"/></svg>`
+};
+
+function homeDoorHTML(opts){
+    opts=opts||{};
+    const glyphKey=opts.glyph||"";
+    const glyph=SWX_DOOR_GLYPH[glyphKey]
+        ? `<span class="home-door-glyph" data-glyph="${glyphKey}" aria-hidden="true">${SWX_DOOR_GLYPH[glyphKey]}</span>`
+        : "";
+    const state=opts.state
+        ? `<small class="swx-state">${opts.state}</small>`
+        : "";
+    const attrs=[
+        `class="home-door swx-door ${opts.classes||""}"`,
+        `type="button"`
+    ];
+    if(opts.id) attrs.push(`id="${opts.id}"`);
+    if(opts.dataHome) attrs.push(`data-home="${opts.dataHome}"`);
+    if(opts.disabled) attrs.push("disabled");
+    return `<button ${attrs.join(" ")}>
+        <span class="home-door-rail" aria-hidden="true"></span>
+        ${glyph}
+        <span class="home-door-body">
+            <span class="home-door-kicker">${opts.kicker||""}</span>
+            <b>${opts.title||""}</b>
+            ${state}
+        </span>
+        <span class="home-door-chev" aria-hidden="true"></span>
+    </button>`;
+}
+
 function renderMainMenu(){
     Game.screen="menu";
     Game.quickMatch=false;
@@ -1391,7 +1443,7 @@ function renderMainMenu(){
 
     app.innerHTML=`
     <div class="background stadium"></div>
-    <main class="home lobby">
+    <main class="home lobby swx-shell">
         ${swxProfileChip()}
         ${homeBowlHTML()}
         <div class="swx-lobby-top">
@@ -1399,24 +1451,12 @@ function renderMainMenu(){
         </div>
         <nav class="swx-nav" aria-label="Play">
             <div class="swx-primary" role="group" aria-label="Main modes">
-                <button class="home-door rip swx-hero" data-home="rogue" type="button">
-                    <span class="home-door-kicker">PACK · BUILD</span>
-                    <b>ROGUE</b>
-                </button>
-                <button class="home-door rogue swx-hero swx-hero-campaign" data-home="campaign" type="button">
-                    <span class="home-door-kicker">LOCKER · TRACK</span>
-                    <b>CAMPAIGN</b>
-                </button>
+                ${homeDoorHTML({classes:"rip swx-hero",dataHome:"rogue",glyph:"rogue",kicker:"PACK · BUILD",title:"ROGUE"})}
+                ${homeDoorHTML({classes:"rogue swx-hero swx-hero-campaign",dataHome:"campaign",glyph:"campaign",kicker:"LOCKER · TRACK",title:"CAMPAIGN"})}
             </div>
             <div class="swx-sec" role="group" aria-label="Side modes">
-                <button class="home-door play swx-side" data-home="quick" type="button">
-                    <span class="home-door-kicker">LEAGUE</span>
-                    <b>QUICK PLAY</b>
-                </button>
-                <button class="home-door play swx-side" data-home="sandbox" type="button">
-                    <span class="home-door-kicker">LAB</span>
-                    <b>SANDBOX</b>
-                </button>
+                ${homeDoorHTML({classes:"play swx-side",dataHome:"quick",glyph:"quick",kicker:"LEAGUE",title:"QUICK PLAY"})}
+                ${homeDoorHTML({classes:"play swx-side",dataHome:"sandbox",glyph:"sandbox",kicker:"LAB",title:"SANDBOX"})}
             </div>
             <div class="swx-util">
                 <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
@@ -1578,26 +1618,28 @@ function renderLeagueSelect(){
 
     app.innerHTML=`
     <div class="background stadium"></div>
-    <main class="home league-board">
+    <main class="home league-board swx-shell">
         ${homeBowlHTML()}
         ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:""})}
-        <nav class="home-leagues board" aria-label="Choose a league">
-            <button class="home-league featured" data-quick-match="1" type="button">
-                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random · reroll</small></span>
+        <nav class="home-leagues board swx-shell-scroll" aria-label="Choose a league">
+            <button class="home-league featured swx-plate" data-quick-match="1" type="button">
+                <span class="home-league-rail" aria-hidden="true"></span>
+                <span class="home-door-glyph" data-glyph="league" aria-hidden="true">${SWX_DOOR_GLYPH.league}</span>
+                <span class="home-league-copy"><span class="home-door-kicker">FEATURED</span><b>QUICK MATCH</b><small>Random · reroll</small></span>
                 <span class="home-league-go">RIP</span>
             </button>
             <div class="home-league-grid">
-                <button class="home-league bronze" data-mode="bronze" type="button">
-                    <span class="home-league-copy"><b>BRONZE</b><small>Starter pool</small></span>
+                <button class="home-league bronze swx-plate" data-mode="bronze" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>BRONZE</b><small>Starter pool</small></span>
                 </button>
-                <button class="home-league silver" data-mode="silver" type="button">
-                    <span class="home-league-copy"><b>SILVER</b><small>Mid-tier pool</small></span>
+                <button class="home-league silver swx-plate" data-mode="silver" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>SILVER</b><small>Mid-tier pool</small></span>
                 </button>
-                <button class="home-league gold" data-mode="gold" type="button">
-                    <span class="home-league-copy"><b>GOLD</b><small>Top-tier pool</small></span>
+                <button class="home-league gold swx-plate" data-mode="gold" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>GOLD</b><small>Top-tier pool</small></span>
                 </button>
-                <button class="home-league custom" data-mode="custom" type="button">
-                    <span class="home-league-copy"><b>CUSTOM</b><small>Full garage</small></span>
+                <button class="home-league custom swx-plate" data-mode="custom" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">GARAGE</span><b>CUSTOM</b><small>Full garage</small></span>
                 </button>
             </div>
         </nav>

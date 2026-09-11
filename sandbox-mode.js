@@ -246,28 +246,30 @@ function showLanding(){
     const s=ensure();
     const logN=s.session.log.length;
     const app=document.getElementById("app");
+    const door=typeof homeDoorHTML==="function"?homeDoorHTML:null;
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home sandbox-landing">
+    <main class="home sandbox-landing swx-shell">
         ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
         ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"SANDBOX",tag:""}):""}
-        <nav class="swx-nav sandbox-landing-doors" aria-label="Sandbox">
-            <button class="home-door rip swx-hero" type="button" data-enter-vs="pve">
-                <span class="home-door-kicker">${VS_MODES[0].kicker}</span>
-                <b>${VS_MODES[0].short}</b>
-                <span class="swx-hero-mark">RIP</span>
-            </button>
+        <nav class="swx-nav sandbox-landing-doors swx-shell-scroll" aria-label="Sandbox">
+            ${door
+                ? door({classes:"rip swx-hero",glyph:"pve",kicker:VS_MODES[0].kicker,title:VS_MODES[0].short})
+                    .replace('type="button"','type="button" data-enter-vs="pve"')
+                : `<button class="home-door rip swx-hero" type="button" data-enter-vs="pve"><span class="home-door-kicker">${VS_MODES[0].kicker}</span><b>${VS_MODES[0].short}</b></button>`}
             <div class="swx-sec">
-                <button class="home-door play" type="button" data-enter-vs="pvp">
-                    <span class="home-door-kicker">${VS_MODES[1].kicker}</span>
-                    <b>${VS_MODES[1].short}</b>
-                </button>
-                <button class="home-door play" type="button" data-enter-vs="cvc">
-                    <span class="home-door-kicker">${VS_MODES[2].kicker}</span>
-                    <b>${VS_MODES[2].short}</b>
-                </button>
+                ${door
+                    ? door({classes:"play swx-side",glyph:"pvp",kicker:VS_MODES[1].kicker,title:VS_MODES[1].short})
+                        .replace('type="button"','type="button" data-enter-vs="pvp"')
+                    : `<button class="home-door play" type="button" data-enter-vs="pvp"><span class="home-door-kicker">${VS_MODES[1].kicker}</span><b>${VS_MODES[1].short}</b></button>`}
+                ${door
+                    ? door({classes:"play swx-side",glyph:"watch",kicker:VS_MODES[2].kicker,title:VS_MODES[2].short})
+                        .replace('type="button"','type="button" data-enter-vs="cvc"')
+                    : `<button class="home-door play" type="button" data-enter-vs="cvc"><span class="home-door-kicker">${VS_MODES[2].kicker}</span><b>${VS_MODES[2].short}</b></button>`}
             </div>
             <div class="swx-util">
-                <button class="home-door play" id="sandboxOpenLab" type="button"><b>LAB</b></button>
+                ${door
+                    ? door({id:"sandboxOpenLab",classes:"play swx-side",glyph:"lab",kicker:"GARAGE",title:"LAB"})
+                    : `<button class="home-door play" id="sandboxOpenLab" type="button"><b>LAB</b></button>`}
                 <button class="home-help" id="sandboxSession" type="button">LOG${logN?` · ${logN}`:""}</button>
                 <button class="home-help" id="sandboxHelp" type="button">HOW</button>
             </div>
