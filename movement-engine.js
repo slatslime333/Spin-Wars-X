@@ -305,17 +305,22 @@ const bitNameNow=String(ctx.bitName||s.bitName||(s.bit&&s.bit.name)||"").toLower
 if(bitNameNow==="ball") plant*=0.82;
 /*
   A real collision owns the trajectory briefly. Attack sheds hit-stun
-  a little faster so it can re-hook the rail. Non-Attack keeps the
-  shove longer so the ring cannot rubber-band them back first.
+  fastest so it can re-hook the rail. Tanks plant sooner after a punch
+  (no air-hockey skate into mouths). Balance sits mid.
 */
+const bitTypeNow=String(ctx.bitType||s.bitType||(s.bit&&s.bit.type)||"").toLowerCase();
+const clashRole=attackLike?"attack":(bitTypeNow==="balance"?"balance":"tank");
+const impactDecay=clashRole==="attack"?0.72:clashRole==="balance"?0.58:0.64;
+const impactSteer=clashRole==="attack"?1.05:clashRole==="balance"?1.20:1.14;
+const impactFloor=clashRole==="attack"?0.18:clashRole==="balance"?0.10:0.12;
 s.impactMomentumState=
     clamp(
-        (s.impactMomentumState||0)-dt*(attackLike?0.72:0.48),
+        (s.impactMomentumState||0)-dt*impactDecay,
         0,1
     );
 const orbitSteeringAvailability=clamp(
-    1-(attackLike?1.05:1.32)*s.impactMomentumState,
-    attackLike?0.18:0.07,
+    1-impactSteer*s.impactMomentumState,
+    impactFloor,
     1
 );
 

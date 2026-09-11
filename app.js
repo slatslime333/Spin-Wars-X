@@ -4929,6 +4929,45 @@ function isAttackTypeBit(s){
     return String(s?.bit?.type||"").toLowerCase()==="attack";
 }
 
+/** Clash role bands: Attack / Balance / Tank (Defense+Stamina). */
+function bitClashRole(s){
+    const t=String(s?.bit?.type||"").toLowerCase();
+    if(t==="attack") return "attack";
+    if(t==="balance") return "balance";
+    return "tank";
+}
+
+/** Live dash commit window from abilities.js dashBurst (~480ms). */
+function dashCommitLive(s){
+    return !!(s && s.dashBurst && (Number(s.dashBurst.until)||0)>performance.now());
+}
+
+/**
+ * Rail-swing pressure still counts as Attack for bully matchups.
+ * Base role stays for Balance/Tank identity and dash converts.
+ */
+function clashPressureRole(s, hitLikeAttack){
+    if(hitLikeAttack) return "attack";
+    return bitClashRole(s);
+}
+
+/**
+ * Attack dash greed near Over/Xtreme: keep follow-through so a bad
+ * commit can self-KO. Does not raise the knock cap.
+ */
+function applyAttackDashOvercommit(s){
+    if(!s || bitClashRole(s)!=="attack" || !dashCommitLive(s)) return;
+    const nearMouth=s.y>0.30 && (Math.abs(s.x)>0.20 || s.y>0.48);
+    if(!nearMouth) return;
+    const sp=Math.hypot(s.vx,s.vy)||1;
+    const outward=(s.x*s.vx+(s.y-0.15)*s.vy)/sp;
+    if(outward<0.12) return;
+    s.vx*=1.07;
+    s.vy*=1.07;
+    s.lastImpactForce=Math.min(0.027, Math.max(Number(s.lastImpactForce)||0, 0.021));
+    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.56);
+}
+
 function recentXExitSwing(s){
     if(!s || s.railEngaged || s.xrailExitRampActive) return false;
     if(s.lastXRailExitReason!=="x-exit") return false;
@@ -7493,21 +7532,49 @@ function newPhysicsCollision(dt){
         cDefenseSoak*
         (1.02+newBattleClamp(momentumFactor/2.4,0,0.16))
     );
-    if(pHitLikeAttack && !cHitLikeAttack){
-        pKnockRaw*=1.24;
-        // Non-Attack still answers — slightly less penalty than before.
-        cKnockRaw*=0.88;
-    }else if(cHitLikeAttack && !pHitLikeAttack){
-        cKnockRaw*=1.24;
-        pKnockRaw*=0.88;
-    }else if(!pAttackBit && !cAttackBit){
-        // Tank vs tank: a touch more shove so free-space pockets stay reachable under the 0.086 cap.
-        pKnockRaw*=1.62;
-        cKnockRaw*=1.62;
+    /*
+      Bit knock roles (cap still 0.086):
+      - Attack idle-bullies Tanks; Tanks answer softer unless they dashed.
+      - Tank vs Tank stays chunky and fun, not air-hockey rockets.
+      - Balance sits mid — not on the tank branch.
+      - Dash commit converts knock (Tank highest, then Balance, then Attack).
+      - Flat non-Attack ×1.06 outgoing removed.
+    */
+    const pRole=bitClashRole(p);
+    const cRole=bitClashRole(c);
+    const pPress=clashPressureRole(p, pHitLikeAttack);
+    const cPress=clashPressureRole(c, cHitLikeAttack);
+    if(pPress==="attack" && cRole==="tank" && cPress!=="attack"){
+        pKnockRaw*=1.25;
+        cKnockRaw*=0.84;
+    }else if(cPress==="attack" && pRole==="tank" && pPress!=="attack"){
+        cKnockRaw*=1.25;
+        pKnockRaw*=0.84;
+    }else if(pPress==="attack" && cRole==="balance" && cPress!=="attack"){
+        pKnockRaw*=1.12;
+        cKnockRaw*=1.00;
+    }else if(cPress==="attack" && pRole==="balance" && pPress!=="attack"){
+        cKnockRaw*=1.12;
+        pKnockRaw*=1.00;
+    }else if(pRole==="tank" && cRole==="tank"){
+        pKnockRaw*=1.34;
+        cKnockRaw*=1.34;
+    }else if(pRole==="balance" && cRole==="balance"){
+        pKnockRaw*=1.05;
+        cKnockRaw*=1.05;
+    }else if(pRole==="balance" && cRole==="tank"){
+        pKnockRaw*=1.06;
+        cKnockRaw*=1.10;
+    }else if(pRole==="tank" && cRole==="balance"){
+        pKnockRaw*=1.10;
+        cKnockRaw*=1.06;
     }
-    // Non-Attack bits deal a slight bit more shove in general (Ball/Orb/Hexa/etc.), still under cap.
-    if(!pAttackBit) pKnockRaw*=1.06;
-    if(!cAttackBit) cKnockRaw*=1.06;
+    if(dashCommitLive(p)){
+        pKnockRaw*=pRole==="tank"?1.20:pRole==="balance"?1.14:1.10;
+    }
+    if(dashCommitLive(c)){
+        cKnockRaw*=cRole==="tank"?1.20:cRole==="balance"?1.14:1.10;
+    }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
       Over/Xtreme are a bit more reachable. Attack bits get a tad more
@@ -7605,11 +7672,14 @@ function newPhysicsCollision(dt){
       Using its own outgoing knock left tanks glued: they hit weakly,
       so they recovered orbit before the incoming smash could travel.
     */
+    // Tanks plant a bit sooner after the punch so thumps don't skate into mouths.
+    const pImpactCap=pAttackBit?0.52:(pRole==="balance"?0.60:0.58);
+    const cImpactCap=cAttackBit?0.52:(cRole==="balance"?0.60:0.58);
     const pImpactMomentumState=
-        newBattleClamp(cKnockback/0.090, 0.14, pAttackBit?0.52:0.68);
+        newBattleClamp(cKnockback/0.090, 0.14, pImpactCap);
 
     const cImpactMomentumState=
-        newBattleClamp(pKnockback/0.090, 0.14, cAttackBit?0.52:0.68);
+        newBattleClamp(pKnockback/0.090, 0.14, cImpactCap);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
@@ -7655,6 +7725,8 @@ function newPhysicsCollision(dt){
     c.vy-=ty*cFollow;
     dumpRailSwingFollowThrough(p, pVxIn, pVyIn, nx, ny);
     dumpRailSwingFollowThrough(c, cVxIn, cVyIn, -nx, -ny);
+    applyAttackDashOvercommit(p);
+    applyAttackDashOvercommit(c);
 
     if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
         breakXRailFromImpact(p,nx,ny,cRailBreakForce);
