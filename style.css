@@ -196,6 +196,7 @@ footer{
 
 .home{
   position:relative;
+  isolation:isolate;
   min-height:100vh;
   min-height:100dvh;
   display:flex;
@@ -210,31 +211,99 @@ footer{
 
 .home-bowl{
   position:absolute;
-  width:min(520px,92vw);
-  height:min(340px,52vw);
-  max-height:42vh;
+  width:min(560px,94vw);
+  height:min(360px,54vw);
+  max-height:46vh;
   top:46%;
   left:50%;
   transform:translate(-50%,-58%);
   pointer-events:none;
-  z-index:-1;
+  z-index:0;
+  /* Dim the bowl under the UI column; keep glow vivid around the edges. */
+  -webkit-mask-image:radial-gradient(ellipse 62% 56% at 50% 42%,rgba(0,0,0,.08) 0%,rgba(0,0,0,.35) 36%,rgba(0,0,0,.75) 58%,#000 78%);
+  mask-image:radial-gradient(ellipse 62% 56% at 50% 42%,rgba(0,0,0,.08) 0%,rgba(0,0,0,.35) 36%,rgba(0,0,0,.75) 58%,#000 78%);
 }
-/* Keep stadium bowl behind hub chrome (HUD / doors / cards). */
-.home > .home-mark,
-.home > .rl-hud,
-.home > .rl-doors,
-.home > .rr-hud,
-.home > .rr-loadout,
-.home > .home-doors,
-.home > .menu-card,
-.rogue-lite-hub > *:not(.home-bowl),
-.rr-hub > *:not(.home-bowl){
+/* Interactive chrome always above the moving bowl art. */
+.home > *:not(.home-bowl),
+.menu > *:not(.home-bowl){
   position:relative;
-  z-index:1;
+  z-index:2;
 }
-.rl-hud{
+.menu{
   position:relative;
-  z-index:1;
+  isolation:isolate;
+}
+
+
+.rl-hud-money,
+.rl-hud-col{
+  background-color:#121018 !important;
+  background-image:linear-gradient(180deg,#1c1824,#0f0d14) !important;
+}
+.home-door,
+.home-door.rip{
+  background-color:#141018 !important;
+}
+
+/* Soft dark plate behind UI clusters — hides bowl bleed through cut-corner clip-paths. */
+.rl-hud,
+.rl-doors,
+.swx-nav,
+.home-doors,
+.rr-doors,
+.rr-loadout,
+.rl-build-row,
+.rl-pack-grid,
+.rl-bey-grid{
+  box-shadow:0 0 42px 26px rgba(6,5,9,.82);
+}
+.home.lobby .swx-nav{
+  box-shadow:0 0 48px 30px rgba(6,5,9,.88);
+}
+/* Keep living-bowl atmosphere, but never let it read through chrome. */
+.home-door,
+.home-door.rip,
+.home-door.play,
+.home-door.rogue{
+  background-color:#141018;
+}
+.rl-hud-money,
+.rl-hud-col{
+  background-color:#121018;
+}
+.rl-bey-card,
+.rl-pack-card,
+.rl-build-card,
+.rr-loadout,
+.menu-card{
+  background-color:#100e14;
+}
+.home-mark .swx-wordmark,
+.home-mark h1{
+  text-shadow:0 2px 0 #000,0 0 18px rgba(0,0,0,.85),0 10px 24px rgba(0,0,0,.55);
+}
+
+/* Hubs: a little more presence so the bowl reads as atmosphere. */
+.home.rogue-lite-hub .home-bowl,
+.home.rr-hub .home-bowl,
+.home.rr-shell.rr-hub .home-bowl,
+.home.lobby .home-bowl{
+  width:min(680px,98vw);
+  height:min(440px,60vw);
+  max-height:52vh;
+}
+/* Flow / dense screens: keep bowl soft so cards stay primary. */
+.rl-flow-screen .home-bowl,
+.home.rogue-lite-market .home-bowl,
+.home.rogue-lite-collection .home-bowl,
+.home.rogue-lite-help .home-bowl,
+.menu.rr-garage .home-bowl,
+.menu.rr-track .home-bowl,
+.menu.rogue-help .home-bowl{
+  opacity:.8;
+  max-height:44vh;
+  -webkit-mask-image:radial-gradient(ellipse 68% 60% at 50% 38%,rgba(0,0,0,.06) 0%,rgba(0,0,0,.32) 34%,rgba(0,0,0,.7) 56%,#000 76%);
+  mask-image:radial-gradient(ellipse 68% 60% at 50% 38%,rgba(0,0,0,.06) 0%,rgba(0,0,0,.32) 34%,rgba(0,0,0,.7) 56%,#000 76%);
 }
 .home-bowl-floor{
   position:absolute;
@@ -364,7 +433,7 @@ footer{
   cursor:pointer;
   border:1px solid #2c2620;
   border-radius:14px;
-  background:#121014;
+  background:#141018;
   box-shadow:0 8px 20px rgba(0,0,0,.28);
   transition:transform .12s ease,filter .12s ease,border-color .12s ease;
 }
@@ -3137,7 +3206,7 @@ button:focus-visible{
   border:1px solid #3a3328;
   border-radius:999px;
   padding:6px 10px;
-  background:#121014;
+  background:#141018;
 }
 .howto-toc a:hover{color:#f0b429;border-color:#c4a056}
 .howto-card h2{
@@ -4031,7 +4100,7 @@ button:focus-visible{
 .rr-loadout-arts{display:flex;align-items:center;gap:6px}
 .rr-loadout-art{
   width:88px;height:88px;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.28);overflow:hidden
+  background:linear-gradient(180deg,#1a1620,#0c0b10);overflow:hidden
 }
 .rr-loadout-art.sm{width:52px;height:52px}
 .rr-loadout-art img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center}
@@ -4153,7 +4222,8 @@ button:focus-visible{
   display:flex;flex-direction:column;gap:2px;
   padding:8px 10px;
   border:1px solid rgba(255,255,255,.12);
-  background:linear-gradient(180deg,rgba(20,18,28,.9),rgba(8,7,12,.95));
+  /* Opaque so moving bowl rail/glow never reads “on top” of the chips. */
+  background:linear-gradient(180deg,#1a1620,#0c0b10);
 }
 .rl-hud small{font-size:10px;letter-spacing:.12em;opacity:.7}
 .rl-hud b{font-family:Staatliches,Impact,sans-serif;font-size:22px;letter-spacing:.06em}
@@ -4272,7 +4342,7 @@ button:focus-visible{
   position:relative;
   text-align:left;
   border:1px solid rgba(255,255,255,.14);
-  background:linear-gradient(180deg,#1a1622,#0c0a10);
+  background:linear-gradient(180deg,#1c1824,#0e0c12);
   padding:12px;
   color:inherit;
   cursor:pointer;

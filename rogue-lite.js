@@ -844,6 +844,7 @@ function showHelp(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-help">
+        ${bowl()}
         ${mark("ROGUE","HELP")}
         <section class="menu-card">
             <h2>The night</h2>
@@ -973,6 +974,7 @@ function showCollection(){
         : "";
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-collection rl-inv-screen">
+        ${bowl()}
         <header class="rl-inv-head">
             <div class="rl-inv-title">
                 <span class="eyebrow">INVENTORY</span>
@@ -1020,6 +1022,7 @@ function showCollectionDetail(id){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-collection rl-inv-screen">
+        ${bowl()}
         <header class="rl-inv-head">
             <div class="rl-inv-title">
                 <span class="eyebrow">${tier.toUpperCase()}</span>
@@ -1088,6 +1091,7 @@ function showMarket(){
     </section>`;
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-market">
+        ${bowl()}
         ${mark("MARKETPLACE","OPEN PACKS")}
         ${hudStrip()}
         <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
@@ -1284,6 +1288,7 @@ function showStartConfirm(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-confirm rl-flow-screen">
+        ${bowl()}
         ${mark("START RUN",broke?"ENTRY WAIVED":`ENTRY $${cost}`)}
         <p class="rl-lede">Pay ${broke?"nothing (broke waiver)":`$${cost}`} to lock this run. After you confirm you cannot return to reroll kits or undo the entry.</p>
         <div class="rl-awaken-actions">
@@ -1332,6 +1337,7 @@ function showGoldCommit(golds){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-gold rl-flow-screen">
+        ${bowl()}
         ${mark("GOLD RENTAL","OPTIONAL")}
         <p class="rl-lede rl-lede-tight">Commit a Gold to force three kits on that Bey — or draft only from your Silver and Bronze.</p>
         <div class="rl-pick-list">
@@ -1439,6 +1445,7 @@ function showBuildDraft(goldId){
         refundEntryIfPaid();
         app.innerHTML=`<div class="background stadium"></div>
         <main class="home rl-flow-screen">
+        ${bowl()}
             ${mark("NO KITS","DRAFT")}
             <p class="rl-lede">${goldId?"That Gold kit could not be built.":"No Silver or Bronze blades in your collection. Open packs first."}${!goldId?" Entry refunded.":""}</p>
             <button class="rip-btn" id="rlBackHub" type="button">HUB</button>
@@ -1453,6 +1460,7 @@ function showBuildDraft(goldId){
     const poolNote=goldId?"":" Silver and Bronze only.";
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-draft rl-flow-screen">
+        ${bowl()}
         ${mark("CHOOSE YOUR BUILD",Game._rlEntryPaid?"ENTRY LOCKED":`ENTRY $${cost}`)}
         <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Cards show full combo; ROGUE STAT SCALE previews Bronze-form run stats. RUN PAY uses that run-start OVERALL. ${sideNote?` Then optional ${sideNote}.`:""}</p>
         <div class="rl-build-row">
@@ -1495,6 +1503,7 @@ function showAwakeningPrompt(build,level){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-awaken rl-flow-screen">
+        ${bowl()}
         ${mark("AWAKENING",`LV.${level}`)}
         <p class="rl-lede"><b>${build.blade.name}</b> has Awakening ready. Use it for this run only? Declining keeps it for later.</p>
         <div class="rl-awaken-actions">
@@ -1524,6 +1533,7 @@ function showTempPartPick(build,useAwakening){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-temp rl-flow-screen">
+        ${bowl()}
         ${mark("TEMP PART","OPTIONAL")}
         <p class="rl-lede rl-lede-tight">Slot one temporary part into <b>${build.blade.name}</b>, or skip.</p>
         <div class="rl-pick-list">
@@ -1566,6 +1576,7 @@ function showModifierPick(build,useAwakening,tempPart){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-mod rl-flow-screen">
+        ${bowl()}
         ${mark("MODIFIER",`${owned.length} READY`)}
         <p class="rl-lede rl-lede-tight">Pick one rolled mod for this run, or skip to keep them.</p>
         <div class="rl-pick-list rl-mod-list">
