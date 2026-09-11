@@ -84,7 +84,20 @@ body{
 }
 
 button,input,select,textarea{font:inherit}
-button{-webkit-tap-highlight-color:transparent}
+/* Kill iOS/Android blue tap flash on every interactive surface (pack open taps the stage/main). */
+html,body,#app,
+button,a,label,summary,
+.home,.menu,.swx-shell,
+.home-door,.rl-pack-shell,.rl-pack-card,.rl-open-stage,
+.rogue-lite-open,.rl-card-rail,.rl-trade-card,
+.rip-btn,.menu-btn,.back-btn{
+  -webkit-tap-highlight-color:transparent;
+}
+button,a,.home-door,.rl-pack-shell,.rl-open-stage,.rogue-lite-open,.rip-btn,.menu-btn{
+  -webkit-user-select:none;
+  user-select:none;
+  touch-action:manipulation;
+}
 button:disabled{opacity:.35!important;cursor:not-allowed!important;transform:none!important}
 
 #app{width:100%;min-height:100vh}
@@ -4107,9 +4120,15 @@ button:focus-visible{
 }
 .rr-loadout-art.sm{width:52px;height:52px}
 .rr-loadout-art img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;object-position:center}
-.rr-loadout-copy{min-width:0}
-.rr-loadout-copy b{display:block;font-size:18px}
-.rr-loadout-copy small{color:var(--muted)}
+.rr-loadout-copy{min-width:0;overflow:hidden}
+.rr-loadout-copy b{
+  display:block;font-size:clamp(15px,4.6vw,18px);
+  line-height:1.1;overflow-wrap:anywhere;word-break:break-word;
+}
+.rr-loadout-copy small{
+  color:var(--muted);display:block;
+  overflow-wrap:anywhere;word-break:break-word;line-height:1.25;
+}
 .rr-form-note{display:block;margin-top:2px;color:var(--gold);font-size:11px;letter-spacing:.04em}
 .rr-doors{width:100%}
 .rr-starter-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -4684,7 +4703,11 @@ button:focus-visible{
   min-height:100dvh;max-height:100dvh;
   padding:10px 8px 16px !important;gap:8px !important;
   box-sizing:border-box;overflow:hidden;
-  justify-content:flex-start !important;
+  justify-content:center !important;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;
+  user-select:none;
+  touch-action:manipulation;
 }
 .rl-open-title{
   font-family:Staatliches,Impact,sans-serif;letter-spacing:.1em;font-size:20px;margin:0;
@@ -4692,16 +4715,18 @@ button:focus-visible{
 }
 .rl-open-stage{
   width:min(960px,100%);
-  flex:1 1 auto;
+  flex:0 1 auto;
   min-height:0;
   display:grid;
   place-items:center;
   position:relative;
   overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  outline:none;
 }
 .rogue-lite-open.is-revealing{
   padding-top:8px;gap:6px;
-  justify-content:flex-start !important;
+  justify-content:center !important;
 }
 .rogue-lite-open.is-revealing .rl-open-stage{
   flex:1 1 auto;
