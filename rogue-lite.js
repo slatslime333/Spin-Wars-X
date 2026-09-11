@@ -480,19 +480,16 @@ function openPack(packId){
 
 /* ---------- Build draft ---------- */
 function randomKitForBlade(blade){
-    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.pickCommittedParts==="function"){
-        return SpinWarsRogue.pickCommittedParts(blade);
+    /* Player draft kits stay fully random (same pool as early CPU), not role-committed. */
+    if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.starterParts==="function"){
+        return SpinWarsRogue.starterParts(blade);
     }
-    const role=String(blade?.type||"Balance");
-    const bitPool=role==="Attack"
-        ?["Rush","Flat","Low Flat","Kick"]
-        :role==="Defense"?["Needle","Hexa","Ball","Orb"]
-        :["Ball","Orb","Point","Level","Needle"];
-    const bitName=pick(bitPool);
+    const bits=(typeof selectableBits==="function"?selectableBits():[])
+        .map(b=>b?.name).filter(Boolean);
+    const bitName=pick(bits.length?bits:["Point"]);
     const bit=bitByName(bitName)||{name:bitName};
-    const height=role==="Attack"?pick([60,70]):60;
-    const num=pick(role==="Attack"?[1,3,4,5]:[5,6,7,9]);
-    const ratchet=ratchetByName(`${num}-${height}`)||{name:`${num}-${height}`,number:num,height};
+    const rats=(typeof RATCHETS!=="undefined"?RATCHETS:[]).filter(Boolean);
+    const ratchet=pick(rats.length?rats:[{name:"3-60",number:3,height:60}]);
     return {ratchet,bit};
 }
 
