@@ -1488,7 +1488,7 @@ function renderHowTo(){
             <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
             <p><strong>Ratchet.</strong> Height is undercut versus exposure. 60 sits low — extra smash, harder to snipe. 70 is the middle. 80 is tall and pokey: easier to lift, easier to burst, a little more scrape. Sides change mass, alignment, and burst risk. The bars on the card show what that does to your blade.</p>
             <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet. Taper, High Needle, and Elevate are not in the garage.</p>
-            <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is a short booth line, not a kit lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
+            <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is a short booth line, not a kit lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL spins both grades; the set-quality button locks yours while the CPU still rolls. After the reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-stats">
@@ -1508,7 +1508,7 @@ function renderHowTo(){
 
         <section class="menu-card howto-card" id="ht-launch">
             <h2>The launch screen</h2>
-            <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
+            <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL spins a quick reel for both sides. Picking the set grade locks yours and still rolls the CPU. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
             <p><strong>Angle.</strong> Flat is neutral. Slight lasts 2.5s: +1 Attack, +1 Knockback, −1 Defense, −1 Mobility. Hard lasts 3.3s at +2 / −2 on the same pair. Both add a short oval, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
             <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
             <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
@@ -2760,23 +2760,25 @@ function showLetItRip(){
 
     if(stage==="qualityRolling"||stage==="qualityReveal"){
         const rolling=stage==="qualityRolling";
+        const fixedPlayer=Game.player.launch.qualityMode==="Fixed";
         const playerQ=Game.player.launch.quality||"Okay";
         const cpuQ=Game.cpu.launch?.quality||"Okay";
         const ladder=["Horrible","Bad","Okay","Good","Perfect"];
-        const reel=(side,final)=>{
+        // Fixed quality locks YOU and only spins the CPU reel.
+        const reel=(side,final,spin)=>{
             const strip=ladder.concat(ladder).concat([final]);
-            return `<div class="launch-quality-column ${side}-quality-reveal${rolling?" is-reel":""}">
+            return `<div class="launch-quality-column ${side}-quality-reveal${spin?" is-reel":""}${!spin&&rolling&&side==="player"?" is-set":""}">
               <span class="launch-quality-who">${side==="player"?"YOU":"CPU"}</span>
-              ${rolling
+              ${spin
                 ? `<div class="swx-reel"><div class="swx-reel-strip">${strip.map(q=>`<b>${q}</b>`).join("")}</div></div>`
                 : `<strong>${final}</strong>`}
             </div>`;
         };
         controls.innerHTML=`
           <div class="launch-quality-reveal${rolling?" is-rolling":""}">
-            ${reel("player",playerQ)}
+            ${reel("player",playerQ, rolling && !fixedPlayer)}
             <div class="launch-quality-divider"><b>VS</b></div>
-            ${reel("cpu",cpuQ)}
+            ${reel("cpu",cpuQ, rolling)}
           </div>
         `;
         if(rolling && !Game.player.launch.qualityRollStarted){
@@ -2792,7 +2794,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRollStarted=0;
                     showLetItRip();
                 }
-            },900);
+            },700);
         }else if(!rolling && !Game.player.launch.qualityRevealStarted){
             Game.player.launch.qualityRevealStarted=Date.now();
             setTimeout(()=>{
@@ -2801,7 +2803,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRevealStarted=0;
                     showLetItRip();
                 }
-            },900);
+            },700);
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
@@ -2812,7 +2814,6 @@ function showLetItRip(){
               </button>
               <button class="menu-btn gold" id="rollQualityBtn" type="button">ROLL</button>
             </div>
-            <button class="menu-btn silver" id="backToVS" type="button">BACK</button>
           </div>
         `;
     }else{
@@ -2852,7 +2853,6 @@ function showLetItRip(){
     if(stage==="quality"){
         const fixedQualityBtn=controls.querySelector("#fixedQualityBtn");
         const rollQualityBtn=controls.querySelector("#rollQualityBtn");
-        const backToVS=controls.querySelector("#backToVS");
 
         if(fixedQualityBtn){
             fixedQualityBtn.onclick=()=>{
@@ -2863,8 +2863,9 @@ function showLetItRip(){
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.qualityMode="Fixed";
-                Game.player.launch.setupStage="qualityReveal";
-                Game.player.launch.qualityRevealStarted=0;
+                // Player stays on the set grade; CPU still gets the reel spin.
+                Game.player.launch.setupStage="qualityRolling";
+                Game.player.launch.qualityRollStarted=0;
                 showLetItRip();
             };
         }
@@ -2875,16 +2876,12 @@ function showLetItRip(){
                 Game.player.launch.quality=bumpLuckyLaunchQuality(Game.player.launch.quality);
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
+                Game.player.launch.qualityMode="Roll";
                 Game.player.launch.setupStage="qualityRolling";
                 Game.player.launch.qualityRollStarted=0;
                 showLetItRip();
             };
         }
-
-        if(backToVS) backToVS.onclick=()=>{
-            if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined") SpinWarsSandbox.showLab();
-            else showVS();
-        };
         return;
     }
 

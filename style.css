@@ -1960,7 +1960,7 @@ footer{
   display:flex;
   flex-direction:column;
   will-change:transform;
-  transition:transform .85s cubic-bezier(.12,.82,.18,1);
+  transition:transform .62s cubic-bezier(.12,.82,.18,1);
 }
 .swx-reel-strip b{
   height:34px;
@@ -1971,6 +1971,10 @@ footer{
   font-size:26px;
   font-weight:400;
   line-height:1;
+}
+.launch-quality-column.is-set strong{
+  color:#9dffb5;
+  text-shadow:0 0 10px rgba(90,255,150,.35);
 }
 
 #launchInfo{
