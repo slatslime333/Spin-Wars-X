@@ -292,18 +292,13 @@ function showHelp(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">SANDBOX</span>
-                <h1>HOW THE LAB WORKS</h1>
-                <p>Same stadium. No first to 7. Leave when you are done.</p>
+                <h1>THE LAB</h1>
+                <p>Same stadium. No first to 7. Leave when you're done.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p><strong>Player vs CPU.</strong> You drive the left Bey. The CPU drives the right. Same dash / kit as a live fight.</p>
-            <p><strong>Player vs Player.</strong> Two human docks. P1 is left (Space / E). P2 is right (Enter / Shift). Needs two Beys.</p>
-            <p><strong>CPU vs CPU.</strong> Watch mode. Both brains run. Combat buttons hide. 1 Bey + CPU is a solo spin with the CPU piloting.</p>
-            <p>OPEN LAB is the garage. 1 Bey watches a single kit. 2 Beys clash. Each side has the full blade / ratchet / bit pool. CHANGE opens a picker with tier, type, height filters. PRESETS roll an Attack, Tank, Stamina, Balance, or Gold kit. BOTH LAUNCHES sets Center, X-Rail, Clash, or Drop on both sides.</p>
-            <p>Human sides use the launch dropdowns. CPU sides pick like the live CPU unless you tick LOCK LAUNCH. AUTO quality still rolls each rip.</p>
-            <p>A Spin, Over, or Xtreme prints who scored and how many points. The session log keeps that list. It never ends the match. AUTO RELAUNCH rips the same kits again. LEAVE is the only exit.</p>
-            <p>Infinite charges stay on unless you flip them off. Tap a name in any live fight, including this lab, for a paused stat sheet.</p>
+            <p><strong>PvC</strong> — you left, CPU right. <strong>PvP</strong> — two docks (P1 Space/E, P2 Enter/Shift). <strong>CvC</strong> — watch mode.</p>
+            <p>Garage: 1 or 2 Beys, full parts, presets, launch picks. Scores log to the session — they never end the night. LEAVE exits.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
