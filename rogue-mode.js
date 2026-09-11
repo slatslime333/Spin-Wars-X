@@ -495,9 +495,10 @@ function bronzeBand(){
 
 /**
  * Bronze-form start for Silver/Gold blades.
- * Keeps the kit's personality (Attack stays attacky) but seats power a step
- * above a typical Bronze combo — never a crushed dump. Evolve / final clear
- * the startScale toward real stats. Bronze starters get no startScale.
+ * Keeps personality (Attack stays attacky) but seats near a Bronze opener —
+ * highs compress harder than before, dumps may fall (no soft 60 floor in
+ * app clamp). Evolve / final clear startScale toward real stats.
+ * Bronze starters get no startScale.
  */
 function makeStartScale(blade,ratchet,bit){
     const scale=emptyBonuses();
@@ -507,14 +508,16 @@ function makeStartScale(blade,ratchet,bit){
     const mine=comboBase(blade,ratchet,bit);
     const bandPow=powerOf(band);
     const minePow=powerOf(mine);
-    // Average-stat lead over the Bronze pack (powerOf is mean of six battle stats).
-    const powerLead=tier==="Gold"?3.6:1.8;
+    // Thin lead over the Bronze pack — Bronze-form, not compressed Silver/Gold.
+    const powerLead=tier==="Gold"?2.2:0.6;
     const targetPow=bandPow+powerLead;
     const meanMine=minePow;
     const meanBand=bandPow;
-    // Keep enough of the blade's shape that highs stay highs and dumps stay dumps.
-    const shapeKeep=tier==="Gold"?0.58:0.50;
-    const seatLead=tier==="Gold"?3.4:1.7;
+    // Less shape keep → highs fall closer to the band; dumps can sit under it.
+    // Silver specialists (Shark Edge) need a hard compress so Bronze-form
+    // does not still swing like mid-Silver.
+    const shapeKeep=tier==="Gold"?0.38:0.22;
+    const seatLead=tier==="Gold"?2.0:0.6;
 
     if(minePow>targetPow+0.15){
         const ideal={};
@@ -527,34 +530,43 @@ function makeStartScale(blade,ratchet,bit){
         const norm=targetPow/Math.max(1,idealPow);
         STATS.forEach(k=>{
             const have=Number(mine[k])||70;
-            const want=(Number(ideal[k])||70)*norm;
-            // Only pull highs down — never inflate dumps here (personality).
+            const bandK=Number(band[k])||meanBand;
+            let want=(Number(ideal[k])||70)*norm;
+            // Dumps (at/under band): allow a mild settle toward / under the band.
+            // Never inflate a dump up to the pack average here.
+            if(have<=bandK+0.5){
+                const dumpWant=Math.min(have, bandK-1.2+personalityBias(have,meanMine)*0.25);
+                want=Math.min(want, dumpWant);
+            }
             if(want<have) scale[k]=round(want-have);
         });
     }
-    // Floor: never land weaker than a typical Bronze + a hair.
+
+    // Soft floor only — small restore so awkward kits can still open weak.
     let scaled=mergeStats(mine,scale);
     let pow=powerOf(scaled);
-    const floor=bandPow+Math.max(0.6,powerLead*0.45);
+    const floor=bandPow+Math.max(0.15,powerLead*0.2);
     if(pow<floor){
         const needSum=(floor-pow)*STATS.length;
         const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
         if(totalCut>0){
-            const restore=Math.min(1,needSum/totalCut);
+            const restore=Math.min(0.55,needSum/totalCut);
             STATS.forEach(k=>{
                 if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1-restore));
             });
         }
     }
 
-    // Soft lift when the natural Silver/Gold kit is already near Bronze power —
-    // still bronze-form, but not weaker than the pack seat.
+    // Soft lift: identity highs only — never pad dumps back toward the band.
     scaled=mergeStats(mine,scale);
     pow=powerOf(scaled);
-    if(pow<targetPow-0.2){
+    if(pow<targetPow-0.35){
         const liftSum=(targetPow-pow)*STATS.length;
-        // Prefer lifting the blade's identity highs (personality), not flattening dumps.
-        const ranked=STATS.slice().sort((a,b)=>{
+        const ranked=STATS.slice().filter(k=>{
+            const have=Number(mine[k])||70;
+            const bandK=Number(band[k])||meanBand;
+            return have>bandK+0.5;
+        }).sort((a,b)=>{
             const da=(Number(mine[a])||70)-(Number(band[a])||70);
             const db=(Number(mine[b])||70)-(Number(band[b])||70);
             return db-da;
@@ -562,26 +574,23 @@ function makeStartScale(blade,ratchet,bit){
         let left=liftSum;
         ranked.forEach((k,i)=>{
             if(left<=0.05) return;
-            const weight=i<3?0.22:0.12;
+            const weight=i<3?0.28:0.14;
             const give=Math.min(left,liftSum*weight);
             scale[k]=round((Number(scale[k])||0)+give);
             left-=give;
         });
-        if(left>0.05){
-            const share=left/STATS.length;
-            STATS.forEach(k=>{scale[k]=round((Number(scale[k])||0)+share);});
-        }
+        // Leftover lift is dropped (do not sprinkle onto dumps).
     }
 
     // Soft ceiling so a perfect Gold kit cannot sit like a mid-Gold opener.
     scaled=mergeStats(mine,scale);
     pow=powerOf(scaled);
-    const ceiling=targetPow+(tier==="Gold"?2.2:1.4);
+    const ceiling=targetPow+(tier==="Gold"?1.6:1.0);
     if(pow>ceiling){
         const overSum=(pow-ceiling)*STATS.length;
         const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
         if(totalCut>0.5){
-            const deepen=Math.min(0.45,overSum/totalCut);
+            const deepen=Math.min(0.55,overSum/totalCut);
             STATS.forEach(k=>{
                 if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1+deepen));
             });
@@ -596,6 +605,10 @@ function makeStartScale(blade,ratchet,bit){
         }
     }
     return scale;
+}
+
+function personalityBias(have,meanMine){
+    return (Number(have)||70)-(Number(meanMine)||70);
 }
 
 /** Hub/garage preview: full combo for Bronze; Silver/Gold use live parts then bronze-form scale. */

@@ -2130,7 +2130,10 @@ function getCompatibilityScore(blade,ratchet,bit){
         getBitCompatibility(bladeData,bit)*0.45
     );
 }
-function clamp(value){return Math.max(60,Math.min(99,Math.round(value)));}
+/** Battle/display stat band. No soft 60 floor — dumps may sit low; keep 1 so UI/math never go ≤0. */
+const STAT_FLOOR=1;
+const STAT_CEIL=99;
+function clamp(value){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(value)));}
 
 function getBladePhysicalProfile(bladeData){
     const p=bladeData.physics||{},b=bladeData.behavior||{};
@@ -2361,7 +2364,8 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     return calculateOverallScoreV58(blade,ratchet,bit,stats);
 }
 
-function normalizePhysicalStat(v){return Math.max(60,Math.min(99,Math.round(v)));}
+function normalizePhysicalStat(v){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(v)));}
+/** Role 0..1 → rating on the old mid band (construction curve, not a dump floor). */
 function getBitRatedProperty(role){return 60+role*40;}
 function getRatchetRatedProperty(role){return 60+role*40;}
 
