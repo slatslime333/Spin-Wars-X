@@ -546,24 +546,94 @@ function rollThreeBuilds(fromBladeId){
     return picks.slice(0,3);
 }
 
-function awakeningBonuses(blade,level){
-    const lv=Number(level)||0;
-    const role=String(blade?.type||"Balance");
-    const b={attack:0,knockback:0,defense:0,mobility:0,balance:0,stamina:0,burst:0};
-    if(lv<=0) return b;
-    // Phase 3: slightly stronger role identity so Awakening feels worth claiming.
-    const amp=lv===1?1:lv===2?2:3.5;
-    if(role==="Attack"){
-        b.knockback=Math.round(2.5*amp);b.attack=Math.round(1.5*amp);b.mobility=Math.round(1.2*amp);
-    }else if(role==="Defense"){
-        b.defense=Math.round(2.5*amp);b.balance=Math.round(2.2*amp);b.stamina=Math.round(1.2*amp);
-    }else if(role==="Stamina"){
-        b.stamina=Math.round(2.5*amp);b.balance=Math.round(2.2*amp);b.defense=Math.round(1.2*amp);
-    }else{
-        b.attack=Math.round(1.2*amp);b.defense=Math.round(1.2*amp);b.stamina=Math.round(1.2*amp);b.balance=Math.round(1.2*amp);b.knockback=Math.round(amp);
-    }
-    return b;
+function bladePersonality(blade){
+    const role=String(blade?.type||blade?.role||"Balance");
+    if(role==="Attack"||role==="Defense"||role==="Stamina") return role;
+    return "Balance";
 }
+
+/** Small personality buffs. LV3 is the biggest step. */
+function awakeningBonuses(blade,level){
+    const lv=Math.max(0,Math.min(3,Number(level)||0));
+    const role=bladePersonality(blade);
+    const empty={attack:0,knockback:0,defense:0,mobility:0,balance:0,stamina:0,burst:0};
+    if(lv<=0) return empty;
+    const tables={
+        Attack:{
+            1:{attack:2,knockback:3,mobility:1},
+            2:{attack:3,knockback:5,mobility:2},
+            3:{attack:5,knockback:8,mobility:3}
+        },
+        Defense:{
+            1:{defense:3,balance:2,stamina:1},
+            2:{defense:5,balance:3,stamina:2},
+            3:{defense:8,balance:5,stamina:3}
+        },
+        Stamina:{
+            1:{stamina:3,balance:2,defense:1},
+            2:{stamina:5,balance:3,defense:2},
+            3:{stamina:8,balance:5,defense:3}
+        },
+        Balance:{
+            1:{attack:1,defense:1,stamina:1,balance:2,knockback:1},
+            2:{attack:2,defense:2,stamina:2,balance:3,knockback:2},
+            3:{attack:3,defense:3,stamina:3,balance:5,knockback:3}
+        }
+    };
+    return Object.assign({},empty,tables[role][lv]);
+}
+
+function awakeningBonusLine(blade,level){
+    const b=awakeningBonuses(blade,level);
+    const bits=STATS.map(k=>{
+        const n=Number(b[k])||0;
+        return n?`+${n} ${LABEL[k]||k.toUpperCase()}`:"";
+    }).filter(Boolean);
+    return bits.join(" · ")||"No buff";
+}
+
+function awakeningTrackHTML(id,opts){
+    opts=opts||{};
+    const blade=bladeById(id);
+    const prog=awakeningProgress(id);
+    const claimed=highestClaimedAwakening(id);
+    const role=bladePersonality(blade);
+    const next=[1,2,3].find(lv=>!prog.levels[lv].unlocked)||null;
+    const nextNeed=next?prog.levels[next].need:prog.max;
+    const pct=Math.max(0,Math.min(100,Math.round((prog.copies/Math.max(1,prog.max))*100)));
+    const steps=[1,2,3].map(lv=>{
+        const L=prog.levels[lv];
+        const tip=awakeningBonusLine(blade,lv);
+        if(L.unlocked&&!L.claimed){
+            return `<button type="button" class="rl-aw-step is-ready" data-aw="${id}:${lv}">
+                <b>CLAIM LV${lv}</b><small>${tip}</small>
+            </button>`;
+        }
+        if(L.claimed){
+            return `<div class="rl-aw-step is-claimed"><b>LV${lv} ON</b><small>${tip}</small></div>`;
+        }
+        return `<div class="rl-aw-step is-locked"><b>LV${lv}</b><small>${prog.copies}/${L.need} dups</small></div>`;
+    }).join("");
+    const status=claimed
+        ? `Active LV${claimed} · ${role}`
+        : `Dupes unlock levels · ${role}`;
+    const hint=next
+        ? `${prog.copies}/${nextNeed} to LV${next}`
+        : (claimed>=3?`Maxed · ${prog.copies} dups`:`${prog.copies}/${prog.max} dups`);
+    return `<section class="rl-aw-panel${opts.compact?" is-compact":""}">
+        <header class="rl-aw-head">
+            <div>
+                <span class="rl-aw-kicker">AWAKENING</span>
+                <b>${status}</b>
+            </div>
+            <span class="rl-aw-count">${hint}</span>
+        </header>
+        <div class="rl-aw-meter" aria-hidden="true"><i style="width:${pct}%"></i></div>
+        <div class="rl-aw-steps">${steps}</div>
+        ${claimed?`<p class="rl-aw-preview">If used on a run: <b>${awakeningBonusLine(blade,claimed)}</b></p>`:""}
+    </section>`;
+}
+
 
 /* ---------- Live run bridge ---------- */
 function clearLive(){
@@ -862,7 +932,7 @@ function showHelp(){
         </section>
         <section class="menu-card">
             <h2>Progress</h2>
-            <p>Dupes fill Awakening (5 / 10 / 15). Night pay scales off your starter OVERALL — stronger kit, thinner paycheck. Early nights are farmable; later ones squeeze.</p>
+            <p>Dupes unlock Awakening LV1–3 (5 / 10 / 15). Claim in Collection, then choose it at run start for a small personality buff (Attack/Defense/Stamina/Balance). LV3 is strongest. Night pay scales off starter OVERALL.</p>
         </section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
@@ -915,12 +985,21 @@ function inventoryCardHTML(id){
     const aw=highestClaimedAwakening(id);
     const gold=tier==="Gold"?account().goldRentals[id]:null;
     const ability=bladeAbilityLabel(b);
+    const role=bladePersonality(b);
+    const awChip=aw?`AW LV${aw}`:(prog.copies>0?`${prog.copies}/${prog.max} DUP`:"NEW");
     return `<button type="button" class="rl-inv-card tier-${tier.toLowerCase()}" data-inv="${id}">
         <div class="rl-inv-art">${art?`<img src="${art}" alt="">`:"<span></span>"}</div>
         <div class="rl-inv-copy">
-            <span class="rl-inv-chip">${tier.toUpperCase()}${ability?` · ${ability}`:""}${aw?` · AW${aw}`:""}</span>
+            <span class="rl-inv-chip">${tier.toUpperCase()} · ${role}${ability?` · ${ability}`:""}</span>
             <b>${b.name}</b>
-            <small class="rl-inv-meta">Dup ${prog.copies}/${prog.max}${gold?` · ${gold.runsLeft} runs`:""}</small>
+            <small class="rl-inv-meta">${awChip}${gold?` · ${gold.runsLeft} runs`:""}</small>
+            <div class="rl-inv-aw-mini" aria-hidden="true">
+                ${[1,2,3].map(lv=>{
+                    const L=prog.levels[lv];
+                    const st=L.claimed?"on":(L.unlocked?"ready":"");
+                    return `<i class="${st}"></i>`;
+                }).join("")}
+            </div>
             ${beyRatingsHTML(b)}
             <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
         </div>
@@ -1041,15 +1120,8 @@ function showCollectionDetail(id){
             ${beyRatingsHTML(b)}
             ${ability}
             <div class="rl-inv-stats">${beyStatBarsHTML(b)}</div>
-            <div class="rl-aw-row">
-                ${[1,2,3].map(lv=>{
-                    const L=prog.levels[lv];
-                    if(L.claimed) return `<span class="rl-aw on">LV${lv} READY</span>`;
-                    if(L.unlocked) return `<button type="button" class="rl-aw claim" data-aw="${id}:${lv}">CLAIM LV${lv}</button>`;
-                    return `<span class="rl-aw">LV${lv} · ${L.need}</span>`;
-                }).join("")}
-            </div>
-            <small class="rl-detail-dup">Duplicates ${prog.copies} / ${prog.max}${gold?` · ${gold.runsLeft} RUNS LEFT`:""}</small>
+            ${awakeningTrackHTML(id)}
+            <small class="rl-detail-dup">${bladePersonality(b)} blade · ${prog.copies}/${prog.max} duplicates${gold?` · ${gold.runsLeft} RUNS LEFT`:""}</small>
             ${tier!=="Gold"&&prog.copies>1
                 ?`<button type="button" class="menu-btn silver" id="rlSellBey">SELL DUP · $${cfg().SELL?.[tier]||0}</button>`
                 :""}
@@ -1496,10 +1568,14 @@ function buildCardHTML(build,idx){
     const bitArt=typeof bitSpritePath==="function"?bitSpritePath(build.bit):"";
     const tier=String(build.blade.tier||"");
     const ability=bladeAbilityLabel(build.blade);
+    const role=bladePersonality(build.blade);
     const aw=build.awakeningAvailable
-        ? `<span class="rl-aw-badge">AWAKENING ${build.awakeningLevel}</span>`
+        ? `<span class="rl-aw-badge">AW LV${build.awakeningLevel} · ${role}</span>`
         : "";
     const canScale=tier==="Silver"||tier==="Gold";
+    const scaleBtn=canScale
+        ? `<button type="button" class="rl-scale-btn rl-scale-btn-lg" data-scale-toggle="${idx}" aria-pressed="false">ROGUE STAT SCALE</button>`
+        : `<span class="rl-scale-btn rl-scale-btn-lg is-static" title="Bronze opens at full combo">BRONZE · FULL COMBO</span>`;
     return `<article class="rl-build-card tier-${tier.toLowerCase()}" data-build="${idx}" tabindex="0" role="button">
         ${aw}
         <div class="rl-build-arts">
@@ -1507,14 +1583,13 @@ function buildCardHTML(build,idx){
             <div class="rl-part-art">${ratArt?`<img src="${ratArt}" alt="">`:""}</div>
             <div class="rl-part-art">${bitArt?`<img src="${bitArt}" alt="">`:""}</div>
         </div>
-        <span class="rl-inv-chip">BUILD ${String.fromCharCode(65+idx)} · ${tier.toUpperCase()}${ability?` · ${ability}`:""}</span>
+        <span class="rl-inv-chip">BUILD ${String.fromCharCode(65+idx)} · ${tier.toUpperCase()} · ${role}${ability?` · ${ability}`:""}</span>
         <b>${build.blade.name}</b>
         <small>${build.ratchet.name} · ${build.bit.name}</small>
-        ${canScale?`<button type="button" class="rl-scale-btn" data-scale-toggle="${idx}" aria-pressed="false">ROGUE STAT SCALE</button>`
-            :`<span class="rl-scale-btn is-static" title="Bronze opens at full combo">BRONZE · NO SCALE</span>`}
         <div class="rl-build-stats" data-stats-slot="${idx}">
             ${buildStatsBlockHTML(build.combo,build.scaledCombo,false)}
         </div>
+        ${scaleBtn}
     </article>`;
 }
 
@@ -1563,7 +1638,7 @@ function showBuildDraft(goldId){
     <main class="home rogue-lite-draft rl-flow-screen swx-shell">
         ${bowl()}
         ${mark("CHOOSE YOUR BUILD",Game._rlEntryPaid?"ENTRY LOCKED":`ENTRY $${cost}`)}
-        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Cards show full combo; ROGUE STAT SCALE previews Bronze-form run stats. RUN PAY uses that run-start OVERALL. ${sideNote?` Then optional ${sideNote}.`:""}</p>
+        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Cards show full combo; the ROGUE STAT SCALE button under each card previews Bronze-form run stats. RUN PAY uses that run-start OVERALL. ${sideNote?` Then optional ${sideNote}.`:""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>
@@ -1602,13 +1677,25 @@ function onBuildPicked(idx){
 function showAwakeningPrompt(build,level){
     Game.screen="rogueLiteAwaken";
     const app=document.getElementById("app");
+    const role=bladePersonality(build.blade);
+    const line=awakeningBonusLine(build.blade,level);
+    const art=typeof bladeSpritePath==="function"?bladeSpritePath(build.blade):"";
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-awaken rl-flow-screen swx-shell">
         ${bowl()}
-        ${mark("AWAKENING",`LV.${level}`)}
-        <p class="rl-lede"><b>${build.blade.name}</b> has Awakening ready. Use it for this run only? Declining keeps it for later.</p>
+        ${mark("AWAKENING",`LV.${level} · ${role.toUpperCase()}`)}
+        <div class="rl-awaken-card">
+            <div class="rl-awaken-art">${art?`<img src="${art}" alt="">`:""}</div>
+            <div class="rl-awaken-copy">
+                <b>${build.blade.name}</b>
+                <span class="rl-inv-chip">${role.toUpperCase()} PERSONALITY</span>
+                <p>Small ${role.toLowerCase()}-leaning buff for this run only. LV3 is the strongest step.</p>
+                <p class="rl-awaken-buff"><span>RUN BUFF</span><b>${line}</b></p>
+            </div>
+        </div>
+        <p class="rl-lede rl-lede-tight">Use it now, or skip and keep Awakening for a later run.</p>
         <div class="rl-awaken-actions">
-            <button class="rip-btn" id="rlAwYes" type="button">USE AWAKENING</button>
+            <button class="rip-btn" id="rlAwYes" type="button">USE AWAKENING LV${level}</button>
             <button class="menu-btn silver" id="rlAwNo" type="button">NOT THIS RUN</button>
         </div>
     </main>`;
