@@ -512,6 +512,10 @@ function bronzeBand(){
  * highs compress harder than before, dumps may fall (no soft 60 floor in
  * app clamp). Evolve / final clear startScale toward real stats.
  * Bronze starters get no startScale.
+ *
+ * Glass cannons (Shark Edge): never up-normalize after dump compress — that
+ * used to re-inflate ATK/KB into mid-Silver. Soft lift stays mild, and
+ * identity highs hard-cap near the Bronze Attack neighborhood.
  */
 function makeStartScale(blade,ratchet,bit){
     const scale=emptyBonuses();
@@ -522,15 +526,16 @@ function makeStartScale(blade,ratchet,bit){
     const bandPow=powerOf(band);
     const minePow=powerOf(mine);
     // Thin lead over the Bronze pack — Bronze-form, not compressed Silver/Gold.
-    const powerLead=tier==="Gold"?2.2:0.6;
+    const powerLead=tier==="Gold"?2.2:0.35;
     const targetPow=bandPow+powerLead;
     const meanMine=minePow;
     const meanBand=bandPow;
-    // Less shape keep → highs fall closer to the band; dumps can sit under it.
-    // Silver specialists (Shark Edge) need a hard compress so Bronze-form
-    // does not still swing like mid-Silver.
-    const shapeKeep=tier==="Gold"?0.38:0.22;
-    const seatLead=tier==="Gold"?2.0:0.6;
+    // Shape keep preserves glass-cannon identity without mid-Silver seats.
+    // Silver spikes hard-cap later; Gold keeps a wider lead.
+    const shapeKeep=tier==="Gold"?0.38:0.30;
+    const seatLead=tier==="Gold"?2.0:0.4;
+    // Max seated high above the Bronze band (Shark Edge ATK ~ band+11 ≈ Viper).
+    const spikeCap=tier==="Gold"?16:11;
 
     if(minePow>targetPow+0.15){
         const ideal={};
@@ -540,7 +545,8 @@ function makeStartScale(blade,ratchet,bit){
             ideal[k]=(Number(band[k])||meanBand)+seatLead+personality*shapeKeep;
         });
         let idealPow=powerOf(ideal);
-        const norm=targetPow/Math.max(1,idealPow);
+        // Never upscale — dump-low ideals used to inflate highs back to Silver.
+        const norm=Math.min(1, targetPow/Math.max(1,idealPow));
         STATS.forEach(k=>{
             const have=Number(mine[k])||70;
             const bandK=Number(band[k])||meanBand;
@@ -563,7 +569,7 @@ function makeStartScale(blade,ratchet,bit){
         const needSum=(floor-pow)*STATS.length;
         const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
         if(totalCut>0){
-            const restore=Math.min(0.55,needSum/totalCut);
+            const restore=Math.min(tier==="Gold"?0.55:0.32,needSum/totalCut);
             STATS.forEach(k=>{
                 if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1-restore));
             });
@@ -571,9 +577,11 @@ function makeStartScale(blade,ratchet,bit){
     }
 
     // Soft lift: identity highs only — never pad dumps back toward the band.
+    // Silver lift is light so Shark Edge cannot rebuild mid-Silver spikes.
     scaled=mergeStats(mine,scale);
     pow=powerOf(scaled);
-    if(pow<targetPow-0.35){
+    const liftGate=tier==="Gold"?0.35:0.55;
+    if(pow<targetPow-liftGate){
         const liftSum=(targetPow-pow)*STATS.length;
         const ranked=STATS.slice().filter(k=>{
             const have=Number(mine[k])||70;
@@ -587,7 +595,7 @@ function makeStartScale(blade,ratchet,bit){
         let left=liftSum;
         ranked.forEach((k,i)=>{
             if(left<=0.05) return;
-            const weight=i<3?0.28:0.14;
+            const weight=tier==="Gold"?(i<3?0.28:0.14):(i<3?0.18:0.08);
             const give=Math.min(left,liftSum*weight);
             scale[k]=round((Number(scale[k])||0)+give);
             left-=give;
@@ -598,12 +606,12 @@ function makeStartScale(blade,ratchet,bit){
     // Soft ceiling so a perfect Gold kit cannot sit like a mid-Gold opener.
     scaled=mergeStats(mine,scale);
     pow=powerOf(scaled);
-    const ceiling=targetPow+(tier==="Gold"?1.6:1.0);
+    const ceiling=targetPow+(tier==="Gold"?1.6:0.45);
     if(pow>ceiling){
         const overSum=(pow-ceiling)*STATS.length;
         const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
         if(totalCut>0.5){
-            const deepen=Math.min(0.55,overSum/totalCut);
+            const deepen=Math.min(tier==="Gold"?0.55:0.70,overSum/totalCut);
             STATS.forEach(k=>{
                 if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1+deepen));
             });
@@ -617,6 +625,16 @@ function makeStartScale(blade,ratchet,bit){
             });
         }
     }
+
+    // Hard spike cap: identity highs may lead the Bronze band, not leave it.
+    STATS.forEach(k=>{
+        const have=Number(mine[k])||70;
+        const bandK=Number(band[k])||meanBand;
+        if(have<=bandK+0.5) return;
+        const seated=have+(Number(scale[k])||0);
+        const cap=bandK+spikeCap;
+        if(seated>cap) scale[k]=round(cap-have);
+    });
     return scale;
 }
 
