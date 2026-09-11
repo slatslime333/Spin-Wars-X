@@ -28,55 +28,59 @@ const SELL={
 /** First Rogue open: random 2 Bronze + 2 Silver via Gold pack theater. */
 const STARTER_GRANT={bronze:2,silver:2};
 
-/** Pack catalog — prices climb; Premium Gold is a grind, not a joke. */
+/** Pack catalog — slightly cheaper ladder; Premium Silver is the mid chase. */
 const PACKS={
     bey_bronze:{
         id:"bey_bronze",family:"bey",tier:"Bronze",name:"BRONZE BEY PACK",
-        price:120,blurb:"1 Bronze blade."
+        price:105,blurb:"1 Bronze blade."
     },
     bey_bronze_rare:{
         id:"bey_bronze_rare",family:"bey",tier:"Bronze",name:"RARE BRONZE BEY PACK",
-        price:200,blurb:"2 blades. Mostly Bronze. Tiny Silver chance."
+        price:175,blurb:"2 blades. Mostly Bronze. Tiny Silver chance."
     },
     bey_bronze_premium:{
         id:"bey_bronze_premium",family:"bey",tier:"Bronze",name:"PREMIUM BRONZE BEY PACK",
-        price:290,blurb:"3 blades. Mostly Bronze. Tiny Silver chance."
+        price:255,blurb:"3 blades. Mostly Bronze. Tiny Silver chance."
     },
     bey_silver:{
         id:"bey_silver",family:"bey",tier:"Silver",name:"SILVER BEY PACK",
-        price:260,blurb:"2 blades. Mostly Silver. Tiny Bronze chance."
+        price:230,blurb:"2 blades. Mostly Silver. Tiny Bronze chance."
     },
     bey_silver_rare:{
         id:"bey_silver_rare",family:"bey",tier:"Silver",name:"RARE SILVER BEY PACK",
-        price:380,blurb:"3 Silver blades."
+        price:335,blurb:"3 Silver blades."
+    },
+    bey_silver_premium:{
+        id:"bey_silver_premium",family:"bey",tier:"Silver",name:"PREMIUM SILVER BEY PACK",
+        price:385,blurb:"5 blades. 3 Silver locked. 1 high-odds Silver. 1 small Gold chance."
     },
     bey_gold:{
         id:"bey_gold",family:"bey",tier:"Gold",name:"GOLD BEY PACK",
-        price:420,blurb:"1 Gold rental blade."
+        price:370,blurb:"1 Gold rental blade."
     },
     bey_gold_rare:{
         id:"bey_gold_rare",family:"bey",tier:"Gold",name:"RARE GOLD BEY PACK",
-        price:560,blurb:"1 Gold + 1 flex + 2 Bronze."
+        price:490,blurb:"1 Gold + 1 flex + 2 Bronze."
     },
     bey_gold_premium:{
         id:"bey_gold_premium",family:"bey",tier:"Gold",name:"PREMIUM GOLD BEY PACK",
-        price:780,blurb:"5 cards. Guaranteed Gold chase."
+        price:685,blurb:"5 cards. Guaranteed Gold chase."
     },
     part_bronze:{
         id:"part_bronze",family:"part",tier:"Bronze",name:"BRONZE PART PACK",
-        price:110,blurb:"1 temp part. Low bit / 60–70 odds."
+        price:95,blurb:"1 temp part. Low bit / 60–70 odds."
     },
     part_silver:{
         id:"part_silver",family:"part",tier:"Silver",name:"SILVER PART PACK",
-        price:190,blurb:"2 temp parts. Mid bit / 60–70. Tiny 80."
+        price:165,blurb:"2 temp parts. Mid bit / 60–70. Tiny 80."
     },
     part_gold:{
         id:"part_gold",family:"part",tier:"Gold",name:"GOLD PART PACK",
-        price:310,blurb:"3 temp parts. High bit / 60. No 80."
+        price:270,blurb:"3 temp parts. High bit / 60. No 80."
     },
     mod_pack:{
         id:"mod_pack",family:"mod",tier:"Gold",name:"MODIFIER PACK",
-        price:340,blurb:"2 random run mods from the Rogue pool. Pick one at run start."
+        price:300,blurb:"2 random run mods from the Rogue pool. Pick one at run start."
     }
 };
 
@@ -86,14 +90,14 @@ function chance(p){return Math.random()<clamp01(p);}
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?14:7;
-    const base=win?(16+m):(8+Math.floor(m/2));
-    return base+(opts.shark&&win?60:0);
+    if(opts.endless) return win?16:8;
+    const base=win?(18+m):(9+Math.floor(m/2));
+    return base+(opts.shark&&win?68:0);
 }
 
 /**
  * Lite-only night pay from starter kit OVERALL (locked at run commit).
- * Tuned to pack prices: Bronze 120 / Silver 260 / Gold 420 / Premium Gold 780.
+ * Tuned to pack prices: Bronze 105 / Silver 230 / Gold 370 / Premium Gold 685.
  * Full 30-win clear base ≈ 1005 before this mult (then optional earnBoost ×1.35).
  *   low OVR (~62–68) → ×1.22 ≈ $1226 (Premium Gold + leftover)
  *   mid  (~78)       → ×1.03 ≈ $1038 (near base)
@@ -174,7 +178,9 @@ global.SpinWarsRogueLiteConfig={
         rareGoldFlexGold:0.08,
         rareGoldFlexSilver:0.92,
         premiumFlexGold:0.72,
-        premiumThirdGold:0.28
+        premiumThirdGold:0.28,
+        premiumSilverFlexSilver:0.88,
+        premiumSilverGold:0.10
     }
 };
 })(typeof window!=="undefined"?window:globalThis);
