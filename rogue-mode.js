@@ -953,6 +953,14 @@ function makePlus3Card(){
     card.body="Random stat +3. Clean bump.";
     return card;
 }
+
+function playerAbilityIsPassive(){
+    if(typeof SpinWarsAbilities==="undefined") return false;
+    const blade=Game.player?.blade;
+    const id=SpinWarsAbilities.kitId?.(blade);
+    const meta=id?(SpinWarsAbilities.kitMeta?.(id)||SpinWarsAbilities.META?.[id]):null;
+    return !!(meta && meta.active===false);
+}
 function shopBlocked(id){
     const r=run();
     if(!r||!id) return false;
@@ -962,7 +970,7 @@ function shopBlocked(id){
     if(id==="blessed") return !!r.blessed;
     if(id==="earnBoost") return !!r.earnBoost;
     if(id==="dashHaste") return !!r.matchBuffs?.dashHaste;
-    if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1;
+    if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1 || playerAbilityIsPassive();
     return false;
 }
 function cardKey(card){
@@ -1644,6 +1652,10 @@ function applyAbilityChargeCard(card){
     const r=run();
     ensureRunShape(r);
     const before={...playerEffective()};
+    // Passive kits never hold charges — skip the rare so it cannot pad a Free Spin / Double Edge run.
+    if(playerAbilityIsPassive()){
+        return {before,after:{...playerEffective()},card,skipped:true};
+    }
     r.abilityBonus=(Number(r.abilityBonus)||0)+1;
     if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.grantCharge && NEW_BATTLE?.active){
         SpinWarsAbilities.grantCharge("player");

@@ -184,7 +184,17 @@
         </details>`;
     }
 
+    function sideBlade(side){
+        return bey(side)?.blade || global.Game?.[side]?.blade || null;
+    }
+    /** Passive kits (Free Spin / Double Edge) never hold match charges. */
+    function sideAbilityActive(side){
+        const meta=kitMeta(kitId(sideBlade(side)));
+        if(!meta) return true;
+        return !!meta.active;
+    }
     function abilityMax(side){
+        if(!sideAbilityActive(side)) return 0;
         if(typeof global.SpinWarsSandbox!=="undefined" && global.SpinWarsSandbox.isActive?.() && global.SpinWarsSandbox.ensure?.().infiniteCharges){
             return 99;
         }
@@ -196,6 +206,7 @@
     }
     function grantCharge(side){
         const max=abilityMax(side);
+        if(max<=0) return;
         state.charges[side]=Math.min(max,(state.charges[side]||0)+1);
         persistCharges();
         updateDock();
