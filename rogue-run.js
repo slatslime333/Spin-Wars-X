@@ -675,6 +675,7 @@ function showPlayConfirm(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="menu rr-shell">
+        ${bowl()}
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
@@ -759,6 +760,7 @@ function showGarage(){
     };
     app.innerHTML=`<div class="background stadium"></div>
     <main class="menu rr-shell rr-garage">
+        ${bowl()}
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
@@ -821,6 +823,7 @@ function showTrack(focusN){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="menu rr-shell rr-track">
+        ${bowl()}
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
@@ -908,6 +911,7 @@ function showHelp(){
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background"></div>
     <main class="menu rogue-help">
+        ${bowl()}
         <div class="selection-header">
             <div class="selection-icon">X</div>
             <div>
