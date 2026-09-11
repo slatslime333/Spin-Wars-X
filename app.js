@@ -1797,7 +1797,7 @@ function renderBladeDraft(){
         ? `ROGUE · ${String(Game.selection?.rogueTier||"").toUpperCase()}`
         : (Game.mode==="custom"?"CUSTOM · ALL BLADES":Game.mode.toUpperCase()+" · BLADE POOL");
     const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${league}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen swx-shell"><div class="selection-header"><div class="selection-icon">✦</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BLADE</h1><p>${league}</p></div></div><section class="menu-card selection-card blade-pick-grid" id="bladeContainer"></section></main>`;
     const container=document.getElementById("bladeContainer"); pool.slice(safe*size,(safe+1)*size).forEach(blade=>container.appendChild(createBladeCard(blade)));
     if(total>1){
         const nav=document.createElement("div"); nav.className="selection-nav";;
@@ -2045,7 +2045,7 @@ function ratchetCard(r){
 
 function showRatchetPlaceholder(){
     Game.screen="ratchetDraft"; const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">⚙</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE RATCHET</h1><p>${Game.mode==="custom"?"CUSTOM · ALL RATCHETS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="ratchetContainer"></section></main>`;
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen swx-shell"><div class="selection-header"><div class="selection-icon">⚙</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE RATCHET</h1><p>${Game.mode==="custom"?"CUSTOM · ALL RATCHETS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="ratchetContainer"></section></main>`;
     const container=document.getElementById("ratchetContainer");
     if(Game.mode==="custom"){
         Game.selection=Game.selection||{}; Game.selection.ratchetPool=[...RATCHETS]; Game.selection.ratchetPage=Game.selection.ratchetPage||0; renderRatchetPage(); return;
@@ -2095,7 +2095,7 @@ function bitCard(bit){
 
 function showBitDraft(){
     Game.screen="bitDraft"; const app=document.getElementById("app");
-    app.innerHTML=`<div class="background"></div><main class="menu selection-screen"><div class="selection-header"><div class="selection-icon">◉</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BIT</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BITS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="bitContainer"></section></main>`;
+    app.innerHTML=`<div class="background"></div><main class="menu selection-screen swx-shell"><div class="selection-header"><div class="selection-icon">◉</div><div><span class="eyebrow">BUILD YOUR COMBO</span><h1>CHOOSE BIT</h1><p>${Game.mode==="custom"?"CUSTOM · ALL BITS":Game.player.blade.name}</p></div></div><section class="menu-card selection-card" id="bitContainer"></section></main>`;
     if(Game.mode==="custom"){Game.selection=Game.selection||{};Game.selection.bitPool=selectableBits();Game.selection.bitPage=Game.selection.bitPage||0;renderBitPage();return;}
     const c=document.getElementById("bitContainer");
     const pool=Game.mode==="rogue" && Game.selection?.bitPool?.length
@@ -2536,7 +2536,7 @@ function showComboCard(){
         ?SpinWarsVsCall.renderHTML(Game.player,Game.cpu,playerCombo,cpuCombo,playerPlate,cpuPlate)
         :"";
     if(typeof SpinWarsVsCall!=="undefined"&&SpinWarsVsCall.resetMatch) SpinWarsVsCall.resetMatch();
-    app.innerHTML=`<div class="background"></div><main class="vs-screen">
+    app.innerHTML=`<div class="background"></div><main class="vs-screen swx-shell">
       ${vsCall}
       <section class="vs-board">
         ${createComboSummaryCard("player",{...Game.player,...playerCombo,stats:playerCombo.stats,power:playerCombo.power,ovr:playerCombo.ovr,meta:playerCombo.ovr,statDelta:playerPlate?.delta||playerCombo.deltaFromBlade,rogueMod:playerCombo.mod,rogueStack:playerPlate?playerPlate.stackHTML:"",plateTier:playerPlate?.plateTier,enhanced:playerPlate?.enhanced,awakeningLevel:playerPlate?.awakeningLevel||Game.rogue?.awakeningLevel||0})}

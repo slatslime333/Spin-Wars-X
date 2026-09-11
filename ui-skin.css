@@ -1059,3 +1059,181 @@
 .rl-pack-card button{
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
 }
+
+
+/* =========================================================
+   PART 3 — Packs Shop tabs + sharper VS / selection / dock
+   ========================================================= */
+
+.rl-shop-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  width:min(640px,100%);
+  margin:0 auto;
+  flex:0 0 auto;
+}
+.rl-shop-tab{
+  appearance:none;
+  border:1.5px solid rgba(240,180,41,.28);
+  background:linear-gradient(180deg,#16121a,#0c0a10);
+  color:#c9d2dc;
+  font-family:Staatliches,Impact,sans-serif;
+  letter-spacing:.14em;
+  font-size:15px;
+  padding:10px 8px;
+  cursor:pointer;
+  border-radius:0;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  box-shadow:0 6px 0 #050308;
+  transition:border-color .14s ease, color .14s ease, transform .14s ease, filter .14s ease;
+}
+.rl-shop-tab.is-on,
+.rl-shop-tab[aria-selected="true"]{
+  border-color:var(--swx-edge-hot);
+  color:#7dff9f;
+  background:
+    linear-gradient(180deg,rgba(26,209,90,.16),transparent 55%),
+    linear-gradient(180deg,#142016,#0a100c);
+}
+.rl-shop-tab:active{transform:translateY(2px);box-shadow:0 4px 0 #050308}
+.rl-shop-panel[hidden]{display:none !important}
+.rl-shop-panel{animation:swxShopPanel .18s ease-out}
+@keyframes swxShopPanel{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .rl-shop-panel{animation:none!important}
+}
+
+/* Selection + VS locked shells */
+.menu.selection-screen.swx-shell,
+.vs-screen.swx-shell{
+  height:100dvh;
+  height:100svh;
+  max-height:100dvh;
+  max-height:100svh;
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+  box-sizing:border-box;
+  padding:
+    max(10px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(72px, calc(18px + env(safe-area-inset-bottom, 0px)))
+    max(12px, env(safe-area-inset-left, 0px)) !important;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:min(980px,100%);
+  margin:0 auto;
+}
+.menu.selection-screen.swx-shell .selection-header,
+.vs-screen.swx-shell .vs-call{
+  flex:0 0 auto;
+}
+.menu.selection-screen.swx-shell .selection-card,
+.vs-screen.swx-shell .vs-board{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.menu.selection-screen.swx-shell .selection-header{
+  border-bottom:1.5px solid rgba(240,180,41,.22);
+  padding-bottom:10px;
+}
+.menu.selection-screen.swx-shell .selection-icon{
+  border-radius:0 !important;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  border:1.5px solid rgba(26,209,90,.4);
+  background:#07140c;
+  color:#7dff9f;
+  box-shadow:0 6px 0 #050308;
+}
+.menu.selection-screen.swx-shell .menu-card,
+.menu.selection-screen.swx-shell .selection-card,
+.menu.selection-screen.swx-shell .blade-card,
+.menu.selection-screen.swx-shell .part-select-card{
+  border-radius:0 !important;
+  border-width:1.5px;
+  clip-path:polygon(
+    var(--swx-cut-sm) 0,
+    100% 0,
+    100% calc(100% - var(--swx-cut-sm)),
+    calc(100% - var(--swx-cut-sm)) 100%,
+    0 100%,
+    0 var(--swx-cut-sm)
+  );
+  box-shadow:
+    0 8px 0 #050308,
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+/* VS plates — harder cut, harder step shadow */
+.vs-screen.swx-shell .vs-plate,
+.vs-plate{
+  border-radius:0 !important;
+  border-width:1.5px !important;
+  clip-path:polygon(
+    var(--swx-cut) 0,
+    100% 0,
+    100% calc(100% - var(--swx-cut)),
+    calc(100% - var(--swx-cut)) 100%,
+    0 100%,
+    0 var(--swx-cut)
+  );
+}
+.vs-screen.swx-shell .vs-plate.you{
+  box-shadow:0 10px 0 #0c6b32, 0 14px 0 rgba(0,0,0,.35) !important;
+}
+.vs-screen.swx-shell .vs-plate.them{
+  box-shadow:0 10px 0 #7a1020, 0 14px 0 rgba(0,0,0,.35) !important;
+}
+.vs-screen.swx-shell .vs-call,
+.vs-screen.swx-shell .rip-btn,
+.vs-screen.swx-shell .menu-btn{
+  border-radius:0 !important;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+.vs-screen.swx-shell .vs-stamp{
+  border-radius:0 !important;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  letter-spacing:.12em;
+}
+
+/* Battle dock — sharper thumb chrome */
+.battle-shell .combat-dock,
+.battle-shell .launch-dock,
+.battle-shell #launchDock{
+  border-radius:0;
+}
+.battle-shell .combat-btn,
+.battle-shell .dash-btn,
+.battle-shell .ability-btn,
+.battle-shell .menu-btn,
+.battle-shell .rip-btn,
+.battle-shell .launch-tilt-btn,
+.battle-shell button{
+  border-radius:0 !important;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  box-shadow:0 6px 0 #050308 !important;
+}
+.battle-shell .battle-callout,
+.battle-shell .live-booth,
+.battle-shell .health-card,
+.battle-shell .hud-chip,
+.battle-shell .rpm-card{
+  border-radius:0 !important;
+  clip-path:polygon(
+    var(--swx-cut-xs) 0,
+    100% 0,
+    100% calc(100% - var(--swx-cut-xs)),
+    calc(100% - var(--swx-cut-xs)) 100%,
+    0 100%,
+    0 var(--swx-cut-xs)
+  );
+}
