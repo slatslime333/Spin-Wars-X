@@ -234,6 +234,17 @@ footer{
   isolation:isolate;
 }
 
+
+.rl-hud-money,
+.rl-hud-col{
+  background-color:#121018 !important;
+  background-image:linear-gradient(180deg,#1c1824,#0f0d14) !important;
+}
+.home-door,
+.home-door.rip{
+  background-color:#141018 !important;
+}
+
 /* Soft dark plate behind UI clusters — hides bowl bleed through cut-corner clip-paths. */
 .rl-hud,
 .rl-doors,
