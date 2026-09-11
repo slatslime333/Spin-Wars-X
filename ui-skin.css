@@ -351,10 +351,6 @@
 }
 .home.lobby .swx-wordmark-spin,
 .home.lobby .swx-wordmark-wars{font-size:clamp(44px,10vw,72px)}
-@media (max-width:420px){
-  .swx-primary{grid-template-columns:1fr}
-  .swx-hero{min-height:108px!important}
-}
 .home.lobby .home-bowl{
   top:38%;
   max-height:34vh;
@@ -382,8 +378,7 @@
   letter-spacing:.05em;
   line-height:1.05;
   max-width:100%;
-  overflow-wrap:anywhere;
-  word-break:break-word;
+  white-space:nowrap;
 }
 .swx-hero-campaign{
   border-color:#3a3328!important;
@@ -392,6 +387,13 @@
 }
 .swx-hero-campaign .home-door-kicker{color:#c4a056}
 .swx-hero-campaign b{color:#f6f0e6}
+/* Narrow phones: stack primary doors so CAMPAIGN never clips (must follow .swx-primary). */
+@media (max-width:420px){
+  .swx-primary{grid-template-columns:1fr}
+  .swx-hero{min-height:100px!important;padding:14px 14px 12px 12px!important}
+  .swx-hero b{font-size:clamp(26px,8vw,34px);letter-spacing:.06em}
+  .home-door.swx-hero .home-door-glyph{width:40px;height:40px}
+}
 .swx-hero-mark{
   position:absolute;right:16px;top:14px;
   font-size:10px;font-weight:800;letter-spacing:.2em;color:rgba(216,255,228,.4);
@@ -790,9 +792,23 @@
 
 /* Short hubs: center the stack so doors are not pinned to the top. */
 .home.rr-shell.rr-hub,
+.home.rr-shell,
 .home.sandbox-landing,
 .home.league-board{
   justify-content:center !important;
+}
+/* Campaign hub can grow tall (loadout + doors) — scroll the shell, never clip doors. */
+.home.rr-shell.rr-hub{
+  overflow-x:hidden;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+}
+.home.rr-shell .rr-starter-row{
+  flex:0 1 auto;
+  min-height:0;
+  width:min(440px,100%);
+  margin:0 auto;
 }
 
 .swx-shell-scroll,
@@ -816,14 +832,20 @@
 .home.rr-hub .rr-doors,
 .home.sandbox-landing .swx-nav,
 .home.league-board .home-leagues{
+  flex:0 0 auto;
+  min-height:0;
+  justify-content:center;
+  overflow:visible;
+}
+.home.rr-hub .rr-loadout{
   flex:0 1 auto;
   min-height:0;
-  max-height:100%;
-  justify-content:center;
+  max-height:min(42dvh,360px);
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
 }
 .home.rr-hub > .home-mark,
 .home.rr-hub > .rr-hud,
-.home.rr-hub > .rr-loadout,
 .home.sandbox-landing > .home-mark,
 .home.league-board > .home-mark{
   flex:0 0 auto;
@@ -1318,8 +1340,9 @@
 
 .home-door.swx-hero-campaign b,
 .home-door[data-home="campaign"] b{
-  font-size:clamp(20px,5.8vw,36px);
+  font-size:clamp(18px,5.2vw,36px);
   letter-spacing:.04em;
+  white-space:nowrap;
 }
 
 .rr-scale-btn,
@@ -1330,14 +1353,34 @@
   font-size:clamp(10px,2.8vw,12px);
 }
 
+@media (max-width:520px) and (min-width:421px){
+  /* Mid phones keep 2-col — shrink glyph/title so CAMPAIGN stays one line. */
+  .home.lobby .swx-hero{
+    min-height:118px !important;
+    padding:14px 12px 12px 10px !important;
+    column-gap:8px;
+  }
+  .home.lobby .swx-hero .home-door-glyph{
+    width:36px;height:36px;
+  }
+  .home.lobby .swx-hero b{
+    font-size:clamp(16px,4.6vw,24px);
+    letter-spacing:.03em;
+  }
+  .home.lobby .swx-hero .home-door-kicker{
+    font-size:8px;letter-spacing:.12em;
+  }
+  .home.lobby .swx-hero .home-door-chev{display:none}
+}
+
 @media (max-width:400px){
   .swx-hero{
-    min-height:112px !important;
-    padding:14px 12px 12px 10px !important;
+    min-height:96px !important;
+    padding:12px 12px 12px 10px !important;
   }
   .swx-hero b{
-    font-size:clamp(18px,6.4vw,26px);
-    letter-spacing:.03em;
+    font-size:clamp(24px,7.5vw,30px);
+    letter-spacing:.05em;
   }
   .swx-hero .home-door-kicker,
   .home-door.swx-hero-campaign .home-door-kicker{
@@ -1348,6 +1391,7 @@
   .swx-sec .home-door b{
     font-size:14px;
     letter-spacing:.06em;
+    white-space:nowrap;
   }
   .home.rr-hub .rr-loadout{
     grid-template-columns:1fr;

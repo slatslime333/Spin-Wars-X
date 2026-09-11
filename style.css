@@ -4715,7 +4715,7 @@ button:focus-visible{
 }
 .rl-open-stage{
   width:min(960px,100%);
-  flex:1 1 auto;
+  flex:0 1 auto;
   min-height:0;
   display:grid;
   place-items:center;
