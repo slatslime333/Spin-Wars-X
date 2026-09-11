@@ -854,17 +854,14 @@ function showHelp(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">CAMPAIGN</span>
-                <h1>HOW THIS LOCKER WORKS</h1>
-                <p>Same stadium as Tier Rogue. Longer night. Your collection is the paycheck.</p>
+                <h1>THE LOCKER</h1>
+                <p>Same stadium. Longer climb. Your collection pays the bills.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p><strong>EXP</strong> only levels the account. <strong>Money</strong> only buys Track rows. They never swap jobs.</p>
-            <p>Garage equips what you own. Track is the full unlock order — locked rows still show name, level, and price. PLAY snapshots the hub Bey. A night is first to 7, shop cards after a win, same as Tier Rogue.</p>
-            <p>Silver and Gold blades open in Bronze form — same personality, highs pulled toward Bronze with a small lead. Evolve through the night the same way as Tier Rogue. Gold never Enhances. Form cards stop in endless.</p>
-            <p>Difficulty is the climb, not the blade sticker. Early nights stay farmable on starter kits so you can earn EXP and money. Better parts make later nights easier. Uncommon <strong>Payday</strong> pays +35% money and EXP for the rest of that run.</p>
-            <p>Minis at 10 and 20. Shark Scale at 30. Then endless. Mid-run reforges stay on that night only and add a small +1 chip. They do not rewrite the Garage.</p>
-            <p>Nights 26–29 can roll any face. PC: Space dashes, M pops the kit. Those hints only print on a pointer desktop.</p>
+            <p><strong>EXP</strong> levels the account. <strong>Money</strong> buys Track rows. Garage equips what you own.</p>
+            <p>PLAY locks the hub Bey into a night (first to 7, shop after wins). Silver / Gold start in Bronze form and can evolve on the climb.</p>
+            <p>Minis at 10 &amp; 20. Shark Scale at 30. Then endless. Early nights are farmable — the squeeze is the climb.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showHub()));

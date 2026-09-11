@@ -2803,13 +2803,13 @@ function showHelp(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">ROGUE</span>
-                <h1>HOW A RUN WORKS</h1>
-                <p>Use Pack Rogue or Campaign from the title screen.</p>
+                <h1>PICK A DOOR</h1>
+                <p>Pack Rogue or Campaign from the title screen.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p><strong>Rogue</strong> is the pack-and-build night: collect blades, draft kits, climb 30 matches.</p>
-            <p><strong>Campaign</strong> is the locker climb: Garage, Track, money and EXP, then a 30-night run.</p>
+            <p><strong>Rogue</strong> — packs, draft, climb 30.</p>
+            <p><strong>Campaign</strong> — locker money/EXP, then a long climb.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));

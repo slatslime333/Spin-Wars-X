@@ -846,32 +846,16 @@ function showHelp(){
     <main class="home rogue-lite-help">
         ${mark("ROGUE","HELP")}
         <section class="menu-card">
-            <h2>What this is</h2>
-            <p>Rogue is a pack-and-build night. You collect blades, draft three random kits, pick one, then climb 30 matches. Ratchets and bits are never permanent here — only blades (and temp part packs).</p>
+            <h2>The night</h2>
+            <p>Open packs → draft 3 kits → pick 1 → climb 30. Only blades stick. Ratchets / bits are temp.</p>
         </section>
         <section class="menu-card">
-            <h2>First pack</h2>
-            <p>Your first Rogue open tears a Silver starter Bey pack: 2 random Bronze and 2 random Silver from the live pool. After that, packs are bought in the Marketplace.</p>
+            <h2>Packs &amp; gold</h2>
+            <p>Bey packs unlock blades. Part / mod packs are run fuel. Gold blades are rentals (${cfg().GOLD_DEFAULT_RUNS||2} runs). Shark Scale is a boss, not a drop.</p>
         </section>
         <section class="menu-card">
-            <h2>Packs</h2>
-            <p>Bey packs grant every revealed blade. Part packs give temporary ratchet/bit cards for a later run start. Modifier packs roll random mods from the Rogue pool — you keep those cards and pick one when a night begins.</p>
-        </section>
-        <section class="menu-card">
-            <h2>Awakening</h2>
-            <p>Duplicates fill 5 / 10 / 15. Claimed Awakening can turn on when that Bey is drafted. Decline and it stays for later. Enhance / Evolve mid-run are different.</p>
-        </section>
-        <section class="menu-card">
-            <h2>Gold</h2>
-            <p>Gold blades are rentals. Pack Gold starts with ${cfg().GOLD_DEFAULT_RUNS||2} runs — they expire when those runs are spent. Shark Scale stays a boss — not a pack drop.</p>
-        </section>
-        <section class="menu-card">
-            <h2>Night pay</h2>
-            <p>Money from each match scales off the starter kit’s OVERALL when you commit the run — not mid-run shops. Stronger kits earn less; weaker kits earn a little more so pack grinding stays worth it. Pack prices stay fixed (Bronze ~$120, Gold ~$420, Premium Gold ~$780).</p>
-        </section>
-        <section class="menu-card">
-            <h2>Difficulty</h2>
-            <p>Nights 1–5 stay farmable on a starter kit. Later matches and bosses squeeze harder. A deeper blade collection raises CPU pressure — Awakening, Gold, temp parts, and modifiers are how you answer it.</p>
+            <h2>Progress</h2>
+            <p>Dupes fill Awakening (5 / 10 / 15). Night pay scales off your starter OVERALL — stronger kit, thinner paycheck. Early nights are farmable; later ones squeeze.</p>
         </section>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
