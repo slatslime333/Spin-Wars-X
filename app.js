@@ -1382,7 +1382,18 @@ const SWX_DOOR_GLYPH={
     start:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h16M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="miter"/></svg>`,
     market:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16l-1.5 11H5.5L4 8z" stroke="currentColor" stroke-width="1.8"/><path d="M9 8V6a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.8"/></svg>`,
     collection:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z" stroke="currentColor" stroke-width="1.8"/></svg>`,
-    help:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.5a2.5 2.5 0 114.2 1.8C12.8 12.2 12 12.8 12 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/><path d="M12 17.5h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg>`
+    help:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M9.5 9.5a2.5 2.5 0 114.2 1.8C12.8 12.2 12 12.8 12 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/><path d="M12 17.5h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"/></svg>`,
+    /* Part 2 — Campaign / Sandbox / league glyphs */
+    play:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 5l14 7-14 7V5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="miter"/></svg>`,
+    garage:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10l9-6 9 6v10H3V10z" stroke="currentColor" stroke-width="1.8"/><path d="M9 20v-6h6v6" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    track:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18V6h4l3 8 3-8h4v12" stroke="currentColor" stroke-width="1.8"/><path d="M4 14h16" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    board:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h14v16H5V4z" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    reset:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 8a7 7 0 119 9.9" stroke="currentColor" stroke-width="1.8"/><path d="M6 3v5h5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    pve:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="8" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="12" r="4" stroke="currentColor" stroke-width="1.8" stroke-dasharray="2.5 2"/></svg>`,
+    pvp:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="7" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M11 12h2" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    watch:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    lab:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6v6l4 10H5l4-10V3z" stroke="currentColor" stroke-width="1.8"/><path d="M9 9h6" stroke="currentColor" stroke-width="1.8"/></svg>`,
+    league:`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v3a5 5 0 01-5 5 5 5 0 01-5-5V4z" stroke="currentColor" stroke-width="1.8"/><path d="M12 12v3M8 20h8M6 7H4v1a3 3 0 003 3M18 7h2v1a3 3 0 01-3 3" stroke="currentColor" stroke-width="1.8"/></svg>`
 };
 
 function homeDoorHTML(opts){
@@ -1607,26 +1618,28 @@ function renderLeagueSelect(){
 
     app.innerHTML=`
     <div class="background stadium"></div>
-    <main class="home league-board">
+    <main class="home league-board swx-shell">
         ${homeBowlHTML()}
         ${homeMarkHTML({compact:true,kicker:"QUICK PLAY",tag:""})}
-        <nav class="home-leagues board" aria-label="Choose a league">
-            <button class="home-league featured" data-quick-match="1" type="button">
-                <span class="home-league-copy"><b>QUICK MATCH</b><small>Random · reroll</small></span>
+        <nav class="home-leagues board swx-shell-scroll" aria-label="Choose a league">
+            <button class="home-league featured swx-plate" data-quick-match="1" type="button">
+                <span class="home-league-rail" aria-hidden="true"></span>
+                <span class="home-door-glyph" data-glyph="league" aria-hidden="true">${SWX_DOOR_GLYPH.league}</span>
+                <span class="home-league-copy"><span class="home-door-kicker">FEATURED</span><b>QUICK MATCH</b><small>Random · reroll</small></span>
                 <span class="home-league-go">RIP</span>
             </button>
             <div class="home-league-grid">
-                <button class="home-league bronze" data-mode="bronze" type="button">
-                    <span class="home-league-copy"><b>BRONZE</b><small>Starter pool</small></span>
+                <button class="home-league bronze swx-plate" data-mode="bronze" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>BRONZE</b><small>Starter pool</small></span>
                 </button>
-                <button class="home-league silver" data-mode="silver" type="button">
-                    <span class="home-league-copy"><b>SILVER</b><small>Mid-tier pool</small></span>
+                <button class="home-league silver swx-plate" data-mode="silver" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>SILVER</b><small>Mid-tier pool</small></span>
                 </button>
-                <button class="home-league gold" data-mode="gold" type="button">
-                    <span class="home-league-copy"><b>GOLD</b><small>Top-tier pool</small></span>
+                <button class="home-league gold swx-plate" data-mode="gold" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">POOL</span><b>GOLD</b><small>Top-tier pool</small></span>
                 </button>
-                <button class="home-league custom" data-mode="custom" type="button">
-                    <span class="home-league-copy"><b>CUSTOM</b><small>Full garage</small></span>
+                <button class="home-league custom swx-plate" data-mode="custom" type="button">
+                    <span class="home-league-copy"><span class="home-door-kicker">GARAGE</span><b>CUSTOM</b><small>Full garage</small></span>
                 </button>
             </div>
         </nav>
