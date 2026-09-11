@@ -500,7 +500,7 @@ function makeBuildCard(bladeId){
     const combo=typeof calculateComboStats==="function"
         ? calculateComboStats(blade,parts.ratchet,parts.bit)
         : null;
-    const preview=typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.previewRunCombo
+    const scaledCombo=typeof SpinWarsRogue!=="undefined" && SpinWarsRogue.previewRunCombo
         ? SpinWarsRogue.previewRunCombo(blade,parts.ratchet,parts.bit)
         : combo;
     return {
@@ -508,7 +508,8 @@ function makeBuildCard(bladeId){
         blade,
         ratchet:parts.ratchet,
         bit:parts.bit,
-        combo:preview||combo,
+        combo:combo||scaledCombo,
+        scaledCombo:scaledCombo||combo,
         awakeningAvailable:highestClaimedAwakening(bladeId)>0,
         awakeningLevel:highestClaimedAwakening(bladeId),
         goldRuns:String(blade.tier)==="Gold"?(Number(account().goldRentals[bladeId]?.runsLeft)||0):0
@@ -802,7 +803,6 @@ function showHub(){
         ${bowl()}
         ${brandMark("PACK · BUILD · NIGHT")}
         ${hudStrip()}
-        <p class="rl-lede">Random builds from your blades. Packs grow the pool. Awakening is optional when a ready Bey is drafted.</p>
         <nav class="rl-doors" aria-label="Rogue hub">
             ${live?`<button class="home-door rip swx-hero" id="rlContinue" type="button">
                 <span class="home-door-kicker">LIVE</span>
@@ -1360,13 +1360,15 @@ function showGoldCommit(golds){
     });
 }
 
-function buildCardHTML(build,idx){
-    const c=build.combo;
-    const art=typeof bladeSpritePath==="function"?bladeSpritePath(build.blade):"";
-    const ratArt=typeof ratchetSpritePath==="function"?ratchetSpritePath(build.ratchet):"";
-    const bitArt=typeof bitSpritePath==="function"?bitSpritePath(build.bit):"";
-    const tier=String(build.blade.tier||"");
-    const ability=bladeAbilityLabel(build.blade);
+function buildPayChipHTML(scaledCombo){
+    const ovr=Math.round(Number(scaledCombo?.ovr)||0);
+    const payMult=typeof cfg().payMultForOvr==="function"?cfg().payMultForOvr(ovr):1;
+    const payTone=payMult>=1.08?"hi":payMult<=0.85?"lo":"mid";
+    return `<span class="rl-pay-chip ${payTone}">RUN PAY ×${payMult.toFixed(2)}</span>`;
+}
+
+function buildStatsBlockHTML(combo,scaledCombo,scaledOn){
+    const c=scaledOn?(scaledCombo||combo):combo;
     const badges=c&&typeof comboRatingBadgesHTML==="function"
         ? comboRatingBadgesHTML(c,c.stats)
             .replace(">POWER<",">POWER PTS<")
@@ -1375,14 +1377,23 @@ function buildCardHTML(build,idx){
     const bars=c&&typeof comboStatGroupsHTML==="function"
         ? `<div class="rl-inv-stats">${comboStatGroupsHTML(c.stats||c)}</div>`
         : "";
+    const formNote=scaledOn
+        ? `<small class="rl-scale-note">RUN START · BRONZE FORM</small>`
+        : `<small class="rl-scale-note">COMBO STATS</small>`;
+    return `${formNote}${badges}${buildPayChipHTML(scaledCombo||combo)}${bars}`;
+}
+
+function buildCardHTML(build,idx){
+    const art=typeof bladeSpritePath==="function"?bladeSpritePath(build.blade):"";
+    const ratArt=typeof ratchetSpritePath==="function"?ratchetSpritePath(build.ratchet):"";
+    const bitArt=typeof bitSpritePath==="function"?bitSpritePath(build.bit):"";
+    const tier=String(build.blade.tier||"");
+    const ability=bladeAbilityLabel(build.blade);
     const aw=build.awakeningAvailable
         ? `<span class="rl-aw-badge">AWAKENING ${build.awakeningLevel}</span>`
         : "";
-    const ovr=Math.round(Number(c?.ovr)||0);
-    const payMult=typeof cfg().payMultForOvr==="function"?cfg().payMultForOvr(ovr):1;
-    const payTone=payMult>=1.08?"hi":payMult<=0.85?"lo":"mid";
-    const payChip=`<span class="rl-pay-chip ${payTone}">RUN PAY ×${payMult.toFixed(2)}</span>`;
-    return `<button type="button" class="rl-build-card tier-${tier.toLowerCase()}" data-build="${idx}">
+    const canScale=tier==="Silver"||tier==="Gold";
+    return `<article class="rl-build-card tier-${tier.toLowerCase()}" data-build="${idx}" tabindex="0" role="button">
         ${aw}
         <div class="rl-build-arts">
             <div class="rl-bey-art">${art?`<img src="${art}" alt="">`:""}</div>
@@ -1392,11 +1403,32 @@ function buildCardHTML(build,idx){
         <span class="rl-inv-chip">BUILD ${String.fromCharCode(65+idx)} · ${tier.toUpperCase()}${ability?` · ${ability}`:""}</span>
         <b>${build.blade.name}</b>
         <small>${build.ratchet.name} · ${build.bit.name}</small>
-        ${badges}
-        ${payChip}
-        ${bars}
-    </button>`;
+        ${canScale?`<button type="button" class="rl-scale-btn" data-scale-toggle="${idx}" aria-pressed="false">ROGUE STAT SCALE</button>`
+            :`<span class="rl-scale-btn is-static" title="Bronze opens at full combo">BRONZE · NO SCALE</span>`}
+        <div class="rl-build-stats" data-stats-slot="${idx}">
+            ${buildStatsBlockHTML(build.combo,build.scaledCombo,false)}
+        </div>
+    </article>`;
 }
+
+function wireBuildScaleToggles(builds){
+    document.querySelectorAll("[data-scale-toggle]").forEach(btn=>{
+        btn.addEventListener("click",ev=>{
+            ev.preventDefault();
+            ev.stopPropagation();
+            const idx=Number(btn.getAttribute("data-scale-toggle"));
+            const build=builds[idx];
+            if(!build) return;
+            const on=btn.getAttribute("aria-pressed")!=="true";
+            btn.setAttribute("aria-pressed",on?"true":"false");
+            btn.textContent=on?"COMBO STATS":"ROGUE STAT SCALE";
+            btn.classList.toggle("on",on);
+            const slot=document.querySelector(`[data-stats-slot="${idx}"]`);
+            if(slot) slot.innerHTML=buildStatsBlockHTML(build.combo,build.scaledCombo,on);
+        });
+    });
+}
+
 
 function showBuildDraft(goldId){
     const builds=rollThreeBuilds(goldId);
@@ -1422,14 +1454,25 @@ function showBuildDraft(goldId){
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-draft rl-flow-screen">
         ${mark("CHOOSE YOUR BUILD",Game._rlEntryPaid?"ENTRY LOCKED":`ENTRY $${cost}`)}
-        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Higher OVERALL earns less money this run; lower OVERALL pays a bit more.${sideNote?` Then optional ${sideNote}.`:""}</p>
+        <p class="rl-lede rl-lede-tight">Pick one kit. Ratchet and bit are rolled.${poolNote} Cards show full combo; ROGUE STAT SCALE previews Bronze-form run stats. RUN PAY uses that run-start OVERALL. ${sideNote?` Then optional ${sideNote}.`:""}</p>
         <div class="rl-build-row">
             ${builds.map((b,i)=>buildCardHTML(b,i)).join("")}
         </div>
     </main>`;
     // Paid entry — no hub back / free combo reroll.
-    document.querySelectorAll("[data-build]").forEach(btn=>{
-        btn.onclick=()=>onBuildPicked(Number(btn.getAttribute("data-build")));
+    wireBuildScaleToggles(builds);
+    document.querySelectorAll("[data-build]").forEach(card=>{
+        const pick=()=>onBuildPicked(Number(card.getAttribute("data-build")));
+        card.addEventListener("click",ev=>{
+            if(ev.target.closest("[data-scale-toggle],.rl-scale-btn")) return;
+            pick();
+        });
+        card.addEventListener("keydown",ev=>{
+            if(ev.key!=="Enter"&&ev.key!==" ") return;
+            if(ev.target.closest("[data-scale-toggle]")) return;
+            ev.preventDefault();
+            pick();
+        });
     });
 }
 

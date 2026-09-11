@@ -86,9 +86,9 @@ function chance(p){return Math.random()<clamp01(p);}
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?14:7;
-    const base=win?(16+m):(8+Math.floor(m/2));
-    return base+(opts.shark&&win?60:0);
+    if(opts.endless) return win?16:8;
+    const base=win?(18+m):(9+Math.floor(m/2));
+    return base+(opts.shark&&win?68:0);
 }
 
 /**

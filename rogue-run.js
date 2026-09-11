@@ -208,15 +208,25 @@ function loadoutParts(){
     return {blade,ratchet,bit};
 }
 
-function comboOfLoadout(){
+function rawLoadoutCombo(){
     const p=loadoutParts();
     if(!p.blade||!p.ratchet||!p.bit) return null;
-    // Garage/hub: Bronze keeps full combo; Silver/Gold use bronze-form scale from live ratchet/bit.
+    if(typeof calculateComboStats!=="function") return null;
+    return calculateComboStats(p.blade,p.ratchet,p.bit);
+}
+
+function scaledLoadoutCombo(){
+    const p=loadoutParts();
+    if(!p.blade||!p.ratchet||!p.bit) return null;
     if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.previewRunCombo==="function"){
         return SpinWarsRogue.previewRunCombo(p.blade,p.ratchet,p.bit);
     }
-    if(typeof calculateComboStats!=="function") return null;
-    return calculateComboStats(p.blade,p.ratchet,p.bit);
+    return rawLoadoutCombo();
+}
+
+/** Default hub/garage view: natural combo stats. Use scaledLoadoutCombo for Bronze-form run preview. */
+function comboOfLoadout(){
+    return rawLoadoutCombo();
 }
 
 function bladeStickerCombo(blade){
@@ -469,9 +479,27 @@ function partSprite(part){
     return typeof bitSpritePath==="function"?bitSpritePath(b):"";
 }
 
+function loadoutStatsBlockHTML(combo,scaledOn,tier){
+    const formNote=scaledOn&&(tier==="Silver"||tier==="Gold")
+        ? `<small class="rr-form-note">RUN START · BRONZE FORM · ratchet/bit still apply</small>`
+        : (tier==="Silver"||tier==="Gold"
+            ? `<small class="rr-form-note">COMBO STATS · opens in Bronze form on run start</small>`
+            : `<small class="rr-form-note">COMBO STATS</small>`);
+    const eyebrow=scaledOn&&(tier==="Silver"||tier==="Gold")
+        ? `${tier.toUpperCase()} · BRONZE FORM`
+        : tier.toUpperCase();
+    return {
+        eyebrow,
+        formNote,
+        badges:combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):"",
+        bars:statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})
+    };
+}
+
 function loadoutCard(){
     const parts=loadoutParts();
-    const combo=comboOfLoadout();
+    const combo=rawLoadoutCombo();
+    const scaled=scaledLoadoutCombo();
     const bladeArt=parts.blade&&typeof bladeSpritePath==="function"?bladeSpritePath(parts.blade):"";
     const ratArt=parts.ratchet&&typeof ratchetSpritePath==="function"?ratchetSpritePath(parts.ratchet):"";
     const bitArt=parts.bit&&typeof bitSpritePath==="function"?bitSpritePath(parts.bit):"";
@@ -479,25 +507,53 @@ function loadoutCard(){
         return `<section class="menu-card rr-loadout empty"><p>Pick a starter blade to open the locker.</p></section>`;
     }
     const tier=String(parts.blade.tier||"");
-    const formNote=tier==="Silver"||tier==="Gold"
-        ? `<small class="rr-form-note">BRONZE FORM · ratchet/bit still apply</small>`
-        : "";
-    return `<section class="menu-card rr-loadout">
+    const canScale=tier==="Silver"||tier==="Gold";
+    const block=loadoutStatsBlockHTML(combo,false,tier);
+    return `<section class="menu-card rr-loadout" data-rr-loadout>
         <div class="rr-loadout-arts">
             <div class="rr-loadout-art">${bladeArt?`<img src="${bladeArt}" alt="">`:"<span></span>"}</div>
             <div class="rr-loadout-art sm">${ratArt?`<img src="${ratArt}" alt="">`:"<span></span>"}</div>
             <div class="rr-loadout-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
         </div>
         <div class="rr-loadout-copy">
-            <span class="eyebrow">${tier.toUpperCase()}${tier==="Silver"||tier==="Gold"?" · BRONZE FORM":""}</span>
+            <span class="eyebrow" data-rr-eyebrow>${block.eyebrow}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
-            ${formNote}
-            ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
-            ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
+            ${canScale?`<button type="button" class="rr-scale-btn" data-rr-scale-toggle aria-pressed="false">ROGUE STAT SCALE</button>`
+                :`<span class="rr-scale-btn is-static">BRONZE · NO SCALE</span>`}
+            <div data-rr-form-note>${block.formNote}</div>
+            <div data-rr-badges>${block.badges}</div>
+            <div data-rr-bars>${block.bars}</div>
         </div>
     </section>`;
 }
+
+function wireLoadoutScaleToggle(){
+    const btn=document.querySelector("[data-rr-scale-toggle]");
+    if(!btn) return;
+    const tier=String(loadoutParts().blade?.tier||"");
+    btn.onclick=ev=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+        const on=btn.getAttribute("aria-pressed")!=="true";
+        btn.setAttribute("aria-pressed",on?"true":"false");
+        btn.textContent=on?"COMBO STATS":"ROGUE STAT SCALE";
+        btn.classList.toggle("on",on);
+        const combo=on?scaledLoadoutCombo():rawLoadoutCombo();
+        const block=loadoutStatsBlockHTML(combo,on,tier);
+        const root=document.querySelector("[data-rr-loadout]");
+        if(!root) return;
+        const eye=root.querySelector("[data-rr-eyebrow]");
+        const note=root.querySelector("[data-rr-form-note]");
+        const badges=root.querySelector("[data-rr-badges]");
+        const bars=root.querySelector("[data-rr-bars]");
+        if(eye) eye.textContent=block.eyebrow;
+        if(note) note.innerHTML=block.formNote;
+        if(badges) badges.innerHTML=block.badges;
+        if(bars) bars.innerHTML=block.bars;
+    };
+}
+
 
 function showHub(){
     Game.mode="rogue-run";
@@ -558,6 +614,7 @@ function showHub(){
     document.getElementById("rrBoard")?.addEventListener("click",()=>showBoard());
     document.getElementById("rrHelp")?.addEventListener("click",()=>showHelp());
     mountDev();
+    wireLoadoutScaleToggle();
 }
 
 function showStarterPick(){
@@ -737,6 +794,7 @@ function showGarage(){
         };
     });
     mountDev();
+    wireLoadoutScaleToggle();
 }
 
 function partLabel(part){

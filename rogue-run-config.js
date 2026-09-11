@@ -94,17 +94,17 @@ function levelNeed(level){
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?12:6;
-    const base=win?(14+m):(7+Math.floor(m/2));
-    return base+(opts.shark&&win?55:0);
+    if(opts.endless) return win?14:7;
+    const base=win?(16+m):(8+Math.floor(m/2));
+    return base+(opts.shark&&win?62:0);
 }
 
 function nightExp(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?10:5;
-    const base=win?(17+m):(7+Math.floor(m/2));
-    return base+(opts.shark&&win?42:0);
+    if(opts.endless) return win?12:6;
+    const base=win?(19+m):(8+Math.floor(m/2));
+    return base+(opts.shark&&win?48:0);
 }
 
 function cpuLane(match){
