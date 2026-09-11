@@ -567,40 +567,29 @@ function showHub(){
         showStarterPick();
         return;
     }
+    const door=typeof homeDoorHTML==="function"?homeDoorHTML:null;
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rr-shell rr-hub">
+    <main class="home rr-shell rr-hub swx-shell">
         ${bowl()}
         ${mark("CAMPAIGN","")}
         ${hudStrip()}
         ${loadoutCard()}
-        <nav class="home-doors rogue-doors rr-doors" aria-label="Campaign">
-            ${live?`<button class="home-door rip swx-hero" id="rrContinue" type="button">
-                <span class="home-door-kicker">SAVE</span>
-                <b>CONTINUE</b>
-                <small class="swx-state">N${live.match||1} · ${live.blade}${live.score?` · ${live.score.player}-${live.score.cpu}`:""}</small>
-            </button>`:`<button class="home-door rip swx-hero" id="rrPlay" type="button">
-                <span class="home-door-kicker">NIGHT</span>
-                <b>PLAY</b>
-            </button>`}
-            ${live?`<button class="home-door play" id="rrNew" type="button">
-                <span class="home-door-kicker">RESET</span>
-                <b>NEW RUN</b>
-            </button>`:""}
-            <div class="home-door-row">
-                <button class="home-door play" id="rrGarage" type="button">
-                    <span class="home-door-kicker">KIT</span>
-                    <b>GARAGE</b>
-                </button>
-                <button class="home-door play" id="rrTrack" type="button">
-                    <span class="home-door-kicker">UNLOCKS</span>
-                    <b>TRACK</b>
-                </button>
+        <nav class="rr-doors swx-shell-scroll" aria-label="Campaign">
+            ${live
+                ?(door?door({id:"rrContinue",classes:"rip swx-hero",glyph:"continue",kicker:"SAVE",title:"CONTINUE",state:`N${live.match||1} · ${live.blade}${live.score?` · ${live.score.player}-${live.score.cpu}`:""}`})
+                    :`<button class="home-door rip swx-hero" id="rrContinue" type="button"><span class="home-door-kicker">SAVE</span><b>CONTINUE</b></button>`)
+                :(door?door({id:"rrPlay",classes:"rip swx-hero",glyph:"play",kicker:"NIGHT",title:"PLAY"})
+                    :`<button class="home-door rip swx-hero" id="rrPlay" type="button"><span class="home-door-kicker">NIGHT</span><b>PLAY</b></button>`)}
+            ${live?(door?door({id:"rrNew",classes:"play",glyph:"reset",kicker:"RESET",title:"NEW RUN"})
+                :`<button class="home-door play" id="rrNew" type="button"><span class="home-door-kicker">RESET</span><b>NEW RUN</b></button>`):""}
+            <div class="home-door-row rr-door-row">
+                ${door?door({id:"rrGarage",classes:"play swx-side",glyph:"garage",kicker:"KIT",title:"GARAGE"})
+                    :`<button class="home-door play" id="rrGarage" type="button"><span class="home-door-kicker">KIT</span><b>GARAGE</b></button>`}
+                ${door?door({id:"rrTrack",classes:"play swx-side",glyph:"track",kicker:"UNLOCKS",title:"TRACK"})
+                    :`<button class="home-door play" id="rrTrack" type="button"><span class="home-door-kicker">UNLOCKS</span><b>TRACK</b></button>`}
             </div>
-            <button class="home-door rogue" id="rrBoard" type="button">
-                <span class="home-door-kicker">HISTORY</span>
-                <b>SCOREBOARD</b>
-                <small class="swx-state">${past.length?`${past.length} RUN${past.length===1?"":"S"}`:"EMPTY"}</small>
-            </button>
+            ${door?door({id:"rrBoard",classes:"rogue",glyph:"board",kicker:"HISTORY",title:"SCOREBOARD",state:past.length?`${past.length} RUN${past.length===1?"":"S"}`:"EMPTY"})
+                :`<button class="home-door rogue" id="rrBoard" type="button"><span class="home-door-kicker">HISTORY</span><b>SCOREBOARD</b></button>`}
             <button class="home-help" id="rrHelp" type="button">HOW</button>
         </nav>
         <div id="rrConfirm" hidden></div>

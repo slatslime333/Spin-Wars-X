@@ -735,3 +735,327 @@
 @media(prefers-reduced-motion:reduce){
   .home-door.rip .home-door-rail{animation:none!important}
 }
+
+/* =========================================================
+   PART 2 — locked flow shells + sharper plates + shop carousel
+   Market / collection / draft flows / Campaign hub / Sandbox /
+   Quick Play league board.
+   ========================================================= */
+
+.home.rogue-lite-market,
+.home.rogue-lite-collection,
+.home.rogue-lite-help,
+.home.rl-flow-screen,
+.home.rr-shell.rr-hub,
+.home.sandbox-landing,
+.home.league-board{
+  height:100dvh;
+  height:100svh;
+  max-height:100dvh;
+  max-height:100svh;
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+  justify-content:flex-start !important;
+  align-items:stretch !important;
+  gap:10px;
+  box-sizing:border-box;
+  padding:
+    max(10px, env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px)) !important;
+}
+
+.swx-shell-scroll,
+.rl-market-scroll,
+.home.rogue-lite-market .swx-shell-scroll,
+.home.rogue-lite-collection .rl-inv-scroll,
+.home.rr-hub .rr-doors,
+.home.sandbox-landing .swx-nav,
+.home.league-board .home-leagues,
+.home.rogue-lite-help{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+
+.home.rogue-lite-help{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:min(640px,100%);
+  margin:0 auto;
+}
+.home.rogue-lite-help .menu-card{
+  border-radius:0;
+  border-width:1.5px;
+  clip-path:polygon(
+    var(--swx-cut-sm) 0,
+    100% 0,
+    100% calc(100% - var(--swx-cut-sm)),
+    calc(100% - var(--swx-cut-sm)) 100%,
+    0 100%,
+    0 var(--swx-cut-sm)
+  );
+}
+
+/* Campaign hub */
+.home.rr-hub .rr-doors{
+  width:min(640px,100%);
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.home.rr-hub .rr-door-row,
+.home.rr-hub .home-door-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.home.rr-hub .rr-loadout,
+.home.rr-hub .rl-hud,
+.home.rr-hub .rr-hud{
+  width:min(640px,100%);
+  margin:0 auto;
+  border-radius:0;
+}
+
+/* Sandbox / league width */
+.home.sandbox-landing .swx-nav,
+.home.league-board .home-leagues{
+  width:min(640px,100%);
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+@media (min-width:900px){
+  .home.rogue-lite-market .rl-market-scroll,
+.home.rogue-lite-market .swx-shell-scroll,
+  .home.rogue-lite-collection .rl-inv-scroll,
+  .home.rr-hub .rr-doors,
+  .home.sandbox-landing .swx-nav,
+  .home.league-board .home-leagues{
+    width:min(860px,92vw);
+  }
+}
+
+/* Sharper plates — cards / leagues / picks */
+.swx-plate,
+.rl-pack-card,
+.rl-inv-card,
+.rl-bey-card,
+.rl-build-card,
+.rl-pick-row,
+.home-league{
+  border-radius:0 !important;
+  border-width:1.5px;
+  clip-path:polygon(
+    var(--swx-cut-sm) 0,
+    100% 0,
+    100% calc(100% - var(--swx-cut-sm)),
+    calc(100% - var(--swx-cut-sm)) 100%,
+    0 100%,
+    0 var(--swx-cut-sm)
+  );
+  box-shadow:
+    0 8px 0 #050308,
+    inset 0 1px 0 rgba(255,255,255,.08) !important;
+}
+
+.home-league.swx-plate{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  column-gap:12px;
+  min-height:72px;
+}
+.home-league.featured.swx-plate{
+  min-height:96px;
+  border-color:var(--swx-edge-hot);
+}
+.home-league-rail{
+  position:absolute;left:0;top:14%;bottom:14%;width:3px;
+  background:linear-gradient(180deg,rgba(26,209,90,.2),rgba(61,255,122,.95),rgba(26,209,90,.2));
+}
+.home-league .home-door-glyph{
+  width:40px;height:40px;display:grid;place-items:center;
+  border:1.5px solid rgba(26,209,90,.4);
+  color:#7dff9f;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  background:linear-gradient(160deg,rgba(26,209,90,.14),transparent 55%),#07140c;
+}
+.home-league .home-door-glyph svg{width:22px;height:22px;display:block}
+.home-league-copy{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.home-league-copy .home-door-kicker{
+  font-size:9px;letter-spacing:.18em;color:#7dff9f;font-weight:800;
+}
+.home-league:not(.featured) .home-door-kicker{color:#c4a056}
+.home-league-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;
+}
+.home-league-grid .home-league.swx-plate{
+  grid-template-columns:minmax(0,1fr);
+  min-height:64px;
+}
+
+.rl-inv-filter select{
+  border-radius:0;
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+}
+
+/* —— Shop pack cards with rotating tier art —— */
+.rl-pack-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:14px;
+  width:min(960px,100%);
+  margin:0 auto 18px;
+}
+.rl-market-sec{width:min(960px,100%);margin:0 auto 8px}
+.rl-market-h{
+  font-family:Staatliches,Impact,sans-serif;
+  letter-spacing:.1em;font-size:16px;margin:8px 0 10px;
+  color:#c9d2dc;
+}
+.rl-pack-card{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  padding:0 !important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.04),transparent 30%),
+    linear-gradient(180deg,#1a1622,#0c0a10) !important;
+  border:1.5px solid var(--swx-edge);
+  color:inherit;
+}
+.rl-pack-card.tier-bronze{border-color:#c07a4a}
+.rl-pack-card.tier-silver{border-color:#c5ced8}
+.rl-pack-card.tier-gold{border-color:#e8c04a}
+.rl-pack-stage{
+  position:relative;
+  height:148px;
+  background:
+    radial-gradient(circle at 50% 40%,rgba(255,255,255,.07),transparent 62%),
+    linear-gradient(180deg,#15121c,#09080c);
+  overflow:hidden;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.rl-pack-carousel{position:absolute;inset:0}
+.rl-pack-slide{
+  position:absolute;inset:0;
+  display:grid;place-items:center;
+  opacity:0;
+  transform:rotate(-14deg) scale(.86) translateY(10px);
+  transition:opacity .45s ease, transform .55s cubic-bezier(.2,.8,.2,1);
+  pointer-events:none;
+}
+.rl-pack-slide.is-on{
+  opacity:1;
+  transform:rotate(0deg) scale(1) translateY(0);
+  z-index:2;
+}
+.rl-pack-slide.is-out{
+  opacity:0;
+  transform:rotate(12deg) scale(.9) translateY(-12px);
+  z-index:1;
+}
+.rl-pack-slide img{
+  width:78%;height:78%;
+  object-fit:contain;
+  filter:drop-shadow(0 8px 14px rgba(0,0,0,.55));
+}
+.rl-pack-slide-empty i,
+.rl-pack-slide-mod i{
+  display:grid;place-items:center;
+  width:64px;height:64px;
+  border:1.5px solid rgba(240,180,41,.35);
+  color:#f0b429;
+  font-style:normal;font-size:28px;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  background:#100e14;
+}
+.rl-pack-foil{
+  position:absolute;inset:0;pointer-events:none;z-index:3;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.14) 50%,transparent 58%);
+  background-size:220% 220%;
+  animation:swxPackFoil 5.5s linear infinite;
+  opacity:.45;
+}
+.rl-pack-card.tier-bronze .rl-pack-foil{background-image:linear-gradient(115deg,transparent 42%,rgba(232,168,110,.32) 50%,transparent 58%)}
+.rl-pack-card.tier-silver .rl-pack-foil{background-image:linear-gradient(115deg,transparent 42%,rgba(210,224,236,.38) 50%,transparent 58%)}
+.rl-pack-card.tier-gold .rl-pack-foil{background-image:linear-gradient(115deg,transparent 42%,rgba(255,220,120,.42) 50%,transparent 58%)}
+@keyframes swxPackFoil{to{background-position:220% 220%}}
+.rl-pack-pool{
+  position:absolute;left:8px;bottom:8px;z-index:4;
+  padding:2px 7px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.55);
+  font-size:9px;letter-spacing:.12em;font-weight:800;color:#c9d2dc;
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+}
+.rl-pack-body{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:12px 12px 14px;
+}
+.rl-pack-body .eyebrow{
+  font-size:10px;letter-spacing:.18em;font-weight:800;color:#c4a056;
+}
+.rl-pack-card.tier-bronze .rl-pack-body .eyebrow{color:#ddb092}
+.rl-pack-card.tier-silver .rl-pack-body .eyebrow{color:#d0d8e0}
+.rl-pack-card.tier-gold .rl-pack-body .eyebrow{color:#f0d57b}
+.rl-pack-body b{
+  font-family:Staatliches,Impact,sans-serif;
+  font-size:20px;letter-spacing:.06em;line-height:1.05;
+}
+.rl-pack-body p{
+  font-size:12px;line-height:1.35;color:#b7aea2;margin:0 0 6px;
+}
+.rl-pack-body .rip-btn,
+.rl-pack-body .rl-buy{
+  align-self:stretch;
+  margin-top:2px;
+  border-radius:0;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+}
+
+@media (max-width:520px){
+  .rl-pack-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .rl-pack-stage{height:120px}
+  .rl-pack-body b{font-size:16px}
+  .home.rr-hub .rr-door-row{grid-template-columns:1fr}
+  .home-league-grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  .rl-pack-foil{animation:none!important}
+  .rl-pack-slide{transition:none!important}
+}
+
+/* Part 2 harden — kill leftover soft radii on market chrome */
+.home.rogue-lite-market .rl-hud-money,
+.home.rogue-lite-market .rl-hud-col,
+.home.rogue-lite-collection .rl-hud-money,
+.home.rogue-lite-collection .rl-hud-col,
+.rl-pack-card,
+.rl-pack-card .rip-btn,
+.rl-pack-card .rl-buy,
+.rl-pack-card button,
+.home-league,
+.home-league .home-league-go,
+.rr-loadout,
+.rl-inv-card,
+.rl-pick-row{
+  border-radius:0 !important;
+}
+.rl-pack-card .rip-btn,
+.rl-pack-card .rl-buy,
+.rl-pack-card button{
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+}
