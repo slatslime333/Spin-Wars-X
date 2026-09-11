@@ -252,24 +252,54 @@ function grantBlade(id,opts){
 function grantStarterCollection(){
     const acc=account();
     if(acc.starterGranted) return [];
-    const needB=cfg().STARTER_GRANT?.bronze||3;
+    const needB=cfg().STARTER_GRANT?.bronze||2;
     const needS=cfg().STARTER_GRANT?.silver||2;
     const bronze=shuffle(playablePool("Bronze"));
     const silver=shuffle(playablePool("Silver"));
     const picks=[];
     bronze.slice(0,needB).forEach(x=>picks.push(x.id));
     silver.slice(0,needS).forEach(x=>picks.push(x.id));
-    const granted=picks.map(id=>grantBlade(id)).filter(Boolean);
+    const granted=shuffle(picks.map(id=>grantBlade(id)).filter(Boolean));
     acc.starterGranted=true;
     if((Number(acc.money)||0)<=0) acc.money=cfg().STARTING_MONEY||80;
     persistAccount();
     return granted;
 }
 
+/** Silver-shell pack used only for the first-time starter reveal. */
+function starterWelcomePackMeta(){
+    return {
+        id:"starter_welcome",
+        family:"bey",
+        tier:"Silver",
+        name:"STARTER BEY PACK",
+        price:0,
+        blurb:"2 Bronze · 2 Silver from the pool."
+    };
+}
+
+function showStarterWelcome(){
+    const granted=grantStarterCollection();
+    if(!granted.length){
+        showHub();
+        return;
+    }
+    showPackTheater({
+        ok:true,
+        pack:starterWelcomePackMeta(),
+        granted,
+        welcome:true,
+        onDone:()=>showHub()
+    });
+}
+
 function ensureAccountReady(){
     const acc=account();
-    if(!acc.starterGranted) grantStarterCollection();
-    else if((Number(acc.money)||0)<=0 && ownedBladeIds().length===0){
+    // Starters are granted through the welcome pack theater, not silently.
+    if(acc.starterGranted && (Number(acc.money)||0)<=0 && ownedBladeIds().length===0){
+        acc.money=cfg().STARTING_MONEY||80;
+        persistAccount();
+    }else if(!acc.starterGranted && (Number(acc.money)||0)<=0){
         acc.money=cfg().STARTING_MONEY||80;
         persistAccount();
     }
@@ -759,6 +789,10 @@ function showHub(){
     ensureAccountReady();
     Game.mode="rogue-lite";
     Game.quickMatch=false;
+    if(!account().starterGranted){
+        showStarterWelcome();
+        return;
+    }
     Game.screen="rogueLiteHub";
     const acc=account();
     const cost=cfg().RUN_COST||40;
@@ -817,6 +851,10 @@ function showHelp(){
         <section class="menu-card">
             <h2>What this is</h2>
             <p>Rogue is a pack-and-build night. You collect blades, draft three random kits, pick one, then climb 30 matches. Ratchets and bits are never permanent here — only blades (and temp part packs).</p>
+        </section>
+        <section class="menu-card">
+            <h2>First pack</h2>
+            <p>Your first Rogue open tears a Silver starter Bey pack: 2 random Bronze and 2 random Silver from the live pool. After that, packs are bought in the Marketplace.</p>
         </section>
         <section class="menu-card">
             <h2>Packs</h2>
@@ -1165,20 +1203,23 @@ function showPackTheater(out){
         cardsHTML=out.mods.map((m,i)=>tradingModCardHTML(m,i)).join("");
         n=out.mods.length;
     }
+    const welcome=!!out.welcome;
+    const band=welcome?"STARTER":(pack.tier||"PACK");
+    const hintStart=welcome?"Your first four Beys — tear the pack.":"Tear the pack.";
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-open" id="rlOpenMain">
         <p class="rl-open-title">${pack.name}</p>
         <div class="rl-open-stage" id="rlOpenStage">
             <button type="button" class="rl-pack-shell tier-${tier}" id="rlPackShell" aria-label="Open pack">
-                <span class="rl-pack-band">${pack.tier}</span>
+                <span class="rl-pack-band">${band}</span>
                 <span class="rl-pack-logo">SPIN WARS</span>
                 <span class="rl-pack-x">X</span>
                 <span class="rl-pack-cta">TAP TO OPEN</span>
             </button>
             <div class="rl-card-rail" id="rlCardRail" hidden>${cardsHTML}</div>
         </div>
-        <p class="rl-open-hint" id="rlOpenHint">Tear the pack.</p>
+        <p class="rl-open-hint" id="rlOpenHint">${hintStart}</p>
         <button class="rip-btn" id="rlOpenDone" type="button" hidden>DONE</button>
     </main>`;
     const main=document.getElementById("rlOpenMain");
@@ -1238,7 +1279,12 @@ function showPackTheater(out){
     };
     shell.onclick=(e)=>{ e.stopPropagation(); startReveal(); };
     main.onclick=onAdvance;
-    done.onclick=(e)=>{ e.stopPropagation(); showMarket(); };
+    done.onclick=(e)=>{
+        e.stopPropagation();
+        if(typeof out.onDone==="function") out.onDone();
+        else if(out.welcome) showHub();
+        else showMarket();
+    };
     mountDev();
 }
 
@@ -1569,6 +1615,7 @@ function toggleDev(){
             <button type="button" class="menu-btn gold" data-rl="shark">FINAL BOSS</button>
             <button type="button" class="menu-btn gold" data-rl="win">WIN NIGHT</button>
             <button type="button" class="menu-btn silver" data-rl="reset">RESET ACCOUNT</button>
+            <button type="button" class="menu-btn gold" data-rl="starterPack">REPLAY STARTER PACK</button>
         </div>`;
     document.body.appendChild(panel);
     document.body.classList.add("rogue-dev-open");
@@ -1716,8 +1763,13 @@ function devAct(id,opts){
         clearLive();
         Game.rogueLiteAccount=normalizeAccount(null);
         persistAccount();
-        ensureAccountReady();
         showHub();
+        return;
+    }else if(id==="starterPack"){
+        clearLive();
+        Game.rogueLiteAccount=normalizeAccount(null);
+        persistAccount();
+        showStarterWelcome();
         return;
     }else if(id==="n10"||id==="n20"||id==="n29"){
         const n=id==="n10"?10:id==="n20"?20:29;

@@ -25,7 +25,8 @@ const SELL={
     Gold:95
 };
 
-const STARTER_GRANT={bronze:3,silver:2};
+/** First Rogue open: random 2 Bronze + 2 Silver via Gold pack theater. */
+const STARTER_GRANT={bronze:2,silver:2};
 
 /** Pack catalog — prices climb; Premium Gold is a grind, not a joke. */
 const PACKS={
