@@ -799,33 +799,30 @@ function showHub(){
     const peek=live?peekLive():null;
     const app=document.getElementById("app");
     app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-lite-hub">
+    <main class="home rogue-lite-hub swx-shell">
         ${bowl()}
         ${brandMark("PACK · BUILD · NIGHT")}
         ${hudStrip()}
         <nav class="rl-doors" aria-label="Rogue hub">
-            ${live?`<button class="home-door rip swx-hero" id="rlContinue" type="button">
-                <span class="home-door-kicker">LIVE</span>
-                <b>CONTINUE</b>
-                <small class="swx-state">Match ${peek?.match||"?"} · ${peek?.blade||""}</small>
-            </button>`:""}
-            <button class="home-door rip ${live?"":"swx-hero"}" id="rlStart" type="button">
-                <span class="home-door-kicker">ENTRY $${cost}</span>
-                <b>START RUN</b>
-                <small class="swx-state">${canAfford?`$${acc.money} on hand`:`Broke — still playable`}</small>
-            </button>
-            <button class="home-door play" id="rlMarket" type="button">
-                <span class="home-door-kicker">SPEND</span>
-                <b>MARKETPLACE</b>
-            </button>
-            <button class="home-door play" id="rlCollection" type="button">
-                <span class="home-door-kicker">OWNED</span>
-                <b>COLLECTION</b>
-            </button>
-            <button class="home-door play" id="rlHelp" type="button">
-                <span class="home-door-kicker">HOW</span>
-                <b>ROGUE HELP</b>
-            </button>
+            ${live?homeDoorHTML({
+                id:"rlContinue",
+                classes:"rip swx-hero",
+                glyph:"continue",
+                kicker:"LIVE",
+                title:"CONTINUE",
+                state:`Match ${peek?.match||"?"} · ${peek?.blade||""}`
+            }):""}
+            ${homeDoorHTML({
+                id:"rlStart",
+                classes:`rip ${live?"":"swx-hero"}`,
+                glyph:"start",
+                kicker:`ENTRY $${cost}`,
+                title:"START RUN",
+                state:canAfford?`$${acc.money} on hand`:`Broke — still playable`
+            })}
+            ${homeDoorHTML({id:"rlMarket",classes:"play",glyph:"market",kicker:"SPEND",title:"MARKETPLACE"})}
+            ${homeDoorHTML({id:"rlCollection",classes:"play",glyph:"collection",kicker:"OWNED",title:"COLLECTION"})}
+            ${homeDoorHTML({id:"rlHelp",classes:"play",glyph:"help",kicker:"HOW",title:"ROGUE HELP"})}
         </nav>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
