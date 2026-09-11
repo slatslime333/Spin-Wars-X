@@ -354,43 +354,32 @@ function openBeyPack(packId){
     const pack=cfg().packById?cfg().packById(packId):cfg().PACKS?.[packId];
     if(!pack||pack.family!=="bey") return {ok:false,why:"pack"};
     if(!trySpend(pack.price)) return {ok:false,why:"money"};
-    const odds=cfg().odds||{};
     const ids=[];
+    const pushN=(tier,n)=>{ for(let i=0;i<n;i++) ids.push(rollTierBlade(tier)); };
     if(packId==="bey_bronze"){
-        ids.push(rollTierBlade("Bronze"));
+        pushN("Bronze",2);
     }else if(packId==="bey_bronze_rare"){
-        ids.push(rollTierBlade("Bronze",{tier:"Silver",p:odds.bronzeBeySilver||0.04}));
-        ids.push(rollTierBlade("Bronze",{tier:"Silver",p:odds.bronzeBeySilver||0.04}));
+        pushN("Bronze",5);
     }else if(packId==="bey_bronze_premium"){
-        for(let i=0;i<3;i++) ids.push(rollTierBlade("Bronze",{tier:"Silver",p:odds.bronzeBeySilver||0.04}));
+        pushN("Bronze",11);
     }else if(packId==="bey_silver"){
-        ids.push(rollTierBlade("Silver",{tier:"Bronze",p:odds.silverBeyBronze||0.06}));
-        ids.push(rollTierBlade("Silver",{tier:"Bronze",p:odds.silverBeyBronze||0.06}));
+        pushN("Silver",3);
     }else if(packId==="bey_silver_rare"){
-        for(let i=0;i<3;i++) ids.push(rollTierBlade("Silver"));
+        pushN("Silver",7);
     }else if(packId==="bey_silver_premium"){
-        // 3 locked Silver + 1 high-odds Silver flex + 1 small Gold chance
-        for(let i=0;i<3;i++) ids.push(rollTierBlade("Silver"));
-        ids.push(chance(odds.premiumSilverFlexSilver||0.88)
-            ?rollTierBlade("Silver")
-            :rollTierBlade("Bronze"));
-        ids.push(chance(odds.premiumSilverGold||0.10)
-            ?rollTierBlade("Gold")
-            :rollTierBlade("Silver"));
+        pushN("Silver",12);
     }else if(packId==="bey_gold"){
-        ids.push(rollTierBlade("Gold"));
+        pushN("Gold",1);
+        pushN("Silver",1);
+        pushN("Bronze",1);
     }else if(packId==="bey_gold_rare"){
-        ids.push(rollTierBlade("Gold"));
-        ids.push(chance(odds.rareGoldFlexGold||0.08)?rollTierBlade("Gold"):rollTierBlade("Silver"));
-        ids.push(rollTierBlade("Bronze"));
-        ids.push(rollTierBlade("Bronze"));
+        pushN("Gold",2);
+        pushN("Silver",2);
+        pushN("Bronze",1);
     }else if(packId==="bey_gold_premium"){
-        ids.push(rollTierBlade("Gold"));
-        ids.push(chance(odds.premiumFlexGold||0.72)?rollTierBlade("Gold"):rollTierBlade("Silver"));
-        const thirdGold=chance(odds.premiumThirdGold||0.28);
-        ids.push(thirdGold||chance(odds.premiumFlexGold||0.72)?rollTierBlade("Gold"):rollTierBlade("Silver"));
-        ids.push(rollTierBlade("Silver"));
-        ids.push(rollTierBlade("Bronze"));
+        pushN("Gold",3);
+        pushN("Silver",4);
+        pushN("Bronze",3);
     }
     const granted=ids.filter(Boolean).map(id=>grantBlade(id)).filter(Boolean);
     account().boughtPacks=(Number(account().boughtPacks)||0)+1;

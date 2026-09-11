@@ -28,43 +28,43 @@ const SELL={
 /** First Rogue open: random 2 Bronze + 2 Silver via Gold pack theater. */
 const STARTER_GRANT={bronze:2,silver:2};
 
-/** Pack catalog — slightly cheaper ladder; Premium Silver is the mid chase. */
+/** Pack catalog — bigger pulls; Premium Silver is the mid chase. */
 const PACKS={
     bey_bronze:{
         id:"bey_bronze",family:"bey",tier:"Bronze",name:"BRONZE BEY PACK",
-        price:105,blurb:"1 Bronze blade."
+        price:105,blurb:"2 Bronze blades."
     },
     bey_bronze_rare:{
         id:"bey_bronze_rare",family:"bey",tier:"Bronze",name:"RARE BRONZE BEY PACK",
-        price:175,blurb:"2 blades. Mostly Bronze. Tiny Silver chance."
+        price:175,blurb:"5 Bronze blades."
     },
     bey_bronze_premium:{
         id:"bey_bronze_premium",family:"bey",tier:"Bronze",name:"PREMIUM BRONZE BEY PACK",
-        price:255,blurb:"3 blades. Mostly Bronze. Tiny Silver chance."
+        price:255,blurb:"11 Bronze blades."
     },
     bey_silver:{
         id:"bey_silver",family:"bey",tier:"Silver",name:"SILVER BEY PACK",
-        price:230,blurb:"2 blades. Mostly Silver. Tiny Bronze chance."
+        price:230,blurb:"3 Silver blades. Strict Silver."
     },
     bey_silver_rare:{
         id:"bey_silver_rare",family:"bey",tier:"Silver",name:"RARE SILVER BEY PACK",
-        price:335,blurb:"3 Silver blades."
+        price:335,blurb:"7 Silver blades."
     },
     bey_silver_premium:{
         id:"bey_silver_premium",family:"bey",tier:"Silver",name:"PREMIUM SILVER BEY PACK",
-        price:385,blurb:"5 blades. 3 Silver locked. 1 high-odds Silver. 1 small Gold chance."
+        price:385,blurb:"12 Silver blades."
     },
     bey_gold:{
         id:"bey_gold",family:"bey",tier:"Gold",name:"GOLD BEY PACK",
-        price:370,blurb:"1 Gold rental blade."
+        price:370,blurb:"1 Gold + 1 Silver + 1 Bronze."
     },
     bey_gold_rare:{
         id:"bey_gold_rare",family:"bey",tier:"Gold",name:"RARE GOLD BEY PACK",
-        price:490,blurb:"1 Gold + 1 flex + 2 Bronze."
+        price:490,blurb:"2 Gold + 2 Silver + 1 Bronze."
     },
     bey_gold_premium:{
         id:"bey_gold_premium",family:"bey",tier:"Gold",name:"PREMIUM GOLD BEY PACK",
-        price:685,blurb:"5 cards. Guaranteed Gold chase."
+        price:685,blurb:"3 Gold + 4 Silver + 3 Bronze."
     },
     part_bronze:{
         id:"part_bronze",family:"part",tier:"Bronze",name:"BRONZE PART PACK",
@@ -133,14 +133,13 @@ function liteCollectionBand(ownedCount){
 function liteNightMix(match,boss){
     const m=Math.max(1,Number(match)||1);
     if(boss){
-        if(m<=10) return {easy:0.24,even:0.52,hard:0.24};
-        if(m<=20) return {easy:0.14,even:0.50,hard:0.36};
-        return {easy:0.08,even:0.44,hard:0.48};
+        if(m<=10) return {easy:0.28,even:0.52,hard:0.20};
+        if(m<=20) return {easy:0.16,even:0.50,hard:0.34};
+        return {easy:0.10,even:0.44,hard:0.46};
     }
-    // Starter-clearable early; late nights punish thin builds harder than Campaign Track.
-    if(m<=3) return {easy:0.52,even:0.40,hard:0.08};
-    if(m<=6) return {easy:0.42,even:0.46,hard:0.12};
-    if(m<=9) return {easy:0.32,even:0.50,hard:0.18};
+    // First 5: mostly easy wins (not guaranteed). After that, normal pressure.
+    if(m<=5) return {easy:0.72,even:0.24,hard:0.04};
+    if(m<=9) return {easy:0.34,even:0.48,hard:0.18};
     if(m<=14) return {easy:0.24,even:0.50,hard:0.26};
     if(m<=19) return {easy:0.18,even:0.48,hard:0.34};
     if(m<=25) return {easy:0.12,even:0.46,hard:0.42};
@@ -172,7 +171,7 @@ global.SpinWarsRogueLiteConfig={
         mixTo:MIX_TO,
         label:"ROGUE"
     },
-    /** Slot odds used by the opener (Phase 2 theater). Phase 1 grants use these. */
+    /** Slot odds kept for part/legacy rolls; Bey packs are fixed counts now. */
     odds:{
         bronzeBeySilver:0.04,
         silverBeyBronze:0.06,

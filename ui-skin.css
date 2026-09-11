@@ -904,13 +904,43 @@
 }
 @media (min-width:900px){
   .home.rogue-lite-market .rl-market-scroll,
-.home.rogue-lite-market .swx-shell-scroll,
+  .home.rogue-lite-market .swx-shell-scroll,
   .home.rogue-lite-collection .rl-inv-scroll,
   .home.rr-hub .rr-doors,
   .home.sandbox-landing .swx-nav,
   .home.league-board .home-leagues{
     width:min(860px,92vw);
+    margin-left:auto;
+    margin-right:auto;
   }
+  .home.rogue-lite-market .home-mark,
+  .home.rogue-lite-market .rl-hud,
+  .home.rogue-lite-market .rl-shop-tabs,
+  .home.rogue-lite-market .rl-market-scroll,
+  .home.rogue-lite-market .swx-shell-scroll{
+    width:min(860px,92vw);
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+
+/* Packs Shop — center the column on every width (PC was left-pinned). */
+.home.rogue-lite-market{
+  align-items:center !important;
+}
+.home.rogue-lite-market > .home-mark,
+.home.rogue-lite-market > .rl-hud,
+.home.rogue-lite-market > .rl-shop-tabs,
+.home.rogue-lite-market > .rl-market-scroll,
+.home.rogue-lite-market > .swx-shell-scroll{
+  width:min(860px,100%);
+  max-width:100%;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  align-self:center;
+}
+.home.rogue-lite-market .rl-hud{
+  width:min(860px,100%) !important;
 }
 
 /* Sharper plates — cards / leagues / picks */
@@ -1000,20 +1030,53 @@
   background:
     linear-gradient(180deg,rgba(255,255,255,.04),transparent 30%),
     linear-gradient(180deg,#1a1622,#0c0a10) !important;
-  border:1.5px solid var(--swx-edge);
+  border:2px solid var(--swx-edge);
   color:inherit;
 }
-.rl-pack-card.tier-bronze{border-color:#c07a4a}
-.rl-pack-card.tier-silver{border-color:#c5ced8}
-.rl-pack-card.tier-gold{border-color:#e8c04a}
+.rl-pack-card.tier-bronze{
+  border-color:#e39a68 !important;
+  background:
+    linear-gradient(180deg,rgba(255,190,120,.16),transparent 28%),
+    linear-gradient(165deg,#c06a3a 0%,#6a3418 48%,#24140c 100%) !important;
+  box-shadow:0 8px 0 #3a1808, inset 0 1px 0 rgba(255,210,160,.22) !important;
+}
+.rl-pack-card.tier-silver{
+  border-color:#e8eef4 !important;
+  background:
+    linear-gradient(180deg,rgba(240,248,255,.16),transparent 28%),
+    linear-gradient(165deg,#c5ced8 0%,#5c6776 48%,#1b2028 100%) !important;
+  box-shadow:0 8px 0 #1a2028, inset 0 1px 0 rgba(255,255,255,.22) !important;
+}
+.rl-pack-card.tier-gold{
+  border-color:#f3d36a !important;
+  background:
+    linear-gradient(180deg,rgba(255,236,160,.18),transparent 28%),
+    linear-gradient(165deg,#d4aa2e 0%,#7a5710 48%,#241806 100%) !important;
+  box-shadow:0 8px 0 #3a2808, inset 0 1px 0 rgba(255,236,160,.28) !important;
+}
 .rl-pack-stage{
   position:relative;
   height:148px;
   background:
-    radial-gradient(circle at 50% 40%,rgba(255,255,255,.07),transparent 62%),
-    linear-gradient(180deg,#15121c,#09080c);
+    radial-gradient(circle at 50% 40%,rgba(255,255,255,.10),transparent 62%),
+    linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.45));
   overflow:hidden;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.14);
+}
+.rl-pack-card.tier-bronze .rl-pack-stage{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(255,190,120,.22),transparent 60%),
+    linear-gradient(180deg,rgba(80,36,16,.35),rgba(0,0,0,.5));
+}
+.rl-pack-card.tier-silver .rl-pack-stage{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(230,240,255,.22),transparent 60%),
+    linear-gradient(180deg,rgba(40,48,58,.4),rgba(0,0,0,.5));
+}
+.rl-pack-card.tier-gold .rl-pack-stage{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(255,230,120,.28),transparent 60%),
+    linear-gradient(180deg,rgba(90,64,12,.4),rgba(0,0,0,.5));
 }
 .rl-pack-carousel{position:absolute;inset:0}
 .rl-pack-slide{
@@ -1071,19 +1134,25 @@
 .rl-pack-body{
   display:flex;flex-direction:column;align-items:flex-start;gap:4px;
   padding:12px 12px 14px;
+  background:rgba(8,6,4,.38);
+  border-top:1px solid rgba(255,255,255,.1);
 }
 .rl-pack-body .eyebrow{
   font-size:10px;letter-spacing:.18em;font-weight:800;color:#c4a056;
 }
-.rl-pack-card.tier-bronze .rl-pack-body .eyebrow{color:#ddb092}
-.rl-pack-card.tier-silver .rl-pack-body .eyebrow{color:#d0d8e0}
-.rl-pack-card.tier-gold .rl-pack-body .eyebrow{color:#f0d57b}
+.rl-pack-card.tier-bronze .rl-pack-body .eyebrow{color:#ffe0c0}
+.rl-pack-card.tier-silver .rl-pack-body .eyebrow{color:#f2f6fa}
+.rl-pack-card.tier-gold .rl-pack-body .eyebrow{color:#ffe9a8}
 .rl-pack-body b{
   font-family:Staatliches,Impact,sans-serif;
   font-size:20px;letter-spacing:.06em;line-height:1.05;
+  text-shadow:0 1px 0 rgba(0,0,0,.55);
 }
+.rl-pack-card.tier-bronze .rl-pack-body b{color:#fff4ea}
+.rl-pack-card.tier-silver .rl-pack-body b{color:#f7fbff}
+.rl-pack-card.tier-gold .rl-pack-body b{color:#fff6d0}
 .rl-pack-body p{
-  font-size:12px;line-height:1.35;color:#b7aea2;margin:0 0 6px;
+  font-size:12px;line-height:1.35;color:rgba(246,240,230,.88);margin:0 0 6px;
 }
 .rl-pack-body .rip-btn,
 .rl-pack-body .rl-buy{
@@ -1240,11 +1309,11 @@
     inset 0 1px 0 rgba(255,255,255,.08) !important;
 }
 
-/* VS plates — harder cut, harder step shadow */
+/* VS plates — harder cut, harder step shadow + inventory-like tier paint */
 .vs-screen.swx-shell .vs-plate,
 .vs-plate{
   border-radius:0 !important;
-  border-width:1.5px !important;
+  border-width:2px !important;
   clip-path:polygon(
     var(--swx-cut) 0,
     100% 0,
@@ -1253,6 +1322,27 @@
     0 100%,
     0 var(--swx-cut)
   );
+}
+.vs-screen.swx-shell .vs-plate.tier-bronze,
+.vs-plate.tier-bronze{
+  border-color:#e39a68 !important;
+  background:
+    linear-gradient(180deg,rgba(255,190,120,.14),transparent 34%),
+    linear-gradient(165deg,#c06a3a 0%,#6a3418 42%,#24140c 100%) !important;
+}
+.vs-screen.swx-shell .vs-plate.tier-silver,
+.vs-plate.tier-silver{
+  border-color:#e8eef4 !important;
+  background:
+    linear-gradient(180deg,rgba(240,248,255,.14),transparent 34%),
+    linear-gradient(165deg,#c5ced8 0%,#5c6776 42%,#1b2028 100%) !important;
+}
+.vs-screen.swx-shell .vs-plate.tier-gold,
+.vs-plate.tier-gold{
+  border-color:#f3d36a !important;
+  background:
+    linear-gradient(180deg,rgba(255,236,160,.16),transparent 34%),
+    linear-gradient(165deg,#d4aa2e 0%,#7a5710 42%,#241806 100%) !important;
 }
 .vs-screen.swx-shell .vs-plate.you{
   box-shadow:0 10px 0 #0c6b32, 0 14px 0 rgba(0,0,0,.35) !important;
