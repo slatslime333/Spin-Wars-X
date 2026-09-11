@@ -154,12 +154,25 @@ function powerOf(stats){
     return STATS.reduce((s,k)=>s+(Number(stats[k])||70),0)/STATS.length;
 }
 
-function starterParts(blade){
-    const bits=selectableBits();
+function starterParts(blade,exclude){
+    const bits=(typeof selectableBits==="function"?selectableBits():[])
+        .filter(b=>!exclude?.bitName||b.name!==exclude.bitName);
     const bit=pick(bits.length?bits:[{name:"Point"}]);
-    const rats=typeof RATCHETS!=="undefined"?RATCHETS:[];
+    const rats=(typeof RATCHETS!=="undefined"?RATCHETS:[])
+        .filter(r=>!exclude?.ratchetName||r.name!==exclude.ratchetName);
     const ratchet=pick(rats.length?rats:[{name:"3-60",number:3,height:60}]);
     return {ratchet,bit};
+}
+
+/* Campaign + Rogue share this loop: random kits through match 17,
+   role-committed kits from match 18 / endless (Shark night still locks). */
+function cpuUsesCommittedParts(match){
+    return Number(match)>=finalMatch();
+}
+
+function cpuPartsForMatch(blade,match,exclude){
+    if(cpuUsesCommittedParts(match)) return pickCommittedParts(blade,exclude);
+    return starterParts(blade,exclude);
 }
 
 function bladeRole(blade){
@@ -1066,12 +1079,13 @@ function applyCpuCard(card){
         STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+2;});
     }else if(card.kind==="reforge"){
         if(Number(r.matchIndex)!==18){
-            const committed=pickCommittedParts(r.cpuBlade,{
+            const exclude={
                 bitName:r.cpuBit?.name,
                 ratchetName:r.cpuRatchet?.name
-            });
-            if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
-            else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
+            };
+            const parts=cpuPartsForMatch(r.cpuBlade,r.matchIndex,exclude);
+            if(card.part==="bit") r.cpuBit=parts.bit||r.cpuBit;
+            else r.cpuRatchet=parts.ratchet||r.cpuRatchet;
         }
     }else if(card.kind==="ability-swap"){
         const pickId=pick(card.choices&&card.choices.length?card.choices:["hurricane"]);
@@ -1392,9 +1406,7 @@ function generateCpu(){
         const mix=wantTier==="mix";
         const pool=mix?blades:blades.filter(b=>b.tier===wantTier);
         r.cpuBlade=pick(pool.length?pool:blades);
-        const parts=(mix||cpuCompetence(match))
-            ? pickCommittedParts(r.cpuBlade)
-            : starterParts(r.cpuBlade);
+        const parts=cpuPartsForMatch(r.cpuBlade,match);
         r.cpuRatchet=parts.ratchet;
         r.cpuBit=parts.bit;
     }
@@ -3851,11 +3863,11 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,goHomeAfterRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
+    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuUsesCommittedParts,cpuPartsForMatch,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isLiteLoop,isCampaignLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint,
-    makeStartScale,previewRunCombo,pickCommittedParts
+    makeStartScale,previewRunCombo,pickCommittedParts,starterParts
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{

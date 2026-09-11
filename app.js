@@ -2594,33 +2594,15 @@ function generateCPUCombo(force=false){
     const bladePool=leaguePool.filter(b=>b && b.name && b.name!==playerBlade?.name);
     const blades=bladePool.length?bladePool:leaguePool.length?leaguePool:allBlades;
     let blade=null,ratchet=null,bit=null,guard=0;
-    const roleBits={
-        Attack:["Rush","Low Rush","Flat","Low Flat","Kick","Quake"],
-        Defense:["Needle","Hexa","Wedge","Ball","Orb","Point"],
-        Stamina:["Ball","Orb","Needle","Hexa","Point","Level"]
-    };
-    const roleRats={
-        Attack:[1,3,7,9],
-        Defense:[9,7,6,5],
-        Stamina:[7,9,6,5]
-    };
-    const league=String(Game.mode||"");
-    const solve=league==="gold"?1:league==="silver"?0.55:league==="bronze"?0.28:1;
-    const committed=!!(Game.quickMatch || league==="custom" || Math.random()<solve);
+    /* Every Quick Play / league mode: fully random CPU kits (no role commit). */
     while(guard++<18){
         blade=blades[Math.floor(Math.random()*blades.length)]||null;
         if(!blade) continue;
-        const role=String(blade.type||"Balance");
         const bits=selectableBits();
-        const prefer=(roleBits[role]||["Point","Level","Hexa","Kick"]).filter(n=>n!==playerBit?.name);
-        const bitPool=committed?bits.filter(b=>prefer.includes(b.name)):[];
-        const bitSource=(committed&&bitPool.length?bitPool:bits.filter(b=>b.name!==playerBit?.name));
+        const bitSource=bits.filter(b=>b.name!==playerBit?.name);
         bit=(bitSource.length?bitSource:bits)[Math.floor(Math.random()*(bitSource.length?bitSource.length:bits.length))]||null;
-        const nums=roleRats[role]||[3,5,7,9];
-        const height=committed
-            ? (role==="Attack"?(Math.random()<0.55?60:70):60)
-            : (Math.random()<0.55?60:(Math.random()<0.7?70:80));
-        const rats=RATCHETS.filter(r=>Number(r.height)===height && (!committed || nums.includes(Number(r.number))) && r.name!==playerRatchet?.name);
+        const height=Math.random()<0.55?60:(Math.random()<0.7?70:80);
+        const rats=RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
         const ratSource=rats.length?rats:RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
         ratchet=(ratSource.length?ratSource:RATCHETS)[Math.floor(Math.random()*(ratSource.length?ratSource.length:RATCHETS.length))]||null;
         if(blade && ratchet && bit && calculateComboStats(blade,ratchet,bit)) break;
