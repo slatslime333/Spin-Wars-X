@@ -90,18 +90,19 @@ function chance(p){return Math.random()<clamp01(p);}
 function nightMoney(win,night,opts){
     opts=opts||{};
     const m=Math.max(1,Number(night)||1);
-    if(opts.endless) return win?16:8;
-    const base=win?(18+m):(9+Math.floor(m/2));
-    return base+(opts.shark&&win?68:0);
+    if(opts.endless) return win?24:12;
+    // ~40% richer nights so packs/Awakening progress feel reachable.
+    const base=win?(26+Math.floor(m*1.25)):(13+Math.floor(m*0.65));
+    return base+(opts.shark&&win?90:0);
 }
 
 /**
  * Lite-only night pay from starter kit OVERALL (locked at run commit).
  * Tuned to pack prices: Bronze 105 / Silver 230 / Gold 370 / Premium Gold 685.
- * Full 30-win clear base ≈ 1005 before this mult (then optional earnBoost ×1.35).
- *   low OVR (~62–68) → ×1.22 ≈ $1226 (Premium Gold + leftover)
- *   mid  (~78)       → ×1.03 ≈ $1038 (near base)
- *   high (~94)       → ×0.61 ≈ $614  (Gold pack yes, Premium not a farm)
+ * Full 30-win clear base ≈ 1450 before this mult (then optional earnBoost ×1.35).
+ *   low OVR (~62–68) → ×1.22 ≈ $1770 (Premium Gold + leftover)
+ *   mid  (~78)       → ×1.03 ≈ $1490 (near base)
+ *   high (~94)       → ×0.61 ≈ $885  (Gold pack yes, Premium not a farm)
  */
 function _lerp(a,b,va,vb,x){
     if(b===a) return va;

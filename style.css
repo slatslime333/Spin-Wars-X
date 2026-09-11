@@ -4924,3 +4924,93 @@ button:focus-visible{
 .rl-mod-card b{display:block;font-family:Staatliches,Impact,sans-serif;letter-spacing:.06em}
 .rl-mod-card small{opacity:.85;letter-spacing:.06em;color:#c9d2dc}
 .rl-mod-card p{margin:6px 0 0;font-size:13px;opacity:.85;line-height:1.35}
+
+/* —— Awakening track (inventory + run prompt) + big build scale —— */
+.rl-aw-panel{
+  margin-top:12px;padding:12px;
+  border:1.5px solid rgba(240,180,41,.35);
+  background:linear-gradient(180deg,rgba(40,28,8,.9),rgba(12,10,8,.95));
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+.rl-aw-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
+.rl-aw-kicker{display:block;font-size:10px;letter-spacing:.18em;color:#f0d57b;font-weight:800}
+.rl-aw-head b{display:block;font-size:14px;letter-spacing:.04em;margin-top:2px}
+.rl-aw-count{font-size:11px;letter-spacing:.06em;color:#c9d2dc;white-space:nowrap}
+.rl-aw-meter{height:6px;background:#0a0806;border:1px solid rgba(255,255,255,.12);margin-bottom:10px;overflow:hidden}
+.rl-aw-meter i{display:block;height:100%;background:linear-gradient(90deg,#c4a056,#f0d57b);width:0}
+.rl-aw-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rl-aw-step{
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  min-height:64px;padding:8px;
+  border:1.5px solid rgba(255,255,255,.14);
+  background:#100e0c;color:#c9d2dc;text-align:left;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+}
+.rl-aw-step b{font-size:12px;letter-spacing:.08em}
+.rl-aw-step small{font-size:10px;line-height:1.25;opacity:.85}
+.rl-aw-step.is-claimed{border-color:#c4a056;color:#f0d57b}
+.rl-aw-step.is-ready{
+  border-color:rgba(26,209,90,.55);color:#9dffb8;cursor:pointer;
+  background:linear-gradient(180deg,rgba(26,209,90,.12),#0c140e);
+}
+.rl-aw-step.is-locked{opacity:.72}
+.rl-aw-preview{margin:10px 0 0;font-size:12px;color:#c9d2dc}
+.rl-aw-preview b{color:#f0d57b}
+.rl-inv-aw-mini{display:flex;gap:4px;margin:4px 0 6px}
+.rl-inv-aw-mini i{
+  width:18px;height:4px;background:#2a2420;border:1px solid rgba(255,255,255,.12);
+}
+.rl-inv-aw-mini i.on{background:#f0d57b;border-color:#c4a056}
+.rl-inv-aw-mini i.ready{background:#3dff7a;border-color:#1ad15a}
+
+.rl-build-card{
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;
+}
+.rl-build-card .rl-build-stats{order:0;width:100%}
+.rl-build-card .rl-scale-btn,
+.rl-build-card .rl-scale-btn-lg{
+  order:1;
+  align-self:stretch !important;
+  width:100%;
+  min-height:48px;
+  margin:8px 0 0;
+  padding:12px 14px;
+  font-size:14px;
+  letter-spacing:.12em;
+  border-width:1.5px;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  box-shadow:0 6px 0 #050308;
+}
+.rl-build-card .rl-scale-btn-lg.is-static{min-height:42px;font-size:12px}
+@media (max-width:720px){
+  .rl-build-card .rl-scale-btn,
+  .rl-build-card .rl-scale-btn-lg{
+    min-height:52px;font-size:13px;padding:14px 12px;
+  }
+  .rl-aw-steps{grid-template-columns:1fr;gap:6px}
+}
+
+.rl-awaken-card{
+  display:grid;grid-template-columns:96px 1fr;gap:12px;
+  width:min(480px,94vw);margin:8px auto 0;padding:12px;
+  border:1.5px solid rgba(240,180,41,.35);
+  background:linear-gradient(180deg,#1a140c,#0c0a08);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+}
+.rl-awaken-art{
+  width:96px;height:96px;display:grid;place-items:center;
+  background:#0a0806;border:1px solid rgba(255,255,255,.1);
+}
+.rl-awaken-art img{width:86%;height:86%;object-fit:contain}
+.rl-awaken-copy{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left}
+.rl-awaken-copy b{font-family:Staatliches,Impact,sans-serif;font-size:22px;letter-spacing:.04em}
+.rl-awaken-copy p{margin:0;font-size:13px;line-height:1.35;color:#c9d2dc}
+.rl-awaken-buff{
+  display:flex;flex-direction:column;gap:2px;width:100%;
+  padding:8px;border:1px solid rgba(240,180,41,.28);background:rgba(0,0,0,.35);
+}
+.rl-awaken-buff span{font-size:10px;letter-spacing:.16em;color:#f0d57b;font-weight:800}
+.rl-awaken-buff b{font-size:14px;color:#fff;letter-spacing:.02em}
+.rl-awaken-actions{display:flex;flex-direction:column;gap:10px;width:min(420px,92vw);margin:16px auto 0}
+.rl-awaken-actions .rip-btn,
+.rl-awaken-actions .menu-btn{min-height:52px;width:100%}
