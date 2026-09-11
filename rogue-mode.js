@@ -795,12 +795,28 @@ function cpuStackLead(){
     if(m<=2) return 0;
     let even=0.40, plus1=0.40, plus2=0.18, plus3=0.02;
     if(isLiteLoop()){
-        // Extra cards climb with the night; starter nights stay light.
-        if(m<=5){ even=0.82; plus1=0.16; plus2=0.02; plus3=0; }
-        else if(m<=10){ even=0.58; plus1=0.32; plus2=0.10; plus3=0; }
-        else if(m<=20){ even=0.36; plus1=0.40; plus2=0.20; plus3=0.04; }
-        else if(m<=25){ even=0.22; plus1=0.40; plus2=0.28; plus3=0.10; }
-        else { even=0.12; plus1=0.36; plus2=0.34; plus3=0.18; }
+        // Extra cards climb with the night; first 5 stay light.
+        if(m<=5){ even=0.90; plus1=0.09; plus2=0.01; plus3=0; }
+        else if(m<=10){
+            if(t==="Bronze"){ even=0.68; plus1=0.26; plus2=0.06; plus3=0; }
+            else if(t==="Silver"){ even=0.56; plus1=0.32; plus2=0.12; plus3=0; }
+            else { even=0.46; plus1=0.36; plus2=0.16; plus3=0.02; }
+        }
+        else if(m<=20){
+            if(t==="Bronze"){ even=0.48; plus1=0.36; plus2=0.14; plus3=0.02; }
+            else if(t==="Silver"){ even=0.34; plus1=0.40; plus2=0.22; plus3=0.04; }
+            else { even=0.24; plus1=0.40; plus2=0.28; plus3=0.08; }
+        }
+        else if(m<=25){
+            if(t==="Bronze"){ even=0.34; plus1=0.40; plus2=0.20; plus3=0.06; }
+            else if(t==="Silver"){ even=0.22; plus1=0.40; plus2=0.28; plus3=0.10; }
+            else { even=0.14; plus1=0.36; plus2=0.34; plus3=0.16; }
+        }
+        else {
+            if(t==="Bronze"){ even=0.22; plus1=0.40; plus2=0.28; plus3=0.10; }
+            else if(t==="Silver"){ even=0.14; plus1=0.36; plus2=0.34; plus3=0.16; }
+            else { even=0.08; plus1=0.32; plus2=0.36; plus3=0.24; }
+        }
     }else if(isCampaignLoop()){
         // Extra CPU cards track the night, not whether you unlocked a Gold blade.
         if(m<=5){ even=0.78; plus1=0.20; plus2=0.02; plus3=0; }
@@ -1267,7 +1283,7 @@ function cpuPowerTarget(playerPow,match,boss){
     r.cpuNight=night;
     let band;
     if(isLiteLoop()){
-        // Blade-only Rogue: soft early so starter kits clear; late squeeze + collection depth.
+        // Blade-only Rogue: first 5 are easy wins (not free); then tier door matters.
         let owned=5;
         try{
             if(global.SpinWarsRogueLite?.account){
@@ -1278,22 +1294,45 @@ function cpuPowerTarget(playerPow,match,boss){
         const depth=typeof SpinWarsRogueLiteConfig?.liteCollectionBand==="function"
             ? SpinWarsRogueLiteConfig.liteCollectionBand(owned)
             : 0;
+        const t=String(tier||"");
         if(boss){
             if(isSharkNight(match)) band=1.07;
             else if(isMiniNight(match) && match>Math.ceil(finalMatch()/2)) band=1.05;
             else band=1.03;
             if(night==="easy") band-=0.02;
             if(night==="hard") band+=0.02;
-        }else if(night==="easy") band=0.88+Math.random()*0.04;
-        else if(night==="even") band=0.93+Math.random()*0.04;
-        else band=0.98+Math.random()*0.035;
-        if(!boss){
-            if(match<=5) band=Math.min(band, night==="hard"?0.97:0.94);
-            else if(match<=10) band=Math.min(band, night==="hard"?1.00:0.98);
-            else if(match<=20) band=Math.min(band, night==="hard"?1.04:1.01);
-            else if(match<=25) band=clamp(band,0.97,1.06);
-            else band=clamp(band,1.00,1.09);
-            band=clamp(band+depth,0.86,1.10);
+            if(t==="Bronze") band-=0.015;
+            if(t==="Gold") band+=0.015;
+        }else if(match<=5){
+            // Easy farm window — still can lose on a hard roll or bad launch.
+            if(night==="easy") band=0.82+Math.random()*0.04;
+            else if(night==="even") band=0.86+Math.random()*0.04;
+            else band=0.90+Math.random()*0.035;
+            band=Math.min(band, night==="hard"?0.93:0.90);
+        }else if(night==="easy") band=0.90+Math.random()*0.04;
+        else if(night==="even") band=0.95+Math.random()*0.04;
+        else band=1.00+Math.random()*0.035;
+        if(!boss && match>5){
+            if(match<=10){
+                if(t==="Bronze") band=Math.min(band, night==="hard"?0.98:0.95);
+                else if(t==="Silver") band=Math.min(band, night==="hard"?1.00:0.97);
+                else band=Math.min(band, night==="hard"?1.02:0.99);
+            }else if(match<=20){
+                if(t==="Bronze") band=Math.min(band, night==="hard"?1.00:0.98);
+                else if(t==="Silver") band=Math.min(band, night==="hard"?1.03:1.00);
+                else band=clamp(band, night==="easy"?0.98:1.00, night==="hard"?1.06:1.04);
+            }else if(match<=25){
+                if(t==="Bronze") band=clamp(band,0.94, night==="hard"?1.03:1.00);
+                else if(t==="Silver") band=clamp(band,0.97, night==="hard"?1.05:1.02);
+                else band=clamp(band,1.00, night==="hard"?1.08:1.05);
+            }else{
+                if(t==="Bronze") band=clamp(band,0.96,1.04);
+                else if(t==="Silver") band=clamp(band,0.99,1.07);
+                else band=clamp(band,1.02,1.10);
+            }
+            band=clamp(band+depth,0.84,1.12);
+        }else if(!boss){
+            band=clamp(band+depth*0.35,0.80,0.94);
         }else{
             band=clamp(band+depth*0.5,0.95,1.12);
         }
