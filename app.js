@@ -299,7 +299,7 @@ const BLADE_ENGINE = {
         weight:37.0,
         sprite:"assets/blades/Wizardrod.png",
 
-        card:{ovr:98,attack:62,knockback:66,defense:95,mobility:64,balance:98,stamina:99,burst:94},
+        card:{ovr:98,attack:70,knockback:70,defense:95,mobility:64,balance:98,stamina:99,burst:94},
 
         physics:{
             weightClass:"Heavy",
@@ -704,7 +704,7 @@ const BLADE_ENGINE = {
         weight:35.0,
         sprite:"assets/blades/Wizard arrow.png",
 
-        card:{ovr:74,attack:60,knockback:57,defense:71,mobility:59,balance:84,stamina:85,burst:74},
+        card:{ovr:74,attack:60,knockback:57,defense:71,mobility:59,balance:84,stamina:83,burst:74},
 
         physics:{
             weightClass:"Medium",
@@ -1398,39 +1398,39 @@ function renderMainMenu(){
             ${homeMarkHTML({tag:""})}
         </div>
         <nav class="swx-nav" aria-label="Play">
-            <button class="home-door rip swx-hero" data-home="rogue" type="button">
-                <span class="home-door-kicker">PACK</span>
-                <b>ROGUE</b>
-                <span class="swx-hero-mark">PRIMARY</span>
-            </button>
-            <div class="swx-sec">
-                <button class="home-door play" data-home="quick" type="button">
-                    <span class="home-door-kicker">LEAGUE</span>
-                    <b>QUICK</b>
+            <div class="swx-primary" role="group" aria-label="Main modes">
+                <button class="home-door rip swx-hero" data-home="rogue" type="button">
+                    <span class="home-door-kicker">PACK · BUILD</span>
+                    <b>ROGUE</b>
                 </button>
-                <button class="home-door play" data-home="sandbox" type="button">
+                <button class="home-door rogue swx-hero swx-hero-campaign" data-home="campaign" type="button">
+                    <span class="home-door-kicker">LOCKER · TRACK</span>
+                    <b>CAMPAIGN</b>
+                </button>
+            </div>
+            <div class="swx-sec" role="group" aria-label="Side modes">
+                <button class="home-door play swx-side" data-home="quick" type="button">
+                    <span class="home-door-kicker">LEAGUE</span>
+                    <b>QUICK PLAY</b>
+                </button>
+                <button class="home-door play swx-side" data-home="sandbox" type="button">
                     <span class="home-door-kicker">LAB</span>
                     <b>SANDBOX</b>
                 </button>
             </div>
             <div class="swx-util">
-                <button class="home-door play" data-home="campaign" type="button">
-                    <span class="home-door-kicker">LOCKER</span>
-                    <b>CAMPAIGN</b>
-                </button>
-                <button class="home-help" data-home="help" type="button">HOW</button>
+                <button class="home-help" data-home="help" type="button">HOW TO PLAY</button>
             </div>
         </nav>
         <p class="home-ver">ALPHA</p>
     </main>`;
     document.querySelector("[data-home='rogue']")?.addEventListener("click",()=>{
         if(typeof SpinWarsRogueLite!=="undefined" && SpinWarsRogueLite.showHub) SpinWarsRogueLite.showHub();
-        else if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
-        else SpinWarsRogue.showLanding();
+        else renderMainMenu();
     });
     document.querySelector("[data-home='campaign']")?.addEventListener("click",()=>{
         if(typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showHub) SpinWarsRogueRun.showHub();
-        else SpinWarsRogue.showLanding();
+        else renderMainMenu();
     });
     document.querySelector("[data-home='sandbox']")?.addEventListener("click",()=>SpinWarsSandbox.showLanding());
     document.querySelector("[data-home='quick']")?.addEventListener("click",()=>renderLeagueSelect());
@@ -1440,7 +1440,18 @@ function renderMainMenu(){
 function howToKitLine(id){
     const meta=typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.META?.[id];
     if(!meta) return "";
-    return `<p><strong>${meta.name}${meta.active?"":" · always on"}.</strong> ${meta.blurb}</p>`;
+    const gist={
+        "ancient-sword":"Close-range freeze + multi-hit cut.",
+        "hurricane":"Speed up, heal a little RPM, shove on entry.",
+        "iron-skin":"Briefly ignore clash RPM and bounce their knock.",
+        "earthquake":"Cracks on the floor — drive through one to get hurt.",
+        "pegasus-blast":"Vanish, aim the glow marker, blast on a graze.",
+        "flame-trail":"Faster with fire behind you that burns them.",
+        "free-spin":"Chance to eat a clash for free.",
+        "double-edge":"Each clash may buff or nerf your knock."
+    };
+    const line=gist[id]||String(meta.blurb||"").split(".")[0]+".";
+    return `<li><strong>${meta.name}${meta.active?"":" · passive"}.</strong> ${line}</li>`;
 }
 
 function renderHowTo(){
@@ -1467,84 +1478,74 @@ function renderHowTo(){
         </nav>
 
         <section class="menu-card howto-card" id="ht-start">
-            <h2>What you are playing</h2>
-            <p>You and the CPU each have one Beyblade. You launch. They spin in the bowl. They clash, they ride the X-Rail, they fall in holes, or they run out of spin. First player to 7 points wins the match.</p>
-            <p>Points come from finishes, not from a health bar you click. Spin Finish is +1 when the other Bey hits 0 RPM. Over is +2 — left or right pocket. Xtreme is +3 — the center pocket. That is the whole scoring of a round. The rest is how you get there.</p>
-            <p>Bit, launch, and physics still decide the round. Stats refine the contacts. POWER and OVR on the plates are bragging rights. They do not enter battle math.</p>
+            <h2>The game</h2>
+            <p>Two Beys. Bowl. First to <strong>7</strong>.</p>
+            <p><strong>Spin</strong> +1 · <strong>Over</strong> +2 · <strong>Xtreme</strong> +3.</p>
+            <p>Bit + launch decide the round. Stats refine the hit. POWER / OVR are display only.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-modes">
-            <h2>The doors</h2>
-            <p><strong>Rogue</strong> is the pack night: collect blades, open packs, draft three random kits, pick one, climb 30 matches. Ratchets and bits are not permanent unlocks. Gold blades are temporary rentals. Duplicates feed Awakening. Mid-run shop cards and modifiers still go crazy. Lose, and that run is over. Continue remembers a live night.</p>
-            <p><strong>Sandbox</strong> is the lab. Landing doors for Player vs CPU, Player vs Player, and CPU vs CPU. 1 Bey or 2. Full garage, kit presets, launch presets, a session log. Finishes call out a score and keep going. Leave is the only exit. PvP uses two docks (P1 Space / E, P2 Enter / Shift). CPU vs CPU is watch mode. Tap a name in battle for a paused stat sheet — that works in Rogue and Quick Play too.</p>
-            <p><strong>Campaign</strong> is the locker climb (former Rogue Run): Garage, Track, money and EXP, then a 30-night climb (minis 10 / 20, Shark at 30, then endless). Still 1v1 for now. Separate save from Rogue packs.</p>
-            <p><strong>Quick Play</strong> is the league board. Quick Match rolls random combos for both sides with reroll, then PLAY. Bronze / Silver / Gold / Custom let you draft from that pool. Custom is the full garage. Every Quick Play match is first to 7, and a new one always starts with 2 ability charges. They do not refill mid-match.</p>
+            <h2>Modes</h2>
+            <ul>
+                <li><strong>Rogue</strong> — packs, draft a kit, climb. Lose = run over.</li>
+                <li><strong>Campaign</strong> — locker money/EXP, then a long climb.</li>
+                <li><strong>Quick Play</strong> — league / Quick Match. First to 7.</li>
+                <li><strong>Sandbox</strong> — lab. No first-to-7. Leave when done.</li>
+            </ul>
         </section>
 
         <section class="menu-card howto-card" id="ht-combo">
-            <h2>Building a combo</h2>
-            <p>A Bey is three parts stacked: <strong>blade</strong> on top, <strong>ratchet</strong> in the middle, <strong>bit</strong> on the bottom. Blade is the personality and the ability kit. Ratchet is sides × height — 3-60, 5-70, 9-80, like that. Bit is how it actually moves in the bowl.</p>
-            <p>Pick cards tint by tier: gold, silver, bronze. The photo is the whole Bey sitting in its slot. Under that: name, ability chip, POWER and OVR, and the HIT / HOLD / MOVE bars.</p>
-            <p><strong>Blade</strong> is the job. Attack wants to smash and pocket. Defense and Stamina want to outlast. Balance does a bit of both. The draft will not stop you from mixing weird; it will just play like you mixed weird.</p>
-            <p><strong>Ratchet.</strong> Height is undercut versus exposure. 60 sits low — extra smash, harder to snipe. 70 is the middle. 80 is tall and pokey: easier to lift, easier to burst, a little more scrape. Sides change mass, alignment, and burst risk. The bars on the card show what that does to your blade.</p>
-            <p><strong>Bit is the path.</strong> Stats do not rewrite orbit. Attack bits run a wide ring at full spin, close enough to hook the X-Rail, then walk in as RPM dies. Non-Attack bits stay tighter. Ball and Orb are shorter than Point and Level. Ball still sits short, but a real smash can travel before the bowl walks it home. By about 30% RPM every non-Attack bit sits on the center pin so two tired tanks actually meet. Taper, High Needle, and Elevate are not in the garage.</p>
-            <p>After you lock a combo you get the VS plates — same chrome you will see in battle. LIVE copy above them is a short booth line, not a kit lecture. Then LET IT RIP. In Quick Match you can reroll both sides on that screen. Quality ROLL still lets you go BACK to VS. After the quality reveal, angle and technique have LET IT RIP only. No take-backs on the roll.</p>
+            <h2>Combo</h2>
+            <p><strong>Blade</strong> = kit + personality. <strong>Ratchet</strong> = sides × height. <strong>Bit</strong> = path in the bowl.</p>
+            <p>Attack bits run wide (can hook the rail). Tanks stay tighter. Mix weird if you want — it will play weird.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-stats">
-            <h2>Stats, for real</h2>
-            <p>Here is the thing people get wrong. The seven combo stats are potential, not a tax you pay every time two discs kiss. A graze barely spends that budget. A real smash — the kind that actually winds up and plants — can spend most of it. If the gap is huge, that smash is devastating. If you are 70 versus 70, you are in a skill fight. Same intensity as 94 versus 94. The higher pair just makes the contacts a little denser. 99 versus 60 should feel like a mismatch on a hit that counts, not a one-graze delete. A ridiculous 500 versus a normal Silver still hits a ceiling. Unfair, not a bye.</p>
-            <p>Battle uses each stat against the opponent's matching number, not against 99. POWER is the six battle stats added up — Burst is left out. OVR is the kit overall: how well this blade, ratchet, and bit actually belong together. Both stay on the plate. Burst is on the card and does nothing in battle right now. Ratchet and bit bonuses shrink as a stat is already high — a Bronze Attack blade gets more from 1-60 than a Gold smash blade does. Flat and Low Flat are the raw smash bits; Rush keeps more stamina and does not max a Gold's Attack.</p>
-            <p>The pairings, because this used to be muddy:</p>
+            <h2>Stats</h2>
+            <p>Potential on a real hit — not a tax every graze. Each stat answers the foe's match:</p>
             <ul>
-                <li><strong>Attack answers Defense.</strong> Attack is how hard a real contact melts their remaining spin. Defense soaks that RPM loss. Attack does not shove them into a pocket. That is Knockback's job.</li>
-                <li><strong>Knockback answers Balance.</strong> Knockback is the clash bounce — the shove, capped so they cannot skate the bowl like air hockey. Balance soaks that shove. Knockback does not melt spin. That is Attack's job.</li>
-                <li><strong>Stamina answers Stamina.</strong> This is the clock. It slows idle drain. Drain speeds up a little as remaining spin falls, so two tanks at 20% do not live forever the way they used to at full.</li>
-                <li><strong>Mobility answers Mobility.</strong> A little more cruise and launch response. It does not widen the orbit. Bit still owns the path.</li>
+                <li><strong>Attack → Defense</strong> — melts RPM.</li>
+                <li><strong>Knockback → Balance</strong> — shoves (capped).</li>
+                <li><strong>Stamina → Stamina</strong> — spin clock.</li>
+                <li><strong>Mobility → Mobility</strong> — cruise / launch feel, not orbit width.</li>
             </ul>
-            <p>HIT on the plate is Attack and Knockback. HOLD is Defense, Balance, and Burst. MOVE is Mobility and Stamina. When a Bey is dying, the Defense and Balance walls come down with remaining RPM, so chip-stalling a corpse is less of a thing. Bit type still decides who shoves whom on contact — Attack bits hit tanks harder, two tanks can still pocket from a free-space hit without flying like Rush.</p>
-            <p>Physics still own the round. Mass, speed, closing, blade shape, whether you just swung off the X-Exit — that is the collision. Stats refine how much of that collision becomes RPM loss or shove. Launch quality, the bit, and whether you actually hit them clean will beat a 4-point card bump every time.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-launch">
-            <h2>The launch screen</h2>
-            <p>You roll quality first. Horrible / Bad / Okay / Good / Perfect. That roll is aim accuracy, not a vibes sticker. Perfect is tight. Horrible is wide. It also sets the launch RPM (Perfect is 100%, Horrible is 90%). ROLL still has BACK to the VS plates. After the reveal, you pick angle and technique and you LET IT RIP. You do not reroll from there.</p>
-            <p><strong>Angle.</strong> Flat is neutral. Slight lasts 2.5s: +1 Attack, +1 Knockback, −1 Defense, −1 Mobility. Hard lasts 3.3s at +2 / −2 on the same pair. Both add a short oval, then fade. Harder tilt hooks the X-Rail less cleanly and is more likely to creep the ring than ride it. On a Drop they also change how long you hang before the shot.</p>
-            <p><strong>Center.</strong> Spawns in the middle of the bowl, slightly toward your stadium side so two Center picks do not stack. Attack bits still wind out to their wide ring. Non-Attack bits wind into their own tighter orbit — they must not sling to the X-Rail like Rush. A small spin-correct tangent, not a random throw.</p>
-            <p><strong>X-Rail.</strong> Starts at the live lower corner on your side and rides. Quality is how clean that entry is. You are on the rail, not in a hole.</p>
-            <p><strong>Direct Clash.</strong> After both Beys spawn they fly at each other. Quality is how true that aim is. They keep that incoming momentum instead of immediately orbiting, so the first contact is a real hit if you did not whiff.</p>
-            <p><strong>Drop.</strong> You hang under the top X-Rail, beside the X-Exit — not on the lip, not inside the V — then shoot toward stadium middle. Quality is aim accuracy. The rail does not grab you while you are stalling up there.</p>
-            <p>The CPU is not reading your live pick. It locked a plan at round start from how you have been launching: Center-heavy habits get more rail, drop, and clash answers; X-Rail habits get rail contests and clashes, not more Center; Clash habits get Center, rail, and drop; Drop habits get Center and clash. It also tries not to repeat itself.</p>
+            <h2>Launch</h2>
+            <p>Roll quality (aim + launch RPM), then angle + technique. No reroll after the reveal.</p>
+            <ul>
+                <li><strong>Center</strong> — mid bowl, wind into your bit's ring.</li>
+                <li><strong>X-Rail</strong> — start on the rail and ride.</li>
+                <li><strong>Direct Clash</strong> — both fly at each other.</li>
+                <li><strong>Drop</strong> — hang under the top rail, shoot middle.</li>
+            </ul>
+            <p>Flat / Slight / Hard tilt trades offense for defense for a few seconds.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-battle">
-            <h2>How a battle actually plays</h2>
-            <p>The LIVE booth sits above the stadium — same chrome as the VS plates. It holds a line for a beat: one event, one line. Launch, clash, rail, recover, finish. Witty, not a lecture. Late in a match it will sometimes call a prediction. Names and ratchet · bit are text on the health row. RPM bars keep a faint amber trail when spin falls, and a cyan chunk that lands ahead of the fill when you gain (Hurricane). POWER and OVR sit in boxes on that row. Dash and ability live in the thumb zone. On a PC, Space dashes and M pops the kit — those key labels only print under the buttons on a desktop pointer. On a phone the whole battle is a locked screen — no page scroll.</p>
-            <p>You are watching two discs in a bowl. They have a home radius the bit likes, but knockback can throw them off it, and they have to walk back. They always un-overlap, even during hit-lock, so they cannot phase through. Head-on clashes bounce; they do not zero both speeds and they do not swap spin direction.</p>
-            <p>Idle spin drains the whole time. Stamina stretches that clock. Two tanks at low RPM drain a little faster than they did at full, so the endgame does not become a staring contest. When they hit, Attack vs Defense spends RPM. Knockback vs Balance spends shove. The shove is capped — heavy, not air hockey.</p>
-            <p>If you smash someone toward Over or Xtreme, the inner lens can zoom (~50%, once per point) on a real pocket-bound hit. Player dashes have a 40% chance to reuse that cam for a second and a half. CPU dashes do not. Physics ticks stay 1/60. Only the clock feeding them slows. The green stadium outline does not scale, so a bigger phone does not mean a bigger knock.</p>
+            <h2>Battle</h2>
+            <p>Clash: Attack melts spin, Knockback shoves. Idle drain always ticks (Stamina slows it).</p>
+            <p>Dash = shove along your heading (can't from a dead stop). Space / M on desktop.</p>
+            <p>Tap a name for a paused stat sheet.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-rail">
-            <h2>X-Rail and X-Exit</h2>
-            <p>The gold ring on the upper stadium is the X-Rail. You hook it from the inner face with remaining counter-clockwise bite and speed, not with peak RPM on a card. Near-misses can still ride. You cannot capture from the back of the rail or while you are already in a painted hole. Failed hooks bounce softer and keep a little CCW, so a high-RPM Attack can wind on instead of skating straight off. Tired wide laps bounce more often — low remaining RPM raises the bar so they do not ride out a dead match.</p>
-            <p>Ride speed is the speed you arrived with, plus a light RPM drive. Exit speed is that carried rail speed. A rail-break ejector shoves toward stadium middle, not out through a pocket.</p>
-            <p>The X-Exit is the V at the top. Leaving the rail, you go toward left-center, center, or right-center — not every exit down the exact middle. Beys do not brake themselves off a pocket. If that line hits Over or Xtreme, it rolls: 20% self-KO at 80%+ RPM, 30% from 60–79%, 50% when tired. A smash after they left the ring is still a smash. A free Bey that hits the X-Exit bounces toward middle with most of its speed. It only rides if the existing hook already has a real CCW bite into the rail.</p>
-            <p>Swinging off that exit into a clash is a real hit. You get a slight knock boost. The swinging Bey dumps leftover follow-through so they bounce instead of riding through into a pocket. Non-Attack bits on that swing hit with Attack-bit weight for that contact. Riding the rail is not that swing.</p>
+            <h2>X-Rail</h2>
+            <p>Hook from the <strong>inside</strong> with CCW bite + speed. Ride, then exit toward left / mid / right.</p>
+            <p>Exit into a pocket can self-KO (more likely when tired). A smash after exit still counts as a smash.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-finish">
-            <h2>Over, Xtreme, spin, recover</h2>
-            <p>Only the three painted holes score a knockout: left Over, center Xtreme, right Over. The rest of the lower rail and wall stay solid. Light taps should not score. You have to actually cross into the hole, not graze the paint.</p>
-            <p>A parked clip is not a finish. You need a knock into the opening. Smash credit lasts about a second and needs a real plant. A smash that strong can still count after hit-stun fades. Light force only counts while they are still in the shove. Crossing a hole on a clash tangent is allowed — you do not need a perfect radial line.</p>
-            <p>Occupying a painted hole — center in, or a knocked disc overlapping the rim — is a made pocket: Over, Xtreme, or they recover and climb out. Recovery is a thing. A healthy Bey knocked in at high RPM can climb. Smash is still the easiest KO. Generic rail pockets and limp dumps climb more than a smash. When they climb, the booth says RECOVERED over the usual IMPACT line.</p>
-            <p>There is no launch invuln timer to save you from yourself. X-Rail spawn sits on the rail, not in a hole. Do not launch into a pocket on purpose unless you like donating 2 or 3.</p>
+            <h2>Finishes</h2>
+            <p>Only the three painted holes KO. Need a real knock in — not a parked clip.</p>
+            <p>Healthy Beys can <strong>recover</strong> out. Smash is still the easiest KO.</p>
         </section>
 
         <section class="menu-card howto-card" id="ht-combat">
-            <h2>Dash and abilities</h2>
-            <p>Dash is a shove along the heading you already have. About a 3.8 second cooldown. You cannot dash from a dead stop. It is for committing a line, not for teleporting. Player dashes can trigger that inner-lens cam. On a PC, Space dashes and M uses the kit; those labels sit under the buttons only on a desktop pointer. Ability charges are 2 per match, keyed to this match (mode + blades). Leave and come back to the same fight and they stay spent. A new Quick Play or league match starts at 2/2. They do not refill because you got bored mid-set.</p>
-            <p>Active kits spend a charge. Passives do not. CPU spends like that blade's personality: tanks hold dash, Attack and Flame dash into clashes, Pegasus and Iron Skin save charges, Hurricane waits until RPM is actually down. The last charge is usually clutched until the CPU is behind by 2 or you are at 5.</p>
+            <h2>Dash &amp; kits</h2>
+            <p>2 ability charges per match. Actives spend one. Passives don't. New match = 2/2.</p>
+            <ul>
             ${howToKitLine("ancient-sword")}
             ${howToKitLine("hurricane")}
             ${howToKitLine("iron-skin")}
@@ -1553,14 +1554,13 @@ function renderHowTo(){
             ${howToKitLine("flame-trail")}
             ${howToKitLine("free-spin")}
             ${howToKitLine("double-edge")}
-            <p>Pegasus aim is a bottom-right overlay stick. The marker is a glow circle, not a crosshair. A graze of that marker against their disc is a hit. You vanish for 1.3s, then you have 3s to aim. The stick unmounts when the blast fires.</p>
+            </ul>
         </section>
 
         <section class="menu-card howto-card" id="ht-score">
-            <h2>After first to 7</h2>
-            <p>The scoreboard is 0 VS 0 with "first to 7" underneath. Rogue prints the match number there. When someone hits 7, Quick Play and Rogue open a Match Summary. RPM Damage scales toward a ~700 ceiling (100 bar × 7 points) with denser bands at higher totals. Ability scores kit damage, restore (Hurricane), and Over/Xtreme pockets caused by an ability shove. A short chain line shows the best Big Impact → X-Rail → Finish stack and its × multiplier. Dashes and X-Rail rides list at +0. Game quality uses the Horrible / Bad / Okay / Good / Perfect ladder from how you played and what you scored.</p>
-            <p>Rogue run totals and boss bonuses live on a separate run summary when the run ends. The landing has Continue when a run is saved, and a Run Scoreboard of finished nights.</p>
-            <p>If you only remember four things: bit is the path, launch is the first decision that matters, Attack melts spin and Knockback shoves, first to 7. The rest is why a clean smash into Xtreme feels like the whole game in one second.</p>
+            <h2>After 7</h2>
+            <p>Match Summary for Quick Play / Rogue. Rogue also has a run scoreboard on the landing.</p>
+            <p><strong>Remember:</strong> bit = path, launch matters, Attack melts / Knockback shoves, first to 7.</p>
         </section>
     </main>`;
     const main=document.querySelector(".menu");
@@ -2073,6 +2073,14 @@ function renderBitPage(){
 
 
 //=========================
+// STAT BAND (must precede load-time DB clamp)
+//=========================
+/** Battle/display stat band. No soft 60 floor — dumps may sit low; keep 1 so UI/math never go ≤0. */
+const STAT_FLOOR=1;
+const STAT_CEIL=99;
+function clamp(value){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(value)));}
+
+//=========================
 // STAT DATABASE NORMALIZATION
 //=========================
 Object.values(BLADE_ENGINE).forEach(blade=>{
@@ -2130,7 +2138,6 @@ function getCompatibilityScore(blade,ratchet,bit){
         getBitCompatibility(bladeData,bit)*0.45
     );
 }
-function clamp(value){return Math.max(60,Math.min(99,Math.round(value)));}
 
 function getBladePhysicalProfile(bladeData){
     const p=bladeData.physics||{},b=bladeData.behavior||{};
@@ -2361,7 +2368,8 @@ function calculateMetaScoreV57(blade,ratchet,bit,stats,fit){
     return calculateOverallScoreV58(blade,ratchet,bit,stats);
 }
 
-function normalizePhysicalStat(v){return Math.max(60,Math.min(99,Math.round(v)));}
+function normalizePhysicalStat(v){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(v)));}
+/** Role 0..1 → rating on the old mid band (construction curve, not a dump floor). */
 function getBitRatedProperty(role){return 60+role*40;}
 function getRatchetRatedProperty(role){return 60+role*40;}
 
@@ -2537,7 +2545,7 @@ function showComboCard(){
                 SpinWarsRogueRun.showHub();
                 return;
             }
-            SpinWarsRogue.showLanding();
+            renderMainMenu();
             return;
         }
         if(Game.quickMatch){ renderLeagueSelect(); return; }
@@ -2590,33 +2598,15 @@ function generateCPUCombo(force=false){
     const bladePool=leaguePool.filter(b=>b && b.name && b.name!==playerBlade?.name);
     const blades=bladePool.length?bladePool:leaguePool.length?leaguePool:allBlades;
     let blade=null,ratchet=null,bit=null,guard=0;
-    const roleBits={
-        Attack:["Rush","Low Rush","Flat","Low Flat","Kick","Quake"],
-        Defense:["Needle","Hexa","Wedge","Ball","Orb","Point"],
-        Stamina:["Ball","Orb","Needle","Hexa","Point","Level"]
-    };
-    const roleRats={
-        Attack:[1,3,7,9],
-        Defense:[9,7,6,5],
-        Stamina:[7,9,6,5]
-    };
-    const league=String(Game.mode||"");
-    const solve=league==="gold"?1:league==="silver"?0.55:league==="bronze"?0.28:1;
-    const committed=!!(Game.quickMatch || league==="custom" || Math.random()<solve);
+    /* Every Quick Play / league mode: fully random CPU kits (no role commit). */
     while(guard++<18){
         blade=blades[Math.floor(Math.random()*blades.length)]||null;
         if(!blade) continue;
-        const role=String(blade.type||"Balance");
         const bits=selectableBits();
-        const prefer=(roleBits[role]||["Point","Level","Hexa","Kick"]).filter(n=>n!==playerBit?.name);
-        const bitPool=committed?bits.filter(b=>prefer.includes(b.name)):[];
-        const bitSource=(committed&&bitPool.length?bitPool:bits.filter(b=>b.name!==playerBit?.name));
+        const bitSource=bits.filter(b=>b.name!==playerBit?.name);
         bit=(bitSource.length?bitSource:bits)[Math.floor(Math.random()*(bitSource.length?bitSource.length:bits.length))]||null;
-        const nums=roleRats[role]||[3,5,7,9];
-        const height=committed
-            ? (role==="Attack"?(Math.random()<0.55?60:70):60)
-            : (Math.random()<0.55?60:(Math.random()<0.7?70:80));
-        const rats=RATCHETS.filter(r=>Number(r.height)===height && (!committed || nums.includes(Number(r.number))) && r.name!==playerRatchet?.name);
+        const height=Math.random()<0.55?60:(Math.random()<0.7?70:80);
+        const rats=RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
         const ratSource=rats.length?rats:RATCHETS.filter(r=>Number(r.height)===height && r.name!==playerRatchet?.name);
         ratchet=(ratSource.length?ratSource:RATCHETS)[Math.floor(Math.random()*(ratSource.length?ratSource.length:RATCHETS.length))]||null;
         if(blade && ratchet && bit && calculateComboStats(blade,ratchet,bit)) break;
@@ -2760,23 +2750,25 @@ function showLetItRip(){
 
     if(stage==="qualityRolling"||stage==="qualityReveal"){
         const rolling=stage==="qualityRolling";
+        const fixedPlayer=Game.player.launch.qualityMode==="Fixed";
         const playerQ=Game.player.launch.quality||"Okay";
         const cpuQ=Game.cpu.launch?.quality||"Okay";
         const ladder=["Horrible","Bad","Okay","Good","Perfect"];
-        const reel=(side,final)=>{
+        // Fixed quality locks YOU and only spins the CPU reel.
+        const reel=(side,final,spin)=>{
             const strip=ladder.concat(ladder).concat([final]);
-            return `<div class="launch-quality-column ${side}-quality-reveal${rolling?" is-reel":""}">
+            return `<div class="launch-quality-column ${side}-quality-reveal${spin?" is-reel":""}${!spin&&rolling&&side==="player"?" is-set":""}">
               <span class="launch-quality-who">${side==="player"?"YOU":"CPU"}</span>
-              ${rolling
+              ${spin
                 ? `<div class="swx-reel"><div class="swx-reel-strip">${strip.map(q=>`<b>${q}</b>`).join("")}</div></div>`
                 : `<strong>${final}</strong>`}
             </div>`;
         };
         controls.innerHTML=`
           <div class="launch-quality-reveal${rolling?" is-rolling":""}">
-            ${reel("player",playerQ)}
+            ${reel("player",playerQ, rolling && !fixedPlayer)}
             <div class="launch-quality-divider"><b>VS</b></div>
-            ${reel("cpu",cpuQ)}
+            ${reel("cpu",cpuQ, rolling)}
           </div>
         `;
         if(rolling && !Game.player.launch.qualityRollStarted){
@@ -2792,7 +2784,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRollStarted=0;
                     showLetItRip();
                 }
-            },900);
+            },700);
         }else if(!rolling && !Game.player.launch.qualityRevealStarted){
             Game.player.launch.qualityRevealStarted=Date.now();
             setTimeout(()=>{
@@ -2801,7 +2793,7 @@ function showLetItRip(){
                     Game.player.launch.qualityRevealStarted=0;
                     showLetItRip();
                 }
-            },900);
+            },700);
         }
     }else if(stage==="quality"){
         controls.innerHTML=`
@@ -2812,7 +2804,6 @@ function showLetItRip(){
               </button>
               <button class="menu-btn gold" id="rollQualityBtn" type="button">ROLL</button>
             </div>
-            <button class="menu-btn silver" id="backToVS" type="button">BACK</button>
           </div>
         `;
     }else{
@@ -2852,7 +2843,6 @@ function showLetItRip(){
     if(stage==="quality"){
         const fixedQualityBtn=controls.querySelector("#fixedQualityBtn");
         const rollQualityBtn=controls.querySelector("#rollQualityBtn");
-        const backToVS=controls.querySelector("#backToVS");
 
         if(fixedQualityBtn){
             fixedQualityBtn.onclick=()=>{
@@ -2863,8 +2853,9 @@ function showLetItRip(){
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
                 Game.player.launch.qualityMode="Fixed";
-                Game.player.launch.setupStage="qualityReveal";
-                Game.player.launch.qualityRevealStarted=0;
+                // Player stays on the set grade; CPU still gets the reel spin.
+                Game.player.launch.setupStage="qualityRolling";
+                Game.player.launch.qualityRollStarted=0;
                 showLetItRip();
             };
         }
@@ -2875,16 +2866,12 @@ function showLetItRip(){
                 Game.player.launch.quality=bumpLuckyLaunchQuality(Game.player.launch.quality);
                 Game.cpu.launch=Game.cpu.launch||{};
                 Game.cpu.launch.quality=rollRandomLaunchQuality();
+                Game.player.launch.qualityMode="Roll";
                 Game.player.launch.setupStage="qualityRolling";
                 Game.player.launch.qualityRollStarted=0;
                 showLetItRip();
             };
         }
-
-        if(backToVS) backToVS.onclick=()=>{
-            if(Game.mode==="sandbox" && typeof SpinWarsSandbox!=="undefined") SpinWarsSandbox.showLab();
-            else showVS();
-        };
         return;
     }
 
@@ -4161,12 +4148,11 @@ function forfeitLiveMatch(){
         const loop=Game.rogue?.loop;
         const lite=loop==="lite"||Game.mode==="rogue-lite";
         const campaign=loop==="run"||Game.mode==="rogue-run";
-        /* Lite / Campaign never dump onto the old Tier Rogue landing. */
         if((lite||campaign) && typeof SpinWarsRogue.goHomeAfterRun==="function"){
             SpinWarsRogue.goHomeAfterRun("lost");
             return;
         }
-        SpinWarsRogue.showLanding();
+        renderMainMenu();
         return;
     }
     renderMainMenu();
@@ -4928,6 +4914,45 @@ function finishNewBattle(winnerSide,finishType="Spin Finish"){
 
 function isAttackTypeBit(s){
     return String(s?.bit?.type||"").toLowerCase()==="attack";
+}
+
+/** Clash role bands: Attack / Balance / Tank (Defense+Stamina). */
+function bitClashRole(s){
+    const t=String(s?.bit?.type||"").toLowerCase();
+    if(t==="attack") return "attack";
+    if(t==="balance") return "balance";
+    return "tank";
+}
+
+/** Live dash commit window from abilities.js dashBurst (~480ms). */
+function dashCommitLive(s){
+    return !!(s && s.dashBurst && (Number(s.dashBurst.until)||0)>performance.now());
+}
+
+/**
+ * Rail-swing pressure still counts as Attack for bully matchups.
+ * Base role stays for Balance/Tank identity and dash converts.
+ */
+function clashPressureRole(s, hitLikeAttack){
+    if(hitLikeAttack) return "attack";
+    return bitClashRole(s);
+}
+
+/**
+ * Attack dash greed near Over/Xtreme: keep follow-through so a bad
+ * commit can self-KO. Does not raise the knock cap.
+ */
+function applyAttackDashOvercommit(s){
+    if(!s || bitClashRole(s)!=="attack" || !dashCommitLive(s)) return;
+    const nearMouth=s.y>0.30 && (Math.abs(s.x)>0.20 || s.y>0.48);
+    if(!nearMouth) return;
+    const sp=Math.hypot(s.vx,s.vy)||1;
+    const outward=(s.x*s.vx+(s.y-0.15)*s.vy)/sp;
+    if(outward<0.12) return;
+    s.vx*=1.07;
+    s.vy*=1.07;
+    s.lastImpactForce=Math.min(0.027, Math.max(Number(s.lastImpactForce)||0, 0.021));
+    s.impactMomentumState=Math.max(Number(s.impactMomentumState)||0, 0.56);
 }
 
 function recentXExitSwing(s){
@@ -7494,21 +7519,49 @@ function newPhysicsCollision(dt){
         cDefenseSoak*
         (1.02+newBattleClamp(momentumFactor/2.4,0,0.16))
     );
-    if(pHitLikeAttack && !cHitLikeAttack){
-        pKnockRaw*=1.24;
-        // Non-Attack still answers — slightly less penalty than before.
-        cKnockRaw*=0.88;
-    }else if(cHitLikeAttack && !pHitLikeAttack){
-        cKnockRaw*=1.24;
-        pKnockRaw*=0.88;
-    }else if(!pAttackBit && !cAttackBit){
-        // Tank vs tank: a touch more shove so free-space pockets stay reachable under the 0.086 cap.
-        pKnockRaw*=1.62;
-        cKnockRaw*=1.62;
+    /*
+      Bit knock roles (cap still 0.086):
+      - Attack idle-bullies Tanks; Tanks answer softer unless they dashed.
+      - Tank vs Tank stays chunky and fun, not air-hockey rockets.
+      - Balance sits mid — not on the tank branch.
+      - Dash commit converts knock (Tank highest, then Balance, then Attack).
+      - Flat non-Attack ×1.06 outgoing removed.
+    */
+    const pRole=bitClashRole(p);
+    const cRole=bitClashRole(c);
+    const pPress=clashPressureRole(p, pHitLikeAttack);
+    const cPress=clashPressureRole(c, cHitLikeAttack);
+    if(pPress==="attack" && cRole==="tank" && cPress!=="attack"){
+        pKnockRaw*=1.25;
+        cKnockRaw*=0.84;
+    }else if(cPress==="attack" && pRole==="tank" && pPress!=="attack"){
+        cKnockRaw*=1.25;
+        pKnockRaw*=0.84;
+    }else if(pPress==="attack" && cRole==="balance" && cPress!=="attack"){
+        pKnockRaw*=1.12;
+        cKnockRaw*=1.00;
+    }else if(cPress==="attack" && pRole==="balance" && pPress!=="attack"){
+        cKnockRaw*=1.12;
+        pKnockRaw*=1.00;
+    }else if(pRole==="tank" && cRole==="tank"){
+        pKnockRaw*=1.34;
+        cKnockRaw*=1.34;
+    }else if(pRole==="balance" && cRole==="balance"){
+        pKnockRaw*=1.05;
+        cKnockRaw*=1.05;
+    }else if(pRole==="balance" && cRole==="tank"){
+        pKnockRaw*=1.06;
+        cKnockRaw*=1.10;
+    }else if(pRole==="tank" && cRole==="balance"){
+        pKnockRaw*=1.10;
+        cKnockRaw*=1.06;
     }
-    // Non-Attack bits deal a slight bit more shove in general (Ball/Orb/Hexa/etc.), still under cap.
-    if(!pAttackBit) pKnockRaw*=1.06;
-    if(!cAttackBit) cKnockRaw*=1.06;
+    if(dashCommitLive(p)){
+        pKnockRaw*=pRole==="tank"?1.20:pRole==="balance"?1.14:1.10;
+    }
+    if(dashCommitLive(c)){
+        cKnockRaw*=cRole==="tank"?1.20:cRole==="balance"?1.14:1.10;
+    }
     /*
       Swinging off the X-Exit into a clash gets a small extra shove so
       Over/Xtreme are a bit more reachable. Attack bits get a tad more
@@ -7606,11 +7659,14 @@ function newPhysicsCollision(dt){
       Using its own outgoing knock left tanks glued: they hit weakly,
       so they recovered orbit before the incoming smash could travel.
     */
+    // Tanks plant a bit sooner after the punch so thumps don't skate into mouths.
+    const pImpactCap=pAttackBit?0.52:(pRole==="balance"?0.60:0.58);
+    const cImpactCap=cAttackBit?0.52:(cRole==="balance"?0.60:0.58);
     const pImpactMomentumState=
-        newBattleClamp(cKnockback/0.090, 0.14, pAttackBit?0.52:0.68);
+        newBattleClamp(cKnockback/0.090, 0.14, pImpactCap);
 
     const cImpactMomentumState=
-        newBattleClamp(pKnockback/0.090, 0.14, cAttackBit?0.52:0.68);
+        newBattleClamp(pKnockback/0.090, 0.14, cImpactCap);
 
     p.impactMomentumState=Math.max(
         p.impactMomentumState||0,
@@ -7656,6 +7712,8 @@ function newPhysicsCollision(dt){
     c.vy-=ty*cFollow;
     dumpRailSwingFollowThrough(p, pVxIn, pVyIn, nx, ny);
     dumpRailSwingFollowThrough(c, cVxIn, cVyIn, -nx, -ny);
+    applyAttackDashOvercommit(p);
+    applyAttackDashOvercommit(c);
 
     if(p.railEngaged && cRailBreakForce>=railBreakThreshold){
         breakXRailFromImpact(p,nx,ny,cRailBreakForce);

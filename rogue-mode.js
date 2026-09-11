@@ -154,12 +154,25 @@ function powerOf(stats){
     return STATS.reduce((s,k)=>s+(Number(stats[k])||70),0)/STATS.length;
 }
 
-function starterParts(blade){
-    const bits=selectableBits();
+function starterParts(blade,exclude){
+    const bits=(typeof selectableBits==="function"?selectableBits():[])
+        .filter(b=>!exclude?.bitName||b.name!==exclude.bitName);
     const bit=pick(bits.length?bits:[{name:"Point"}]);
-    const rats=typeof RATCHETS!=="undefined"?RATCHETS:[];
+    const rats=(typeof RATCHETS!=="undefined"?RATCHETS:[])
+        .filter(r=>!exclude?.ratchetName||r.name!==exclude.ratchetName);
     const ratchet=pick(rats.length?rats:[{name:"3-60",number:3,height:60}]);
     return {ratchet,bit};
+}
+
+/* Campaign + Rogue share this loop: random kits through match 17,
+   role-committed kits from match 18 / endless (Shark night still locks). */
+function cpuUsesCommittedParts(match){
+    return Number(match)>=finalMatch();
+}
+
+function cpuPartsForMatch(blade,match,exclude){
+    if(cpuUsesCommittedParts(match)) return pickCommittedParts(blade,exclude);
+    return starterParts(blade,exclude);
 }
 
 function bladeRole(blade){
@@ -493,23 +506,140 @@ function bronzeBand(){
     return acc;
 }
 
+/**
+ * Bronze-form start for Silver/Gold blades.
+ * Keeps personality (Attack stays attacky) but seats near a Bronze opener —
+ * highs compress harder than before, dumps may fall (no soft 60 floor in
+ * app clamp). Evolve / final clear startScale toward real stats.
+ * Bronze starters get no startScale.
+ *
+ * Glass cannons (Shark Edge): never up-normalize after dump compress — that
+ * used to re-inflate ATK/KB into mid-Silver. Soft lift stays mild, and
+ * identity highs hard-cap near the Bronze Attack neighborhood.
+ */
 function makeStartScale(blade,ratchet,bit){
     const scale=emptyBonuses();
     const tier=String(blade?.tier||"");
     if(tier==="Bronze"||!blade) return scale;
     const band=bronzeBand();
     const mine=comboBase(blade,ratchet,bit);
-    // Silver/Gold sit a step above Bronze, not a full-tier jump.
-    // Keep the shape: only pull highs down, leave dump stats dump.
-    // Same Bronze-form start in Rogue Run and Tier Rogue.
-    // Recompute from the live ratchet/bit so garage swaps still move the bronze-form kit.
-    const lead=tier==="Gold"?2.2:1.0;
+    const bandPow=powerOf(band);
+    const minePow=powerOf(mine);
+    // Thin lead over the Bronze pack — Bronze-form, not compressed Silver/Gold.
+    const powerLead=tier==="Gold"?2.2:0.35;
+    const targetPow=bandPow+powerLead;
+    const meanMine=minePow;
+    const meanBand=bandPow;
+    // Shape keep preserves glass-cannon identity without mid-Silver seats.
+    // Silver spikes hard-cap later; Gold keeps a wider lead.
+    const shapeKeep=tier==="Gold"?0.38:0.30;
+    const seatLead=tier==="Gold"?2.0:0.4;
+    // Max seated high above the Bronze band (Shark Edge ATK ~ band+11 ≈ Viper).
+    const spikeCap=tier==="Gold"?16:11;
+
+    if(minePow>targetPow+0.15){
+        const ideal={};
+        STATS.forEach(k=>{
+            const have=Number(mine[k])||70;
+            const personality=have-meanMine;
+            ideal[k]=(Number(band[k])||meanBand)+seatLead+personality*shapeKeep;
+        });
+        let idealPow=powerOf(ideal);
+        // Never upscale — dump-low ideals used to inflate highs back to Silver.
+        const norm=Math.min(1, targetPow/Math.max(1,idealPow));
+        STATS.forEach(k=>{
+            const have=Number(mine[k])||70;
+            const bandK=Number(band[k])||meanBand;
+            let want=(Number(ideal[k])||70)*norm;
+            // Dumps (at/under band): allow a mild settle toward / under the band.
+            // Never inflate a dump up to the pack average here.
+            if(have<=bandK+0.5){
+                const dumpWant=Math.min(have, bandK-1.2+personalityBias(have,meanMine)*0.25);
+                want=Math.min(want, dumpWant);
+            }
+            if(want<have) scale[k]=round(want-have);
+        });
+    }
+
+    // Soft floor only — small restore so awkward kits can still open weak.
+    let scaled=mergeStats(mine,scale);
+    let pow=powerOf(scaled);
+    const floor=bandPow+Math.max(0.15,powerLead*0.2);
+    if(pow<floor){
+        const needSum=(floor-pow)*STATS.length;
+        const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
+        if(totalCut>0){
+            const restore=Math.min(tier==="Gold"?0.55:0.32,needSum/totalCut);
+            STATS.forEach(k=>{
+                if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1-restore));
+            });
+        }
+    }
+
+    // Soft lift: identity highs only — never pad dumps back toward the band.
+    // Silver lift is light so Shark Edge cannot rebuild mid-Silver spikes.
+    scaled=mergeStats(mine,scale);
+    pow=powerOf(scaled);
+    const liftGate=tier==="Gold"?0.35:0.55;
+    if(pow<targetPow-liftGate){
+        const liftSum=(targetPow-pow)*STATS.length;
+        const ranked=STATS.slice().filter(k=>{
+            const have=Number(mine[k])||70;
+            const bandK=Number(band[k])||meanBand;
+            return have>bandK+0.5;
+        }).sort((a,b)=>{
+            const da=(Number(mine[a])||70)-(Number(band[a])||70);
+            const db=(Number(mine[b])||70)-(Number(band[b])||70);
+            return db-da;
+        });
+        let left=liftSum;
+        ranked.forEach((k,i)=>{
+            if(left<=0.05) return;
+            const weight=tier==="Gold"?(i<3?0.28:0.14):(i<3?0.18:0.08);
+            const give=Math.min(left,liftSum*weight);
+            scale[k]=round((Number(scale[k])||0)+give);
+            left-=give;
+        });
+        // Leftover lift is dropped (do not sprinkle onto dumps).
+    }
+
+    // Soft ceiling so a perfect Gold kit cannot sit like a mid-Gold opener.
+    scaled=mergeStats(mine,scale);
+    pow=powerOf(scaled);
+    const ceiling=targetPow+(tier==="Gold"?1.6:0.45);
+    if(pow>ceiling){
+        const overSum=(pow-ceiling)*STATS.length;
+        const totalCut=-STATS.reduce((s,k)=>s+Math.min(0,Number(scale[k])||0),0);
+        if(totalCut>0.5){
+            const deepen=Math.min(tier==="Gold"?0.55:0.70,overSum/totalCut);
+            STATS.forEach(k=>{
+                if((Number(scale[k])||0)<0) scale[k]=round(scale[k]*(1+deepen));
+            });
+        }else{
+            const share=overSum/STATS.length;
+            STATS.forEach(k=>{
+                const have=Number(mine[k])||70;
+                if(have>(Number(band[k])||70)+seatLead){
+                    scale[k]=round((Number(scale[k])||0)-share);
+                }
+            });
+        }
+    }
+
+    // Hard spike cap: identity highs may lead the Bronze band, not leave it.
     STATS.forEach(k=>{
-        const target=(Number(band[k])||70)+lead;
         const have=Number(mine[k])||70;
-        if(have>target) scale[k]=round((target-have)*0.93);
+        const bandK=Number(band[k])||meanBand;
+        if(have<=bandK+0.5) return;
+        const seated=have+(Number(scale[k])||0);
+        const cap=bandK+spikeCap;
+        if(seated>cap) scale[k]=round(cap-have);
     });
     return scale;
+}
+
+function personalityBias(have,meanMine){
+    return (Number(have)||70)-(Number(meanMine)||70);
 }
 
 /** Hub/garage preview: full combo for Bronze; Silver/Gold use live parts then bronze-form scale. */
@@ -627,20 +757,25 @@ function cpuNightMix(tier,match,boss){
         if(t==="Gold") return {easy:0.12,even:0.48,hard:0.40};
         return {easy:0.16,even:0.50,hard:0.34};
     }
-    if(m<=3) return {easy:0.36,even:0.50,hard:0.14};
+    // Matches 1–3: same farm window on every door — winnable with play, not a bye.
+    if(m<=3) return {easy:0.42,even:0.46,hard:0.12};
+    // After the opener, starter-tier curve takes over.
     if(t==="Bronze"){
-        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
-        if(m<=12) return {easy:0.24,even:0.56,hard:0.20};
-        return {easy:0.30,even:0.55,hard:0.15};
+        // Weaker opener, richer shop — ease as the snowball lands.
+        if(m<=5) return {easy:0.30,even:0.52,hard:0.18};
+        if(m<=12) return {easy:0.26,even:0.54,hard:0.20};
+        return {easy:0.32,even:0.54,hard:0.14};
     }
     if(t==="Gold"){
-        if(m<=5) return {easy:0.28,even:0.54,hard:0.18};
-        if(m<=12) return {easy:0.16,even:0.52,hard:0.32};
-        return {easy:0.12,even:0.50,hard:0.38};
+        // Stronger bronze-form seat, thinner shop — late nights squeeze.
+        if(m<=5) return {easy:0.30,even:0.52,hard:0.18};
+        if(m<=12) return {easy:0.16,even:0.50,hard:0.34};
+        return {easy:0.10,even:0.48,hard:0.42};
     }
-    if(m<=5) return {easy:0.20,even:0.50,hard:0.30};
+    // Silver sits between the two doors.
+    if(m<=5) return {easy:0.28,even:0.52,hard:0.20};
     if(m<=12) return {easy:0.20,even:0.52,hard:0.28};
-    return {easy:0.22,even:0.53,hard:0.25};
+    return {easy:0.18,even:0.52,hard:0.30};
 }
 
 function cpuNightRoll(){
@@ -862,6 +997,14 @@ function makePlus3Card(){
     card.body="Random stat +3. Clean bump.";
     return card;
 }
+
+function playerAbilityIsPassive(){
+    if(typeof SpinWarsAbilities==="undefined") return false;
+    const blade=Game.player?.blade;
+    const id=SpinWarsAbilities.kitId?.(blade);
+    const meta=id?(SpinWarsAbilities.kitMeta?.(id)||SpinWarsAbilities.META?.[id]):null;
+    return !!(meta && meta.active===false);
+}
 function shopBlocked(id){
     const r=run();
     if(!r||!id) return false;
@@ -871,7 +1014,7 @@ function shopBlocked(id){
     if(id==="blessed") return !!r.blessed;
     if(id==="earnBoost") return !!r.earnBoost;
     if(id==="dashHaste") return !!r.matchBuffs?.dashHaste;
-    if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1;
+    if(id==="abilityCharge") return (Number(r.abilityBonus)||0)>=1 || playerAbilityIsPassive();
     return false;
 }
 function cardKey(card){
@@ -954,12 +1097,13 @@ function applyCpuCard(card){
         STATS.forEach(k=>{r.cpuBonuses[k]=(r.cpuBonuses[k]||0)+2;});
     }else if(card.kind==="reforge"){
         if(Number(r.matchIndex)!==18){
-            const committed=pickCommittedParts(r.cpuBlade,{
+            const exclude={
                 bitName:r.cpuBit?.name,
                 ratchetName:r.cpuRatchet?.name
-            });
-            if(card.part==="bit") r.cpuBit=committed.bit||r.cpuBit;
-            else r.cpuRatchet=committed.ratchet||r.cpuRatchet;
+            };
+            const parts=cpuPartsForMatch(r.cpuBlade,r.matchIndex,exclude);
+            if(card.part==="bit") r.cpuBit=parts.bit||r.cpuBit;
+            else r.cpuRatchet=parts.ratchet||r.cpuRatchet;
         }
     }else if(card.kind==="ability-swap"){
         const pickId=pick(card.choices&&card.choices.length?card.choices:["hurricane"]);
@@ -1186,18 +1330,32 @@ function cpuPowerTarget(playerPow,match,boss){
     else if(night==="even") band=0.96+Math.random()*0.04;
     else band=1.00+Math.random()*0.03;
     if(!boss){
+        // Early farm: CPU tracks under the player's bronze-form seat so wins feel earned.
         if(match<=3){
-            if(night==="hard") band=Math.min(band,1.02);
-            else band=Math.min(band,1.00);
-            if(tier==="Gold" && night!=="hard") band=Math.min(band,0.98);
+            if(night==="hard") band=Math.min(band,0.99);
+            else if(night==="easy") band=Math.min(band,0.94);
+            else band=Math.min(band,0.97);
+            if(tier==="Gold") band=Math.min(band, night==="hard"?0.99:0.96);
+            else if(tier==="Bronze") band=Math.min(band, night==="hard"?1.00:0.98);
         }else if(match<=5){
+            if(tier==="Bronze" && night!=="hard") band=Math.min(band,1.00);
+            if(tier==="Gold" && night!=="hard") band=Math.min(band,0.99);
+            if(tier==="Silver" && night!=="hard") band=Math.min(band,1.00);
+        }else if(match<=12){
+            // Mid climb: starter door starts to matter.
             if(tier==="Bronze" && night!=="hard") band=Math.min(band,1.01);
-            if(tier==="Gold" && night!=="hard") band=Math.min(band,1.00);
+            if(tier==="Gold" && night==="hard") band=clamp(band,1.01,1.06);
+            if(tier==="Gold" && night==="even") band=Math.min(Math.max(band,0.99),1.04);
         }
         if(tier==="Bronze" && match>=13){
             if(night==="easy") band=Math.min(band,0.96);
             else if(night==="even") band=Math.min(band,0.99);
             else band=Math.min(band,1.04);
+        }
+        if(tier==="Gold" && match>=13){
+            if(night==="easy") band=clamp(band,0.98,1.03);
+            else if(night==="even") band=clamp(band,1.01,1.06);
+            else band=clamp(band,1.04,1.08);
         }
         band=clamp(band,0.90,1.08);
     }
@@ -1266,9 +1424,7 @@ function generateCpu(){
         const mix=wantTier==="mix";
         const pool=mix?blades:blades.filter(b=>b.tier===wantTier);
         r.cpuBlade=pick(pool.length?pool:blades);
-        const parts=(mix||cpuCompetence(match))
-            ? pickCommittedParts(r.cpuBlade)
-            : starterParts(r.cpuBlade);
+        const parts=cpuPartsForMatch(r.cpuBlade,match);
         r.cpuRatchet=parts.ratchet;
         r.cpuBit=parts.bit;
     }
@@ -1539,6 +1695,10 @@ function applyAbilityChargeCard(card){
     const r=run();
     ensureRunShape(r);
     const before={...playerEffective()};
+    // Passive kits never hold charges — skip the rare so it cannot pad a Free Spin / Double Edge run.
+    if(playerAbilityIsPassive()){
+        return {before,after:{...playerEffective()},card,skipped:true};
+    }
     r.abilityBonus=(Number(r.abilityBonus)||0)+1;
     if(typeof SpinWarsAbilities!=="undefined" && SpinWarsAbilities.grantCharge && NEW_BATTLE?.active){
         SpinWarsAbilities.grantCharge("player");
@@ -2303,6 +2463,8 @@ function buildSave(){
             flavorCall:r.flavorCall||null,
             runEarn:{exp:Number(r.runEarn?.exp)||0,money:Number(r.runEarn?.money)||0},
             lastPayout:r.lastPayout||null,
+            starterPayOvr:Number(r.starterPayOvr)||0,
+            starterPayMult:Number(r.starterPayMult)||0,
             _paidMatch:Number(r._paidMatch)||0,
             scoreboardRun:typeof SpinWarsScoreboard!=="undefined"?SpinWarsScoreboard.exportRun():(r.scoreboardRun||null)
         }
@@ -2434,26 +2596,8 @@ function bindRunHistoryRows(root){
 }
 
 function showRunHistory(){
-    Game.mode="rogue";
-    Game.quickMatch=false;
-    Game.screen="rogueRunHistory";
-    Game._viewingArchive=false;
-    const past=loadRunArchive();
-    const body=past.length
-        ? past.map(runHistoryRowHTML).join("")
-        : `<p class="rogue-run-empty">No finished runs yet. Win or lose a Rogue run and it shows here.</p>`;
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing rogue-run-board">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:"SCOREBOARD"})}
-        <section class="rogue-run-history" aria-label="Finished runs">
-            ${body}
-        </section>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
-    bindRunHistoryRows();
-    mountDevButton();
+    // Classic Tier Rogue archive UI removed with that mode.
+    showLanding();
 }
 
 function openArchivedRun(id){
@@ -2537,6 +2681,8 @@ function hydrate(data){
         flavorCall:raw.flavorCall||null,
         runEarn:{exp:Number(raw.runEarn?.exp)||0,money:Number(raw.runEarn?.money)||0},
         lastPayout:raw.lastPayout||null,
+        starterPayOvr:Number(raw.starterPayOvr)||0,
+        starterPayMult:(Number(raw.starterPayMult)>0?Number(raw.starterPayMult):1),
         _paidMatch:Number(raw._paidMatch)||0,
         _scenarioDone:false
     };
@@ -2596,7 +2742,7 @@ function resumeSave(){
 }
 
 function showLanding(){
-    /* Pack Rogue (Lite) must never land on Tier Rogue. */
+    /* Tier Rogue landing removed. Route to Pack Rogue, Campaign, or title. */
     if((Game.rogue?.loop==="lite"||Game.mode==="rogue-lite") &&
         global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
         SpinWarsRogueLite.showHub();
@@ -2607,57 +2753,11 @@ function showLanding(){
         SpinWarsRogueRun.showHub();
         return;
     }
-    Game.mode="rogue";
-    Game.quickMatch=false;
-    Game.screen="rogueLanding";
-    Game._viewingArchive=false;
-    const save=peekSave();
-    const canContinue=!!save && save.blade;
-    const continueNote=canContinue
-        ? `Match ${save.match||1} · ${save.blade}${save.score?` · ${save.score.player}-${save.score.cpu}`:""}`
-        : "No run saved";
-    const past=loadRunArchive();
-    const boardNote=past.length
-        ? `${past.length} finished run${past.length===1?"":"s"}`
-        : "No finished runs yet";
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${homeBowlHTML()}
-        ${homeMarkHTML({compact:true,kicker:"TIER ROGUE",tag:""})}
-        <nav class="home-doors rogue-doors" aria-label="Rogue">
-            <button class="home-door rip swx-hero" id="rogueNewGame" type="button">
-                <span class="home-door-kicker">NEW RUN</span>
-                <b>NEW GAME</b>
-            </button>
-            <button class="home-door ${canContinue?"rogue":"locked"}" id="rogueContinue" type="button" ${canContinue?"":"disabled aria-disabled=\"true\""}>
-                <span class="home-door-kicker">SAVE</span>
-                <b>CONTINUE</b>
-                <small class="swx-state">${continueNote}</small>
-                ${canContinue?"":"<span class=\"home-door-lock\">LOCKED</span>"}
-            </button>
-            <button class="home-door rogue" id="rogueScoreboard" type="button">
-                <span class="home-door-kicker">HISTORY</span>
-                <b>SCOREBOARD</b>
-                <small class="swx-state">${boardNote}</small>
-            </button>
-            <button class="home-help" id="rogueHelp" type="button">HOW</button>
-        </nav>
-        <div id="rogueNewConfirm" hidden></div>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>
-        (typeof SpinWarsRogueRun!=="undefined" && SpinWarsRogueRun.showFork)
-            ? SpinWarsRogueRun.showFork()
-            : renderMainMenu()
-    ));
-    document.getElementById("rogueNewGame").onclick=()=>requestNewGame();
-    document.getElementById("rogueContinue").onclick=()=>{
-        if(!canContinue) return;
-        resumeSave();
-    };
-    document.getElementById("rogueScoreboard").onclick=()=>showRunHistory();
-    document.getElementById("rogueHelp").onclick=()=>showHelp();
-    mountDevButton();
+    if(global.SpinWarsRogueLite && typeof SpinWarsRogueLite.showHub==="function"){
+        SpinWarsRogueLite.showHub();
+        return;
+    }
+    if(typeof renderMainMenu==="function") renderMainMenu();
 }
 
 function requestNewGame(){
@@ -2681,54 +2781,17 @@ function requestNewGame(){
 }
 
 function showTierPick(){
-    Game.mode="rogue";
-    Game.screen="rogueTier";
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${typeof homeBowlHTML==="function"?homeBowlHTML():""}
-        ${typeof homeMarkHTML==="function"?homeMarkHTML({compact:true,kicker:"NEW RUN",tag:""}):""}
-        <nav class="home-leagues rogue-tier-pick" aria-label="Starting tier">
-            <button class="home-league bronze" type="button" data-tier="Bronze">
-                <span class="home-league-copy"><b>BRONZE</b><small>Shop snowballs</small></span>
-            </button>
-            <button class="home-league silver" type="button" data-tier="Silver">
-                <span class="home-league-copy"><b>SILVER</b><small>Evolve · Enhance</small></span>
-            </button>
-            <button class="home-league gold" type="button" data-tier="Gold">
-                <span class="home-league-copy"><b>GOLD</b><small>Climb the forms</small></span>
-            </button>
-        </nav>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showLanding()));
-    document.querySelectorAll("[data-tier]").forEach(btn=>{
-        btn.onclick=()=>startRogueDraft(btn.dataset.tier);
-    });
-    mountDevButton();
+    // Classic Tier Rogue door pick removed from play — route to Pack Rogue.
+    showLanding();
 }
 
 function startRogueDraft(tier){
-    Game.mode="rogue";
-    const t=String(tier||"Bronze");
-    const blades=playableBlades().filter(b=>b && !b.hidden && String(b.tier)===t);
-    const bladePool=shuffle(blades).slice(0,3);
-    const ratchetPool=shuffle(typeof RATCHETS!=="undefined"?RATCHETS.slice():[]).slice(0,3);
-    const bitPool=shuffle(
-        typeof selectableBits==="function"?selectableBits():[]
-    ).slice(0,3);
-    Game.selection=Game.selection||{};
-    Game.selection.rogueTier=t;
-    Game.selection.bladePool=bladePool;
-    Game.selection.bladePage=0;
-    Game.selection.ratchetPool=ratchetPool;
-    Game.selection.bitPool=bitPool;
-    if(typeof renderBladeDraft==="function") renderBladeDraft();
-    else if(typeof showBladeDraft==="function") showBladeDraft();
-    mountDevButton();
+    // Tier draft no longer reachable from play; keep helper for DEV only.
+    showLanding();
 }
 
 function startBladePick(){
-    showTierPick();
+    showLanding();
 }
 
 function showHelp(){
@@ -2740,28 +2803,13 @@ function showHelp(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">ROGUE</span>
-                <h1>HOW A RUN WORKS</h1>
-                <p>Same stadium. One Bey. Eighteen matches, then endless.</p>
+                <h1>PICK A DOOR</h1>
+                <p>Pack Rogue or Campaign from the title screen.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p>Pick a tier. Then three blades, three ratchets, three bits — same as Quick Play. Every fight is first to 7. Win the match, choose one upgrade. Lose, and the run is over.</p>
-            <p>A run is 18 matches, then the night keeps going. Matches 6 and 12 are minis. Match 18 is Shark Scale on 1-60 Ball. Beat it and you can take that Bey or keep yours, then endless starts.</p>
-            <p>New Game: Bronze / Silver / Gold, then three blades from that tier, three ratchets, three bits. Every Bey opens in Bronze form. Silver and Gold keep their shape — highs get pulled toward Bronze, dump stats stay dump. The first few matches are easier on every door so you can farm a win and a shop — not a free bye. Bronze starts weak and snowballs upgrades. Gold starts a step higher but the shop stays thin; you grow by evolving toward full Gold form. Silver sits in the middle.</p>
-            <p>Bronze cannot evolve. Enhance can start showing after a few wins and the chance climbs if it stays missing — it is not locked to match 5. Silver can evolve, then Enhance, on the same kind of slope. Gold climbs Bronze → Silver → Gold and never Enhances. Form cards stop in endless. BACK on a kit swap keeps your current kit.</p>
-            <p>The CPU takes a real card for each stat upgrade you locked in, rolled not copied. Toys (Zombie, reforge, kit swap) and skipped shops give the CPU a weaker +1 instead of a full card, plus a little extra that depends on your starter and the night. Early nights stay winnable. Bronze eases as the shop snowballs; Gold squeezes later. Mini bosses add extra stacks. Close the app and hit Continue to pick up where you left off.</p>
-        </section>
-        <p class="home-leagues-label">UPGRADES</p>
-        <div class="rogue-offers rogue-help-offers">
-            <article class="rogue-offer common"><span class="rogue-offer-kicker">COMMON</span><strong>+2 / −1 · BURST</strong><small>+2 a random stat and −1 another, or +3 now plus +2 for the next 2 games. Commons always cost something.</small></article>
-            <article class="rogue-offer uncommon"><span class="rogue-offer-kicker">UNCOMMON</span><strong>TRADEOFFS · CONSUMABLES</strong><small>ATK/KB/DEF/MOB/BAL/STA swaps, plus Zombie (once per point on a spin finish), Lucky Launch, Force Field, and Pocket Save. Remaining uses print on the VS plate.</small></article>
-            <article class="rogue-offer rare"><span class="rogue-offer-kicker">RARE</span><strong>GROWTH · REFORGE · TOYS</strong><small>Clean +3 or +1 · +1, plus bit/ratchet reforge, ability swap, Hells Chain, Comeback Spin, dash cooldown, or an extra charge. Rare is the clean bump.</small></article>
-            <article class="rogue-offer legendary"><span class="rogue-offer-kicker">LEGENDARY</span><strong>BLESSED · MODIFIERS</strong><small>Blessed stacks forever. Other modifiers replace each other. Vampire and Psyshock live here too. Gold sees this table less.</small></article>
-            <article class="rogue-offer evolve"><span class="rogue-offer-kicker">FORM</span><strong>ENHANCE OR EVOLVE</strong><small>That is the real paycheck. Enhance is +5 / +3. Silver evolves then enhances. Gold climbs to Gold form. Toys do not replace this.</small></article>
-        </div>
-        <section class="menu-card rogue-help-card">
-            <p class="eyebrow">MODIFIERS</p>
-            <p>Last Stand and Final Spin kick in when you are almost out of spin. Berserker and First Blood hit harder while you are still healthy. Psyshock hits 60% then 160%. Vampire can steal a sliver of RPM. Blessed is a permanent after-match bump and does not replace a modifier. Rail Rush and X-Exit Swing want the ring. Pin Lock and Anchor keep you in the middle. Glass Cannon hits harder and dies faster. Heavy Contact and Counterweight answer a real clash.</p>
+            <p><strong>Rogue</strong> — packs, draft, climb 30.</p>
+            <p><strong>Campaign</strong> — locker money/EXP, then a long climb.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showLanding()));
@@ -3308,7 +3356,7 @@ function showResults(){
         ${homeMarkHTML({tag:win?(isSharkNight(r.matchIndex)?"FINAL BOSS DOWN":(isMiniNight(r.matchIndex)?"BOSS CLEAR":"MATCH CLEAR")):"RUN OVER"})}
         <p class="win-name">${win?(isSharkNight(r.matchIndex)?"THE PRESENCE FALLS":"MATCH WON"):"RUN OVER"}</p>
         <p class="win-score">${res.playerScore} — ${res.cpuScore}</p>
-        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b></p>`:""}
+        ${isRunLoop()&&r.lastPayout?`<p class="sb-earn"><span>NIGHT</span>${r.lastPayout.exp?`<b>+${r.lastPayout.exp} EXP</b>`:""}<b>+${r.lastPayout.money} MONEY</b>${isLiteLoop()&&r.lastPayout.payMult!=null&&Number(r.lastPayout.payMult)!==1?`<small class="sb-pay-mult">RUN PAY ×${Number(r.lastPayout.payMult).toFixed(2)}</small>`:""}</p>`:""}
         <p class="rogue-result-copy">${res.commentary||""}</p>
         ${actions}
     </main>`;
@@ -3833,11 +3881,11 @@ global.SpinWarsRogue={
     isActive,run,liveBonus,onClash,battleCombo,playerEffective,
     showIntro,showLanding,showTierPick,onStarterPicked,decorateVs,scoreboardLabel,onMatchOver,showResults,
     mountDevButton,endRun,goHomeAfterRun,persist,hasSave,plateDecor,MAX_MATCHES,BOSS_AT,MODIFIERS,
-    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
+    playerUpgradeCount,cpuNightMix,cpuStackPlan,cpuCompetence,cpuUsesCommittedParts,cpuPartsForMatch,cpuStackLead,cpuPowerTarget,canEnhance,canEvolve,formSlopeChance,formHardPity,nextFormCard,applyPsyshockKnock,FINAL_MATCH,generateCpu,handoffOmen,jumpToFinalBoss,
     beginFromLoadout,hydrateAndResume,buildSave,isRunLoop,isLiteLoop,isCampaignLoop,isSharkNight,isMiniNight,finalMatch,jumpToMatch,
     perfectLaunchesActive,flavorCallLine,openShopOrScenario,makeOfferCard,
     luckyLaunchBump,dashHasteActive,tryZombieRespawn,tryPocketSave,tickPoint,
-    makeStartScale,previewRunCombo,pickCommittedParts
+    makeStartScale,previewRunCombo,pickCommittedParts,starterParts
 };
 if(typeof window!=="undefined"){
     window.addEventListener("beforeunload",()=>{

@@ -208,15 +208,25 @@ function loadoutParts(){
     return {blade,ratchet,bit};
 }
 
-function comboOfLoadout(){
+function rawLoadoutCombo(){
     const p=loadoutParts();
     if(!p.blade||!p.ratchet||!p.bit) return null;
-    // Garage/hub: Bronze keeps full combo; Silver/Gold use bronze-form scale from live ratchet/bit.
+    if(typeof calculateComboStats!=="function") return null;
+    return calculateComboStats(p.blade,p.ratchet,p.bit);
+}
+
+function scaledLoadoutCombo(){
+    const p=loadoutParts();
+    if(!p.blade||!p.ratchet||!p.bit) return null;
     if(typeof SpinWarsRogue!=="undefined" && typeof SpinWarsRogue.previewRunCombo==="function"){
         return SpinWarsRogue.previewRunCombo(p.blade,p.ratchet,p.bit);
     }
-    if(typeof calculateComboStats!=="function") return null;
-    return calculateComboStats(p.blade,p.ratchet,p.bit);
+    return rawLoadoutCombo();
+}
+
+/** Default hub/garage view: natural combo stats. Use scaledLoadoutCombo for Bronze-form run preview. */
+function comboOfLoadout(){
+    return rawLoadoutCombo();
 }
 
 function bladeStickerCombo(blade){
@@ -437,30 +447,8 @@ function bowl(){
 }
 
 function showFork(){
-    Game.mode=null;
-    Game.screen="rogueFork";
-    document.getElementById("rrDevBtn")?.remove();
-    document.getElementById("rrDevPanel")?.remove();
-    const app=document.getElementById("app");
-    app.innerHTML=`<div class="background stadium"></div>
-    <main class="home rogue-landing">
-        ${bowl()}
-        ${mark("ROGUE","")}
-        <nav class="home-doors rogue-doors" aria-label="Rogue modes">
-            <button class="home-door rip swx-hero" id="rrForkRun" type="button">
-                <span class="home-door-kicker">NIGHT</span>
-                <b>ROGUE RUN</b>
-                <span class="swx-hero-mark">PRIMARY</span>
-            </button>
-            <button class="home-door play" id="rrForkTier" type="button">
-                <span class="home-door-kicker">CLASSIC</span>
-                <b>TIER ROGUE</b>
-            </button>
-        </nav>
-    </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
-    document.getElementById("rrForkRun").onclick=()=>showHub();
-    document.getElementById("rrForkTier").onclick=()=>SpinWarsRogue.showLanding();
+    // Old Rogue Run / Tier Rogue fork removed — Campaign opens its hub directly.
+    showHub();
 }
 
 function hudStrip(){
@@ -491,9 +479,27 @@ function partSprite(part){
     return typeof bitSpritePath==="function"?bitSpritePath(b):"";
 }
 
+function loadoutStatsBlockHTML(combo,scaledOn,tier){
+    const formNote=scaledOn&&(tier==="Silver"||tier==="Gold")
+        ? `<small class="rr-form-note">RUN START · BRONZE FORM · ratchet/bit still apply</small>`
+        : (tier==="Silver"||tier==="Gold"
+            ? `<small class="rr-form-note">COMBO STATS · opens in Bronze form on run start</small>`
+            : `<small class="rr-form-note">COMBO STATS</small>`);
+    const eyebrow=scaledOn&&(tier==="Silver"||tier==="Gold")
+        ? `${tier.toUpperCase()} · BRONZE FORM`
+        : tier.toUpperCase();
+    return {
+        eyebrow,
+        formNote,
+        badges:combo&&typeof comboRatingBadgesHTML==="function"?comboRatingBadgesHTML(combo,combo.stats):"",
+        bars:statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})
+    };
+}
+
 function loadoutCard(){
     const parts=loadoutParts();
-    const combo=comboOfLoadout();
+    const combo=rawLoadoutCombo();
+    const scaled=scaledLoadoutCombo();
     const bladeArt=parts.blade&&typeof bladeSpritePath==="function"?bladeSpritePath(parts.blade):"";
     const ratArt=parts.ratchet&&typeof ratchetSpritePath==="function"?ratchetSpritePath(parts.ratchet):"";
     const bitArt=parts.bit&&typeof bitSpritePath==="function"?bitSpritePath(parts.bit):"";
@@ -501,25 +507,53 @@ function loadoutCard(){
         return `<section class="menu-card rr-loadout empty"><p>Pick a starter blade to open the locker.</p></section>`;
     }
     const tier=String(parts.blade.tier||"");
-    const formNote=tier==="Silver"||tier==="Gold"
-        ? `<small class="rr-form-note">BRONZE FORM · ratchet/bit still apply</small>`
-        : "";
-    return `<section class="menu-card rr-loadout">
+    const canScale=tier==="Silver"||tier==="Gold";
+    const block=loadoutStatsBlockHTML(combo,false,tier);
+    return `<section class="menu-card rr-loadout" data-rr-loadout>
         <div class="rr-loadout-arts">
             <div class="rr-loadout-art">${bladeArt?`<img src="${bladeArt}" alt="">`:"<span></span>"}</div>
             <div class="rr-loadout-art sm">${ratArt?`<img src="${ratArt}" alt="">`:"<span></span>"}</div>
             <div class="rr-loadout-art sm">${bitArt?`<img src="${bitArt}" alt="">`:"<span></span>"}</div>
         </div>
         <div class="rr-loadout-copy">
-            <span class="eyebrow">${tier.toUpperCase()}${tier==="Silver"||tier==="Gold"?" · BRONZE FORM":""}</span>
+            <span class="eyebrow" data-rr-eyebrow>${block.eyebrow}</span>
             <b>${parts.blade.name}</b>
             <small>${parts.ratchet.name} · ${parts.bit.name}</small>
-            ${formNote}
-            ${combo?comboRatingBadgesHTML(combo,combo.stats):""}
-            ${statGroupsHTML(combo?.stats||{},combo?.deltaFromBlade||{})}
+            ${canScale?`<button type="button" class="rr-scale-btn" data-rr-scale-toggle aria-pressed="false">ROGUE STAT SCALE</button>`
+                :`<span class="rr-scale-btn is-static">BRONZE · NO SCALE</span>`}
+            <div data-rr-form-note>${block.formNote}</div>
+            <div data-rr-badges>${block.badges}</div>
+            <div data-rr-bars>${block.bars}</div>
         </div>
     </section>`;
 }
+
+function wireLoadoutScaleToggle(){
+    const btn=document.querySelector("[data-rr-scale-toggle]");
+    if(!btn) return;
+    const tier=String(loadoutParts().blade?.tier||"");
+    btn.onclick=ev=>{
+        ev.preventDefault();
+        ev.stopPropagation();
+        const on=btn.getAttribute("aria-pressed")!=="true";
+        btn.setAttribute("aria-pressed",on?"true":"false");
+        btn.textContent=on?"COMBO STATS":"ROGUE STAT SCALE";
+        btn.classList.toggle("on",on);
+        const combo=on?scaledLoadoutCombo():rawLoadoutCombo();
+        const block=loadoutStatsBlockHTML(combo,on,tier);
+        const root=document.querySelector("[data-rr-loadout]");
+        if(!root) return;
+        const eye=root.querySelector("[data-rr-eyebrow]");
+        const note=root.querySelector("[data-rr-form-note]");
+        const badges=root.querySelector("[data-rr-badges]");
+        const bars=root.querySelector("[data-rr-bars]");
+        if(eye) eye.textContent=block.eyebrow;
+        if(note) note.innerHTML=block.formNote;
+        if(badges) badges.innerHTML=block.badges;
+        if(bars) bars.innerHTML=block.bars;
+    };
+}
+
 
 function showHub(){
     Game.mode="rogue-run";
@@ -571,7 +605,7 @@ function showHub(){
         </nav>
         <div id="rrConfirm" hidden></div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
     document.getElementById("rrPlay")?.addEventListener("click",()=>showPlayConfirm(false));
     document.getElementById("rrContinue")?.addEventListener("click",()=>resumeLive());
     document.getElementById("rrNew")?.addEventListener("click",()=>confirmNewRun());
@@ -580,6 +614,7 @@ function showHub(){
     document.getElementById("rrBoard")?.addEventListener("click",()=>showBoard());
     document.getElementById("rrHelp")?.addEventListener("click",()=>showHelp());
     mountDev();
+    wireLoadoutScaleToggle();
 }
 
 function showStarterPick(){
@@ -603,7 +638,7 @@ function showStarterPick(){
             }).join("")}
         </div>
     </main>`;
-    document.querySelector(".home")?.appendChild(createBackButton(()=>showFork()));
+    document.querySelector(".home")?.appendChild(createBackButton(()=>renderMainMenu()));
     document.querySelectorAll("[data-starter]").forEach(btn=>{
         btn.onclick=()=>{
             const acc=account();
@@ -759,6 +794,7 @@ function showGarage(){
         };
     });
     mountDev();
+    wireLoadoutScaleToggle();
 }
 
 function partLabel(part){
@@ -876,17 +912,14 @@ function showHelp(){
             <div class="selection-icon">X</div>
             <div>
                 <span class="eyebrow">CAMPAIGN</span>
-                <h1>HOW THIS LOCKER WORKS</h1>
-                <p>Same stadium as Tier Rogue. Longer night. Your collection is the paycheck.</p>
+                <h1>THE LOCKER</h1>
+                <p>Same stadium. Longer climb. Your collection pays the bills.</p>
             </div>
         </div>
         <section class="menu-card rogue-help-card">
-            <p><strong>EXP</strong> only levels the account. <strong>Money</strong> only buys Track rows. They never swap jobs.</p>
-            <p>Garage equips what you own. Track is the full unlock order — locked rows still show name, level, and price. PLAY snapshots the hub Bey. A night is first to 7, shop cards after a win, same as Tier Rogue.</p>
-            <p>Silver and Gold blades open in Bronze form — same personality, highs pulled toward Bronze with a small lead. Evolve through the night the same way as Tier Rogue. Gold never Enhances. Form cards stop in endless.</p>
-            <p>Difficulty is the climb, not the blade sticker. Early nights stay farmable on starter kits so you can earn EXP and money. Better parts make later nights easier. Uncommon <strong>Payday</strong> pays +35% money and EXP for the rest of that run.</p>
-            <p>Minis at 10 and 20. Shark Scale at 30. Then endless. Mid-run reforges stay on that night only and add a small +1 chip. They do not rewrite the Garage.</p>
-            <p>Nights 26–29 can roll any face. PC: Space dashes, M pops the kit. Those hints only print on a pointer desktop.</p>
+            <p><strong>EXP</strong> levels the account. <strong>Money</strong> buys Track rows. Garage equips what you own.</p>
+            <p>PLAY locks the hub Bey into a night (first to 7, shop after wins). Silver / Gold start in Bronze form and can evolve on the climb.</p>
+            <p>Minis at 10 &amp; 20. Shark Scale at 30. Then endless. Early nights are farmable — the squeeze is the climb.</p>
         </section>
     </main>`;
     document.querySelector(".menu")?.appendChild(createBackButton(()=>showHub()));
