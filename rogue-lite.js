@@ -368,6 +368,15 @@ function openBeyPack(packId){
         ids.push(rollTierBlade("Silver",{tier:"Bronze",p:odds.silverBeyBronze||0.06}));
     }else if(packId==="bey_silver_rare"){
         for(let i=0;i<3;i++) ids.push(rollTierBlade("Silver"));
+    }else if(packId==="bey_silver_premium"){
+        // 3 locked Silver + 1 high-odds Silver flex + 1 small Gold chance
+        for(let i=0;i<3;i++) ids.push(rollTierBlade("Silver"));
+        ids.push(chance(odds.premiumSilverFlexSilver||0.88)
+            ?rollTierBlade("Silver")
+            :rollTierBlade("Bronze"));
+        ids.push(chance(odds.premiumSilverGold||0.10)
+            ?rollTierBlade("Gold")
+            :rollTierBlade("Silver"));
     }else if(packId==="bey_gold"){
         ids.push(rollTierBlade("Gold"));
     }else if(packId==="bey_gold_rare"){
@@ -820,7 +829,7 @@ function showHub(){
                 title:"START RUN",
                 state:canAfford?`$${acc.money} on hand`:`Broke — still playable`
             })}
-            ${homeDoorHTML({id:"rlMarket",classes:"play",glyph:"market",kicker:"SPEND",title:"MARKETPLACE"})}
+            ${homeDoorHTML({id:"rlMarket",classes:"play",glyph:"market",kicker:"SPEND",title:"PACKS SHOP"})}
             ${homeDoorHTML({id:"rlCollection",classes:"play",glyph:"collection",kicker:"OWNED",title:"COLLECTION"})}
             ${homeDoorHTML({id:"rlHelp",classes:"play",glyph:"help",kicker:"HOW",title:"ROGUE HELP"})}
         </nav>
@@ -1066,7 +1075,12 @@ function packPreviewSlides(pack){
     const family=String(pack?.family||"");
     const tier=String(pack?.tier||"Bronze");
     if(family==="bey"){
-        const pool=shuffle(playablePool(tier).slice());
+        let pool=playablePool(tier).slice();
+        // Premium Silver teases a Gold chase in the carousel.
+        if(pack?.id==="bey_silver_premium"){
+            pool=pool.concat(playablePool("Gold").slice(0,3));
+        }
+        pool=shuffle(pool);
         const slides=pool.map(entry=>{
             const b=entry.blade||entry;
             const src=typeof bladeSpritePath==="function"?bladeSpritePath(b):"";
@@ -1146,7 +1160,7 @@ function bindPackCarousels(root){
     });
 }
 
-function showMarket(){
+function showMarket(tab){
     ensureAccountReady();
     Game.screen="rogueLiteMarket";
     const packs=(typeof cfg().packList==="function"?cfg().packList():Object.values(cfg().PACKS||{}));
@@ -1156,25 +1170,36 @@ function showMarket(){
     const money=account().money;
     const temps=account().runTempParts||[];
     const app=document.getElementById("app");
-    const section=(title,list)=>`<section class="rl-market-sec">
+    const active=String(tab||Game._rlShopTab||"bey");
+    Game._rlShopTab=active;
+    const panel=(id,title,list)=>`<section class="rl-shop-panel${active===id?" is-on":""}" data-shop-panel="${id}" role="tabpanel" ${active===id?"":'hidden'}>
         <h2 class="rl-market-h">${title}</h2>
         <div class="rl-pack-grid">
             ${list.map(p=>packCardHTML(p,money)).join("")}
         </div>
     </section>`;
+    const tabBtn=(id,label)=>`<button type="button" class="rl-shop-tab${active===id?" is-on":""}" data-shop-tab="${id}" role="tab" aria-selected="${active===id?"true":"false"}">${label}</button>`;
     app.innerHTML=`<div class="background stadium"></div>
     <main class="home rogue-lite-market swx-shell">
         ${bowl()}
-        ${mark("MARKETPLACE","OPEN PACKS")}
+        ${mark("PACKS SHOP","TEAR ONE OPEN")}
         ${hudStrip()}
+        <nav class="rl-shop-tabs" role="tablist" aria-label="Pack families">
+            ${tabBtn("bey","BEY")}
+            ${tabBtn("part","PARTS")}
+            ${tabBtn("mod","MODS")}
+        </nav>
         <div class="swx-shell-scroll rl-market-scroll">
-            <p class="rl-lede">Tap a pack. Tear it open. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
-            ${section("BEY PACKS",beys)}
-            ${section("PART PACKS",parts)}
-            ${section("MODIFIERS",mods)}
+            <p class="rl-lede">Pick a lane. Tear a pack. Cards flip one by one.${temps.length?` · ${temps.length} temp part${temps.length>1?"s":""} ready.`:""}${(account().runTempMods||[]).length?` · ${(account().runTempMods||[]).length} mod${(account().runTempMods||[]).length>1?"s":""} ready.`:""}</p>
+            ${panel("bey","BEY PACKS",beys)}
+            ${panel("part","PART PACKS",parts)}
+            ${panel("mod","MODIFIERS",mods)}
         </div>
     </main>`;
     document.querySelector(".home")?.appendChild(createBackButton(()=>showHub()));
+    document.querySelectorAll("[data-shop-tab]").forEach(btn=>{
+        btn.onclick=()=>showMarket(btn.getAttribute("data-shop-tab"));
+    });
     document.querySelectorAll("[data-pack]").forEach(btn=>{
         btn.onclick=()=>buyAndOpenPack(btn.getAttribute("data-pack"));
     });
@@ -1854,17 +1879,17 @@ function devAct(id,opts){
         ].filter(Boolean));
         persistAccount();
     }else if(id==="packB"){
-        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_bronze?.price||120));
+        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_bronze?.price||105));
         persistAccount();
         const out=openPack("bey_bronze");
         if(out.ok){showPackTheater(out);return;}
     }else if(id==="packPrem"){
-        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_gold_premium?.price||780));
+        acc.money=Math.max(acc.money,(cfg().PACKS?.bey_gold_premium?.price||685));
         persistAccount();
         const out=openPack("bey_gold_premium");
         if(out.ok){showPackTheater(out);return;}
     }else if(id==="packMod"){
-        acc.money=Math.max(acc.money,(cfg().PACKS?.mod_pack?.price||340));
+        acc.money=Math.max(acc.money,(cfg().PACKS?.mod_pack?.price||300));
         persistAccount();
         const out=openPack("mod_pack");
         if(out.ok){showPackTheater(out);return;}
