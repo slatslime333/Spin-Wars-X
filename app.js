@@ -2073,6 +2073,14 @@ function renderBitPage(){
 
 
 //=========================
+// STAT BAND (must precede load-time DB clamp)
+//=========================
+/** Battle/display stat band. No soft 60 floor — dumps may sit low; keep 1 so UI/math never go ≤0. */
+const STAT_FLOOR=1;
+const STAT_CEIL=99;
+function clamp(value){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(value)));}
+
+//=========================
 // STAT DATABASE NORMALIZATION
 //=========================
 Object.values(BLADE_ENGINE).forEach(blade=>{
@@ -2130,10 +2138,6 @@ function getCompatibilityScore(blade,ratchet,bit){
         getBitCompatibility(bladeData,bit)*0.45
     );
 }
-/** Battle/display stat band. No soft 60 floor — dumps may sit low; keep 1 so UI/math never go ≤0. */
-const STAT_FLOOR=1;
-const STAT_CEIL=99;
-function clamp(value){return Math.max(STAT_FLOOR,Math.min(STAT_CEIL,Math.round(value)));}
 
 function getBladePhysicalProfile(bladeData){
     const p=bladeData.physics||{},b=bladeData.behavior||{};
